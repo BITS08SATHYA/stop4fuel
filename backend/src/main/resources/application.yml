@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: stopforfuel
+  datasource:
+    url: jdbc:postgresql://172.19.0.2:5432/stopforfuel
+    username: postgres
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
