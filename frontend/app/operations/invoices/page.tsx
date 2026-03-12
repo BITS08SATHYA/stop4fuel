@@ -1,0 +1,908 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { GlassCard } from "@/components/ui/glass-card";
+import {
+    getInvoices,
+    createInvoice,
+    getActiveProducts,
+    getNozzles,
+    getCustomers,
+    getIncentivesByCustomer,
+    Product,
+    Nozzle,
+    InvoiceBill,
+    InvoiceProduct,
+    Vehicle,
+    Customer,
+    Incentive,
+    API_BASE_URL
+} from "@/lib/api/station";
+import {
+    Receipt,
+    Plus,
+    History,
+    CreditCard,
+    Truck,
+    Package,
+    User,
+    Check,
+    ArrowLeft,
+    ArrowRight,
+    AlertTriangle,
+    FileText,
+    Search,
+    Calendar,
+    CheckCircle2,
+    Trash2,
+    ShieldAlert,
+    Ban
+} from "lucide-react";
+
+export default function InvoicesPage() {
+    const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [nozzles, setNozzles] = useState<Nozzle[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
+    const [currentStep, setCurrentStep] = useState(1);
+    const [error, setError] = useState("");
+
+    // Customer & Vehicle
+    const [customerSearch, setCustomerSearch] = useState("");
+    const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+    const [selectedCustomer, setSelectedCustomer] = useState<any>(undefined);
+    const [customerVehicles, setCustomerVehicles] = useState<any[]>([]);
+    const [selectedVehicle, setSelectedVehicle] = useState<any>(undefined);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Incentives
+    const [incentives, setIncentives] = useState<Incentive[]>([]);
+
+    // Form State
+    const [billType, setBillType] = useState<'CASH' | 'CREDIT'>('CASH');
+    const [driverName, setDriverName] = useState("");
+    const [driverPhone, setDriverPhone] = useState("");
+    const [paymentMode, setPaymentMode] = useState("CASH");
+    const [indentNo, setIndentNo] = useState("");
+    const [vehicleKM, setVehicleKM] = useState("");
+    const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+
+    const loadData = async () => {
+        setIsLoading(true);
+        try {
+            const [invData, prodData, nozData] = await Promise.all([
+                getInvoices(),
+                getActiveProducts(),
+                getNozzles()
+            ]);
+            setInvoices(invData.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            setProducts(prodData);
+            setNozzles(nozData.filter((n: Nozzle) => n.active));
+        } catch (err) {
+            console.error("Failed to load data", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    // Search customers
+    const searchCustomers = async (val: string) => {
+        setCustomerSearch(val);
+        if (val.length < 2) { setCustomerSuggestions([]); return; }
+        try {
+            const data = await getCustomers(val);
+            setCustomerSuggestions(data.content || []);
+        } catch (err) { console.error(err); }
+    };
+
+    // Select customer and load their vehicles + incentives
+    const selectCustomer = async (c: any) => {
+        setSelectedCustomer(c);
+        setCustomerSearch(c.name);
+        setCustomerSuggestions([]);
+        setSelectedVehicle(undefined);
+        try {
+            const [vehiclesRes, incentivesData] = await Promise.all([
+                fetch(`${API_BASE_URL}/customers/${c.id}/vehicles`),
+                getIncentivesByCustomer(c.id).catch(() => [])
+            ]);
+            if (vehiclesRes.ok) {
+                setCustomerVehicles(await vehiclesRes.json());
+            }
+            setIncentives(incentivesData.filter((i: Incentive) => i.active));
+        } catch (err) { console.error(err); }
+    };
+
+    const selectVehicle = (v: any) => {
+        setSelectedVehicle(v);
+    };
+
+    const addProductLine = () => {
+        setSelectedProducts([...selectedProducts, {
+            product: null,
+            nozzle: null,
+            quantity: "",
+            unitPrice: "",
+            amount: 0
+        }]);
+    };
+
+    const updateProductLine = (index: number, updates: any) => {
+        const newLines = [...selectedProducts];
+        const line = { ...newLines[index], ...updates };
+
+        const qty = parseFloat(line.quantity) || 0;
+        const price = parseFloat(line.unitPrice) || 0;
+        const gross = qty * price;
+        line.grossAmount = gross;
+
+        // Auto-apply incentive discount
+        const productId = line.product?.id;
+        const incentive = productId ? incentives.find((i: Incentive) => (i.product as any)?.id === productId || (i.product as any) === productId) : null;
+        if (incentive && (incentive.minQuantity == null || qty >= incentive.minQuantity)) {
+            line.discountRate = incentive.discountRate;
+            line.discountAmount = incentive.discountRate * qty;
+            line.amount = gross - line.discountAmount;
+        } else {
+            line.discountRate = null;
+            line.discountAmount = null;
+            line.amount = gross;
+        }
+
+        newLines[index] = line;
+        setSelectedProducts(newLines);
+    };
+
+    const removeProductLine = (index: number) => {
+        setSelectedProducts(selectedProducts.filter((_: any, i: number) => i !== index));
+    };
+
+    const calculateTotal = () => {
+        return selectedProducts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    };
+
+    const resetForm = () => {
+        setSelectedVehicle(undefined);
+        setSelectedCustomer(undefined);
+        setCustomerVehicles([]);
+        setCustomerSearch("");
+        setSelectedProducts([]);
+        setIncentives([]);
+        setVehicleKM("");
+        setBillType('CASH');
+        setPaymentMode('CASH');
+        setIndentNo("");
+        setDriverName("");
+        setDriverPhone("");
+        setCurrentStep(1);
+        setError("");
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        setError("");
+        try {
+            const payload: any = {
+                billType,
+                vehicleKM: vehicleKM ? Number(vehicleKM) : undefined,
+                paymentMode: billType === 'CASH' ? paymentMode : undefined,
+                indentNo: billType === 'CREDIT' ? indentNo : undefined,
+                netAmount: calculateTotal(),
+                status: 'PAID',
+                products: selectedProducts.map((p: any) => ({
+                    product: p.product ? { id: p.product.id } : undefined,
+                    nozzle: p.nozzle ? { id: p.nozzle.id } : undefined,
+                    quantity: parseFloat(p.quantity) || 0,
+                    unitPrice: parseFloat(p.unitPrice) || 0,
+                    amount: p.amount || 0
+                })),
+                customer: selectedCustomer ? { id: selectedCustomer.id } : undefined,
+                vehicle: selectedVehicle ? { id: selectedVehicle.id } : undefined,
+                driverName,
+                driverPhone,
+                date: new Date().toISOString()
+            };
+
+            await createInvoice(payload);
+            resetForm();
+            setActiveTab('history');
+            loadData();
+        } catch (err: any) {
+            console.error("Failed to save invoice", err);
+            setError(err.message || "Error saving invoice");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const isCustomerBlocked = selectedCustomer && (selectedCustomer.status === "BLOCKED" || selectedCustomer.status === "INACTIVE");
+    const isVehicleBlocked = selectedVehicle && (selectedVehicle.status === "BLOCKED" || selectedVehicle.status === "INACTIVE");
+
+    const renderStepper = () => (
+        <div className="flex items-center justify-between mb-8 px-4">
+            {[
+                { step: 1, label: "Customer" },
+                { step: 2, label: "Vehicle" },
+                { step: 3, label: "Products" },
+                { step: 4, label: "Payment" },
+                { step: 5, label: "Confirm" }
+            ].map(({ step, label }) => (
+                <div key={step} className="flex flex-col items-center relative flex-1">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                        currentStep === step
+                            ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110"
+                            : currentStep > step
+                                ? "bg-green-500 border-green-500 text-white"
+                                : "bg-muted border-border text-muted-foreground"
+                    }`}>
+                        {currentStep > step ? <Check size={20} /> : step}
+                    </div>
+                    <span className={`text-[10px] mt-2 font-bold uppercase tracking-wider transition-colors ${currentStep === step ? "text-primary" : "text-muted-foreground"}`}>
+                        {label}
+                    </span>
+                    {step < 5 && (
+                        <div className={`absolute top-5 left-[60%] right-[-40%] h-[2px] -z-10 transition-colors ${currentStep > step ? "bg-green-500" : "bg-border"}`} />
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+
+    const renderStep1 = () => (
+        <div className="space-y-6">
+            <GlassCard className="p-8">
+                <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
+                    <User className="text-primary" size={24} />
+                    Select Customer
+                </h3>
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Search Customer Name or Phone..."
+                        className="w-full bg-background border border-border rounded-2xl py-4 pl-12 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium text-lg"
+                        value={customerSearch}
+                        onChange={(e) => searchCustomers(e.target.value)}
+                    />
+                    {customerSearch && customerSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
+                            {customerSuggestions.map((c: any) => (
+                                <button
+                                    key={c.id}
+                                    className="w-full px-6 py-4 text-left hover:bg-primary/5 text-foreground transition-colors flex items-center justify-between group"
+                                    onClick={() => selectCustomer(c)}
+                                >
+                                    <div>
+                                        <span className="font-bold block group-hover:text-primary transition-colors">{c.name}</span>
+                                        <span className="text-xs text-muted-foreground">{c.phoneNumbers || 'No Phone'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {c.status && c.status !== "ACTIVE" && (
+                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                                c.status === "BLOCKED" ? "bg-red-500/10 text-red-500" : "bg-yellow-500/10 text-yellow-500"
+                                            }`}>{c.status}</span>
+                                        )}
+                                        <Plus size={18} className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all" />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                {selectedCustomer && (
+                    <div className={`mt-8 p-6 rounded-2xl flex items-center gap-6 ${
+                        isCustomerBlocked
+                            ? "bg-red-500/5 border border-red-500/20"
+                            : "bg-green-500/5 border border-green-500/20"
+                    }`}>
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                            isCustomerBlocked ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"
+                        }`}>
+                            {isCustomerBlocked ? <Ban size={32} /> : <CheckCircle2 size={32} />}
+                        </div>
+                        <div className="flex-1">
+                            <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${
+                                isCustomerBlocked ? "text-red-600/60" : "text-green-600/60"
+                            }`}>
+                                {isCustomerBlocked ? "Customer Blocked/Inactive" : "Customer Confirmed"}
+                            </p>
+                            <p className="text-foreground font-black text-2xl">{selectedCustomer.name}</p>
+                            <p className="text-sm text-muted-foreground">{selectedCustomer.phoneNumbers}</p>
+                            {selectedCustomer.creditLimitLiters && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Credit: {selectedCustomer.consumedLiters || 0} / {selectedCustomer.creditLimitLiters} L used
+                                </p>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => { setSelectedCustomer(undefined); setCustomerSearch(""); setCustomerVehicles([]); setSelectedVehicle(undefined); }}
+                            className="text-muted-foreground hover:text-foreground p-2"
+                        >
+                            <Trash2 size={18} />
+                        </button>
+                    </div>
+                )}
+                {isCustomerBlocked && (
+                    <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
+                        <ShieldAlert size={20} className="text-red-500 shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                            This customer is {selectedCustomer.status}. Invoice creation will be blocked by the system.
+                        </p>
+                    </div>
+                )}
+            </GlassCard>
+            <div className="flex justify-end">
+                <button
+                    disabled={!selectedCustomer}
+                    onClick={() => setCurrentStep(2)}
+                    className="px-10 py-4 btn-gradient disabled:opacity-50 disabled:grayscale text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3 group"
+                >
+                    Next <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderStep2 = () => (
+        <div className="space-y-6">
+            <GlassCard className="p-8">
+                <h3 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
+                    <Truck className="text-primary" size={24} />
+                    Select Vehicle
+                </h3>
+                <p className="text-muted-foreground text-sm mb-6">
+                    Vehicles registered under <span className="text-primary font-bold">{selectedCustomer?.name}</span>
+                </p>
+
+                {customerVehicles.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                        <Truck className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                        <p className="font-medium">No vehicles found for this customer.</p>
+                        <p className="text-sm">Add vehicles in Customer Management first.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {customerVehicles.map((v: any) => {
+                            const isBlocked = v.status === "BLOCKED" || v.status === "INACTIVE";
+                            const isSelected = selectedVehicle?.id === v.id;
+                            return (
+                                <button
+                                    key={v.id}
+                                    onClick={() => selectVehicle(v)}
+                                    className={`p-5 rounded-2xl border-2 text-left transition-all ${
+                                        isSelected
+                                            ? "border-primary bg-primary/5 shadow-lg"
+                                            : isBlocked
+                                                ? "border-red-500/20 bg-red-500/5 opacity-70"
+                                                : "border-border hover:border-primary/50 hover:bg-primary/5"
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="font-black text-lg text-foreground">{v.vehicleNumber}</p>
+                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                            v.status === "ACTIVE" || !v.status ? "bg-green-500/10 text-green-500"
+                                                : v.status === "BLOCKED" ? "bg-red-500/10 text-red-500"
+                                                : "bg-yellow-500/10 text-yellow-500"
+                                        }`}>
+                                            {v.status || "ACTIVE"}
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground space-y-1">
+                                        {v.vehicleType && <p>Type: {v.vehicleType.name}</p>}
+                                        {v.maxLitersPerMonth && (
+                                            <p>Limit: {v.consumedLiters || 0} / {v.maxLitersPerMonth} L</p>
+                                        )}
+                                    </div>
+                                    {isSelected && (
+                                        <div className="mt-3 flex items-center gap-1 text-primary text-xs font-bold">
+                                            <CheckCircle2 size={14} /> Selected
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {isVehicleBlocked && (
+                    <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
+                        <ShieldAlert size={20} className="text-red-500 shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                            This vehicle is {selectedVehicle.status}. Invoice creation will be blocked by the system.
+                        </p>
+                    </div>
+                )}
+
+                <div className="mt-6">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Vehicle KM (Optional)</label>
+                    <input
+                        type="number"
+                        value={vehicleKM}
+                        onChange={(e) => setVehicleKM(e.target.value)}
+                        className="w-full max-w-xs bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                        placeholder="Current odometer reading"
+                    />
+                </div>
+            </GlassCard>
+            <div className="flex justify-between items-center">
+                <button onClick={() => setCurrentStep(1)} className="px-8 py-4 bg-muted hover:bg-muted/80 text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 border border-border">
+                    <ArrowLeft size={20} /> Back
+                </button>
+                <button
+                    disabled={!selectedVehicle}
+                    onClick={() => setCurrentStep(3)}
+                    className="px-10 py-4 btn-gradient disabled:opacity-50 disabled:grayscale text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3 group"
+                >
+                    Next <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderStep3 = () => (
+        <div className="space-y-6">
+            <GlassCard className="p-8">
+                <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                        <Package className="text-primary" size={24} />
+                        Add Products
+                    </h3>
+                    <button
+                        onClick={addProductLine}
+                        className="px-6 py-2.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 border border-primary/20"
+                    >
+                        <Plus size={18} /> Add Line
+                    </button>
+                </div>
+
+                {selectedProducts.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                        <Package className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                        <p className="font-medium">No products added yet.</p>
+                        <p className="text-sm">Click "Add Line" to start adding products.</p>
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    {selectedProducts.map((line: any, idx: number) => (
+                        <div key={idx} className="p-5 bg-background border border-border rounded-2xl space-y-4 relative border-l-4 border-l-primary">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                                <div className="lg:col-span-2">
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Product</label>
+                                    <select
+                                        className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
+                                        value={line.product?.id || ""}
+                                        onChange={(e) => {
+                                            const p = products.find(prod => prod.id === parseInt(e.target.value));
+                                            if (p) updateProductLine(idx, { product: p, unitPrice: String(p.price) });
+                                        }}
+                                    >
+                                        <option value="">Select Product...</option>
+                                        {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.category} - {p.unit})</option>)}
+                                    </select>
+                                </div>
+
+                                {line.product?.category === "Fuel" && (
+                                    <div>
+                                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Nozzle</label>
+                                        <select
+                                            className="w-full bg-muted border border-border rounded-xl p-3 text-foreground text-sm"
+                                            value={line.nozzle?.id || ""}
+                                            onChange={(e) => {
+                                                const n = nozzles.find(noz => noz.id === parseInt(e.target.value));
+                                                updateProductLine(idx, { nozzle: n || null });
+                                            }}
+                                        >
+                                            <option value="">Select Nozzle...</option>
+                                            {nozzles
+                                                .filter(n => n.tank?.product?.id === line.product?.id)
+                                                .map(n => (
+                                                    <option key={n.id} value={n.id}>
+                                                        {n.nozzleName} ({n.pump.name})
+                                                    </option>
+                                                ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Qty</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
+                                        value={line.quantity}
+                                        onChange={(e) => updateProductLine(idx, { quantity: e.target.value })}
+                                        placeholder="0"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Rate</label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
+                                            value={line.unitPrice}
+                                            onChange={(e) => updateProductLine(idx, { unitPrice: e.target.value })}
+                                        />
+                                        <button
+                                            onClick={() => removeProductLine(idx)}
+                                            className="p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors shrink-0"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                {line.discountRate > 0 && (
+                                    <div className="text-[10px] text-emerald-500 font-bold mb-0.5">
+                                        Discount: ₹{line.discountRate}/unit &times; {parseFloat(line.quantity) || 0} = -₹{(line.discountAmount || 0).toFixed(2)}
+                                    </div>
+                                )}
+                                <span className="text-primary font-black text-lg">
+                                    ₹{(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </span>
+                                {line.discountRate > 0 && (
+                                    <span className="text-muted-foreground line-through text-xs ml-2">
+                                        ₹{(line.grossAmount || 0).toFixed(2)}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {selectedProducts.length > 0 && (
+                    <div className="mt-8 pt-6 border-t border-border flex justify-between items-end">
+                        <div>
+                            <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-widest font-black">Net Amount</p>
+                            <p className="text-4xl font-black text-foreground">₹{calculateTotal().toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{selectedProducts.length} item(s)</p>
+                    </div>
+                )}
+            </GlassCard>
+            <div className="flex justify-between items-center">
+                <button onClick={() => setCurrentStep(2)} className="px-8 py-4 bg-muted hover:bg-muted/80 text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 border border-border">
+                    <ArrowLeft size={20} /> Back
+                </button>
+                <button
+                    disabled={selectedProducts.length === 0 || calculateTotal() === 0}
+                    onClick={() => setCurrentStep(4)}
+                    className="px-10 py-4 btn-gradient disabled:opacity-50 disabled:grayscale text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3 group"
+                >
+                    Next <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderStep4 = () => (
+        <div className="space-y-6">
+            <GlassCard className="p-8">
+                <h3 className="text-xl font-bold text-foreground mb-8 flex items-center gap-2">
+                    <CreditCard className="text-primary" size={24} />
+                    Payment & Driver
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                        <div>
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Bill Type</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setBillType("CASH")}
+                                    className={`py-4 rounded-2xl font-bold text-sm uppercase border-2 transition-all ${
+                                        billType === "CASH" ? "bg-primary text-primary-foreground border-primary shadow-lg" : "bg-muted border-border text-muted-foreground"
+                                    }`}
+                                >
+                                    Cash
+                                </button>
+                                <button
+                                    onClick={() => setBillType("CREDIT")}
+                                    className={`py-4 rounded-2xl font-bold text-sm uppercase border-2 transition-all ${
+                                        billType === "CREDIT" ? "bg-primary text-primary-foreground border-primary shadow-lg" : "bg-muted border-border text-muted-foreground"
+                                    }`}
+                                >
+                                    Credit
+                                </button>
+                            </div>
+                        </div>
+
+                        {billType === "CASH" && (
+                            <div>
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Payment Method</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {["CASH", "CARD", "UPI"].map(mode => (
+                                        <button
+                                            key={mode}
+                                            onClick={() => setPaymentMode(mode)}
+                                            className={`py-3 rounded-xl text-xs font-bold uppercase border-2 transition-all ${
+                                                paymentMode === mode ? "bg-foreground text-background border-foreground" : "bg-muted border-border text-muted-foreground"
+                                            }`}
+                                        >
+                                            {mode}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {billType === "CREDIT" && (
+                            <div>
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Indent No.</label>
+                                <input
+                                    type="text"
+                                    value={indentNo}
+                                    onChange={(e) => setIndentNo(e.target.value)}
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                    placeholder="Enter indent/reference number"
+                                />
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Driver Name</label>
+                            <input
+                                type="text"
+                                value={driverName}
+                                onChange={(e) => setDriverName(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-bold"
+                                placeholder="Enter driver name"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Driver Phone (Optional)</label>
+                            <input
+                                type="text"
+                                value={driverPhone}
+                                onChange={(e) => setDriverPhone(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                placeholder="Mobile number"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="p-8 bg-muted/30 border border-border rounded-3xl flex flex-col justify-center items-center text-center">
+                        <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-[0.2em] font-black">Total Payable</p>
+                        <p className="text-5xl font-black text-foreground mb-3">₹{calculateTotal().toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <div className="w-full space-y-2 mt-6 text-left px-4">
+                            <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground font-bold">Customer:</span>
+                                <span className="text-foreground font-bold">{selectedCustomer?.name}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground font-bold">Vehicle:</span>
+                                <span className="text-foreground font-bold">{selectedVehicle?.vehicleNumber}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground font-bold">Type:</span>
+                                <span className="text-foreground font-bold">{billType}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground font-bold">Items:</span>
+                                <span className="text-foreground font-bold">{selectedProducts.length}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </GlassCard>
+            <div className="flex justify-between items-center">
+                <button onClick={() => setCurrentStep(3)} className="px-8 py-4 bg-muted hover:bg-muted/80 text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 border border-border">
+                    <ArrowLeft size={20} /> Back
+                </button>
+                <button
+                    onClick={() => setCurrentStep(5)}
+                    disabled={!driverName}
+                    className="px-10 py-4 btn-gradient disabled:opacity-50 text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3 group"
+                >
+                    Review <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderStep5 = () => (
+        <div className="space-y-6">
+            <GlassCard className="p-8">
+                <h3 className="text-xl font-bold text-foreground mb-8 flex items-center gap-2">
+                    <FileText className="text-primary" size={24} />
+                    Review & Confirm
+                </h3>
+
+                <div className="space-y-6">
+                    {/* Summary */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-4 bg-muted rounded-xl">
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Customer</p>
+                            <p className="font-bold text-foreground">{selectedCustomer?.name}</p>
+                        </div>
+                        <div className="p-4 bg-muted rounded-xl">
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Vehicle</p>
+                            <p className="font-bold text-foreground">{selectedVehicle?.vehicleNumber}</p>
+                        </div>
+                        <div className="p-4 bg-muted rounded-xl">
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Bill Type</p>
+                            <p className="font-bold text-foreground">{billType} {billType === "CASH" ? `(${paymentMode})` : ""}</p>
+                        </div>
+                        <div className="p-4 bg-muted rounded-xl">
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Driver</p>
+                            <p className="font-bold text-foreground">{driverName}</p>
+                        </div>
+                    </div>
+
+                    {/* Product lines */}
+                    <div className="border border-border rounded-xl overflow-hidden">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-muted/50 border-b border-border">
+                                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-muted-foreground">Product</th>
+                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Qty</th>
+                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Rate</th>
+                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {selectedProducts.map((line: any, idx: number) => (
+                                    <tr key={idx}>
+                                        <td className="px-4 py-3 font-medium">
+                                            {line.product?.name || "Unknown"}
+                                            {line.nozzle && <span className="text-xs text-muted-foreground ml-1">({line.nozzle.nozzleName})</span>}
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-mono">{line.quantity}</td>
+                                        <td className="px-4 py-3 text-right font-mono">₹{parseFloat(line.unitPrice || 0).toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-right font-bold">₹{(line.amount || 0).toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr className="bg-primary/5 border-t border-primary/20">
+                                    <td colSpan={3} className="px-4 py-4 text-right font-black uppercase text-sm">Total</td>
+                                    <td className="px-4 py-4 text-right font-black text-primary text-xl">₹{calculateTotal().toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    {error && (
+                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
+                            <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+                        </div>
+                    )}
+
+                    <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl text-xs text-yellow-700 dark:text-yellow-400">
+                        Submitting this invoice will automatically update consumed liters for the customer and vehicle, and deduct from inventory records.
+                    </div>
+                </div>
+            </GlassCard>
+            <div className="flex justify-between items-center">
+                <button onClick={() => setCurrentStep(4)} className="px-8 py-4 bg-muted hover:bg-muted/80 text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 border border-border">
+                    <ArrowLeft size={20} /> Back
+                </button>
+                <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-12 py-5 btn-gradient disabled:opacity-50 text-white rounded-3xl font-black text-lg transition-all shadow-2xl hover:scale-[1.02] flex items-center gap-4 group"
+                >
+                    {isSaving ? "Creating Invoice..." : "Confirm & Create Invoice"}
+                    {!isSaving && <CheckCircle2 size={24} className="group-hover:scale-110 transition-transform" />}
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderCreateTab = () => (
+        <div className="max-w-4xl mx-auto pb-20">
+            {renderStepper()}
+            <div className="mt-10">
+                {currentStep === 1 && renderStep1()}
+                {currentStep === 2 && renderStep2()}
+                {currentStep === 3 && renderStep3()}
+                {currentStep === 4 && renderStep4()}
+                {currentStep === 5 && renderStep5()}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="p-8 min-h-screen bg-background">
+            <div className="max-w-7xl mx-auto">
+                <div className="flex justify-between items-center mb-10">
+                    <div>
+                        <h1 className="text-4xl font-bold text-foreground tracking-tight">
+                            Billing <span className="text-gradient">& POS</span>
+                        </h1>
+                        <p className="text-muted-foreground mt-2">
+                            Generate and manage cash and credit invoices for fuel and products.
+                        </p>
+                    </div>
+
+                    <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-2xl border border-border/50">
+                        <button
+                            onClick={() => { setActiveTab('create'); resetForm(); }}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all ${activeTab === 'create' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                            <Receipt className="w-4 h-4" />
+                            New Bill
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all ${activeTab === 'history' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                            <History className="w-4 h-4" />
+                            History
+                        </button>
+                    </div>
+                </div>
+
+                {activeTab === 'create' ? (
+                    renderCreateTab()
+                ) : (
+                    <GlassCard className="overflow-hidden border-none p-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-white/5 border-b border-border/50">
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-16">#</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Customer</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Items</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/30">
+                                    {invoices.map((inv: any, idx: number) => (
+                                        <tr key={inv.id} className="hover:bg-white/5 transition-colors">
+                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-bold text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
+                                                <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 mt-1">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {new Date(inv.date).toLocaleTimeString()}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-foreground font-medium">{inv.customer?.name || "-"}</td>
+                                            <td className="px-6 py-4 text-sm text-foreground font-mono">{inv.vehicle?.vehicleNumber || "-"}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                                    inv.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                                                }`}>
+                                                    {inv.billType}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="text-sm font-mono bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
+                                                    {inv.products?.length || 0}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold text-foreground">
+                                                ₹{(inv.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {invoices.length === 0 && (
+                            <div className="p-12 text-center text-muted-foreground">
+                                No invoices found. Create your first invoice using the "New Bill" tab.
+                            </div>
+                        )}
+                    </GlassCard>
+                )}
+            </div>
+        </div>
+    );
+}

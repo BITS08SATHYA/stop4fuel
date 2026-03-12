@@ -1,0 +1,287 @@
+package com.stopforfuel.backend.service;
+
+import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class InvoiceBillService {
+
+    private final InvoiceBillRepository repository;
+    private final CustomerRepository customerRepository;
+    private final VehicleRepository vehicleRepository;
+    private final TankInventoryRepository tankInventoryRepository;
+    private final NozzleInventoryRepository nozzleInventoryRepository;
+    private final ProductInventoryRepository productInventoryRepository;
+    private final com.stopforfuel.backend.repository.NozzleRepository nozzleRepository;
+    private final CustomerService customerService;
+    private final IncentiveService incentiveService;
+
+    public List<InvoiceBill> getAllInvoices() {
+        return repository.findAll();
+    }
+
+    public List<InvoiceBill> getInvoicesByShift(Long shiftId) {
+        return repository.findByShiftId(shiftId);
+    }
+
+    @Transactional
+    public InvoiceBill createInvoice(InvoiceBill invoice) {
+        // --- Validation: Check customer and vehicle status ---
+        if (invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+            Customer customer = customerRepository.findById(invoice.getCustomer().getId())
+                    .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+            if (!customer.canRaiseInvoice()) {
+                throw new RuntimeException(
+                        "Cannot create invoice: Customer '" + customer.getName() +
+                        "' is " + customer.getStatus() +
+                        (customer.isBlocked() ? " (credit limit exceeded)" : " (manually disabled)"));
+            }
+            invoice.setCustomer(customer);
+        }
+
+        if (invoice.getVehicle() != null && invoice.getVehicle().getId() != null) {
+            Vehicle vehicle = vehicleRepository.findById(invoice.getVehicle().getId())
+                    .orElseThrow(() -> new RuntimeException("Vehicle not found"));
+
+            if (!vehicle.canRaiseInvoice()) {
+                throw new RuntimeException(
+                        "Cannot create invoice: Vehicle '" + vehicle.getVehicleNumber() +
+                        "' is " + vehicle.getStatus() +
+                        (vehicle.isBlocked() ? " (liter limit exceeded)" : " (manually disabled)"));
+            }
+            invoice.setVehicle(vehicle);
+        }
+
+        // --- Calculate net amount from products (with incentive discounts) ---
+        BigDecimal totalLiters = BigDecimal.ZERO;
+        if (invoice.getProducts() != null) {
+            BigDecimal totalGross = BigDecimal.ZERO;
+            BigDecimal totalDiscountSum = BigDecimal.ZERO;
+
+            Long custId = (invoice.getCustomer() != null && invoice.getCustomer().getId() != null)
+                    ? invoice.getCustomer().getId() : null;
+
+            for (InvoiceProduct product : invoice.getProducts()) {
+                product.setInvoiceBill(invoice);
+                if (product.getQuantity() != null) {
+                    totalLiters = totalLiters.add(product.getQuantity());
+                }
+
+                // Compute gross amount (qty * unitPrice)
+                BigDecimal qty = product.getQuantity() != null ? product.getQuantity() : BigDecimal.ZERO;
+                BigDecimal price = product.getUnitPrice() != null ? product.getUnitPrice() : BigDecimal.ZERO;
+                BigDecimal gross = qty.multiply(price);
+                product.setGrossAmount(gross);
+                totalGross = totalGross.add(gross);
+
+                // Apply incentive discount if applicable
+                if (custId != null && product.getProduct() != null && product.getProduct().getId() != null) {
+                    incentiveService.getActiveIncentive(custId, product.getProduct().getId())
+                            .ifPresent(incentive -> {
+                                boolean meetsMin = incentive.getMinQuantity() == null
+                                        || qty.compareTo(incentive.getMinQuantity()) >= 0;
+                                if (meetsMin) {
+                                    product.setDiscountRate(incentive.getDiscountRate());
+                                    BigDecimal discAmt = incentive.getDiscountRate().multiply(qty);
+                                    product.setDiscountAmount(discAmt);
+                                    product.setAmount(gross.subtract(discAmt));
+                                }
+                            });
+                }
+
+                // If no discount was applied, set amount = gross
+                if (product.getAmount() == null || product.getDiscountRate() != null) {
+                    // already set above if discount applied
+                } else {
+                    product.setAmount(gross);
+                }
+                if (product.getAmount() == null) {
+                    product.setAmount(gross);
+                }
+
+                if (product.getDiscountAmount() != null) {
+                    totalDiscountSum = totalDiscountSum.add(product.getDiscountAmount());
+                }
+            }
+
+            invoice.setGrossAmount(totalGross);
+            invoice.setTotalDiscount(totalDiscountSum);
+            BigDecimal netAmount = totalGross.subtract(totalDiscountSum);
+            if (invoice.getNetAmount() == null || invoice.getNetAmount().compareTo(BigDecimal.ZERO) == 0) {
+                invoice.setNetAmount(netAmount);
+            }
+        }
+
+        if (invoice.getScid() == null) {
+            invoice.setScid(1L);
+        }
+
+        // --- Save the invoice ---
+        InvoiceBill saved = repository.save(invoice);
+
+        // --- Update consumed liters on vehicle and customer ---
+        if (totalLiters.compareTo(BigDecimal.ZERO) > 0) {
+            updateConsumedLiters(invoice.getVehicle(), invoice.getCustomer(), totalLiters);
+        }
+
+        // --- Auto-deduct inventory ---
+        if (invoice.getProducts() != null) {
+            for (InvoiceProduct invoiceProduct : invoice.getProducts()) {
+                deductInventory(invoiceProduct);
+            }
+        }
+
+        // --- Auto-block check (amount, liters, aging) ---
+        if (invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+            customerService.checkAndAutoBlock(invoice.getCustomer().getId());
+        }
+
+        return saved;
+    }
+
+    /**
+     * Updates consumed liters on both vehicle and customer,
+     * and auto-blocks them if limits are exceeded.
+     */
+    private void updateConsumedLiters(Vehicle vehicle, Customer customer, BigDecimal liters) {
+        if (vehicle != null) {
+            Vehicle v = vehicleRepository.findById(vehicle.getId()).orElse(null);
+            if (v != null) {
+                BigDecimal newConsumed = (v.getConsumedLiters() != null ? v.getConsumedLiters() : BigDecimal.ZERO)
+                        .add(liters);
+                v.setConsumedLiters(newConsumed);
+
+                if (v.getMaxLitersPerMonth() != null
+                        && newConsumed.compareTo(v.getMaxLitersPerMonth()) >= 0
+                        && "ACTIVE".equals(v.getStatus())) {
+                    v.setStatus("BLOCKED");
+                }
+                vehicleRepository.save(v);
+            }
+        }
+
+        if (customer != null) {
+            Customer c = customerRepository.findById(customer.getId()).orElse(null);
+            if (c != null) {
+                BigDecimal newConsumed = (c.getConsumedLiters() != null ? c.getConsumedLiters() : BigDecimal.ZERO)
+                        .add(liters);
+                c.setConsumedLiters(newConsumed);
+
+                if (c.getCreditLimitLiters() != null
+                        && newConsumed.compareTo(c.getCreditLimitLiters()) >= 0
+                        && "ACTIVE".equals(c.getStatus())) {
+                    c.setStatus("BLOCKED");
+                }
+                customerRepository.save(c);
+            }
+        }
+    }
+
+    /**
+     * Auto-deducts inventory based on the invoice product line item.
+     * For each product sold:
+     * 1. Tank inventory: reduce closeStock by quantity (if nozzle → tank link exists)
+     * 2. Product inventory: reduce closeStock by quantity
+     * 3. Nozzle inventory: advance closeMeterReading by quantity
+     */
+    private void deductInventory(InvoiceProduct invoiceProduct) {
+        if (invoiceProduct.getQuantity() == null || invoiceProduct.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        double qty = invoiceProduct.getQuantity().doubleValue();
+
+        // --- 1. Tank inventory deduction (via nozzle → tank) ---
+        if (invoiceProduct.getNozzle() != null && invoiceProduct.getNozzle().getId() != null) {
+            Nozzle nozzle = nozzleRepository.findById(invoiceProduct.getNozzle().getId()).orElse(null);
+            if (nozzle != null && nozzle.getTank() != null) {
+                Long tankId = nozzle.getTank().getId();
+                TankInventory tankInv = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tankId);
+                if (tankInv != null) {
+                    double currentClose = tankInv.getCloseStock() != null ? tankInv.getCloseStock() : 0.0;
+                    tankInv.setCloseStock(currentClose - qty);
+                    // Recalculate saleStock
+                    double total = tankInv.getTotalStock() != null ? tankInv.getTotalStock() : 0.0;
+                    tankInv.setSaleStock(total - tankInv.getCloseStock());
+                    tankInventoryRepository.save(tankInv);
+                }
+
+                // --- 3. Nozzle meter reading update ---
+                NozzleInventory nozzleInv = nozzleInventoryRepository
+                        .findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
+                if (nozzleInv != null) {
+                    double currentReading = nozzleInv.getCloseMeterReading() != null
+                            ? nozzleInv.getCloseMeterReading() : 0.0;
+                    nozzleInv.setCloseMeterReading(currentReading + qty);
+                    // Recalculate sales
+                    double openReading = nozzleInv.getOpenMeterReading() != null
+                            ? nozzleInv.getOpenMeterReading() : 0.0;
+                    nozzleInv.setSales(nozzleInv.getCloseMeterReading() - openReading);
+                    nozzleInventoryRepository.save(nozzleInv);
+                }
+            }
+        }
+
+        // --- 2. Product inventory deduction ---
+        if (invoiceProduct.getProduct() != null && invoiceProduct.getProduct().getId() != null) {
+            Long productId = invoiceProduct.getProduct().getId();
+            ProductInventory productInv = productInventoryRepository
+                    .findTopByProductIdOrderByDateDescIdDesc(productId);
+            if (productInv != null) {
+                double currentClose = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
+                productInv.setCloseStock(currentClose - qty);
+                // Recalculate sales
+                double total = productInv.getTotalStock() != null ? productInv.getTotalStock() : 0.0;
+                productInv.setSales(total - productInv.getCloseStock());
+                productInventoryRepository.save(productInv);
+            }
+        }
+    }
+
+    public org.springframework.data.domain.Page<InvoiceBill> getInvoicesByCustomer(
+            Long customerId, String billType, String paymentStatus,
+            java.time.LocalDateTime fromDate, java.time.LocalDateTime toDate,
+            org.springframework.data.domain.Pageable pageable) {
+
+        boolean hasBillType = billType != null && !billType.isEmpty();
+        boolean hasPaymentStatus = paymentStatus != null && !paymentStatus.isEmpty();
+        boolean hasDateRange = fromDate != null && toDate != null;
+
+        if (hasDateRange) {
+            if (hasBillType && hasPaymentStatus) {
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, billType, paymentStatus, fromDate, toDate, pageable);
+            } else if (hasBillType) {
+                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, billType, fromDate, toDate, pageable);
+            } else if (hasPaymentStatus) {
+                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, paymentStatus, fromDate, toDate, pageable);
+            } else {
+                return repository.findByCustomerIdAndDateRange(customerId, fromDate, toDate, pageable);
+            }
+        } else {
+            if (hasBillType && hasPaymentStatus) {
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(customerId, billType, paymentStatus, pageable);
+            } else if (hasBillType) {
+                return repository.findByCustomerIdAndBillTypeOrderByDateDesc(customerId, billType, pageable);
+            } else if (hasPaymentStatus) {
+                return repository.findByCustomerIdAndPaymentStatusOrderByDateDesc(customerId, paymentStatus, pageable);
+            } else {
+                return repository.findByCustomerIdOrderByDateDesc(customerId, pageable);
+            }
+        }
+    }
+
+    public InvoiceBill getInvoiceById(Long id) {
+        return repository.findById(id).orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+    }
+
+    public void deleteInvoice(Long id) {
+        repository.deleteById(id);
+    }
+}

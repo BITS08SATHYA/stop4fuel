@@ -1,0 +1,53 @@
+yet to start
+
+11. Implement filter options to all the management tables (Working) 
+1. Income bill/statement management (Working)
+2. Advance Management (Working)
+12. Extensively elaborate the income bill/statement management (Working)
+	11.1 Dashboards for that
+3. Shift Management 
+9. Dashboards (properly show the necessary informations)
+10. Properly Reassemble
+	10.1 Employee Management
+	10.2 Customer Management (working) 
+	10.3 Invoice (bill/statement) Management (Working)
+		9.3.1 Advance Management (Working)
+	10.4 Product Management (Working)
+	10.5 Inventory Management (Working)
+	10.6 Marketing Management	
+	
+non-application tasks	
+4. Spring security
+	3.a AWS Cognito
+5. TLS/SSL Configurations
+6. login/logout page
+7. Database final work
+8. Reports (JasperReport Server)
+	7.1 Daily Sales Report
+	7.2 Inventory Report (Summary and detailed) by individual and total
+	7.3 Customer Balance Report (Summary and Detailed) by individual and total
+	7.4 Sales Tax Templates (automatically export to pdf or excel) 
+	7.5 Oil Calculation Templates (automatically export to pdf or excel)
+	7.6 SBI bank Customer Balance report (local and statement party balances)
+13. Implement Spring AI in the dashboard (LLM designed for this application alone)
+14. Implement Authenticator application kinda integration into the application for otp purposes (during the validation of credit bills)
+15. S3 bucket integrations for storing pics, pdfs (bills and statements) and photocopies of bills (signed by authorative) and indents photocopies
+16. Phonepe or PayTM Integrations
+17. IOT Integrations (future phase)
+
+
+Requirements/Questions/Thoughts:
+1. If i reassign or mapping a vehicle (/api/customers/mappings)  from one customer to another ...will that vehicle invoice bill histories be reflected to the new added customer ledger balance ... 
+
+
+2.  another importatnt distinction ..or the problem is that i would like to maintain the gowdown stock and stock with cashier seperately (it would be benefinical for the shift management daily) and if the stock needs to move from godown to cashier stock ..it should be easy one and should be recorded also...
+
+3. also i would like to maintain a purchase invoice a complete CRUD for it ...purchasing fuel and non-fuel (accessories) 
+
+4. while adding the product, it is not allowing to include Grade oil type and but successfully choose the variant type... similarly in the grade page ..still the oil types and grades are CRUD independetently ....
+
+5. in the tank management, add an another field AvailableStock that should have the updated value (how much the tank currently holds) ..add a tag like widget on the tank to show its presense 
+
+6. If i disable the product, an invoice cannot be using the product...
+
+
