@@ -26,7 +26,9 @@ import {
     UserCog,
     ClipboardList,
     Warehouse,
-    Clock
+    Clock,
+    BarChart3,
+    PieChart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -62,6 +64,7 @@ const pumpManagementNav = [
 ];
 
 const inventoryManagementNav = [
+    { name: "Operational Dashboard", href: "/operations/dashboard", icon: BarChart3 },
     { name: "Tank Dip Readings", href: "/operations/inventory/tanks", icon: Ruler },
     { name: "Nozzle Meter Readings", href: "/operations/inventory/nozzles", icon: Hash },
     { name: "Product Stock", href: "/operations/inventory/products", icon: Archive },
@@ -76,6 +79,7 @@ const invoiceManagementNav = [
 ];
 
 const paymentManagementNav = [
+    { name: "Payment Dashboard", href: "/payments/dashboard", icon: PieChart },
     { name: "Credit Overview", href: "/payments/credit", icon: Eye },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
     { name: "Payments", href: "/payments", icon: CreditCard },
