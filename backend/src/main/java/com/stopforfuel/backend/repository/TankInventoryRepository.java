@@ -12,4 +12,5 @@ public interface TankInventoryRepository extends JpaRepository<TankInventory, Lo
     List<TankInventory> findByDate(LocalDate date);
     List<TankInventory> findByTankId(Long tankId);
     TankInventory findTopByTankIdOrderByDateDescIdDesc(Long tankId);
+    List<TankInventory> findByShiftId(Long shiftId);
 }

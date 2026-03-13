@@ -15,6 +15,8 @@ yet to start
 	10.4 Product Management (Working)
 	10.5 Inventory Management (Working)
 	10.6 Marketing Management	
+	10.7 Operational Dashboards
+	10.8 Invoice Payment Dashboards 
 	
 non-application tasks	
 4. Spring security
@@ -32,11 +34,11 @@ non-application tasks
 13. Implement Spring AI in the dashboard (LLM designed for this application alone)
 14. Implement Authenticator application kinda integration into the application for otp purposes (during the validation of credit bills)
 15. S3 bucket integrations for storing pics, pdfs (bills and statements) and photocopies of bills (signed by authorative) and indents photocopies
-16. Phonepe or PayTM Integrations
+16. PayTM Integrations
 17. IOT Integrations (future phase)
 
 
-Requirements/Questions/Thoughts:
+Requirements/Questions/Thoughts/Improvements:
 1. If i reassign or mapping a vehicle (/api/customers/mappings)  from one customer to another ...will that vehicle invoice bill histories be reflected to the new added customer ledger balance ... 
 
 
@@ -49,5 +51,10 @@ Requirements/Questions/Thoughts:
 5. in the tank management, add an another field AvailableStock that should have the updated value (how much the tank currently holds) ..add a tag like widget on the tank to show its presense 
 
 6. If i disable the product, an invoice cannot be using the product...
+
+7. Have you created a frontend page and backend api for the expense and incentives (towards cash, credit invoices (bills and statements)  ...And I am under the impression that the (Card, UPI, cheque, CCMS, bank Transfer -- an entry will be automatically created when give the payment transaction of the invoice credit bill/statement...and also when i create the a cash invoice) ... a seperate UI home (cash advance) needs to be created for taking cash from the petrol bunk (night(home advance) or regular advance)  .....
+
+8. employee management..currently it has a functional employee addittion. ... i want to include their aadhar card, multiple phone numbers, address , their salary (management and it s histories, any advances that they got) ...and additionally ..(their photo- ---> the usual records the photo url (mostly saved in S3 bucket) ...and of course their bank details ...anymore it needed ...
+
 
 

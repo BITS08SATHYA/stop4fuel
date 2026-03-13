@@ -25,7 +25,8 @@ import {
     Eye,
     UserCog,
     ClipboardList,
-    Warehouse
+    Warehouse,
+    Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -66,6 +67,10 @@ const inventoryManagementNav = [
     { name: "Product Stock", href: "/operations/inventory/products", icon: Archive },
 ];
 
+const shiftManagementNav = [
+    { name: "Shift Register", href: "/operations/shifts", icon: Clock },
+];
+
 const invoiceManagementNav = [
     { name: "Invoices", href: "/operations/invoices", icon: FileText },
 ];
@@ -93,6 +98,7 @@ const sections: NavSection[] = [
     { label: "Product Management", items: productManagementNav },
     { label: "Pump Management", items: pumpManagementNav },
     { label: "Inventory", items: inventoryManagementNav },
+    { label: "Shift Management", items: shiftManagementNav },
     { label: "Invoice Management", items: invoiceManagementNav },
     { label: "Payment Management", items: paymentManagementNav },
     { label: "System", items: systemNav },
