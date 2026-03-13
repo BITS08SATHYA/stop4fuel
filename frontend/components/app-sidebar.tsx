@@ -28,7 +28,8 @@ import {
     Warehouse,
     Clock,
     BarChart3,
-    PieChart
+    PieChart,
+    Wallet
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -72,6 +73,7 @@ const inventoryManagementNav = [
 
 const shiftManagementNav = [
     { name: "Shift Register", href: "/operations/shifts", icon: Clock },
+    { name: "Cash Advances", href: "/operations/advances", icon: Wallet },
 ];
 
 const invoiceManagementNav = [
