@@ -44,4 +44,39 @@ public class EmployeeController {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/{id}/salary-history")
+    public List<SalaryHistory> getSalaryHistory(@PathVariable Long id) {
+        return employeeService.getSalaryHistory(id);
+    }
+
+    @PostMapping("/{id}/salary-revision")
+    public SalaryHistory addSalaryRevision(@PathVariable Long id, @RequestBody SalaryHistory history) {
+        Employee employee = new Employee();
+        employee.setId(id);
+        history.setEmployee(employee);
+        return employeeService.addSalaryRevision(history);
+    }
+
+    @GetMapping("/{id}/advances")
+    public List<EmployeeAdvance> getAdvances(@PathVariable Long id) {
+        return employeeService.getAdvances(id);
+    }
+
+    @PostMapping("/{id}/advances")
+    public EmployeeAdvance addAdvance(@PathVariable Long id, @RequestBody EmployeeAdvance advance) {
+        Employee employee = new Employee();
+        employee.setId(id);
+        advance.setEmployee(employee);
+        return employeeService.addAdvance(advance);
+    }
+
+    @PatchMapping("/advances/{advanceId}/status")
+    public ResponseEntity<EmployeeAdvance> updateAdvanceStatus(@PathVariable Long advanceId, @RequestParam String status) {
+        try {
+            return ResponseEntity.ok(employeeService.updateAdvanceStatus(advanceId, status));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }
