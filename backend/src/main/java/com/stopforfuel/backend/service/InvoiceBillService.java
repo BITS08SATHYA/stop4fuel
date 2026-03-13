@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.entity.transaction.*;
 import com.stopforfuel.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,11 @@ public class InvoiceBillService {
     private final NozzleInventoryRepository nozzleInventoryRepository;
     private final ProductInventoryRepository productInventoryRepository;
     private final com.stopforfuel.backend.repository.NozzleRepository nozzleRepository;
+    private final ProductRepository productRepository;
     private final CustomerService customerService;
     private final IncentiveService incentiveService;
+    private final ShiftService shiftService;
+    private final ShiftTransactionService shiftTransactionService;
 
     public List<InvoiceBill> getAllInvoices() {
         return repository.findAll();
@@ -58,6 +62,20 @@ public class InvoiceBillService {
                         (vehicle.isBlocked() ? " (liter limit exceeded)" : " (manually disabled)"));
             }
             invoice.setVehicle(vehicle);
+        }
+
+        // --- Validate all products are active ---
+        if (invoice.getProducts() != null) {
+            for (InvoiceProduct ip : invoice.getProducts()) {
+                if (ip.getProduct() != null && ip.getProduct().getId() != null) {
+                    Product prod = productRepository.findById(ip.getProduct().getId())
+                            .orElseThrow(() -> new RuntimeException("Product not found"));
+                    if (!prod.isActive()) {
+                        throw new RuntimeException(
+                                "Cannot create invoice: Product '" + prod.getName() + "' is disabled.");
+                    }
+                }
+            }
         }
 
         // --- Calculate net amount from products (with incentive discounts) ---
@@ -144,7 +162,64 @@ public class InvoiceBillService {
             customerService.checkAndAutoBlock(invoice.getCustomer().getId());
         }
 
+        // --- Auto-create shift transaction for CASH invoices ---
+        autoCreateShiftTransaction(saved);
+
         return saved;
+    }
+
+    /**
+     * Auto-creates a shift transaction entry when a CASH invoice is created.
+     * Maps the invoice payment mode to the appropriate transaction type.
+     */
+    private void autoCreateShiftTransaction(InvoiceBill invoice) {
+        if (!"CASH".equals(invoice.getBillType())) {
+            return; // Only auto-create for cash invoices
+        }
+
+        Shift activeShift = shiftService.getActiveShift();
+        if (activeShift == null) {
+            return; // No open shift, skip auto-creation
+        }
+
+        BigDecimal amount = invoice.getNetAmount();
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        String paymentMode = invoice.getPaymentMode();
+        if (paymentMode == null) paymentMode = "CASH";
+
+        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : null;
+        String remark = "Auto: Invoice #" + invoice.getId()
+                + (customerName != null ? " - " + customerName : "");
+
+        ShiftTransaction txn;
+        switch (paymentMode.toUpperCase()) {
+            case "UPI":
+                UpiTransaction upiTxn = new UpiTransaction();
+                upiTxn.setReceivedAmount(amount);
+                upiTxn.setRemarks(remark);
+                txn = upiTxn;
+                break;
+            case "CARD":
+                CardTransaction cardTxn = new CardTransaction();
+                cardTxn.setReceivedAmount(amount);
+                cardTxn.setRemarks(remark);
+                if (customerName != null) cardTxn.setCustomerName(customerName);
+                txn = cardTxn;
+                break;
+            default:
+                CashTransaction cashTxn = new CashTransaction();
+                cashTxn.setReceivedAmount(amount);
+                cashTxn.setRemarks(remark);
+                txn = cashTxn;
+                break;
+        }
+
+        txn.setShiftId(activeShift.getId());
+        txn.setScid(invoice.getScid());
+        shiftTransactionService.create(txn);
     }
 
     /**

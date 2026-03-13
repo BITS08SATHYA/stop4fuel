@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.entity.transaction.*;
 import com.stopforfuel.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,8 @@ public class PaymentService {
     private final InvoiceBillRepository invoiceBillRepository;
     private final CustomerRepository customerRepository;
     private final PaymentModeRepository paymentModeRepository;
+    private final ShiftService shiftService;
+    private final ShiftTransactionService shiftTransactionService;
 
     public Page<Payment> getPayments(Pageable pageable) {
         return paymentRepository.findAll(pageable);
@@ -108,6 +111,10 @@ public class PaymentService {
         }
 
         statementRepository.save(statement);
+
+        // Auto-create shift transaction for this payment
+        autoCreateShiftTransaction(saved);
+
         return saved;
     }
 
@@ -160,6 +167,9 @@ public class PaymentService {
             invoiceBillRepository.save(bill);
         }
 
+        // Auto-create shift transaction for this payment
+        autoCreateShiftTransaction(saved);
+
         return saved;
     }
 
@@ -197,6 +207,73 @@ public class PaymentService {
         summary.totalReceived = totalReceived;
         summary.balanceAmount = balance.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : balance;
         return summary;
+    }
+
+    /**
+     * Auto-creates a shift transaction when a credit payment is recorded.
+     * Maps the PaymentMode name to the appropriate transaction type.
+     */
+    private void autoCreateShiftTransaction(Payment payment) {
+        Shift activeShift = shiftService.getActiveShift();
+        if (activeShift == null) {
+            return;
+        }
+
+        BigDecimal amount = payment.getAmount();
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        String modeName = payment.getPaymentMode() != null ? payment.getPaymentMode().getModeName() : "CASH";
+        String customerName = payment.getCustomer() != null ? payment.getCustomer().getName() : null;
+        String remark = "Auto: Payment #" + payment.getId()
+                + (customerName != null ? " - " + customerName : "");
+
+        ShiftTransaction txn;
+        switch (modeName.toUpperCase()) {
+            case "UPI":
+                UpiTransaction upiTxn = new UpiTransaction();
+                upiTxn.setReceivedAmount(amount);
+                upiTxn.setRemarks(remark);
+                txn = upiTxn;
+                break;
+            case "CARD":
+                CardTransaction cardTxn = new CardTransaction();
+                cardTxn.setReceivedAmount(amount);
+                cardTxn.setRemarks(remark);
+                if (customerName != null) cardTxn.setCustomerName(customerName);
+                txn = cardTxn;
+                break;
+            case "CHEQUE":
+                ChequeTransaction chequeTxn = new ChequeTransaction();
+                chequeTxn.setReceivedAmount(amount);
+                chequeTxn.setRemarks(remark);
+                txn = chequeTxn;
+                break;
+            case "BANK TRANSFER":
+            case "BANK":
+                BankTransaction bankTxn = new BankTransaction();
+                bankTxn.setReceivedAmount(amount);
+                bankTxn.setRemarks(remark);
+                txn = bankTxn;
+                break;
+            case "CCMS":
+                CcmsTransaction ccmsTxn = new CcmsTransaction();
+                ccmsTxn.setReceivedAmount(amount);
+                ccmsTxn.setRemarks(remark);
+                txn = ccmsTxn;
+                break;
+            default:
+                CashTransaction cashTxn = new CashTransaction();
+                cashTxn.setReceivedAmount(amount);
+                cashTxn.setRemarks(remark);
+                txn = cashTxn;
+                break;
+        }
+
+        txn.setShiftId(activeShift.getId());
+        txn.setScid(payment.getScid());
+        shiftTransactionService.create(txn);
     }
 
     /**

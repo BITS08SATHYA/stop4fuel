@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.ProductInventory;
 import com.stopforfuel.backend.repository.ProductInventoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import java.util.List;
 public class ProductInventoryService {
 
     private final ProductInventoryRepository repository;
+    private final ShiftService shiftService;
 
     public List<ProductInventory> getAll() {
         return repository.findAll();
@@ -34,6 +36,12 @@ public class ProductInventoryService {
     public ProductInventory save(ProductInventory inventory) {
         if (inventory.getScid() == null) {
             inventory.setScid(1L);
+        }
+        if (inventory.getShiftId() == null) {
+            Shift activeShift = shiftService.getActiveShift();
+            if (activeShift != null) {
+                inventory.setShiftId(activeShift.getId());
+            }
         }
         calculateFields(inventory);
         return repository.save(inventory);

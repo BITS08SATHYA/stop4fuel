@@ -685,6 +685,34 @@ export const updateIncentive = (id: number, incentive: Partial<Incentive>): Prom
 export const deleteIncentive = (id: number): Promise<void> =>
     fetch(`${API_BASE_URL}/incentives/${id}`, { method: 'DELETE' }).then(handleResponse);
 
+// Shifts
+export interface Shift {
+    id: number;
+    startTime: string;
+    endTime?: string;
+    status: string; // OPEN, CLOSED, RECONCILED
+    attendant?: User;
+    scid?: number;
+}
+
+export const getShifts = (): Promise<Shift[]> =>
+    fetch(`${API_BASE_URL}/shifts`).then(handleResponse);
+
+export const getActiveShift = (): Promise<Shift | null> =>
+    fetch(`${API_BASE_URL}/shifts/active`).then(handleResponse);
+
+export const openShift = (shift: Partial<Shift>): Promise<Shift> =>
+    fetch(`${API_BASE_URL}/shifts/open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shift),
+    }).then(handleResponse);
+
+export const closeShift = (id: number): Promise<Shift> =>
+    fetch(`${API_BASE_URL}/shifts/${id}/close`, {
+        method: 'POST',
+    }).then(handleResponse);
+
 // Shift Transactions
 export interface ShiftTransaction {
     id?: number;

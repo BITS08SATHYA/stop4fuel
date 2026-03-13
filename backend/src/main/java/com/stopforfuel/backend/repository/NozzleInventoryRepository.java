@@ -12,4 +12,5 @@ public interface NozzleInventoryRepository extends JpaRepository<NozzleInventory
     List<NozzleInventory> findByDate(LocalDate date);
     List<NozzleInventory> findByNozzleId(Long nozzleId);
     NozzleInventory findTopByNozzleIdOrderByDateDescIdDesc(Long nozzleId);
+    List<NozzleInventory> findByShiftId(Long shiftId);
 }
