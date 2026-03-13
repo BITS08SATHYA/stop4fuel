@@ -796,3 +796,41 @@ export const createExpenseType = (type: Partial<ExpenseType>): Promise<ExpenseTy
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(type),
     }).then(handleResponse);
+
+// Dashboard
+export interface DashboardStats {
+    todayRevenue: number;
+    todayFuelVolume: number;
+    todayInvoiceCount: number;
+    todayCashInvoices: number;
+    todayCreditInvoices: number;
+    activeShiftId: number | null;
+    activeShiftStartTime: string | null;
+    shiftCash: number | null;
+    shiftUpi: number | null;
+    shiftCard: number | null;
+    shiftExpense: number | null;
+    shiftTotal: number | null;
+    shiftNet: number | null;
+    totalTanks: number;
+    activeTanks: number;
+    totalPumps: number;
+    activePumps: number;
+    totalNozzles: number;
+    activeNozzles: number;
+    totalOutstanding: number;
+    totalCreditCustomers: number;
+    recentInvoices: RecentInvoiceItem[];
+}
+
+export interface RecentInvoiceItem {
+    id: number;
+    date: string;
+    customerName: string | null;
+    billType: string;
+    amount: number;
+    paymentStatus: string;
+}
+
+export const getDashboardStats = (): Promise<DashboardStats> =>
+    fetch(`${API_BASE_URL}/dashboard/stats`).then(handleResponse);

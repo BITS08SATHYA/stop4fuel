@@ -57,4 +57,115 @@ Requirements/Questions/Thoughts/Improvements:
 8. employee management..currently it has a functional employee addittion. ... i want to include their aadhar card, multiple phone numbers, address , their salary (management and it s histories, any advances that they got) ...and additionally ..(their photo- ---> the usual records the photo url (mostly saved in S3 bucket) ...and of course their bank details ...anymore it needed ...
 
 
+# Status Report
+                                                                               
+                                                                                               
+  #: 11                                                                                        
+  Task: Filter options on all management tables                                                
+  Status: ~95% Done                                                                            
+  Details: 15/17 pages have filters. Only /customers (main list) is missing a filter bar.
+    /company doesn't need one (it's a form, not a table).                                      
+  ────────────────────────────────────────                                                     
+  #: 1                                                                                         
+  Task: Income bill/statement management                                                       
+  Status: Done                                                                                 
+  Details: Full CRUD for invoices (cash + credit), statements (generate/preview/manage),       
+    payments (statement + bill). All working.                                                  
+  ────────────────────────────────────────                                                     
+  #: 2
+  Task: Advance Management
+  Status: Not Done
+  Details: No Advance entity, no backend API, no frontend UI for cash advances (home advance,
+    salary advance). Only marked "Working" in the list but nothing exists.
+  ────────────────────────────────────────
+  #: 12
+  Task: Extensively elaborate income bill/statement
+  Status: Partial
+  Details: Invoices, statements, payments, credit overview, customer ledger all work. Missing:
+    invoice/payment dashboards (item 12.1).
+  ────────────────────────────────────────
+  #: 12.1
+  Task: Dashboards for invoice/payment
+  Status: Not Done
+  Details: No dedicated analytics dashboard for invoices or payments.
+  ────────────────────────────────────────
+  #: 3
+  Task: Shift Management
+  Status: Done
+  Details: Backend (all 8 txn types) + frontend shift register page. Auto-creates shift txns on
+
+    invoice/payment. Missing: summary for Cheque/Bank/CCMS/NightCash in breakdown, and
+    ShiftSalesReport DTO is unused.
+  ────────────────────────────────────────
+  #: 9
+  Task: Dashboards
+  Status: Not Done
+  Details: Main dashboard (/) has all hardcoded dummy data — no real API integration. No
+    operational or financial dashboards.
+  ────────────────────────────────────────
+  #: 10
+  Task: Properly Reassemble
+  Status: See sub-items
+  Details:
+  ────────────────────────────────────────
+  #: 10.1
+  Task: Employee Management
+  Status: Basic Only
+  Details: CRUD works but missing: Aadhar, multiple phones, address, salary history, advances,
+    photo (S3), bank details. Entity is minimal.
+  ────────────────────────────────────────
+  #: 10.2
+  Task: Customer Management
+  Status: Done
+  Details: Full CRUD, groups, vehicles, mappings, credit blocking, profile overlay.
+  ────────────────────────────────────────
+  #: 10.3
+  Task: Invoice Management
+  Status: Done
+  Details: Full invoice creation, history, statement generation, payment recording.
+  ────────────────────────────────────────
+  #: 10.3.1
+  Task: Advance Management
+  Status: Not Done
+  Details: Same as #2 above.
+  ────────────────────────────────────────
+  #: 10.4
+  Task: Product Management
+  Status: Done
+  Details: Table-based CRUD with filters (name, HSN, category, status).
+  ────────────────────────────────────────
+  #: 10.5
+  Task: Inventory Management
+  Status: Done
+  Details: Tank dip, nozzle meter, product stock — all table-based with filters,
+    auto-calculations.
+  ────────────────────────────────────────
+  #: 10.6
+  Task: Marketing Management
+  Status: Not Done
+  Details: Sidebar link exists but page is missing (404). No backend either.
+  ────────────────────────────────────────
+  #: 10.7
+  Task: Operational Dashboards
+  Status: Not Done
+  Details: Nothing built.
+  ────────────────────────────────────────
+  #: 10.8
+  Task: Invoice Payment Dashboards
+  Status: Not Done
+  Details: Nothing built.
+
+  Summary
+
+  ┌──────────┬────────────────────────────────────────────────┐
+  │ Category │                     Count                      │
+  ├──────────┼────────────────────────────────────────────────┤
+  │ Done     │ 7 items (1, 3, 10.2, 10.3, 10.4, 10.5, 11~)    │
+  ├──────────┼────────────────────────────────────────────────┤
+  │ Partial  │ 2 items (12, 10.1)                             │
+  ├──────────┼────────────────────────────────────────────────┤
+  │ Not Done │ 7 items (2, 9, 10.6, 10.7, 10.8, 12.1, 10.3.1) │
+  └──────────┴────────────────────────────────────────────────┘
+
+
 
