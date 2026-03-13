@@ -3,6 +3,7 @@
 import { GlassCard } from "@/components/ui/glass-card";
 import { Users, Truck, Fuel, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/api/station";
 
 interface Stats {
     totalCustomers: number;
@@ -29,7 +30,7 @@ export function CustomerStats() {
 
     const fetchStats = async () => {
         try {
-            const res = await fetch("http://localhost:8080/api/customers/stats");
+            const res = await fetch(`${API_BASE_URL}/customers/stats`);
             if (res.ok) {
                 setStats(await res.json());
             }

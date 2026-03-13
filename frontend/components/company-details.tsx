@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Building2, Save } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api/station";
 
 interface Company {
     id?: number;
@@ -35,7 +36,7 @@ export function CompanyDetails() {
 
     const fetchCompany = async () => {
         try {
-            const response = await fetch("http://localhost:8080/api/companies");
+            const response = await fetch(`${API_BASE_URL}/companies`);
             if (!response.ok) throw new Error("Failed to fetch companies");
             const data = await response.json();
             if (data && data.length > 0) {
@@ -54,8 +55,8 @@ export function CompanyDetails() {
 
         try {
             const url = company.id
-                ? `http://localhost:8080/api/companies/${company.id}`
-                : "http://localhost:8080/api/companies";
+                ? `${API_BASE_URL}/companies/${company.id}`
+                : `${API_BASE_URL}/companies`;
             const method = company.id ? "PUT" : "POST";
 
             const response = await fetch(url, {

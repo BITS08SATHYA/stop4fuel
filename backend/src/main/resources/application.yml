@@ -2,12 +2,15 @@ spring:
   application:
     name: stopforfuel
   datasource:
-    url: jdbc:postgresql://172.19.0.2:5432/stopforfuel
-    username: postgres
-    password: password
+    url: ${DATABASE_URL:jdbc:postgresql://172.19.0.2:5432/stopforfuel}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:password}
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: ${SERVER_PORT:8080}

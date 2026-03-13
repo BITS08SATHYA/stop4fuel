@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { CustomerForm } from "@/components/customers/customer-form";
+import { API_BASE_URL } from "@/lib/api/station";
 
 export default function CustomersPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,7 +19,7 @@ export default function CustomersPage() {
 
     const handleSaveCustomer = async (formData: any) => {
         try {
-            const res = await fetch("http://localhost:8080/api/customers", {
+            const res = await fetch(`${API_BASE_URL}/customers`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

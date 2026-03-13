@@ -1,4 +1,5 @@
 import React from "react";
+import { API_BASE_URL } from "@/lib/api/station";
 
 interface CustomerStepProps {
     data: any;
@@ -16,11 +17,11 @@ export function CustomerStep({ data, updateData }: CustomerStepProps) {
         // For development, we might need full URL if CORS is an issue or proxy not set.
         const fetchOptions = async () => {
             try {
-                const partiesRes = await fetch("http://localhost:8080/api/parties");
+                const partiesRes = await fetch(`${API_BASE_URL}/parties`);
                 const partiesData = await partiesRes.json();
                 setParties(Array.isArray(partiesData) ? partiesData : partiesData.content || []);
 
-                const groupsRes = await fetch("http://localhost:8080/api/groups");
+                const groupsRes = await fetch(`${API_BASE_URL}/groups`);
                 const groupsData = await groupsRes.json();
                 setGroups(Array.isArray(groupsData) ? groupsData : groupsData.content || []);
             } catch (error) {

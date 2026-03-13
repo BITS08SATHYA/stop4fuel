@@ -81,7 +81,9 @@ const emptyEmployee: Omit<Employee, "id"> = {
     bankBranch: "",
 };
 
-const API_BASE = "http://localhost:8080/api/employees";
+import { API_BASE_URL } from "@/lib/api/station";
+
+const API_BASE = `${API_BASE_URL}/employees`;
 
 const inputClass =
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";

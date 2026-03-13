@@ -5,6 +5,7 @@ import { Plus, Search, Edit2, Trash2, ChevronDown, ChevronRight, Users } from "l
 import { Modal } from "@/components/ui/modal";
 import { GroupStep } from "@/components/steps/group-step";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/lib/api/station";
 
 export default function GroupsPage() {
     const [groups, setGroups] = useState<any[]>([]);
@@ -23,7 +24,7 @@ export default function GroupsPage() {
 
     const fetchGroups = async () => {
         try {
-            const res = await fetch("http://localhost:8080/api/groups");
+            const res = await fetch(`${API_BASE_URL}/groups`);
             if (res.ok) {
                 const data = await res.json();
                 setGroups(Array.isArray(data) ? data : data.content || []);
@@ -42,7 +43,7 @@ export default function GroupsPage() {
         if (!groupCustomers[groupId]) {
             setLoadingCustomers(groupId);
             try {
-                const res = await fetch(`http://localhost:8080/api/groups/${groupId}/customers?size=100`);
+                const res = await fetch(`${API_BASE_URL}/groups/${groupId}/customers?size=100`);
                 if (res.ok) {
                     const data = await res.json();
                     setGroupCustomers(prev => ({ ...prev, [groupId]: data.content || [] }));
@@ -67,7 +68,7 @@ export default function GroupsPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this group?")) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/groups/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/groups/${id}`, {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -82,8 +83,8 @@ export default function GroupsPage() {
         setLoading(true);
         try {
             const url = formData.id 
-                ? `http://localhost:8080/api/groups/${formData.id}`
-                : "http://localhost:8080/api/groups";
+                ? `${API_BASE_URL}/groups/${formData.id}`
+                : `${API_BASE_URL}/groups`;
             const method = formData.id ? "PUT" : "POST";
 
             const res = await fetch(url, {
