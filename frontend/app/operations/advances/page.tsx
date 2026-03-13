@@ -16,8 +16,7 @@ import {
     Hash,
     AlertCircle,
 } from "lucide-react";
-
-const API_BASE = "http://localhost:8080/api";
+import { API_BASE_URL } from "@/lib/api/station";
 
 // --- Types ---
 
@@ -75,14 +74,14 @@ function formatCurrency(val?: number) {
 // --- API helpers ---
 
 async function fetchAdvances(): Promise<CashAdvance[]> {
-    const res = await fetch(`${API_BASE}/advances`);
+    const res = await fetch(`${API_BASE_URL}/advances`);
     if (!res.ok) throw new Error("Failed to fetch advances");
     return res.json();
 }
 
 async function fetchActiveShift(): Promise<{ id: number } | null> {
     try {
-        const res = await fetch(`${API_BASE}/shifts/active`);
+        const res = await fetch(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
         return res.json();
     } catch {
@@ -98,7 +97,7 @@ async function createAdvance(data: {
     purpose: string;
     remarks: string;
 }): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE}/advances`, {
+    const res = await fetch(`${API_BASE_URL}/advances`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -111,7 +110,7 @@ async function createAdvance(data: {
 }
 
 async function returnAdvance(id: number, data: { returnedAmount: number; returnRemarks: string }): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE}/advances/${id}/return`, {
+    const res = await fetch(`${API_BASE_URL}/advances/${id}/return`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -124,7 +123,7 @@ async function returnAdvance(id: number, data: { returnedAmount: number; returnR
 }
 
 async function cancelAdvance(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE}/advances/${id}/cancel`, { method: "PATCH" });
+    const res = await fetch(`${API_BASE_URL}/advances/${id}/cancel`, { method: "PATCH" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to cancel advance");
@@ -132,7 +131,7 @@ async function cancelAdvance(id: number): Promise<void> {
 }
 
 async function deleteAdvance(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE}/advances/${id}`, { method: "DELETE" });
+    const res = await fetch(`${API_BASE_URL}/advances/${id}`, { method: "DELETE" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to delete advance");

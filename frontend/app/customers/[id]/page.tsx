@@ -10,7 +10,9 @@ import {
     getActiveProducts, type Incentive, type Product
 } from "@/lib/api/station";
 
-const API = "http://localhost:8080/api";
+import { API_BASE_URL } from "@/lib/api/station";
+
+const API = API_BASE_URL;
 
 function statusVariant(status: string): "success" | "danger" | "warning" | "default" {
     if (status === "ACTIVE") return "success";

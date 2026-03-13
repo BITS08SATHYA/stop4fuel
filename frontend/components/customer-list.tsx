@@ -5,6 +5,7 @@ import { Search, Filter, MoreHorizontal, Edit, Trash2, Eye, ChevronLeft, Chevron
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/lib/api/station";
 
 // Mock Data (Updated to match schema)
 export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
@@ -26,7 +27,7 @@ export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
 
     const fetchGroups = async () => {
         try {
-            const res = await fetch("http://localhost:8080/api/groups");
+            const res = await fetch(`${API_BASE_URL}/groups`);
             if (res.ok) {
                 const data = await res.json();
                 setGroups(Array.isArray(data) ? data : data.content || []);
@@ -44,7 +45,7 @@ export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
             });
             if (searchQuery) queryParams.set("search", searchQuery);
             if (selectedGroupId) queryParams.set("groupId", selectedGroupId);
-            const res = await fetch(`http://localhost:8080/api/customers?${queryParams}`);
+            const res = await fetch(`${API_BASE_URL}/customers?${queryParams}`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
 
@@ -69,7 +70,7 @@ export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
         if (!confirm("Are you sure you want to delete this customer?")) return;
 
         try {
-            const res = await fetch(`http://localhost:8080/api/customers/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/customers/${id}`, {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -232,7 +233,7 @@ export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
                                             onClick={async (e) => {
                                                 e.stopPropagation();
                                                 try {
-                                                    const res = await fetch(`http://localhost:8080/api/customers/${customer.id}/toggle-status`, {
+                                                    const res = await fetch(`${API_BASE_URL}/customers/${customer.id}/toggle-status`, {
                                                         method: 'PATCH'
                                                     });
                                                     if (res.ok) {

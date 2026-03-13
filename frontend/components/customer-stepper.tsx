@@ -5,6 +5,7 @@ import { GroupStep } from "./steps/group-step";
 import { CustomerStep } from "./steps/customer-step";
 import { VehicleStep } from "./steps/vehicle-step";
 import { Check, ChevronRight, Loader2 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api/station";
 
 interface CustomerStepperProps {
     onComplete: () => void;
@@ -26,7 +27,7 @@ export function CustomerStepper({ onComplete, onCancel }: CustomerStepperProps) 
         try {
             if (step === 1) {
                 // Create/Get Group
-                const res = await fetch("http://localhost:8080/api/groups", {
+                const res = await fetch(`${API_BASE_URL}/groups`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -40,7 +41,7 @@ export function CustomerStepper({ onComplete, onCancel }: CustomerStepperProps) 
                 setStep(2);
             } else if (step === 2) {
                 // Create Customer
-                const res = await fetch("http://localhost:8080/api/customers", {
+                const res = await fetch(`${API_BASE_URL}/customers`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -81,7 +82,7 @@ export function CustomerStepper({ onComplete, onCancel }: CustomerStepperProps) 
                     payload.preferredProduct = { id: formData.fuelType };
                 }
 
-                const res = await fetch("http://localhost:8080/api/vehicles", {
+                const res = await fetch(`${API_BASE_URL}/vehicles`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),

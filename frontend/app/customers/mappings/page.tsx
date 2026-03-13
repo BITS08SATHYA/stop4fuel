@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Users, Truck, ArrowRight, Check, X, AlertCircle, Link2, Unlink } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
+import { API_BASE_URL } from "@/lib/api/station";
 
-const API = "http://localhost:8080/api";
+const API = API_BASE_URL;
 
 type Group = { id: number; groupName: string; description?: string };
 type Customer = { id: number; name: string; phoneNumbers?: string[]; emails?: string[]; group?: Group | null; isActive: boolean };

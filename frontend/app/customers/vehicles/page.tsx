@@ -5,6 +5,7 @@ import { Plus, Search, Edit2, Trash2, Truck } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { VehicleStep } from "@/components/steps/vehicle-step";
 import { Badge } from "@/components/ui/badge";
+import { API_BASE_URL } from "@/lib/api/station";
 
 export default function VehiclesPage() {
     const [vehicles, setVehicles] = useState<any[]>([]);
@@ -18,7 +19,7 @@ export default function VehiclesPage() {
 
     const handleToggleVehicleStatus = async (id: number) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/vehicles/${id}/toggle-status`, { method: "PATCH" });
+            const res = await fetch(`${API_BASE_URL}/vehicles/${id}/toggle-status`, { method: "PATCH" });
             if (res.ok) fetchVehicles();
         } catch (error) {
             console.error("Failed to toggle vehicle status", error);
@@ -32,7 +33,7 @@ export default function VehiclesPage() {
 
     const fetchVehicles = async () => {
         try {
-            const res = await fetch("http://localhost:8080/api/vehicles");
+            const res = await fetch(`${API_BASE_URL}/vehicles`);
             if (res.ok) {
                 const data = await res.json();
                 setVehicles(Array.isArray(data) ? data : data.content || []);
@@ -44,7 +45,7 @@ export default function VehiclesPage() {
 
     const fetchCustomers = async () => {
         try {
-            const res = await fetch("http://localhost:8080/api/customers");
+            const res = await fetch(`${API_BASE_URL}/customers`);
             if (res.ok) {
                 const data = await res.json();
                 setCustomers(Array.isArray(data) ? data : data.content || []);
@@ -69,7 +70,7 @@ export default function VehiclesPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this vehicle?")) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/vehicles/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -84,8 +85,8 @@ export default function VehiclesPage() {
         setLoading(true);
         try {
             const url = formData.id 
-                ? `http://localhost:8080/api/vehicles/${formData.id}`
-                : "http://localhost:8080/api/vehicles";
+                ? `${API_BASE_URL}/vehicles/${formData.id}`
+                : `${API_BASE_URL}/vehicles`;
             const method = formData.id ? "PUT" : "POST";
 
             const payload: any = {
