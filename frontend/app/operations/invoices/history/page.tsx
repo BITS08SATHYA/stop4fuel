@@ -50,7 +50,7 @@ export default function InvoiceHistoryPage() {
         search: "",
     });
     const [appliedFilters, setAppliedFilters] = useState({ ...filters });
-    const pageSize = 20;
+    const pageSize = 10;
 
     // Edit modal state
     const [editModal, setEditModal] = useState(false);
