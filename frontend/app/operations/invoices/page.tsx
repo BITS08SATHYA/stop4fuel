@@ -55,6 +55,7 @@ export default function InvoicesPage() {
     const [customerVehicles, setCustomerVehicles] = useState<any[]>([]);
     const [selectedVehicle, setSelectedVehicle] = useState<any>(undefined);
     const [isSaving, setIsSaving] = useState(false);
+    const [isWalkIn, setIsWalkIn] = useState(false);
 
     // Incentives
     const [incentives, setIncentives] = useState<Incentive[]>([]);
@@ -181,6 +182,7 @@ export default function InvoicesPage() {
         setDriverPhone("");
         setCurrentStep(1);
         setError("");
+        setIsWalkIn(false);
     };
 
     const handleSave = async () => {
@@ -223,15 +225,24 @@ export default function InvoicesPage() {
     const isCustomerBlocked = selectedCustomer && (selectedCustomer.status === "BLOCKED" || selectedCustomer.status === "INACTIVE");
     const isVehicleBlocked = selectedVehicle && (selectedVehicle.status === "BLOCKED" || selectedVehicle.status === "INACTIVE");
 
+    const stepperSteps = isWalkIn
+        ? [
+            { step: 1, label: "Customer" },
+            { step: 3, label: "Products" },
+            { step: 4, label: "Payment" },
+            { step: 5, label: "Confirm" }
+        ]
+        : [
+            { step: 1, label: "Customer" },
+            { step: 2, label: "Vehicle" },
+            { step: 3, label: "Products" },
+            { step: 4, label: "Payment" },
+            { step: 5, label: "Confirm" }
+        ];
+
     const renderStepper = () => (
         <div className="flex items-center justify-between mb-8 px-4">
-            {[
-                { step: 1, label: "Customer" },
-                { step: 2, label: "Vehicle" },
-                { step: 3, label: "Products" },
-                { step: 4, label: "Payment" },
-                { step: 5, label: "Confirm" }
-            ].map(({ step, label }) => (
+            {stepperSteps.map(({ step, label }, idx) => (
                 <div key={step} className="flex flex-col items-center relative flex-1">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
                         currentStep === step
@@ -240,18 +251,29 @@ export default function InvoicesPage() {
                                 ? "bg-green-500 border-green-500 text-white"
                                 : "bg-muted border-border text-muted-foreground"
                     }`}>
-                        {currentStep > step ? <Check size={20} /> : step}
+                        {currentStep > step ? <Check size={20} /> : idx + 1}
                     </div>
                     <span className={`text-[10px] mt-2 font-bold uppercase tracking-wider transition-colors ${currentStep === step ? "text-primary" : "text-muted-foreground"}`}>
                         {label}
                     </span>
-                    {step < 5 && (
+                    {idx < stepperSteps.length - 1 && (
                         <div className={`absolute top-5 left-[60%] right-[-40%] h-[2px] -z-10 transition-colors ${currentStep > step ? "bg-green-500" : "bg-border"}`} />
                     )}
                 </div>
             ))}
         </div>
     );
+
+    const handleWalkIn = () => {
+        setIsWalkIn(true);
+        setSelectedCustomer(undefined);
+        setSelectedVehicle(undefined);
+        setCustomerVehicles([]);
+        setCustomerSearch("");
+        setIncentives([]);
+        setBillType('CASH');
+        setCurrentStep(3);
+    };
 
     const renderStep1 = () => (
         <div className="space-y-6">
@@ -260,7 +282,33 @@ export default function InvoicesPage() {
                     <User className="text-primary" size={24} />
                     Select Customer
                 </h3>
-                <div className="relative">
+
+                {/* Walk-in option */}
+                <div className="mb-6 p-5 bg-primary/5 border border-primary/15 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-bold text-foreground text-sm">Walk-in Customer?</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                For passing-by customers paying cash/card/UPI — no registration needed.
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleWalkIn}
+                            className="px-6 py-3 bg-foreground text-background rounded-xl font-bold text-sm transition-all hover:opacity-90 flex items-center gap-2 shrink-0"
+                        >
+                            <User size={16} />
+                            Walk-in Bill
+                        </button>
+                    </div>
+                </div>
+
+                <div className="relative flex items-center gap-4 mb-2">
+                    <div className="flex-1 border-t border-border"></div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Or select registered customer</span>
+                    <div className="flex-1 border-t border-border"></div>
+                </div>
+
+                <div className="relative mt-4">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
                     <input
                         type="text"
@@ -571,7 +619,7 @@ export default function InvoicesPage() {
                 )}
             </GlassCard>
             <div className="flex justify-between items-center">
-                <button onClick={() => setCurrentStep(2)} className="px-8 py-4 bg-muted hover:bg-muted/80 text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 border border-border">
+                <button onClick={() => setCurrentStep(isWalkIn ? 1 : 2)} className="px-8 py-4 bg-muted hover:bg-muted/80 text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 border border-border">
                     <ArrowLeft size={20} /> Back
                 </button>
                 <button
@@ -597,24 +645,30 @@ export default function InvoicesPage() {
                     <div className="space-y-6">
                         <div>
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Bill Type</label>
-                            <div className="grid grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => setBillType("CASH")}
-                                    className={`py-4 rounded-2xl font-bold text-sm uppercase border-2 transition-all ${
-                                        billType === "CASH" ? "bg-primary text-primary-foreground border-primary shadow-lg" : "bg-muted border-border text-muted-foreground"
-                                    }`}
-                                >
+                            {isWalkIn ? (
+                                <div className="py-4 px-4 rounded-2xl font-bold text-sm uppercase border-2 bg-primary text-primary-foreground border-primary text-center">
                                     Cash
-                                </button>
-                                <button
-                                    onClick={() => setBillType("CREDIT")}
-                                    className={`py-4 rounded-2xl font-bold text-sm uppercase border-2 transition-all ${
-                                        billType === "CREDIT" ? "bg-primary text-primary-foreground border-primary shadow-lg" : "bg-muted border-border text-muted-foreground"
-                                    }`}
-                                >
-                                    Credit
-                                </button>
-                            </div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => setBillType("CASH")}
+                                        className={`py-4 rounded-2xl font-bold text-sm uppercase border-2 transition-all ${
+                                            billType === "CASH" ? "bg-primary text-primary-foreground border-primary shadow-lg" : "bg-muted border-border text-muted-foreground"
+                                        }`}
+                                    >
+                                        Cash
+                                    </button>
+                                    <button
+                                        onClick={() => setBillType("CREDIT")}
+                                        className={`py-4 rounded-2xl font-bold text-sm uppercase border-2 transition-all ${
+                                            billType === "CREDIT" ? "bg-primary text-primary-foreground border-primary shadow-lg" : "bg-muted border-border text-muted-foreground"
+                                        }`}
+                                    >
+                                        Credit
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {billType === "CASH" && (
@@ -650,13 +704,15 @@ export default function InvoicesPage() {
                         )}
 
                         <div>
-                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Driver Name</label>
+                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">
+                                Driver Name {isWalkIn && <span className="text-muted-foreground font-normal normal-case">(Optional)</span>}
+                            </label>
                             <input
                                 type="text"
                                 value={driverName}
                                 onChange={(e) => setDriverName(e.target.value)}
                                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-bold"
-                                placeholder="Enter driver name"
+                                placeholder={isWalkIn ? "Optional for walk-in" : "Enter driver name"}
                             />
                         </div>
 
@@ -678,11 +734,11 @@ export default function InvoicesPage() {
                         <div className="w-full space-y-2 mt-6 text-left px-4">
                             <div className="flex justify-between text-xs">
                                 <span className="text-muted-foreground font-bold">Customer:</span>
-                                <span className="text-foreground font-bold">{selectedCustomer?.name}</span>
+                                <span className="text-foreground font-bold">{isWalkIn ? "Walk-in" : selectedCustomer?.name}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                                 <span className="text-muted-foreground font-bold">Vehicle:</span>
-                                <span className="text-foreground font-bold">{selectedVehicle?.vehicleNumber}</span>
+                                <span className="text-foreground font-bold">{isWalkIn ? "—" : selectedVehicle?.vehicleNumber}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                                 <span className="text-muted-foreground font-bold">Type:</span>
@@ -702,7 +758,7 @@ export default function InvoicesPage() {
                 </button>
                 <button
                     onClick={() => setCurrentStep(5)}
-                    disabled={!driverName}
+                    disabled={!isWalkIn && !driverName}
                     className="px-10 py-4 btn-gradient disabled:opacity-50 text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3 group"
                 >
                     Review <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -724,11 +780,11 @@ export default function InvoicesPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="p-4 bg-muted rounded-xl">
                             <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Customer</p>
-                            <p className="font-bold text-foreground">{selectedCustomer?.name}</p>
+                            <p className="font-bold text-foreground">{isWalkIn ? "Walk-in" : selectedCustomer?.name}</p>
                         </div>
                         <div className="p-4 bg-muted rounded-xl">
                             <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Vehicle</p>
-                            <p className="font-bold text-foreground">{selectedVehicle?.vehicleNumber}</p>
+                            <p className="font-bold text-foreground">{isWalkIn ? "—" : selectedVehicle?.vehicleNumber}</p>
                         </div>
                         <div className="p-4 bg-muted rounded-xl">
                             <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Bill Type</p>
@@ -736,7 +792,7 @@ export default function InvoicesPage() {
                         </div>
                         <div className="p-4 bg-muted rounded-xl">
                             <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Driver</p>
-                            <p className="font-bold text-foreground">{driverName}</p>
+                            <p className="font-bold text-foreground">{driverName || "—"}</p>
                         </div>
                     </div>
 
@@ -781,7 +837,10 @@ export default function InvoicesPage() {
                     )}
 
                     <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl text-xs text-yellow-700 dark:text-yellow-400">
-                        Submitting this invoice will automatically update consumed liters for the customer and vehicle, and deduct from inventory records.
+                        {isWalkIn
+                            ? "This is a walk-in cash bill. No customer or vehicle records will be updated."
+                            : "Submitting this invoice will automatically update consumed liters for the customer and vehicle, and deduct from inventory records."
+                        }
                     </div>
                 </div>
             </GlassCard>
@@ -873,8 +932,8 @@ export default function InvoicesPage() {
                                                     {new Date(inv.date).toLocaleTimeString()}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-foreground font-medium">{inv.customer?.name || "-"}</td>
-                                            <td className="px-6 py-4 text-sm text-foreground font-mono">{inv.vehicle?.vehicleNumber || "-"}</td>
+                                            <td className="px-6 py-4 text-sm text-foreground font-medium">{inv.customer?.name || <span className="text-muted-foreground italic">Walk-in</span>}</td>
+                                            <td className="px-6 py-4 text-sm text-foreground font-mono">{inv.vehicle?.vehicleNumber || "—"}</td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                                                     inv.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
