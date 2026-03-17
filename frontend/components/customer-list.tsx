@@ -41,7 +41,7 @@ export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
         try {
             const queryParams = new URLSearchParams({
                 page: page.toString(),
-                size: "10",
+                size: "5",
             });
             if (searchQuery) queryParams.set("search", searchQuery);
             if (selectedGroupId) queryParams.set("groupId", selectedGroupId);
