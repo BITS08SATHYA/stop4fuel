@@ -5,6 +5,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import { getNozzles, getTanks, getPumps, createNozzle, updateNozzle, deleteNozzle, Nozzle, Tank, Pump } from "@/lib/api/station";
 import { Fuel, Plus, Edit2, Trash2, Search, Activity, Droplets } from "lucide-react";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 export default function NozzlesPage() {
     const [nozzles, setNozzles] = useState<Nozzle[]>([]);
@@ -103,6 +104,8 @@ export default function NozzlesPage() {
         return matchesSearch && matchesStatus && matchesPump;
     });
 
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedNozzles } = useClientPagination(filtered);
+
     return (
         <div className="p-8 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
@@ -184,9 +187,9 @@ export default function NozzlesPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/30">
-                                    {filtered.map((nozzle, idx) => (
+                                    {pagedNozzles.map((nozzle, idx) => (
                                         <tr key={nozzle.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
+                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500">
@@ -240,6 +243,13 @@ export default function NozzlesPage() {
                                 </tbody>
                             </table>
                         </div>
+                        <TablePagination
+                            page={page}
+                            totalPages={totalPages}
+                            totalElements={totalElements}
+                            pageSize={pageSize}
+                            onPageChange={setPage}
+                        />
                     </GlassCard>
                 )}
             </div>
