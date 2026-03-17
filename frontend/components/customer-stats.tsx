@@ -40,7 +40,7 @@ export function CustomerStats() {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <GlassCard className="relative overflow-hidden">
                 <div className="flex justify-between items-start">
                     <div>
