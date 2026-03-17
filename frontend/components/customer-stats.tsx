@@ -14,7 +14,7 @@ interface Stats {
     utilization: number;
 }
 
-export function CustomerStats() {
+export function CustomerStats({ refreshTrigger }: { refreshTrigger?: number }) {
     const [stats, setStats] = useState<Stats>({
         totalCustomers: 0,
         activeFleets: 0,
@@ -26,7 +26,7 @@ export function CustomerStats() {
 
     useEffect(() => {
         fetchStats();
-    }, []);
+    }, [refreshTrigger]);
 
     const fetchStats = async () => {
         try {
