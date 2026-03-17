@@ -1049,3 +1049,335 @@ export const receivePurchaseOrder = (id: number, items: ReceiveItemDTO[]): Promi
 
 export const cancelPurchaseOrder = (id: number): Promise<PurchaseOrder> =>
     fetch(`${API_BASE_URL}/purchase-orders/${id}/cancel`, { method: 'PATCH' }).then(handleResponse);
+
+// ────────────────────────────────────────────────────────────
+// Employee Management Types & APIs
+// ────────────────────────────────────────────────────────────
+
+export interface EmployeeType {
+    id: number;
+    name: string;
+    designation: string;
+    email: string;
+    phone: string;
+    salary: number;
+    joinDate: string;
+    status: string;
+    aadharNumber: string;
+    additionalPhones: string;
+    address: string;
+    city: string;
+    state: string;
+    pincode: string;
+    photoUrl: string;
+    bankAccountNumber: string;
+    bankName: string;
+    bankIfsc: string;
+    bankBranch: string;
+    panNumber?: string;
+    department?: string;
+    employeeCode?: string;
+    emergencyContact?: string;
+    emergencyPhone?: string;
+    bloodGroup?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    maritalStatus?: string;
+    aadharDocUrl?: string;
+    panDocUrl?: string;
+}
+
+export const getEmployees = (): Promise<EmployeeType[]> =>
+    fetch(`${API_BASE_URL}/employees`).then(handleResponse);
+
+export const getActiveEmployees = (): Promise<EmployeeType[]> =>
+    fetch(`${API_BASE_URL}/employees/active`).then(handleResponse);
+
+// ────────────────────────────────────────────────────────────
+// Leave Management Types & APIs
+// ────────────────────────────────────────────────────────────
+
+export interface LeaveType {
+    id: number;
+    typeName: string;
+    maxDaysPerYear: number;
+    carryForward: boolean;
+    maxCarryForwardDays: number;
+}
+
+export interface LeaveBalance {
+    id: number;
+    employee: EmployeeType;
+    leaveType: LeaveType;
+    year: number;
+    totalAllotted: number;
+    used: number;
+    remaining: number;
+}
+
+export interface LeaveRequest {
+    id: number;
+    employee: EmployeeType;
+    leaveType: LeaveType;
+    fromDate: string;
+    toDate: string;
+    numberOfDays: number;
+    reason: string;
+    status: string; // PENDING, APPROVED, REJECTED
+    approvedBy?: string;
+    remarks?: string;
+    createdAt?: string;
+}
+
+export const getLeaveTypes = (): Promise<LeaveType[]> =>
+    fetch(`${API_BASE_URL}/leave-types`).then(handleResponse);
+
+export const createLeaveType = (lt: Partial<LeaveType>): Promise<LeaveType> =>
+    fetch(`${API_BASE_URL}/leave-types`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lt),
+    }).then(handleResponse);
+
+export const updateLeaveType = (id: number, lt: Partial<LeaveType>): Promise<LeaveType> =>
+    fetch(`${API_BASE_URL}/leave-types/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lt),
+    }).then(handleResponse);
+
+export const deleteLeaveType = (id: number): Promise<void> =>
+    fetch(`${API_BASE_URL}/leave-types/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const getEmployeeLeaveBalances = (employeeId: number, year?: number): Promise<LeaveBalance[]> => {
+    const params = year ? `?year=${year}` : '';
+    return fetch(`${API_BASE_URL}/employees/${employeeId}/leave-balances${params}`).then(handleResponse);
+};
+
+export const initializeLeaveBalances = (employeeId: number, year?: number): Promise<LeaveBalance[]> => {
+    const params = year ? `?year=${year}` : '';
+    return fetch(`${API_BASE_URL}/employees/${employeeId}/leave-balances/initialize${params}`, {
+        method: 'POST',
+    }).then(handleResponse);
+};
+
+export const getLeaveRequests = (status?: string): Promise<LeaveRequest[]> => {
+    const params = status ? `?status=${status}` : '';
+    return fetch(`${API_BASE_URL}/leave-requests${params}`).then(handleResponse);
+};
+
+export const createLeaveRequest = (employeeId: number, request: Partial<LeaveRequest>): Promise<LeaveRequest> =>
+    fetch(`${API_BASE_URL}/employees/${employeeId}/leave-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+    }).then(handleResponse);
+
+export const approveLeaveRequest = (id: number, body?: { approvedBy?: string; remarks?: string }): Promise<LeaveRequest> =>
+    fetch(`${API_BASE_URL}/leave-requests/${id}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {}),
+    }).then(handleResponse);
+
+export const rejectLeaveRequest = (id: number, body?: { remarks?: string }): Promise<LeaveRequest> =>
+    fetch(`${API_BASE_URL}/leave-requests/${id}/reject`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {}),
+    }).then(handleResponse);
+
+// ────────────────────────────────────────────────────────────
+// Attendance Types & APIs
+// ────────────────────────────────────────────────────────────
+
+export interface Attendance {
+    id: number;
+    employee: EmployeeType;
+    date: string;
+    checkInTime?: string;
+    checkOutTime?: string;
+    totalHoursWorked?: number;
+    shiftRefId?: number;
+    status: string; // PRESENT, ABSENT, HALF_DAY, ON_LEAVE
+    source: string; // MANUAL, GPS
+    remarks?: string;
+}
+
+export const getDailyAttendance = (date: string): Promise<Attendance[]> =>
+    fetch(`${API_BASE_URL}/attendance/daily?date=${date}`).then(handleResponse);
+
+export const getEmployeeAttendance = (employeeId: number, month: number, year: number): Promise<Attendance[]> =>
+    fetch(`${API_BASE_URL}/employees/${employeeId}/attendance?month=${month}&year=${year}`).then(handleResponse);
+
+export const markAttendance = (employeeId: number, attendance: Partial<Attendance>): Promise<Attendance> =>
+    fetch(`${API_BASE_URL}/employees/${employeeId}/attendance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attendance),
+    }).then(handleResponse);
+
+export const markBulkAttendance = (attendances: Partial<Attendance>[]): Promise<Attendance[]> =>
+    fetch(`${API_BASE_URL}/attendance/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attendances),
+    }).then(handleResponse);
+
+// ────────────────────────────────────────────────────────────
+// Salary Payment Types & APIs
+// ────────────────────────────────────────────────────────────
+
+export interface SalaryPayment {
+    id: number;
+    employee: EmployeeType;
+    month: number;
+    year: number;
+    baseSalary: number;
+    advanceDeduction: number;
+    incentiveAmount: number;
+    otherDeductions: number;
+    netPayable: number;
+    paymentDate?: string;
+    paymentMode?: string;
+    status: string; // DRAFT, PAID
+    remarks?: string;
+}
+
+export const getMonthlyPayments = (month: number, year: number): Promise<SalaryPayment[]> =>
+    fetch(`${API_BASE_URL}/salary?month=${month}&year=${year}`).then(handleResponse);
+
+export const getEmployeeSalaryPayments = (employeeId: number): Promise<SalaryPayment[]> =>
+    fetch(`${API_BASE_URL}/salary/employee/${employeeId}`).then(handleResponse);
+
+export const processMonthlyPayroll = (month: number, year: number): Promise<SalaryPayment[]> =>
+    fetch(`${API_BASE_URL}/salary/process?month=${month}&year=${year}`, {
+        method: 'POST',
+    }).then(handleResponse);
+
+export const markSalaryAsPaid = (id: number, paymentMode?: string): Promise<SalaryPayment> =>
+    fetch(`${API_BASE_URL}/salary/${id}/pay`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMode: paymentMode || 'CASH' }),
+    }).then(handleResponse);
+
+export const updateSalaryPayment = (id: number, payment: Partial<SalaryPayment>): Promise<SalaryPayment> =>
+    fetch(`${API_BASE_URL}/salary/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payment),
+    }).then(handleResponse);
+
+// ────────────────────────────────────────────────────────────
+// Utility Bill Types & APIs
+// ────────────────────────────────────────────────────────────
+
+export interface UtilityBill {
+    id: number;
+    billType: string; // ELECTRICITY, WATER
+    provider: string;
+    consumerNumber: string;
+    billDate: string;
+    dueDate: string;
+    billAmount: number;
+    paidAmount: number;
+    status: string; // PENDING, PAID, OVERDUE
+    unitsConsumed?: number;
+    billPeriod?: string;
+    remarks?: string;
+}
+
+export const getUtilityBills = (type?: string): Promise<UtilityBill[]> => {
+    const params = type ? `?type=${type}` : '';
+    return fetch(`${API_BASE_URL}/utility-bills${params}`).then(handleResponse);
+};
+
+export const getPendingUtilityBills = (): Promise<UtilityBill[]> =>
+    fetch(`${API_BASE_URL}/utility-bills/pending`).then(handleResponse);
+
+export const createUtilityBill = (bill: Partial<UtilityBill>): Promise<UtilityBill> =>
+    fetch(`${API_BASE_URL}/utility-bills`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bill),
+    }).then(handleResponse);
+
+export const updateUtilityBill = (id: number, bill: Partial<UtilityBill>): Promise<UtilityBill> =>
+    fetch(`${API_BASE_URL}/utility-bills/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bill),
+    }).then(handleResponse);
+
+export const deleteUtilityBill = (id: number): Promise<void> =>
+    fetch(`${API_BASE_URL}/utility-bills/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const uploadUtilityBillPdf = (file: File): Promise<UtilityBill> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${API_BASE_URL}/utility-bills/upload-pdf`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const uploadBulkUtilityBillPdfs = (files: File[]): Promise<UtilityBill[]> => {
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    return fetch(`${API_BASE_URL}/utility-bills/upload-bulk`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+// ────────────────────────────────────────────────────────────
+// Station Expense Types & APIs
+// ────────────────────────────────────────────────────────────
+
+export interface StationExpense {
+    id: number;
+    expenseType?: ExpenseType;
+    amount: number;
+    expenseDate: string;
+    description?: string;
+    paidTo?: string;
+    paymentMode?: string;
+    recurringType: string; // ONE_TIME, MONTHLY, QUARTERLY, ANNUAL
+}
+
+export interface ExpenseSummary {
+    totalAmount: number;
+    count: number;
+    byCategory: Record<string, number>;
+    from: string;
+    to: string;
+}
+
+export const getStationExpenses = (from?: string, to?: string): Promise<StationExpense[]> => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const qs = params.toString();
+    return fetch(`${API_BASE_URL}/station-expenses${qs ? `?${qs}` : ''}`).then(handleResponse);
+};
+
+export const createStationExpense = (expense: Partial<StationExpense>): Promise<StationExpense> =>
+    fetch(`${API_BASE_URL}/station-expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expense),
+    }).then(handleResponse);
+
+export const updateStationExpense = (id: number, expense: Partial<StationExpense>): Promise<StationExpense> =>
+    fetch(`${API_BASE_URL}/station-expenses/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expense),
+    }).then(handleResponse);
+
+export const deleteStationExpense = (id: number): Promise<void> =>
+    fetch(`${API_BASE_URL}/station-expenses/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const getExpenseSummary = (from: string, to: string): Promise<ExpenseSummary> =>
+    fetch(`${API_BASE_URL}/station-expenses/summary?from=${from}&to=${to}`).then(handleResponse);

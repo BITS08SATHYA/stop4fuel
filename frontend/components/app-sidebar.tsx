@@ -32,7 +32,16 @@ import {
     BarChart3,
     PieChart,
     Wallet,
-    History
+    History,
+    CalendarDays,
+    CalendarCheck,
+    IndianRupee,
+    Zap,
+    TrendingUp,
+    ShoppingCart,
+    Brain,
+    Shield,
+    UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -51,6 +60,9 @@ const customerManagementNav = [
 
 const employeeManagementNav = [
     { name: "Employees", href: "/employees", icon: UserCog },
+    { name: "Attendance", href: "/employees/attendance", icon: CalendarCheck },
+    { name: "Leave Management", href: "/employees/leaves", icon: CalendarDays },
+    { name: "Salary Processing", href: "/employees/salary", icon: IndianRupee },
     { name: "Company", href: "/company", icon: Building2 },
 ];
 
@@ -96,6 +108,19 @@ const paymentManagementNav = [
     { name: "Customer Ledger", href: "/payments/ledger", icon: BookOpen },
 ];
 
+const financeNav = [
+    { name: "Utility Bills", href: "/operations/utility-bills", icon: Zap },
+    { name: "Expenses", href: "/operations/expenses", icon: Receipt },
+];
+
+const analyticsNav = [
+    { name: "Sales Forecast", href: "/analytics/sales", icon: TrendingUp },
+    { name: "Purchase Planner", href: "/analytics/purchases", icon: ShoppingCart },
+    { name: "Profitability", href: "/analytics/profitability", icon: Brain },
+    { name: "Credit Intelligence", href: "/analytics/credit", icon: Shield },
+    { name: "Employee Insights", href: "/analytics/employees", icon: UserCheck },
+];
+
 const systemNav = [
     { name: "Configurations", href: "/settings", icon: Settings },
 ];
@@ -115,6 +140,8 @@ const sections: NavSection[] = [
     { label: "Shift Management", items: shiftManagementNav },
     { label: "Invoice Management", items: invoiceManagementNav },
     { label: "Payment Management", items: paymentManagementNav },
+    { label: "Finance", items: financeNav },
+    { label: "Analytics", items: analyticsNav },
     { label: "System", items: systemNav },
 ];
 
