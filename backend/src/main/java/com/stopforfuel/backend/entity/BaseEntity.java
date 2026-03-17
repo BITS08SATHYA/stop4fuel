@@ -28,7 +28,7 @@ public abstract class BaseEntity {
      * Site Company ID (Tenant ID).
      * All data is isolated by this ID.
      */
-    @Column(name = "scid", nullable = false)
+    @Column(name = "scid", nullable = false, columnDefinition = "bigint default 1")
     private Long scid;
 
     /**
