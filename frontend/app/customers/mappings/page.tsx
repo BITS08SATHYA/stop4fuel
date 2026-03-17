@@ -19,7 +19,7 @@ export default function MappingsPage() {
     const [activeTab, setActiveTab] = useState<Tab>("customer-group");
 
     return (
-        <div className="p-8 min-h-screen bg-background text-foreground">
+        <div className="p-6 h-screen overflow-hidden bg-background text-foreground">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold tracking-tight">

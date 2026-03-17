@@ -67,7 +67,7 @@ export default function ProductsPage() {
             setEditingProduct(product);
             setName(product.name);
             setHsnCode(product.hsnCode);
-            setPrice(product.price.toString());
+            setPrice(product.price != null ? product.price.toString() : "");
             setCategory(product.category);
             setUnit(product.unit);
             setVolume(product.volume ? product.volume.toString() : "");
@@ -154,7 +154,7 @@ export default function ProductsPage() {
     const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedProducts } = useClientPagination(filtered);
 
     return (
-        <div className="p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>

@@ -48,7 +48,7 @@ export function TablePagination({ page, totalPages, totalElements, pageSize, onP
 }
 
 /** Hook for client-side pagination — resets to page 0 when data changes */
-export function useClientPagination<T>(data: T[], pageSize: number = 10) {
+export function useClientPagination<T>(data: T[], pageSize: number = 7) {
     const [page, setPage] = useState(0);
 
     const totalElements = data.length;
