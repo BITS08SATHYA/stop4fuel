@@ -1,0 +1,57 @@
+package com.stopforfuel.backend.controller;
+
+import com.stopforfuel.backend.entity.StationExpense;
+import com.stopforfuel.backend.service.StationExpenseService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/station-expenses")
+public class StationExpenseController {
+
+    @Autowired
+    private StationExpenseService stationExpenseService;
+
+    @GetMapping
+    public List<StationExpense> getAllExpenses(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        if (from != null && to != null) {
+            return stationExpenseService.getExpensesBetween(from, to);
+        }
+        return stationExpenseService.getAllExpenses();
+    }
+
+    @PostMapping
+    public StationExpense createExpense(@RequestBody StationExpense expense) {
+        return stationExpenseService.createExpense(expense);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<StationExpense> updateExpense(@PathVariable Long id, @RequestBody StationExpense expense) {
+        try {
+            return ResponseEntity.ok(stationExpenseService.updateExpense(id, expense));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteExpense(@PathVariable Long id) {
+        stationExpenseService.deleteExpense(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/summary")
+    public Map<String, Object> getExpenseSummary(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return stationExpenseService.getExpenseSummary(from, to);
+    }
+}
