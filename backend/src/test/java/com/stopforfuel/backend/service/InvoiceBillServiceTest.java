@@ -17,8 +17,11 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoSettings;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class InvoiceBillServiceTest {
 
     @Mock
@@ -45,6 +48,8 @@ class InvoiceBillServiceTest {
     private ShiftService shiftService;
     @Mock
     private ShiftTransactionService shiftTransactionService;
+    @Mock
+    private BillSequenceService billSequenceService;
 
     @InjectMocks
     private InvoiceBillService invoiceBillService;
@@ -78,6 +83,8 @@ class InvoiceBillServiceTest {
         testInvoice.setBillType("CASH");
         testInvoice.setCustomer(testCustomer);
         testInvoice.setVehicle(testVehicle);
+
+        when(billSequenceService.getNextBillNo(anyString())).thenReturn("C26/1");
     }
 
     @Test

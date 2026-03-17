@@ -36,7 +36,7 @@ public class StatementController {
     }
 
     @GetMapping("/by-no/{statementNo}")
-    public Statement getByStatementNo(@PathVariable Long statementNo) {
+    public Statement getByStatementNo(@PathVariable String statementNo) {
         return statementService.getStatementByNo(statementNo);
     }
 

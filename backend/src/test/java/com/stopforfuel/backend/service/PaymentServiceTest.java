@@ -59,7 +59,7 @@ class PaymentServiceTest {
 
         testStatement = new Statement();
         testStatement.setId(1L);
-        testStatement.setStatementNo(1001L);
+        testStatement.setStatementNo("S26/1001");
         testStatement.setCustomer(testCustomer);
         testStatement.setNetAmount(new BigDecimal("10000"));
         testStatement.setReceivedAmount(BigDecimal.ZERO);

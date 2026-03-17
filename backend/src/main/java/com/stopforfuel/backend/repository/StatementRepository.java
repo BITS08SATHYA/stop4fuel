@@ -40,10 +40,7 @@ public interface StatementRepository extends JpaRepository<Statement, Long> {
             @org.springframework.data.repository.query.Param("status") String status,
             Pageable pageable);
 
-    Optional<Statement> findByStatementNo(Long statementNo);
+    Optional<Statement> findByStatementNo(String statementNo);
 
     List<Statement> findByCustomerIdAndStatementDateBetween(Long customerId, LocalDate from, LocalDate to);
-
-    @Query("SELECT COALESCE(MAX(s.statementNo), 0) FROM Statement s")
-    Long findMaxStatementNo();
 }

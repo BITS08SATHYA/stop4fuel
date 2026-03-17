@@ -26,6 +26,7 @@ public class InvoiceBillService {
     private final IncentiveService incentiveService;
     private final ShiftService shiftService;
     private final ShiftTransactionService shiftTransactionService;
+    private final BillSequenceService billSequenceService;
 
     public List<InvoiceBill> getAllInvoices() {
         return repository.findAll();
@@ -141,6 +142,10 @@ public class InvoiceBillService {
         if (invoice.getScid() == null) {
             invoice.setScid(1L);
         }
+
+        // --- Generate bill number ---
+        String billNo = billSequenceService.getNextBillNo(invoice.getBillType());
+        invoice.setBillNo(billNo);
 
         // --- Save the invoice ---
         InvoiceBill saved = repository.save(invoice);
