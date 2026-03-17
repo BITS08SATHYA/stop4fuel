@@ -380,6 +380,60 @@ public class InvoiceBillService {
         return repository.getProductSalesSummary(bt, ps, fd, td);
     }
 
+    @Transactional
+    public InvoiceBill updateInvoice(Long id, InvoiceBill updated) {
+        InvoiceBill existing = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+
+        // Update basic fields
+        existing.setDriverName(updated.getDriverName());
+        existing.setDriverPhone(updated.getDriverPhone());
+        existing.setIndentNo(updated.getIndentNo());
+        existing.setPaymentMode(updated.getPaymentMode());
+        existing.setVehicleKM(updated.getVehicleKM());
+        existing.setBillDesc(updated.getBillDesc());
+
+        // Update products — clear old and add new
+        existing.getProducts().clear();
+
+        BigDecimal totalGross = BigDecimal.ZERO;
+        BigDecimal totalDiscountSum = BigDecimal.ZERO;
+
+        if (updated.getProducts() != null) {
+            for (InvoiceProduct ip : updated.getProducts()) {
+                ip.setInvoiceBill(existing);
+
+                BigDecimal qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
+                BigDecimal price = ip.getUnitPrice() != null ? ip.getUnitPrice() : BigDecimal.ZERO;
+                BigDecimal gross = qty.multiply(price);
+                ip.setGrossAmount(gross);
+
+                if (ip.getDiscountRate() != null && ip.getDiscountRate().compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal discAmt = ip.getDiscountRate().multiply(qty);
+                    ip.setDiscountAmount(discAmt);
+                    ip.setAmount(gross.subtract(discAmt));
+                } else {
+                    ip.setDiscountRate(null);
+                    ip.setDiscountAmount(null);
+                    ip.setAmount(gross);
+                }
+
+                totalGross = totalGross.add(gross);
+                if (ip.getDiscountAmount() != null) {
+                    totalDiscountSum = totalDiscountSum.add(ip.getDiscountAmount());
+                }
+
+                existing.getProducts().add(ip);
+            }
+        }
+
+        existing.setGrossAmount(totalGross);
+        existing.setTotalDiscount(totalDiscountSum);
+        existing.setNetAmount(totalGross.subtract(totalDiscountSum));
+
+        return repository.save(existing);
+    }
+
     public InvoiceBill getInvoiceById(Long id) {
         return repository.findById(id).orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
     }

@@ -2,28 +2,40 @@
 
 import { useState, useEffect, useCallback, Fragment } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Modal } from "@/components/ui/modal";
 import {
-    Search, Filter, Calendar, ChevronDown, ChevronRight,
-    Package, FileText, RotateCcw, Loader2
+    Search, Filter, ChevronDown, ChevronRight,
+    Package, RotateCcw, Pencil, Trash2, Plus, X, Save
 } from "lucide-react";
 import {
-    getInvoiceHistory, getProductSalesSummary,
-    type InvoiceBill, type PageResponse, type ProductSalesSummary
+    getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
+    getActiveProducts, getNozzles,
+    type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
+    type Product, type Nozzle
 } from "@/lib/api/station";
 
+interface EditLine {
+    id?: number;
+    product: Product | null;
+    nozzle: Nozzle | null;
+    quantity: string;
+    unitPrice: string;
+    discountRate: string;
+    grossAmount: number;
+    discountAmount: number;
+    amount: number;
+}
+
 export default function InvoiceHistoryPage() {
-    // Invoices data
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(true);
 
-    // Product summary
     const [productSummary, setProductSummary] = useState<ProductSalesSummary[]>([]);
     const [summaryLoading, setSummaryLoading] = useState(true);
 
-    // Expanded row
     const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 
     // Filters
@@ -37,8 +49,34 @@ export default function InvoiceHistoryPage() {
         search: "",
     });
     const [appliedFilters, setAppliedFilters] = useState({ ...filters });
-
     const pageSize = 20;
+
+    // Edit modal state
+    const [editModal, setEditModal] = useState(false);
+    const [editInvoice, setEditInvoice] = useState<InvoiceBill | null>(null);
+    const [editLines, setEditLines] = useState<EditLine[]>([]);
+    const [editDriverName, setEditDriverName] = useState("");
+    const [editDriverPhone, setEditDriverPhone] = useState("");
+    const [editIndentNo, setEditIndentNo] = useState("");
+    const [editPaymentMode, setEditPaymentMode] = useState("");
+    const [editVehicleKM, setEditVehicleKM] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [editError, setEditError] = useState("");
+
+    // Delete confirm
+    const [deleteConfirm, setDeleteConfirm] = useState<InvoiceBill | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    // Products & Nozzles for edit form
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
+    const [allNozzles, setAllNozzles] = useState<Nozzle[]>([]);
+
+    useEffect(() => {
+        Promise.all([getActiveProducts(), getNozzles()]).then(([p, n]) => {
+            setAllProducts(p);
+            setAllNozzles(n.filter((nz: Nozzle) => nz.active));
+        }).catch(() => {});
+    }, []);
 
     const buildFilterParams = useCallback((f: typeof filters) => {
         const params: any = {};
@@ -76,7 +114,6 @@ export default function InvoiceHistoryPage() {
         }
     }, [buildFilterParams]);
 
-    // Initial load and on filter apply
     useEffect(() => {
         fetchInvoices(page, appliedFilters);
     }, [page, appliedFilters, fetchInvoices]);
@@ -107,14 +144,133 @@ export default function InvoiceHistoryPage() {
         setAppliedFilters(defaultFilters);
     };
 
+    const refresh = () => {
+        fetchInvoices(page, appliedFilters);
+        fetchSummary(appliedFilters);
+    };
+
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // --- Edit ---
+    const openEdit = (inv: InvoiceBill) => {
+        setEditInvoice(inv);
+        setEditDriverName(inv.driverName || "");
+        setEditDriverPhone(inv.driverPhone || "");
+        setEditIndentNo(inv.indentNo || "");
+        setEditPaymentMode(inv.paymentMode || "");
+        setEditVehicleKM(inv.vehicleKM ? String(inv.vehicleKM) : "");
+        setEditError("");
+        setEditLines(
+            (inv.products || []).map(ip => ({
+                id: ip.id,
+                product: ip.product || null,
+                nozzle: ip.nozzle || null,
+                quantity: ip.quantity != null ? String(ip.quantity) : "",
+                unitPrice: ip.unitPrice != null ? String(ip.unitPrice) : "",
+                discountRate: ip.discountRate != null ? String(ip.discountRate) : "",
+                grossAmount: ip.grossAmount || 0,
+                discountAmount: ip.discountAmount || 0,
+                amount: ip.amount || 0,
+            }))
+        );
+        setEditModal(true);
+    };
+
+    const updateEditLine = (index: number, updates: Partial<EditLine>) => {
+        setEditLines(prev => {
+            const lines = [...prev];
+            const line = { ...lines[index], ...updates };
+
+            const qty = parseFloat(line.quantity) || 0;
+            const price = parseFloat(line.unitPrice) || 0;
+            const gross = qty * price;
+            line.grossAmount = gross;
+
+            const discRate = parseFloat(line.discountRate) || 0;
+            if (discRate > 0) {
+                const discAmt = discRate * qty;
+                line.discountAmount = discAmt;
+                line.amount = gross - discAmt;
+            } else {
+                line.discountAmount = 0;
+                line.amount = gross;
+            }
+
+            lines[index] = line;
+            return lines;
+        });
+    };
+
+    const addEditLine = () => {
+        setEditLines(prev => [...prev, {
+            product: null, nozzle: null, quantity: "", unitPrice: "",
+            discountRate: "", grossAmount: 0, discountAmount: 0, amount: 0,
+        }]);
+    };
+
+    const removeEditLine = (index: number) => {
+        setEditLines(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const editTotalGross = editLines.reduce((s, l) => s + l.grossAmount, 0);
+    const editTotalDiscount = editLines.reduce((s, l) => s + l.discountAmount, 0);
+    const editNetAmount = editTotalGross - editTotalDiscount;
+
+    const handleSaveEdit = async () => {
+        if (!editInvoice?.id) return;
+        if (editLines.length === 0) {
+            setEditError("At least one product line is required.");
+            return;
+        }
+        setSaving(true);
+        setEditError("");
+        try {
+            await updateInvoice(editInvoice.id, {
+                driverName: editDriverName || undefined,
+                driverPhone: editDriverPhone || undefined,
+                indentNo: editIndentNo || undefined,
+                paymentMode: editPaymentMode || undefined,
+                vehicleKM: editVehicleKM ? Number(editVehicleKM) : undefined,
+                products: editLines.map(l => ({
+                    product: l.product ? { id: l.product.id } as any : undefined,
+                    nozzle: l.nozzle ? { id: l.nozzle.id } as any : undefined,
+                    quantity: parseFloat(l.quantity) || 0,
+                    unitPrice: parseFloat(l.unitPrice) || 0,
+                    amount: l.amount,
+                    discountRate: parseFloat(l.discountRate) || undefined,
+                })) as InvoiceProduct[],
+            });
+            setEditModal(false);
+            refresh();
+        } catch (e: any) {
+            setEditError(e.message || "Failed to update invoice");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // --- Delete ---
+    const handleDelete = async () => {
+        if (!deleteConfirm?.id) return;
+        setDeleting(true);
+        try {
+            await deleteInvoice(deleteConfirm.id);
+            setDeleteConfirm(null);
+            setExpandedRowId(null);
+            refresh();
+        } catch (e: any) {
+            alert(e.message || "Failed to delete invoice");
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     return (
         <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold text-foreground">Invoice History</h1>
-                <p className="text-sm text-muted-foreground mt-1">Browse, filter, and analyze all invoices</p>
+                <p className="text-sm text-muted-foreground mt-1">Browse, filter, edit, and analyze all invoices</p>
             </div>
 
             {/* Filter Bar */}
@@ -229,20 +385,21 @@ export default function InvoiceHistoryPage() {
                                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Payment</th>
                                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Items</th>
                                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Net Amount</th>
+                                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/30">
                             {loading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td className="px-4 py-4" colSpan={9}>
+                                        <td className="px-4 py-4" colSpan={10}>
                                             <div className="h-4 bg-muted rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : invoices.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
+                                    <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">
                                         No invoices found for the selected filters.
                                     </td>
                                 </tr>
@@ -287,11 +444,28 @@ export default function InvoiceHistoryPage() {
                                                 <td className="px-4 py-3 text-right font-bold text-foreground">
                                                     ₹{fmt(inv.netAmount || 0)}
                                                 </td>
+                                                <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <button
+                                                            onClick={() => openEdit(inv)}
+                                                            className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDeleteConfirm(inv)}
+                                                            className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
                                             </tr>
                                             {isExpanded && (
                                                 <tr key={`${inv.id}-detail`} className="bg-muted/30">
-                                                    <td colSpan={9} className="px-6 py-4">
-                                                        {/* Product line items */}
+                                                    <td colSpan={10} className="px-6 py-4">
                                                         {inv.products && inv.products.length > 0 && (
                                                             <div className="mb-3">
                                                                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Product Details</div>
@@ -302,6 +476,7 @@ export default function InvoiceHistoryPage() {
                                                                             <th className="text-left py-1 pr-4">Nozzle</th>
                                                                             <th className="text-right py-1 pr-4">Qty (L)</th>
                                                                             <th className="text-right py-1 pr-4">Rate</th>
+                                                                            <th className="text-right py-1 pr-4">Gross</th>
                                                                             <th className="text-right py-1 pr-4">Discount</th>
                                                                             <th className="text-right py-1">Amount</th>
                                                                         </tr>
@@ -313,6 +488,7 @@ export default function InvoiceHistoryPage() {
                                                                                 <td className="py-1.5 pr-4 font-mono text-muted-foreground">{ip.nozzle?.nozzleName || "—"}</td>
                                                                                 <td className="py-1.5 pr-4 text-right font-mono">{ip.quantity?.toFixed(2)}</td>
                                                                                 <td className="py-1.5 pr-4 text-right font-mono">₹{ip.unitPrice?.toFixed(2)}</td>
+                                                                                <td className="py-1.5 pr-4 text-right font-mono">₹{(ip.grossAmount || 0).toFixed(2)}</td>
                                                                                 <td className="py-1.5 pr-4 text-right font-mono text-orange-500">
                                                                                     {ip.discountAmount ? `₹${ip.discountAmount.toFixed(2)}` : "—"}
                                                                                 </td>
@@ -321,9 +497,16 @@ export default function InvoiceHistoryPage() {
                                                                         ))}
                                                                     </tbody>
                                                                 </table>
+                                                                {/* Totals row */}
+                                                                <div className="flex justify-end gap-6 mt-2 pt-2 border-t border-border/30 text-sm font-mono">
+                                                                    <span className="text-muted-foreground">Gross: <strong className="text-foreground">₹{fmt(inv.grossAmount || 0)}</strong></span>
+                                                                    {(inv.totalDiscount || 0) > 0 && (
+                                                                        <span className="text-orange-500">Discount: <strong>₹{fmt(inv.totalDiscount || 0)}</strong></span>
+                                                                    )}
+                                                                    <span className="text-foreground">Net: <strong className="text-primary">₹{fmt(inv.netAmount || 0)}</strong></span>
+                                                                </div>
                                                             </div>
                                                         )}
-                                                        {/* Extra info */}
                                                         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                                                             {inv.driverName && <span><strong>Driver:</strong> {inv.driverName} {inv.driverPhone && `(${inv.driverPhone})`}</span>}
                                                             {inv.indentNo && <span><strong>Indent No:</strong> {inv.indentNo}</span>}
@@ -369,6 +552,183 @@ export default function InvoiceHistoryPage() {
                     </div>
                 )}
             </GlassCard>
+
+            {/* Edit Invoice Modal */}
+            <Modal isOpen={editModal} onClose={() => setEditModal(false)} title={`Edit Invoice — ${editInvoice?.billNo || ''}`}>
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+                    {editError && (
+                        <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg">{editError}</div>
+                    )}
+
+                    {/* Product Lines */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Product Line Items</span>
+                            <button onClick={addEditLine} className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                                <Plus className="w-3 h-3" /> Add Line
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            {editLines.map((line, idx) => (
+                                <div key={idx} className="grid grid-cols-12 gap-2 items-end p-3 rounded-lg bg-muted/30 border border-border/30">
+                                    <div className="col-span-3">
+                                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Product</label>
+                                        <select
+                                            value={line.product?.id || ""}
+                                            onChange={e => {
+                                                const p = allProducts.find(pr => pr.id === Number(e.target.value)) || null;
+                                                updateEditLine(idx, {
+                                                    product: p,
+                                                    unitPrice: p ? String(p.price) : line.unitPrice,
+                                                });
+                                            }}
+                                            className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground"
+                                        >
+                                            <option value="">Select...</option>
+                                            {allProducts.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Nozzle</label>
+                                        <select
+                                            value={line.nozzle?.id || ""}
+                                            onChange={e => {
+                                                const n = allNozzles.find(nz => nz.id === Number(e.target.value)) || null;
+                                                updateEditLine(idx, { nozzle: n });
+                                            }}
+                                            className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground"
+                                        >
+                                            <option value="">—</option>
+                                            {allNozzles.map(n => (
+                                                <option key={n.id} value={n.id}>{n.nozzleName}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Qty</label>
+                                        <input
+                                            type="number" step="0.01" value={line.quantity}
+                                            onChange={e => updateEditLine(idx, { quantity: e.target.value })}
+                                            className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground text-right"
+                                        />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Rate</label>
+                                        <input
+                                            type="number" step="0.01" value={line.unitPrice}
+                                            onChange={e => updateEditLine(idx, { unitPrice: e.target.value })}
+                                            className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground text-right"
+                                        />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Disc/L</label>
+                                        <input
+                                            type="number" step="0.01" value={line.discountRate}
+                                            onChange={e => updateEditLine(idx, { discountRate: e.target.value })}
+                                            className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground text-right"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Gross</label>
+                                        <div className="px-2 py-1.5 text-sm font-mono text-muted-foreground text-right">₹{line.grossAmount.toFixed(2)}</div>
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Disc</label>
+                                        <div className="px-2 py-1.5 text-sm font-mono text-orange-500 text-right">{line.discountAmount > 0 ? `₹${line.discountAmount.toFixed(2)}` : "—"}</div>
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Amount</label>
+                                        <div className="px-2 py-1.5 text-sm font-mono font-bold text-foreground text-right">₹{line.amount.toFixed(2)}</div>
+                                    </div>
+                                    <div className="col-span-1 flex items-end justify-center">
+                                        <button onClick={() => removeEditLine(idx)} className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Totals */}
+                        <div className="flex justify-end gap-6 mt-3 pt-3 border-t border-border/50 text-sm font-mono">
+                            <span className="text-muted-foreground">Gross: <strong className="text-foreground">₹{fmt(editTotalGross)}</strong></span>
+                            {editTotalDiscount > 0 && (
+                                <span className="text-orange-500">Discount: <strong>₹{fmt(editTotalDiscount)}</strong></span>
+                            )}
+                            <span className="text-foreground text-base">Net Amount: <strong className="text-primary">₹{fmt(editNetAmount)}</strong></span>
+                        </div>
+                    </div>
+
+                    {/* Other fields */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border/30">
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Driver Name</label>
+                            <input value={editDriverName} onChange={e => setEditDriverName(e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground" />
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Driver Phone</label>
+                            <input value={editDriverPhone} onChange={e => setEditDriverPhone(e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground" />
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Indent No</label>
+                            <input value={editIndentNo} onChange={e => setEditIndentNo(e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground" />
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Vehicle KM</label>
+                            <input type="number" value={editVehicleKM} onChange={e => setEditVehicleKM(e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground" />
+                        </div>
+                    </div>
+
+                    {/* Save button */}
+                    <div className="flex justify-end gap-2 pt-3">
+                        <button onClick={() => setEditModal(false)}
+                            className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors">
+                            Cancel
+                        </button>
+                        <button onClick={handleSaveEdit} disabled={saving}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+                            <Save className="w-4 h-4" />
+                            {saving ? "Saving..." : "Save Changes"}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Invoice">
+                <div className="space-y-4">
+                    <p className="text-sm text-foreground">
+                        Are you sure you want to delete invoice <strong className="font-mono">{deleteConfirm?.billNo}</strong>?
+                        This action cannot be undone.
+                    </p>
+                    {deleteConfirm && (
+                        <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
+                            <div>Customer: <strong>{deleteConfirm.customer?.name || "Walk-in"}</strong></div>
+                            <div>Amount: <strong>₹{fmt(deleteConfirm.netAmount || 0)}</strong></div>
+                            <div>Date: <strong>{new Date(deleteConfirm.date).toLocaleString()}</strong></div>
+                        </div>
+                    )}
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setDeleteConfirm(null)}
+                            className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors">
+                            Cancel
+                        </button>
+                        <button onClick={handleDelete} disabled={deleting}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                            {deleting ? "Deleting..." : "Delete Invoice"}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }
