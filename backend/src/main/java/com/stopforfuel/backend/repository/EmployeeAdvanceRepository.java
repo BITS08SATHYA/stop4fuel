@@ -1,5 +1,6 @@
-package com.stopforfuel.employee;
+package com.stopforfuel.backend.repository;
 
+import com.stopforfuel.backend.entity.EmployeeAdvance;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
