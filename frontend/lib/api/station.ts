@@ -846,3 +846,161 @@ export interface RecentInvoiceItem {
 
 export const getDashboardStats = (): Promise<DashboardStats> =>
     fetch(`${API_BASE_URL}/dashboard/stats`).then(handleResponse);
+
+// --- Godown & Cashier Stock Types ---
+export interface GodownStock {
+    id: number;
+    product: Product;
+    currentStock: number;
+    reorderLevel: number;
+    maxStock: number;
+    location?: string;
+    lastRestockDate?: string;
+}
+
+export interface CashierStock {
+    id: number;
+    product: Product;
+    currentStock: number;
+    maxCapacity: number;
+}
+
+export interface StockTransfer {
+    id: number;
+    product: Product;
+    quantity: number;
+    fromLocation: 'GODOWN' | 'CASHIER';
+    toLocation: 'GODOWN' | 'CASHIER';
+    transferDate: string;
+    remarks?: string;
+    transferredBy?: string;
+}
+
+export interface PurchaseOrderItem {
+    id?: number;
+    product: Product;
+    orderedQty: number;
+    receivedQty: number;
+    unitPrice: number;
+    totalPrice: number;
+}
+
+export interface PurchaseOrder {
+    id?: number;
+    supplier: Supplier;
+    orderDate: string;
+    expectedDeliveryDate?: string;
+    status: 'DRAFT' | 'ORDERED' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED';
+    totalAmount: number;
+    remarks?: string;
+    items: PurchaseOrderItem[];
+}
+
+export interface ReceiveItemDTO {
+    itemId: number;
+    receivedQty: number;
+}
+
+// --- Godown Stock ---
+export const getGodownStocks = (): Promise<GodownStock[]> =>
+    fetch(`${API_BASE_URL}/godown`).then(handleResponse);
+
+export const getGodownStockByProduct = (productId: number): Promise<GodownStock[]> =>
+    fetch(`${API_BASE_URL}/godown?productId=${productId}`).then(handleResponse);
+
+export const getGodownLowStock = (): Promise<GodownStock[]> =>
+    fetch(`${API_BASE_URL}/godown/low-stock`).then(handleResponse);
+
+export const createGodownStock = (stock: Partial<GodownStock>): Promise<GodownStock> =>
+    fetch(`${API_BASE_URL}/godown`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stock),
+    }).then(handleResponse);
+
+export const updateGodownStock = (id: number, stock: Partial<GodownStock>): Promise<GodownStock> =>
+    fetch(`${API_BASE_URL}/godown/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stock),
+    }).then(handleResponse);
+
+export const deleteGodownStock = (id: number): Promise<void> =>
+    fetch(`${API_BASE_URL}/godown/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// --- Cashier Stock ---
+export const getCashierStocks = (): Promise<CashierStock[]> =>
+    fetch(`${API_BASE_URL}/cashier-stock`).then(handleResponse);
+
+export const getCashierStockByProduct = (productId: number): Promise<CashierStock[]> =>
+    fetch(`${API_BASE_URL}/cashier-stock?productId=${productId}`).then(handleResponse);
+
+export const createCashierStock = (stock: Partial<CashierStock>): Promise<CashierStock> =>
+    fetch(`${API_BASE_URL}/cashier-stock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stock),
+    }).then(handleResponse);
+
+export const updateCashierStock = (id: number, stock: Partial<CashierStock>): Promise<CashierStock> =>
+    fetch(`${API_BASE_URL}/cashier-stock/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stock),
+    }).then(handleResponse);
+
+export const deleteCashierStock = (id: number): Promise<void> =>
+    fetch(`${API_BASE_URL}/cashier-stock/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// --- Stock Transfers ---
+export const getStockTransfers = (productId?: number, from?: string, to?: string): Promise<StockTransfer[]> => {
+    const params = new URLSearchParams();
+    if (productId) params.append('productId', String(productId));
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const qs = params.toString();
+    return fetch(`${API_BASE_URL}/stock-transfers${qs ? `?${qs}` : ''}`).then(handleResponse);
+};
+
+export const createStockTransfer = (transfer: Partial<StockTransfer>): Promise<StockTransfer> =>
+    fetch(`${API_BASE_URL}/stock-transfers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transfer),
+    }).then(handleResponse);
+
+// --- Purchase Orders ---
+export const getPurchaseOrders = (status?: string, supplierId?: number): Promise<PurchaseOrder[]> => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (supplierId) params.append('supplierId', String(supplierId));
+    const qs = params.toString();
+    return fetch(`${API_BASE_URL}/purchase-orders${qs ? `?${qs}` : ''}`).then(handleResponse);
+};
+
+export const getPurchaseOrderById = (id: number): Promise<PurchaseOrder> =>
+    fetch(`${API_BASE_URL}/purchase-orders/${id}`).then(handleResponse);
+
+export const createPurchaseOrder = (order: Partial<PurchaseOrder>): Promise<PurchaseOrder> =>
+    fetch(`${API_BASE_URL}/purchase-orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order),
+    }).then(handleResponse);
+
+export const updatePurchaseOrder = (id: number, order: Partial<PurchaseOrder>): Promise<PurchaseOrder> =>
+    fetch(`${API_BASE_URL}/purchase-orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order),
+    }).then(handleResponse);
+
+export const receivePurchaseOrder = (id: number, items: ReceiveItemDTO[]): Promise<PurchaseOrder> =>
+    fetch(`${API_BASE_URL}/purchase-orders/${id}/receive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(items),
+    }).then(handleResponse);
+
+export const cancelPurchaseOrder = (id: number): Promise<PurchaseOrder> =>
+    fetch(`${API_BASE_URL}/purchase-orders/${id}/cancel`, { method: 'PATCH' }).then(handleResponse);
