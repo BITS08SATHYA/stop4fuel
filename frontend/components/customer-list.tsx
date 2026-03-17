@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api/station";
 
 // Mock Data (Updated to match schema)
-export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
+export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?: number; onDataChange?: () => void }) {
     const [customers, setCustomers] = useState<any[]>([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -75,6 +75,7 @@ export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
             });
             if (res.ok) {
                 fetchCustomers();
+                onDataChange?.();
             } else {
                 console.error("Failed to delete customer");
             }
@@ -238,6 +239,7 @@ export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
                                                     });
                                                     if (res.ok) {
                                                         fetchCustomers();
+                                                        onDataChange?.();
                                                     }
                                                 } catch (error) {
                                                     console.error('Failed to toggle status', error);
