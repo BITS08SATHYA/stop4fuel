@@ -15,6 +15,7 @@ import {
     GradeType
 } from "@/lib/api/station";
 import { Package, Plus, Edit2, Trash2, Fuel, Box, Truck, Award, Search } from "lucide-react";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -150,6 +151,8 @@ export default function ProductsPage() {
         return matchesSearch && matchesCategory && matchesStatus;
     });
 
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedProducts } = useClientPagination(filtered);
+
     return (
         <div className="p-8 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
@@ -239,9 +242,9 @@ export default function ProductsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/30">
-                                    {filtered.map((product, idx) => (
+                                    {pagedProducts.map((product, idx) => (
                                         <tr key={product.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
+                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className={`p-2.5 rounded-xl ${
@@ -322,6 +325,13 @@ export default function ProductsPage() {
                                 </tbody>
                             </table>
                         </div>
+                        <TablePagination
+                            page={page}
+                            totalPages={totalPages}
+                            totalElements={totalElements}
+                            pageSize={pageSize}
+                            onPageChange={setPage}
+                        />
                     </GlassCard>
                 )}
             </div>

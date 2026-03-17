@@ -17,6 +17,7 @@ import {
     AlertCircle,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 // --- Types ---
 
@@ -212,6 +213,8 @@ export default function CashAdvancesPage() {
             return matchStatus && matchType && matchSearch;
         });
     }, [advances, statusFilter, typeFilter, searchQuery]);
+
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedAdvances } = useClientPagination(filtered);
 
     // --- Handlers ---
     const resetAddForm = () => {
@@ -440,7 +443,7 @@ export default function CashAdvancesPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filtered.map((adv) => {
+                                            pagedAdvances.map((adv) => {
                                                 const meta = getAdvanceTypeMeta(adv.advanceType);
                                                 const Icon = meta.icon;
                                                 const outstanding = adv.amount - adv.returnedAmount;
@@ -520,6 +523,13 @@ export default function CashAdvancesPage() {
                                     </tbody>
                                 </table>
                             </div>
+                            <TablePagination
+                                page={page}
+                                totalPages={totalPages}
+                                totalElements={totalElements}
+                                pageSize={pageSize}
+                                onPageChange={setPage}
+                            />
                         </GlassCard>
                     </>
                 )}
