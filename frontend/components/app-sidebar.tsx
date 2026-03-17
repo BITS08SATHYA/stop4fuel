@@ -31,7 +31,8 @@ import {
     Clock,
     BarChart3,
     PieChart,
-    Wallet
+    Wallet,
+    History
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -84,6 +85,7 @@ const shiftManagementNav = [
 
 const invoiceManagementNav = [
     { name: "Invoices", href: "/operations/invoices", icon: FileText },
+    { name: "Invoice History", href: "/operations/invoices/history", icon: History },
 ];
 
 const paymentManagementNav = [
