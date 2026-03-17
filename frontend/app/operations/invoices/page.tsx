@@ -210,10 +210,14 @@ export default function InvoicesPage() {
                 date: new Date().toISOString()
             };
 
-            await createInvoice(payload);
+            const saved = await createInvoice(payload);
+            const billNoMsg = saved.billNo ? ` — Bill No: ${saved.billNo}` : '';
             resetForm();
             setActiveTab('history');
             loadData();
+            if (billNoMsg) {
+                alert(`Invoice created successfully${billNoMsg}`);
+            }
         } catch (err: any) {
             console.error("Failed to save invoice", err);
             setError(err.message || "Error saving invoice");
@@ -913,6 +917,7 @@ export default function InvoicesPage() {
                                 <thead>
                                     <tr className="bg-white/5 border-b border-border/50">
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-16">#</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Bill No</th>
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Customer</th>
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle</th>
@@ -925,6 +930,7 @@ export default function InvoicesPage() {
                                     {invoices.map((inv: any, idx: number) => (
                                         <tr key={inv.id} className="hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
+                                            <td className="px-6 py-4 font-mono font-bold text-foreground">{inv.billNo || "—"}</td>
                                             <td className="px-6 py-4">
                                                 <div className="text-sm font-bold text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
                                                 <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 mt-1">
