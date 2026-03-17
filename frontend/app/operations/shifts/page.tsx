@@ -41,6 +41,7 @@ import {
     AlertCircle,
     Moon,
 } from "lucide-react";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 const TXN_TYPES = [
     { value: "CASH", label: "Cash", icon: Banknote, color: "text-green-500 bg-green-500/10" },
@@ -274,6 +275,8 @@ export default function ShiftsPage() {
         return matchType && matchSearch;
     });
 
+    const { page: txnPage, setPage: setTxnPage, totalPages: txnTotalPages, totalElements: txnTotalElements, pageSize: txnPageSize, paginatedData: pagedTxns } = useClientPagination(filtered);
+
     const isViewingActive = viewingShift?.status === "OPEN";
 
     return (
@@ -438,12 +441,12 @@ export default function ShiftsPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filtered.map((txn, idx) => {
+                                            pagedTxns.map((txn, idx) => {
                                                 const meta = getTxnMeta(txn.txnType);
                                                 const Icon = meta.icon;
                                                 return (
                                                     <tr key={txn.id} className="hover:bg-white/5 transition-colors group">
-                                                        <td className="px-6 py-3 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
+                                                        <td className="px-6 py-3 text-xs font-mono text-muted-foreground text-center">{txnPage * txnPageSize + idx + 1}</td>
                                                         <td className="px-6 py-3">
                                                             <div className="flex items-center gap-2">
                                                                 <div className={`p-1.5 rounded-lg ${meta.color}`}>
@@ -484,6 +487,13 @@ export default function ShiftsPage() {
                                     </tbody>
                                 </table>
                             </div>
+                            <TablePagination
+                                page={txnPage}
+                                totalPages={txnTotalPages}
+                                totalElements={txnTotalElements}
+                                pageSize={txnPageSize}
+                                onPageChange={setTxnPage}
+                            />
                         </GlassCard>
                     </>
                 )}

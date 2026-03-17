@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Users, Truck, ArrowRight, Check, X, AlertCircle, Link2, Unlink } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 const API = API_BASE_URL;
 
@@ -108,6 +109,8 @@ function CustomerGroupMapping() {
         if (filter === "assigned") return !!c.group;
         return true;
     });
+
+    const { page: cgPage, setPage: setCgPage, totalPages: cgTotalPages, totalElements: cgTotalElements, pageSize: cgPageSize, paginatedData: cgPaged } = useClientPagination(filtered);
 
     const toggleSelect = (id: number) => {
         setSelectedIds((prev) => {
@@ -245,7 +248,7 @@ function CustomerGroupMapping() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                        {filtered.map((customer) => (
+                        {cgPaged.map((customer) => (
                             <tr
                                 key={customer.id}
                                 onClick={() => toggleSelect(customer.id)}
@@ -293,6 +296,13 @@ function CustomerGroupMapping() {
                         No customers found for this filter.
                     </div>
                 )}
+                <TablePagination
+                    page={cgPage}
+                    totalPages={cgTotalPages}
+                    totalElements={cgTotalElements}
+                    pageSize={cgPageSize}
+                    onPageChange={setCgPage}
+                />
             </GlassCard>
         </div>
     );
@@ -344,6 +354,8 @@ function VehicleCustomerMapping() {
         if (filter === "assigned") return !!v.customer;
         return true;
     });
+
+    const { page: vcPage, setPage: setVcPage, totalPages: vcTotalPages, totalElements: vcTotalElements, pageSize: vcPageSize, paginatedData: vcPaged } = useClientPagination(filtered);
 
     const toggleSelect = (id: number) => {
         setSelectedIds((prev) => {
@@ -479,7 +491,7 @@ function VehicleCustomerMapping() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                        {filtered.map((vehicle) => (
+                        {vcPaged.map((vehicle) => (
                             <tr
                                 key={vehicle.id}
                                 onClick={() => toggleSelect(vehicle.id)}
@@ -523,6 +535,13 @@ function VehicleCustomerMapping() {
                         No vehicles found for this filter.
                     </div>
                 )}
+                <TablePagination
+                    page={vcPage}
+                    totalPages={vcTotalPages}
+                    totalElements={vcTotalElements}
+                    pageSize={vcPageSize}
+                    onPageChange={setVcPage}
+                />
             </GlassCard>
         </div>
     );

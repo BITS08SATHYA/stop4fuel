@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import {
     getSuppliers,
@@ -20,6 +21,15 @@ export default function SuppliersPage() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+    const filteredSuppliers = useMemo(() => suppliers.filter((s) => {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = !searchQuery || s.name?.toLowerCase().includes(q) || s.contactPerson?.toLowerCase().includes(q) || s.phone?.includes(q);
+        const matchesStatus = statusFilter === "ALL" || (s.active ? "ACTIVE" : "INACTIVE") === statusFilter;
+        return matchesSearch && matchesStatus;
+    }), [suppliers, searchQuery, statusFilter]);
+
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedSuppliers } = useClientPagination(filteredSuppliers);
 
     // Form State
     const [name, setName] = useState("");
@@ -171,14 +181,9 @@ export default function SuppliersPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/30">
-                                    {suppliers.filter((s) => {
-                                        const q = searchQuery.toLowerCase();
-                                        const matchesSearch = !searchQuery || s.name?.toLowerCase().includes(q) || s.contactPerson?.toLowerCase().includes(q) || s.phone?.includes(q);
-                                        const matchesStatus = statusFilter === "ALL" || (s.active ? "ACTIVE" : "INACTIVE") === statusFilter;
-                                        return matchesSearch && matchesStatus;
-                                    }).map((s, idx) => (
+                                    {pagedSuppliers.map((s, idx) => (
                                         <tr key={s.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
+                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
@@ -239,6 +244,13 @@ export default function SuppliersPage() {
                                 </tbody>
                             </table>
                         </div>
+                        <TablePagination
+                            page={page}
+                            totalPages={totalPages}
+                            totalElements={totalElements}
+                            pageSize={pageSize}
+                            onPageChange={setPage}
+                        />
                     </GlassCard>
                     </>
                 )}
