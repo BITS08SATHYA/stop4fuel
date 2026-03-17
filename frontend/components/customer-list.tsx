@@ -103,7 +103,7 @@ export function CustomerList({ refreshTrigger }: { refreshTrigger?: number }) {
     };
 
     return (
-        <GlassCard className="h-full min-h-[500px] flex flex-col overflow-hidden relative">
+        <GlassCard className="h-full flex flex-col overflow-hidden relative">
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-6 shrink-0">
                 <h2 className="text-xl font-semibold text-foreground">All Customers</h2>
