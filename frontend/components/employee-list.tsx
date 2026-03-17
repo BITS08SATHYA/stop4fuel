@@ -41,6 +41,17 @@ interface Employee {
     bankName: string;
     bankIfsc: string;
     bankBranch: string;
+    panNumber: string;
+    department: string;
+    employeeCode: string;
+    emergencyContact: string;
+    emergencyPhone: string;
+    bloodGroup: string;
+    dateOfBirth: string;
+    gender: string;
+    maritalStatus: string;
+    aadharDocUrl: string;
+    panDocUrl: string;
 }
 
 interface SalaryHistory {
@@ -79,6 +90,17 @@ const emptyEmployee: Omit<Employee, "id"> = {
     bankName: "",
     bankIfsc: "",
     bankBranch: "",
+    panNumber: "",
+    department: "",
+    employeeCode: "",
+    emergencyContact: "",
+    emergencyPhone: "",
+    bloodGroup: "",
+    dateOfBirth: "",
+    gender: "",
+    maritalStatus: "",
+    aadharDocUrl: "",
+    panDocUrl: "",
 };
 
 import { API_BASE_URL } from "@/lib/api/station";
@@ -116,7 +138,7 @@ export function EmployeeList() {
     const [isEditing, setIsEditing] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
-    const [formTab, setFormTab] = useState<"personal" | "address" | "bank">("personal");
+    const [formTab, setFormTab] = useState<"personal" | "additional" | "address" | "bank">("personal");
 
     // Profile modal state
     const [profileEmployee, setProfileEmployee] = useState<Employee | null>(null);
@@ -435,6 +457,7 @@ export function EmployeeList() {
                         <div className="flex border-b border-border">
                             {([
                                 { key: "personal", label: "Personal Info", icon: User },
+                                { key: "additional", label: "Additional", icon: User },
                                 { key: "address", label: "Address", icon: MapPin },
                                 { key: "bank", label: "Bank Details", icon: Landmark },
                             ] as const).map(({ key, label, icon: Icon }) => (
@@ -496,6 +519,63 @@ export function EmployeeList() {
                                             <option value="Active">Active</option>
                                             <option value="Inactive">Inactive</option>
                                         </select>
+                                    </div>
+                                </div>
+                            )}
+
+                            {formTab === "additional" && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Employee Code</label>
+                                        <input className={inputClass} value={currentEmployee.employeeCode} onChange={(e) => set("employeeCode", e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Department</label>
+                                        <input className={inputClass} value={currentEmployee.department} onChange={(e) => set("department", e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">PAN Number</label>
+                                        <input className={inputClass} value={currentEmployee.panNumber} onChange={(e) => set("panNumber", e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Date of Birth</label>
+                                        <input type="date" className={inputClass} value={currentEmployee.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Gender</label>
+                                        <select className={inputClass} value={currentEmployee.gender} onChange={(e) => set("gender", e.target.value)}>
+                                            <option value="">Select</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Marital Status</label>
+                                        <select className={inputClass} value={currentEmployee.maritalStatus} onChange={(e) => set("maritalStatus", e.target.value)}>
+                                            <option value="">Select</option>
+                                            <option value="Single">Single</option>
+                                            <option value="Married">Married</option>
+                                            <option value="Divorced">Divorced</option>
+                                            <option value="Widowed">Widowed</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Blood Group</label>
+                                        <select className={inputClass} value={currentEmployee.bloodGroup} onChange={(e) => set("bloodGroup", e.target.value)}>
+                                            <option value="">Select</option>
+                                            {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
+                                                <option key={bg} value={bg}>{bg}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Emergency Contact</label>
+                                        <input className={inputClass} value={currentEmployee.emergencyContact} onChange={(e) => set("emergencyContact", e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Emergency Phone</label>
+                                        <input className={inputClass} value={currentEmployee.emergencyPhone} onChange={(e) => set("emergencyPhone", e.target.value)} />
                                     </div>
                                 </div>
                             )}

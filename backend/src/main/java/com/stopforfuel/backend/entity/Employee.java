@@ -1,18 +1,18 @@
-package com.stopforfuel.employee;
+package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.util.List;
 
-@Data
 @Entity
 @Table(name = "employees")
-public class Employee {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@Getter
+@Setter
+public class Employee extends BaseEntity {
 
     private String name;
     private String designation;
@@ -37,6 +37,19 @@ public class Employee {
     private String bankName;
     private String bankIfsc;
     private String bankBranch;
+
+    // New fields
+    private String panNumber;
+    private String department;
+    private String employeeCode;
+    private String emergencyContact;
+    private String emergencyPhone;
+    private String bloodGroup;
+    private LocalDate dateOfBirth;
+    private String gender;
+    private String maritalStatus;
+    private String aadharDocUrl;
+    private String panDocUrl;
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"employee", "hibernateLazyInitializer", "handler"})

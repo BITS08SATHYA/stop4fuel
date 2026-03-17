@@ -1,5 +1,9 @@
-package com.stopforfuel.employee;
+package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.entity.Employee;
+import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.SalaryHistory;
+import com.stopforfuel.backend.service.EmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +20,11 @@ public class EmployeeController {
     @GetMapping
     public List<Employee> getAllEmployees() {
         return employeeService.getAllEmployees();
+    }
+
+    @GetMapping("/active")
+    public List<Employee> getActiveEmployees() {
+        return employeeService.getActiveEmployees();
     }
 
     @GetMapping("/{id}")

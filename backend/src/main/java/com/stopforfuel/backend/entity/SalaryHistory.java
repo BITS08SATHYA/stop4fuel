@@ -1,17 +1,17 @@
-package com.stopforfuel.employee;
+package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 
-@Data
 @Entity
 @Table(name = "salary_history")
-public class SalaryHistory {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@Getter
+@Setter
+public class SalaryHistory extends SimpleBaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
