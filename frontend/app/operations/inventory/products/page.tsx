@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import {
     getProductInventories,
@@ -23,6 +24,16 @@ export default function ProductInventoryPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [dateFilter, setDateFilter] = useState("");
     const [productFilter, setProductFilter] = useState<string>("");
+
+    const filteredInv = useMemo(() => inventories.filter((inv) => {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = !searchQuery || inv.product.name?.toLowerCase().includes(q) || inv.product.category?.toLowerCase().includes(q) || inv.product.brand?.toLowerCase().includes(q);
+        const matchesProduct = !productFilter || String(inv.product.id) === productFilter;
+        const matchesDate = !dateFilter || inv.date === dateFilter;
+        return matchesSearch && matchesProduct && matchesDate;
+    }), [inventories, searchQuery, productFilter, dateFilter]);
+
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedInv } = useClientPagination(filteredInv);
 
     // Form State
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -217,15 +228,9 @@ export default function ProductInventoryPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/30">
-                                    {inventories.filter((inv) => {
-                                        const q = searchQuery.toLowerCase();
-                                        const matchesSearch = !searchQuery || inv.product.name?.toLowerCase().includes(q) || inv.product.category?.toLowerCase().includes(q) || inv.product.brand?.toLowerCase().includes(q);
-                                        const matchesProduct = !productFilter || String(inv.product.id) === productFilter;
-                                        const matchesDate = !dateFilter || inv.date === dateFilter;
-                                        return matchesSearch && matchesProduct && matchesDate;
-                                    }).map((inv, idx) => (
+                                    {pagedInv.map((inv, idx) => (
                                         <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
+                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
                                                 <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
                                             </td>
@@ -285,6 +290,7 @@ export default function ProductInventoryPage() {
                                 </tbody>
                             </table>
                         </div>
+                        <TablePagination page={page} totalPages={totalPages} totalElements={totalElements} pageSize={pageSize} onPageChange={setPage} />
                     </GlassCard>
                     </>
                 )}

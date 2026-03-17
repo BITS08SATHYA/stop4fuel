@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -113,6 +114,8 @@ export default function StockTransferPage() {
         );
     });
 
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData } = useClientPagination(filtered);
+
     return (
         <div className="p-8 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
@@ -180,9 +183,9 @@ export default function StockTransferPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/30">
-                                        {filtered.map((t, idx) => (
+                                        {paginatedData.map((t, idx) => (
                                             <tr key={t.id} className="hover:bg-white/5 transition-colors">
-                                                <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
+                                                <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                                 <td className="px-6 py-4">
                                                     <div className="text-sm font-medium text-foreground">{new Date(t.transferDate).toLocaleDateString()}</div>
                                                     <div className="text-[10px] text-muted-foreground">{new Date(t.transferDate).toLocaleTimeString()}</div>
@@ -212,6 +215,7 @@ export default function StockTransferPage() {
                                     </tbody>
                                 </table>
                             </div>
+                            <TablePagination page={page} totalPages={totalPages} totalElements={totalElements} pageSize={pageSize} onPageChange={setPage} />
                         </GlassCard>
                     </>
                 )}

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Edit2, Trash2, Truck } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { VehicleStep } from "@/components/steps/vehicle-step";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 export default function VehiclesPage() {
     const [vehicles, setVehicles] = useState<any[]>([]);
@@ -16,6 +17,16 @@ export default function VehiclesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [customerFilter, setCustomerFilter] = useState<string>("");
+
+    const filteredVehicles = useMemo(() => vehicles.filter((v) => {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = !searchQuery || v.vehicleNumber?.toLowerCase().includes(q) || v.customer?.name?.toLowerCase().includes(q);
+        const matchesStatus = statusFilter === "ALL" || (v.status || "ACTIVE") === statusFilter;
+        const matchesCustomer = !customerFilter || String(v.customer?.id) === customerFilter;
+        return matchesSearch && matchesStatus && matchesCustomer;
+    }), [vehicles, searchQuery, statusFilter, customerFilter]);
+
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedVehicles } = useClientPagination(filteredVehicles);
 
     const handleToggleVehicleStatus = async (id: number) => {
         try {
@@ -191,13 +202,7 @@ export default function VehiclesPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {vehicles.filter((v) => {
-                                const q = searchQuery.toLowerCase();
-                                const matchesSearch = !searchQuery || v.vehicleNumber?.toLowerCase().includes(q) || v.customer?.name?.toLowerCase().includes(q);
-                                const matchesStatus = statusFilter === "ALL" || (v.status || "ACTIVE") === statusFilter;
-                                const matchesCustomer = !customerFilter || String(v.customer?.id) === customerFilter;
-                                return matchesSearch && matchesStatus && matchesCustomer;
-                            }).map((vehicle) => {
+                            {pagedVehicles.map((vehicle) => {
                                 const vStatus = vehicle.status || "ACTIVE";
                                 return (
                                     <tr key={vehicle.id} className="hover:bg-muted/30 transition-colors">
@@ -248,6 +253,13 @@ export default function VehiclesPage() {
                             No vehicles found. Click "Add New Vehicle" to get started.
                         </div>
                     )}
+                    <TablePagination
+                        page={page}
+                        totalPages={totalPages}
+                        totalElements={totalElements}
+                        pageSize={pageSize}
+                        onPageChange={setPage}
+                    />
                 </div>
             </div>
 

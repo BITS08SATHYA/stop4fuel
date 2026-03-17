@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Edit2, Trash2, ChevronDown, ChevronRight, Users } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { GroupStep } from "@/components/steps/group-step";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api/station";
+import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 export default function GroupsPage() {
     const [groups, setGroups] = useState<any[]>([]);
@@ -17,6 +18,14 @@ export default function GroupsPage() {
     const [loadingCustomers, setLoadingCustomers] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const router = useRouter();
+
+    const filteredGroups = useMemo(() => groups.filter((g) => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return g.groupName?.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q);
+    }), [groups, searchQuery]);
+
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedGroups } = useClientPagination(filteredGroups);
 
     useEffect(() => {
         fetchGroups();
@@ -156,11 +165,7 @@ export default function GroupsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {groups.filter((g) => {
-                                if (!searchQuery) return true;
-                                const q = searchQuery.toLowerCase();
-                                return g.groupName?.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q);
-                            }).map((group) => (
+                            {pagedGroups.map((group) => (
                                 <React.Fragment key={group.id}>
                                     <tr className="hover:bg-muted/30 transition-colors">
                                         <td className="px-6 py-4">
@@ -245,6 +250,13 @@ export default function GroupsPage() {
                             No groups found. Click "Add New Group" to get started.
                         </div>
                     )}
+                    <TablePagination
+                        page={page}
+                        totalPages={totalPages}
+                        totalElements={totalElements}
+                        pageSize={pageSize}
+                        onPageChange={setPage}
+                    />
                 </div>
             </div>
 

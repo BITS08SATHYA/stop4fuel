@@ -38,6 +38,7 @@ import {
     ShieldAlert,
     Ban
 } from "lucide-react";
+import Link from "next/link";
 
 export default function InvoicesPage() {
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
@@ -914,9 +915,9 @@ export default function InvoicesPage() {
                     <GlassCard className="p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-bold text-foreground">Recent Invoices</h3>
-                            <a href="/operations/invoices/history" className="text-sm text-primary hover:underline font-medium flex items-center gap-1">
+                            <Link href="/operations/invoices/history" className="text-sm text-primary hover:underline font-medium flex items-center gap-1">
                                 View Full History <ArrowRight className="w-4 h-4" />
-                            </a>
+                            </Link>
                         </div>
                         {invoices.length === 0 ? (
                             <div className="text-center text-muted-foreground py-8">
