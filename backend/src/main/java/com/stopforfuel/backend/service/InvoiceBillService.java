@@ -366,14 +366,18 @@ public class InvoiceBillService {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
         String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
         String s = (search != null && !search.isEmpty()) ? search : null;
-        return repository.findAllFiltered(bt, ps, fromDate, toDate, s, pageable);
+        LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
+        return repository.findAllFiltered(bt, ps, fd, td, s, pageable);
     }
 
     public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus,
             LocalDateTime fromDate, LocalDateTime toDate) {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
         String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
-        return repository.getProductSalesSummary(bt, ps, fromDate, toDate);
+        LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
+        return repository.getProductSalesSummary(bt, ps, fd, td);
     }
 
     public InvoiceBill getInvoiceById(Long id) {
