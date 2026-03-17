@@ -668,6 +668,43 @@ export const getCustomerInvoices = (
     return fetch(`${API_BASE_URL}/invoices/customer/${customerId}?${params}`).then(handleResponse);
 };
 
+// Product Sales Summary
+export interface ProductSalesSummary {
+    productId: number;
+    productName: string;
+    totalQuantity: number;
+    totalAmount: number;
+    totalGrossAmount: number;
+    totalDiscount: number;
+}
+
+// Invoice History (paginated + filtered)
+export const getInvoiceHistory = (
+    page = 0,
+    size = 20,
+    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string; search?: string }
+): Promise<PageResponse<InvoiceBill>> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (filters?.billType) params.append('billType', filters.billType);
+    if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
+    if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters?.toDate) params.append('toDate', filters.toDate);
+    if (filters?.search) params.append('search', filters.search);
+    return fetch(`${API_BASE_URL}/invoices/history?${params}`).then(handleResponse);
+};
+
+// Product Sales Summary for history filters
+export const getProductSalesSummary = (
+    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string }
+): Promise<ProductSalesSummary[]> => {
+    const params = new URLSearchParams();
+    if (filters?.billType) params.append('billType', filters.billType);
+    if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
+    if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters?.toDate) params.append('toDate', filters.toDate);
+    return fetch(`${API_BASE_URL}/invoices/history/product-summary?${params}`).then(handleResponse);
+};
+
 // Incentives
 export interface Incentive {
     id?: number;
