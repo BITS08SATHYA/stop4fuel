@@ -86,13 +86,39 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
 
     const router = useRouter();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; customerId: number } | null>(null);
+    const [statusDropdown, setStatusDropdown] = useState<number | null>(null);
 
-    // Close context menu on click outside
+    // Close context menu and status dropdown on click outside
     useEffect(() => {
-        const handleClick = () => setContextMenu(null);
+        const handleClick = () => { setContextMenu(null); setStatusDropdown(null); };
         document.addEventListener("click", handleClick);
         return () => document.removeEventListener("click", handleClick);
     }, []);
+
+    const changeStatus = async (customerId: number, currentStatus: string, targetStatus: string) => {
+        setStatusDropdown(null);
+        try {
+            let url = "";
+            let method = "PATCH";
+            if (targetStatus === "BLOCKED") {
+                url = `${API_BASE_URL}/customers/${customerId}/block`;
+            } else if (currentStatus === "BLOCKED" && targetStatus === "ACTIVE") {
+                url = `${API_BASE_URL}/customers/${customerId}/unblock`;
+            } else {
+                url = `${API_BASE_URL}/customers/${customerId}/toggle-status`;
+            }
+            const res = await fetch(url, { method });
+            if (res.ok) {
+                fetchCustomers();
+                onDataChange?.();
+            } else {
+                const err = await res.text();
+                alert(err || "Failed to change status");
+            }
+        } catch (error) {
+            console.error("Failed to change status", error);
+        }
+    };
 
     const handleContextMenu = (e: React.MouseEvent, customerId: number) => {
         e.preventDefault();
@@ -230,30 +256,49 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                                         </div>
                                     </td>
                                     <td className="p-4">
-                                        <button
-                                            onClick={async (e) => {
-                                                e.stopPropagation();
-                                                try {
-                                                    const res = await fetch(`${API_BASE_URL}/customers/${customer.id}/toggle-status`, {
-                                                        method: 'PATCH'
-                                                    });
-                                                    if (res.ok) {
-                                                        fetchCustomers();
-                                                        onDataChange?.();
-                                                    }
-                                                } catch (error) {
-                                                    console.error('Failed to toggle status', error);
-                                                }
-                                            }}
-                                            className="relative inline-flex items-center"
-                                        >
-                                            <Badge
-                                                variant={customer.status === 'ACTIVE' ? 'success' : customer.status === 'BLOCKED' ? 'danger' : 'warning'}
-                                                className="cursor-pointer hover:opacity-80 transition-opacity"
+                                        <div className="relative inline-flex items-center">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setStatusDropdown(statusDropdown === customer.id ? null : customer.id);
+                                                }}
                                             >
-                                                {customer.status === 'ACTIVE' ? 'Active' : customer.status === 'BLOCKED' ? 'Blocked' : 'Inactive'}
-                                            </Badge>
-                                        </button>
+                                                <Badge
+                                                    variant={customer.status === 'ACTIVE' ? 'success' : customer.status === 'BLOCKED' ? 'danger' : 'warning'}
+                                                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                                                >
+                                                    {customer.status === 'ACTIVE' ? 'Active' : customer.status === 'BLOCKED' ? 'Blocked' : 'Inactive'}
+                                                </Badge>
+                                            </button>
+                                            {statusDropdown === customer.id && (
+                                                <div className="absolute top-full left-0 mt-1 z-30 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+                                                    {customer.status !== 'ACTIVE' && (
+                                                        <button
+                                                            onClick={() => changeStatus(customer.id, customer.status, 'ACTIVE')}
+                                                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-2"
+                                                        >
+                                                            <span className="w-2 h-2 rounded-full bg-emerald-500" />Active
+                                                        </button>
+                                                    )}
+                                                    {customer.status !== 'INACTIVE' && customer.status !== 'BLOCKED' && (
+                                                        <button
+                                                            onClick={() => changeStatus(customer.id, customer.status, 'INACTIVE')}
+                                                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-2"
+                                                        >
+                                                            <span className="w-2 h-2 rounded-full bg-amber-500" />Inactive
+                                                        </button>
+                                                    )}
+                                                    {customer.status === 'ACTIVE' && (
+                                                        <button
+                                                            onClick={() => changeStatus(customer.id, customer.status, 'BLOCKED')}
+                                                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-2 text-destructive"
+                                                        >
+                                                            <span className="w-2 h-2 rounded-full bg-red-500" />Block
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="p-4 text-right">
                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
