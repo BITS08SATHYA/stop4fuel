@@ -45,15 +45,15 @@ export default function CustomersPage() {
     };
 
     return (
-        <div className="p-8 min-h-screen bg-background transition-colors duration-300">
-            <div className="max-w-7xl mx-auto">
+        <div className="p-6 h-screen flex flex-col bg-background transition-colors duration-300 overflow-hidden">
+            <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
                 {/* Header */}
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex justify-between items-center mb-4 flex-shrink-0">
                     <div>
                         <h1 className="text-4xl font-bold text-foreground tracking-tight">
                             Customer <span className="text-gradient">Management</span>
                         </h1>
-                        <p className="text-muted-foreground mt-2">
+                        <p className="text-muted-foreground mt-1">
                             Manage fleets, credit limits, and vehicle associations.
                         </p>
                     </div>
@@ -67,10 +67,12 @@ export default function CustomersPage() {
                 </div>
 
                 {/* Stats */}
-                <CustomerStats />
+                <div className="flex-shrink-0">
+                    <CustomerStats />
+                </div>
 
                 {/* Main Content Grid */}
-                <div className="mt-8">
+                <div className="mt-4 flex-1 min-h-0">
                     <CustomerList refreshTrigger={refreshKey} />
                 </div>
             </div>
