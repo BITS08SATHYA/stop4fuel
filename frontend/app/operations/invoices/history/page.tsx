@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import {
     Search, Filter, Calendar, ChevronDown, ChevronRight,
@@ -250,9 +250,8 @@ export default function InvoiceHistoryPage() {
                                 invoices.map(inv => {
                                     const isExpanded = expandedRowId === inv.id;
                                     return (
-                                        <>
+                                        <Fragment key={inv.id}>
                                             <tr
-                                                key={inv.id}
                                                 onClick={() => setExpandedRowId(isExpanded ? null : (inv.id ?? null))}
                                                 className="hover:bg-white/5 transition-colors cursor-pointer"
                                             >
@@ -334,7 +333,7 @@ export default function InvoiceHistoryPage() {
                                                     </td>
                                                 </tr>
                                             )}
-                                        </>
+                                        </Fragment>
                                     );
                                 })
                             )}
