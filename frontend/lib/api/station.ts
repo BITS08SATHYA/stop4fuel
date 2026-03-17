@@ -168,6 +168,7 @@ export interface InvoiceBill {
     grossAmount?: number;
     totalDiscount?: number;
     netAmount: number;
+    billNo?: string;
     billType: 'CASH' | 'CREDIT';
     paymentMode?: string;
     indentNo?: string;
@@ -190,7 +191,7 @@ export interface PaymentMode {
 
 export interface Statement {
     id?: number;
-    statementNo: number;
+    statementNo: string;
     customer: Customer;
     fromDate: string;
     toDate: string;

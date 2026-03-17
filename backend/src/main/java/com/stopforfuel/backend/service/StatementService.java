@@ -26,6 +26,7 @@ public class StatementService {
     private final StatementRepository statementRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final CustomerRepository customerRepository;
+    private final BillSequenceService billSequenceService;
 
     public Page<Statement> getStatements(Long customerId, String status, Pageable pageable) {
         return statementRepository.findWithFilters(customerId, status, pageable);
@@ -40,7 +41,7 @@ public class StatementService {
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
     }
 
-    public Statement getStatementByNo(Long statementNo) {
+    public Statement getStatementByNo(String statementNo) {
         return statementRepository.findByStatementNo(statementNo)
                 .orElseThrow(() -> new RuntimeException("Statement not found with no: " + statementNo));
     }
@@ -115,8 +116,7 @@ public class StatementService {
         BigDecimal roundingAmount = netAmount.subtract(totalAmount);
 
         // Get next statement number
-        Long maxStatementNo = statementRepository.findMaxStatementNo();
-        Long nextStatementNo = maxStatementNo + 1;
+        String nextStatementNo = billSequenceService.getNextBillNo("STMT");
 
         // Create statement
         Statement statement = new Statement();
