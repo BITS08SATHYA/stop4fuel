@@ -338,7 +338,7 @@ export default function InvoicesPage() {
             </GlassCard>
             <div className="flex justify-end">
                 <button
-                    disabled={!selectedCustomer}
+                    disabled={!selectedCustomer || !!isCustomerBlocked}
                     onClick={() => setCurrentStep(2)}
                     className="px-10 py-4 btn-gradient disabled:opacity-50 disabled:grayscale text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3 group"
                 >
@@ -434,7 +434,7 @@ export default function InvoicesPage() {
                     <ArrowLeft size={20} /> Back
                 </button>
                 <button
-                    disabled={!selectedVehicle}
+                    disabled={!selectedVehicle || !!isVehicleBlocked}
                     onClick={() => setCurrentStep(3)}
                     className="px-10 py-4 btn-gradient disabled:opacity-50 disabled:grayscale text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3 group"
                 >
