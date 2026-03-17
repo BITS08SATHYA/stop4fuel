@@ -4,7 +4,6 @@ import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -164,13 +163,13 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated filtered history query (all invoices, not customer-specific)
-    @EntityGraph(attributePaths = {"products", "products.product", "products.nozzle", "customer", "vehicle"})
-    @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
+    @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN FETCH ib.customer c LEFT JOIN FETCH ib.vehicle v "
+         + "LEFT JOIN FETCH ib.products ip LEFT JOIN FETCH ip.product LEFT JOIN FETCH ip.nozzle WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
          + "AND ib.date >= :fromDate "
          + "AND ib.date <= :toDate "
-         + "AND (:search IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
+         + "AND (:search = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%'))) "
          + "ORDER BY ib.date DESC",
@@ -179,7 +178,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
          + "AND ib.date >= :fromDate "
          + "AND ib.date <= :toDate "
-         + "AND (:search IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
+         + "AND (:search = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%')))")
     Page<InvoiceBill> findAllFiltered(
