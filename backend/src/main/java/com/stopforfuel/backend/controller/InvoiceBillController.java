@@ -61,6 +61,11 @@ public class InvoiceBillController {
         return service.createInvoice(invoice);
     }
 
+    @PutMapping("/{id}")
+    public InvoiceBill update(@PathVariable Long id, @RequestBody InvoiceBill invoice) {
+        return service.updateInvoice(id, invoice);
+    }
+
     @GetMapping("/customer/{customerId}")
     public Page<InvoiceBill> getByCustomer(
             @PathVariable Long customerId,
