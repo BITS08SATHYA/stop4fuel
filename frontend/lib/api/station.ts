@@ -476,6 +476,13 @@ export const createInvoice = (invoice: Partial<InvoiceBill>): Promise<InvoiceBil
         body: JSON.stringify(invoice),
     }).then(handleResponse);
 
+export const updateInvoice = (id: number, invoice: Partial<InvoiceBill>): Promise<InvoiceBill> =>
+    fetch(`${API_BASE_URL}/invoices/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoice),
+    }).then(handleResponse);
+
 export const deleteInvoice = (id: number): Promise<void> =>
     fetch(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
 
