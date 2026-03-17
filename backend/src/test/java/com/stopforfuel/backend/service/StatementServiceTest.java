@@ -38,6 +38,9 @@ class StatementServiceTest {
     @Mock
     private CustomerRepository customerRepository;
 
+    @Mock
+    private BillSequenceService billSequenceService;
+
     @InjectMocks
     private StatementService statementService;
 
@@ -61,7 +64,7 @@ class StatementServiceTest {
 
         testStatement = new Statement();
         testStatement.setId(1L);
-        testStatement.setStatementNo(100L);
+        testStatement.setStatementNo("S26/100");
         testStatement.setCustomer(testCustomer);
         testStatement.setStatus("NOT_PAID");
         testStatement.setReceivedAmount(BigDecimal.ZERO);
@@ -86,7 +89,7 @@ class StatementServiceTest {
     @Test
     void getStatementById_exists_returnsStatement() {
         when(statementRepository.findById(1L)).thenReturn(Optional.of(testStatement));
-        assertEquals(100L, statementService.getStatementById(1L).getStatementNo());
+        assertEquals("S26/100", statementService.getStatementById(1L).getStatementNo());
     }
 
     @Test
@@ -97,8 +100,8 @@ class StatementServiceTest {
 
     @Test
     void getStatementByNo_exists_returnsStatement() {
-        when(statementRepository.findByStatementNo(100L)).thenReturn(Optional.of(testStatement));
-        assertNotNull(statementService.getStatementByNo(100L));
+        when(statementRepository.findByStatementNo("S26/100")).thenReturn(Optional.of(testStatement));
+        assertNotNull(statementService.getStatementByNo("S26/100"));
     }
 
     @Test
@@ -118,7 +121,7 @@ class StatementServiceTest {
         when(customerRepository.findById(1L)).thenReturn(Optional.of(testCustomer));
         when(invoiceBillRepository.findUnlinkedCreditBills(eq(1L), any(), any()))
                 .thenReturn(List.of(testBill));
-        when(statementRepository.findMaxStatementNo()).thenReturn(99L);
+        when(billSequenceService.getNextBillNo("STMT")).thenReturn("S26/1");
         when(statementRepository.save(any(Statement.class))).thenAnswer(i -> {
             Statement s = i.getArgument(0);
             s.setId(2L);
@@ -129,7 +132,7 @@ class StatementServiceTest {
                 1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
                 null, null, null);
 
-        assertEquals(100L, result.getStatementNo());
+        assertEquals("S26/1", result.getStatementNo());
         assertEquals(1, result.getNumberOfBills());
         assertEquals("NOT_PAID", result.getStatus());
         verify(invoiceBillRepository).save(testBill);
@@ -140,7 +143,7 @@ class StatementServiceTest {
         when(customerRepository.findById(1L)).thenReturn(Optional.of(testCustomer));
         when(invoiceBillRepository.findUnlinkedCreditBillsByIds(List.of(10L)))
                 .thenReturn(List.of(testBill));
-        when(statementRepository.findMaxStatementNo()).thenReturn(0L);
+        when(billSequenceService.getNextBillNo("STMT")).thenReturn("S26/1");
         when(statementRepository.save(any(Statement.class))).thenAnswer(i -> {
             Statement s = i.getArgument(0);
             s.setId(1L);
@@ -151,7 +154,7 @@ class StatementServiceTest {
                 1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
                 null, null, List.of(10L));
 
-        assertEquals(1L, result.getStatementNo());
+        assertEquals("S26/1", result.getStatementNo());
     }
 
     @Test

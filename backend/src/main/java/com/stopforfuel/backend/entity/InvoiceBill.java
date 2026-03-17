@@ -53,6 +53,9 @@ public class InvoiceBill extends BaseEntity {
     @Column(name = "net_amount", precision = 19, scale = 4)
     private BigDecimal netAmount;
 
+    @Column(name = "bill_no")
+    private String billNo; // e.g., "C26/34", "A26/51"
+
     @Column(name = "bill_type", nullable = false)
     private String billType; // CASH, CREDIT
 

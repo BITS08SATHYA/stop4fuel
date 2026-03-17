@@ -16,7 +16,7 @@ import java.util.List;
 public class Statement extends BaseEntity {
 
     @Column(name = "statement_no", nullable = false, unique = true)
-    private Long statementNo;
+    private String statementNo; // e.g., "S26/12"
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
