@@ -68,12 +68,12 @@ export default function CustomersPage() {
 
                 {/* Stats */}
                 <div className="flex-shrink-0">
-                    <CustomerStats />
+                    <CustomerStats refreshTrigger={refreshKey} />
                 </div>
 
                 {/* Main Content Grid */}
                 <div className="mt-4 flex-1 min-h-0">
-                    <CustomerList refreshTrigger={refreshKey} />
+                    <CustomerList refreshTrigger={refreshKey} onDataChange={() => setRefreshKey(prev => prev + 1)} />
                 </div>
             </div>
 
