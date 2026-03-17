@@ -26,6 +26,8 @@ import {
     UserCog,
     ClipboardList,
     Warehouse,
+    ShoppingBag,
+    ArrowLeftRight,
     Clock,
     BarChart3,
     PieChart,
@@ -69,6 +71,10 @@ const inventoryManagementNav = [
     { name: "Tank Dip Readings", href: "/operations/inventory/tanks", icon: Ruler },
     { name: "Nozzle Meter Readings", href: "/operations/inventory/nozzles", icon: Hash },
     { name: "Product Stock", href: "/operations/inventory/products", icon: Archive },
+    { name: "Godown Stock", href: "/operations/inventory/godown", icon: Warehouse },
+    { name: "Cashier Stock", href: "/operations/inventory/cashier", icon: ShoppingBag },
+    { name: "Stock Transfer", href: "/operations/inventory/transfers", icon: ArrowLeftRight },
+    { name: "Purchase Orders", href: "/operations/inventory/purchase-orders", icon: ClipboardList },
 ];
 
 const shiftManagementNav = [
