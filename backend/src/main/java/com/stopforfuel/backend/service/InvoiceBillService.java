@@ -1,13 +1,17 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.entity.transaction.*;
 import com.stopforfuel.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -355,6 +359,21 @@ public class InvoiceBillService {
                 return repository.findByCustomerIdOrderByDateDesc(customerId, pageable);
             }
         }
+    }
+
+    public Page<InvoiceBill> getInvoiceHistory(String billType, String paymentStatus,
+            LocalDateTime fromDate, LocalDateTime toDate, String search, Pageable pageable) {
+        String bt = (billType != null && !billType.isEmpty()) ? billType : null;
+        String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
+        String s = (search != null && !search.isEmpty()) ? search : null;
+        return repository.findAllFiltered(bt, ps, fromDate, toDate, s, pageable);
+    }
+
+    public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus,
+            LocalDateTime fromDate, LocalDateTime toDate) {
+        String bt = (billType != null && !billType.isEmpty()) ? billType : null;
+        String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
+        return repository.getProductSalesSummary(bt, ps, fromDate, toDate);
     }
 
     public InvoiceBill getInvoiceById(Long id) {
