@@ -117,7 +117,7 @@ export default function StockTransferPage() {
     const { page, setPage, totalPages, totalElements, pageSize, paginatedData } = useClientPagination(filtered);
 
     return (
-        <div className="p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>
