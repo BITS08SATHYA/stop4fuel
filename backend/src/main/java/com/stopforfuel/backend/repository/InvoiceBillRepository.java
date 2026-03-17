@@ -168,8 +168,8 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
     @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
-         + "AND (:fromDate IS NULL OR ib.date >= :fromDate) "
-         + "AND (:toDate IS NULL OR ib.date <= :toDate) "
+         + "AND ib.date >= :fromDate "
+         + "AND ib.date <= :toDate "
          + "AND (:search IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%'))) "
@@ -177,8 +177,8 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
          countQuery = "SELECT COUNT(ib) FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
-         + "AND (:fromDate IS NULL OR ib.date >= :fromDate) "
-         + "AND (:toDate IS NULL OR ib.date <= :toDate) "
+         + "AND ib.date >= :fromDate "
+         + "AND ib.date <= :toDate "
          + "AND (:search IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%')))")
@@ -196,8 +196,8 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
          + "LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
-         + "AND (:fromDate IS NULL OR ib.date >= :fromDate) "
-         + "AND (:toDate IS NULL OR ib.date <= :toDate) "
+         + "AND ib.date >= :fromDate "
+         + "AND ib.date <= :toDate "
          + "GROUP BY ip.product.id, p.name")
     List<ProductSalesSummary> getProductSalesSummary(
             @Param("billType") String billType,
