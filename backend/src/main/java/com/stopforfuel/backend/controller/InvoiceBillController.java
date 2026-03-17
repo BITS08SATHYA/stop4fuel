@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.service.InvoiceBillService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,27 @@ public class InvoiceBillController {
     @GetMapping("/shift/{shiftId}")
     public List<InvoiceBill> getByShift(@PathVariable Long shiftId) {
         return service.getInvoicesByShift(shiftId);
+    }
+
+    @GetMapping("/history")
+    public Page<InvoiceBill> getHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String billType,
+            @RequestParam(required = false) String paymentStatus,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+            @RequestParam(required = false) String search) {
+        return service.getInvoiceHistory(billType, paymentStatus, fromDate, toDate, search, PageRequest.of(page, size));
+    }
+
+    @GetMapping("/history/product-summary")
+    public List<ProductSalesSummary> getProductSalesSummary(
+            @RequestParam(required = false) String billType,
+            @RequestParam(required = false) String paymentStatus,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate) {
+        return service.getProductSalesSummary(billType, paymentStatus, fromDate, toDate);
     }
 
     @GetMapping("/{id}")

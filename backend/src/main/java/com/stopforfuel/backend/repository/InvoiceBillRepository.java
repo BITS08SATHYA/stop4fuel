@@ -1,6 +1,10 @@
 package com.stopforfuel.backend.repository;
 
+import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -158,4 +162,46 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             org.springframework.data.domain.Pageable pageable);
+
+    // Paginated filtered history query (all invoices, not customer-specific)
+    @EntityGraph(attributePaths = {"products", "products.product", "products.nozzle", "customer", "vehicle"})
+    @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
+         + "(:billType IS NULL OR ib.billType = :billType) "
+         + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
+         + "AND (:fromDate IS NULL OR ib.date >= :fromDate) "
+         + "AND (:toDate IS NULL OR ib.date <= :toDate) "
+         + "AND (:search IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
+         + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
+         + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%'))) "
+         + "ORDER BY ib.date DESC",
+         countQuery = "SELECT COUNT(ib) FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
+         + "(:billType IS NULL OR ib.billType = :billType) "
+         + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
+         + "AND (:fromDate IS NULL OR ib.date >= :fromDate) "
+         + "AND (:toDate IS NULL OR ib.date <= :toDate) "
+         + "AND (:search IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
+         + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
+         + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%')))")
+    Page<InvoiceBill> findAllFiltered(
+            @Param("billType") String billType,
+            @Param("paymentStatus") String paymentStatus,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate,
+            @Param("search") String search,
+            Pageable pageable);
+
+    // Product sales summary aggregation
+    @Query("SELECT new com.stopforfuel.backend.dto.ProductSalesSummary(ip.product.id, p.name, SUM(ip.quantity), SUM(ip.amount), SUM(ip.grossAmount), COALESCE(SUM(ip.discountAmount),0)) "
+         + "FROM InvoiceProduct ip JOIN ip.product p JOIN ip.invoiceBill ib "
+         + "LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
+         + "(:billType IS NULL OR ib.billType = :billType) "
+         + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
+         + "AND (:fromDate IS NULL OR ib.date >= :fromDate) "
+         + "AND (:toDate IS NULL OR ib.date <= :toDate) "
+         + "GROUP BY ip.product.id, p.name")
+    List<ProductSalesSummary> getProductSalesSummary(
+            @Param("billType") String billType,
+            @Param("paymentStatus") String paymentStatus,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
 }
