@@ -911,58 +911,34 @@ export default function InvoicesPage() {
                 {activeTab === 'create' ? (
                     renderCreateTab()
                 ) : (
-                    <GlassCard className="overflow-hidden border-none p-0">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-white/5 border-b border-border/50">
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-16">#</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Bill No</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Customer</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Items</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border/30">
-                                    {invoices.map((inv: any, idx: number) => (
-                                        <tr key={inv.id} className="hover:bg-white/5 transition-colors">
-                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{idx + 1}</td>
-                                            <td className="px-6 py-4 font-mono font-bold text-foreground">{inv.billNo || "—"}</td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-bold text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
-                                                <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1 mt-1">
-                                                    <Calendar className="w-3 h-3" />
-                                                    {new Date(inv.date).toLocaleTimeString()}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-foreground font-medium">{inv.customer?.name || <span className="text-muted-foreground italic">Walk-in</span>}</td>
-                                            <td className="px-6 py-4 text-sm text-foreground font-mono">{inv.vehicle?.vehicleNumber || "—"}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                                    inv.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                                                }`}>
-                                                    {inv.billType}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="text-sm font-mono bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
-                                                    {inv.products?.length || 0}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-bold text-foreground">
-                                                ₹{(inv.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <GlassCard className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-bold text-foreground">Recent Invoices</h3>
+                            <a href="/operations/invoices/history" className="text-sm text-primary hover:underline font-medium flex items-center gap-1">
+                                View Full History <ArrowRight className="w-4 h-4" />
+                            </a>
                         </div>
-                        {invoices.length === 0 && (
-                            <div className="p-12 text-center text-muted-foreground">
-                                No invoices found. Create your first invoice using the "New Bill" tab.
+                        {invoices.length === 0 ? (
+                            <div className="text-center text-muted-foreground py-8">
+                                No invoices found. Create your first invoice using the &quot;New Bill&quot; tab.
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {invoices.slice(0, 5).map((inv: any) => (
+                                    <div key={inv.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-mono font-bold text-sm text-foreground">{inv.billNo || "—"}</span>
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                                inv.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                                            }`}>{inv.billType}</span>
+                                            <span className="text-sm text-muted-foreground">{inv.customer?.name || "Walk-in"}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="font-bold text-foreground">₹{(inv.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <div className="text-[10px] text-muted-foreground">{new Date(inv.date).toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </GlassCard>
