@@ -365,7 +365,7 @@ public class InvoiceBillService {
             LocalDateTime fromDate, LocalDateTime toDate, String search, Pageable pageable) {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
         String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
-        String s = (search != null && !search.isEmpty()) ? search : null;
+        String s = (search != null && !search.isEmpty()) ? search : "";
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
         return repository.findAllFiltered(bt, ps, fd, td, s, pageable);
