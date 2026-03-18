@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface SalaryPaymentRepository extends JpaRepository<SalaryPayment, Long> {
     List<SalaryPayment> findByMonthAndYear(Integer month, Integer year);
+    List<SalaryPayment> findByShiftId(Long shiftId);
     List<SalaryPayment> findByEmployeeIdOrderByYearDescMonthDesc(Long employeeId);
     Optional<SalaryPayment> findByEmployeeIdAndMonthAndYear(Long employeeId, Integer month, Integer year);
 }
