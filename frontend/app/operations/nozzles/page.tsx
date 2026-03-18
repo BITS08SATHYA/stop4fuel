@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import { getNozzles, getTanks, getPumps, createNozzle, updateNozzle, deleteNozzle, Nozzle, Tank, Pump } from "@/lib/api/station";
 import { Fuel, Plus, Edit2, Trash2, Search, Activity, Droplets } from "lucide-react";
+import { useFormValidation, required } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 export default function NozzlesPage() {
@@ -25,6 +27,14 @@ export default function NozzlesPage() {
     const [tankId, setTankId] = useState("");
     const [pumpId, setPumpId] = useState("");
     const [active, setActive] = useState(true);
+    const [apiError, setApiError] = useState("");
+
+    const validationRules = useMemo(() => ({
+        nozzleName: [required("Nozzle name is required")],
+        pumpId: [required("Pump is required")],
+        tankId: [required("Tank is required")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -58,11 +68,15 @@ export default function NozzlesPage() {
             setPumpId("");
             setActive(true);
         }
+        clearAllErrors();
+        setApiError("");
         setIsModalOpen(true);
     };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ nozzleName, pumpId, tankId })) return;
         try {
             const payload = {
                 nozzleName,
@@ -80,7 +94,7 @@ export default function NozzlesPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save nozzle", err);
-            alert("Error saving nozzle details");
+            setApiError("Error saving nozzle details");
         }
     };
 
@@ -91,7 +105,7 @@ export default function NozzlesPage() {
                 loadData();
             } catch (err) {
                 console.error("Failed to delete nozzle", err);
-                alert("Cannot delete nozzle.");
+                setApiError("Cannot delete nozzle.");
             }
         }
     };
@@ -260,18 +274,19 @@ export default function NozzlesPage() {
                 title={editingNozzle ? "Edit Nozzle" : "Add New Nozzle"}
             >
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">
                             Nozzle Name <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
-                            required
                             value={nozzleName}
-                            onChange={(e) => setNozzleName(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setNozzleName(e.target.value); clearError("nozzleName"); }}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.nozzleName)}`}
                             placeholder="e.g. N-1"
                         />
+                        <FieldError error={errors.nozzleName} />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -280,32 +295,32 @@ export default function NozzlesPage() {
                                 Assigned Pump <span className="text-red-500">*</span>
                             </label>
                             <select
-                                required
                                 value={pumpId}
-                                onChange={(e) => setPumpId(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                onChange={(e) => { setPumpId(e.target.value); clearError("pumpId"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.pumpId)}`}
                             >
                                 <option value="">Select a pump...</option>
                                 {pumps.map(p => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
                             </select>
+                            <FieldError error={errors.pumpId} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Source Tank <span className="text-red-500">*</span>
                             </label>
                             <select
-                                required
                                 value={tankId}
-                                onChange={(e) => setTankId(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                onChange={(e) => { setTankId(e.target.value); clearError("tankId"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.tankId)}`}
                             >
                                 <option value="">Select a fuel tank...</option>
                                 {tanks.map(t => (
                                     <option key={t.id} value={t.id}>{t.name} ({t.product.name})</option>
                                 ))}
                             </select>
+                            <FieldError error={errors.tankId} />
                         </div>
                     </div>
 
