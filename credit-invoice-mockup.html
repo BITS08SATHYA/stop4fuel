@@ -9,9 +9,7 @@
   body { font-family: 'Courier New', monospace; font-size: 9pt; line-height: 1.3; color: #000; background: #fff; width: 72mm; margin: 0 auto; }
 
   .receipt { padding: 2mm; }
-
   .center { text-align: center; }
-  .right { text-align: right; }
   .bold { font-weight: 700; }
   .big { font-size: 12pt; font-weight: 900; }
   .med { font-size: 10pt; font-weight: 700; }
@@ -24,17 +22,19 @@
   .row { display: flex; justify-content: space-between; }
   .row .lbl { color: #555; font-size: 8pt; }
 
-  table { width: 100%; border-collapse: collapse; margin: 2px 0; }
-  th { font-size: 7pt; font-weight: 700; text-align: left; border-bottom: 1px solid #000; padding: 1px 0; }
-  th.r { text-align: right; }
-  td { font-size: 8pt; padding: 1px 0; }
-  td.r { text-align: right; }
-  td.c { text-align: center; }
-  .tot td { font-weight: 700; border-top: 1px solid #000; padding-top: 2px; }
-
   .badge { display: inline-block; border: 1.5px solid #000; padding: 1px 6px; font-size: 8pt; font-weight: 900; letter-spacing: 0.5px; }
 
   .grand-total { font-size: 14pt; font-weight: 900; text-align: center; margin: 4px 0; }
+
+  /* Product item block */
+  .item { margin-bottom: 4px; }
+  .item-name { font-weight: 900; font-size: 9pt; }
+  .item-detail { font-size: 7pt; color: #555; }
+  .item-calc { display: flex; justify-content: space-between; font-size: 8.5pt; margin-top: 1px; }
+  .item-calc .qty { }
+  .item-calc .rate { color: #555; }
+  .item-calc .amt { font-weight: 700; }
+  .item-disc { font-size: 7.5pt; text-align: right; color: #555; }
 </style>
 </head>
 <body>
@@ -78,46 +78,52 @@
   <div class="row"><span class="lbl">Vehicle:</span><span class="bold">TN 01 AB 1234</span></div>
   <div class="row"><span class="lbl">Type:</span><span>Lorry - 10 Wheeler</span></div>
   <div class="row"><span class="lbl">KM:</span><span>1,24,580</span></div>
-  <div class="row"><span class="lbl">Driver:</span><span>Murugan K | 90876 54321</span></div>
+  <div class="row"><span class="lbl">Driver:</span><span>Murugan K</span></div>
   <div class="row"><span class="lbl">Indent:</span><span>IND/2026/0456</span></div>
   <div class="row"><span class="lbl">Signatory:</span><span>Rajesh S</span></div>
 
   <div class="dline"></div>
+  <div class="center bold sm">ITEMS</div>
+  <div class="dline"></div>
 
-  <!-- Products -->
-  <table>
-    <thead>
-      <tr><th>Item</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amt</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td class="bold">Petrol (MS)</td><td class="r">500.00L</td><td class="r">102.61</td><td class="r">51,305</td>
-      </tr>
-      <tr>
-        <td class="xs">N1-A / Pump 1 | HSN:27101990</td><td colspan="3"></td>
-      </tr>
-      <tr>
-        <td class="sm">Disc @2.05/L</td><td></td><td></td><td class="r sm">-1,025</td>
-      </tr>
-      <tr><td colspan="4" style="height:2px;"></td></tr>
-      <tr>
-        <td class="bold">Diesel (HSD)</td><td class="r">300.00L</td><td class="r">89.62</td><td class="r">26,886</td>
-      </tr>
-      <tr>
-        <td class="xs">N2-A / Pump 2 | HSN:27101930</td><td colspan="3"></td>
-      </tr>
-      <tr>
-        <td class="sm">Disc @1.79/L</td><td></td><td></td><td class="r sm">-538</td>
-      </tr>
-      <tr><td colspan="4" style="height:2px;"></td></tr>
-      <tr>
-        <td class="bold">Engine Oil 5W-30</td><td class="r">2 pcs</td><td class="r">450.00</td><td class="r">900</td>
-      </tr>
-      <tr>
-        <td class="xs">HSN:27101950</td><td colspan="3"></td>
-      </tr>
-    </tbody>
-  </table>
+  <!-- Product 1 -->
+  <div class="item">
+    <div class="item-name">Petrol (MS)</div>
+    <div class="item-detail">N1-A / Pump 1 | HSN: 27101990</div>
+    <div class="item-calc">
+      <span class="qty">500.00 L</span>
+      <span class="rate">x 102.61</span>
+      <span class="amt">51,305.00</span>
+    </div>
+    <div class="item-disc">Disc @2.05/L = -1,025.00</div>
+  </div>
+
+  <div class="line"></div>
+
+  <!-- Product 2 -->
+  <div class="item">
+    <div class="item-name">Diesel (HSD)</div>
+    <div class="item-detail">N2-A / Pump 2 | HSN: 27101930</div>
+    <div class="item-calc">
+      <span class="qty">300.00 L</span>
+      <span class="rate">x 89.62</span>
+      <span class="amt">26,886.00</span>
+    </div>
+    <div class="item-disc">Disc @1.79/L = -538.00</div>
+  </div>
+
+  <div class="line"></div>
+
+  <!-- Product 3 -->
+  <div class="item">
+    <div class="item-name">Engine Oil 5W-30 (1L)</div>
+    <div class="item-detail">HSN: 27101950</div>
+    <div class="item-calc">
+      <span class="qty">2 pcs</span>
+      <span class="rate">x 450.00</span>
+      <span class="amt">900.00</span>
+    </div>
+  </div>
 
   <div class="dline"></div>
 
@@ -151,7 +157,7 @@
   <div class="center xs" style="margin-top:3px;">
     Fuel prices include all applicable taxes.<br>
     Goods once sold will not be taken back.<br>
-    Credit bills must be settled within 15 days.<br>
+    Credit bills settled within 15 days.<br>
     Subject to Chennai jurisdiction.<br>
     Computer-generated invoice.
   </div>
@@ -159,8 +165,8 @@
   <div class="line"></div>
 
   <div class="center xs">
-    Amount in words: Rupees Seventy Seven<br>
-    Thousand Five Hundred and Twenty Eight Only
+    Amt in words: Rupees Seventy Seven<br>
+    Thousand Five Hundred Twenty Eight Only
   </div>
 
   <div style="margin-top:15px;"></div>
