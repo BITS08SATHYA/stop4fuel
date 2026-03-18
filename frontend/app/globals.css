@@ -101,3 +101,34 @@
     @apply bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white shadow-lg shadow-orange-500/20 transition-all duration-300;
   }
 }
+
+/* Print styles for Shift Closing Report — Legal Landscape */
+@media print {
+  /* Hide sidebar, header, footer, scrollbars */
+  aside, nav, header, footer, .print\\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page {
+    size: legal landscape;
+    margin: 8mm;
+  }
+
+  .print-page {
+    page-break-after: always;
+    min-height: 100vh;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+  }
+}
