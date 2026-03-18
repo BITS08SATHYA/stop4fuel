@@ -1,20 +1,20 @@
 import React from "react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { FieldError, inputErrorClass } from "@/components/ui/field-error";
 
 interface CustomerStepProps {
     data: any;
     updateData: (data: any) => void;
+    errors?: Record<string, string | undefined>;
+    clearError?: (field: string) => void;
 }
 
-export function CustomerStep({ data, updateData }: CustomerStepProps) {
+export function CustomerStep({ data, updateData, errors = {}, clearError }: CustomerStepProps) {
     const [parties, setParties] = React.useState<any[]>([]);
     const [groups, setGroups] = React.useState<any[]>([]);
     const [ceilingType, setCeilingType] = React.useState<"amount" | "liters">("amount");
 
     React.useEffect(() => {
-        // Fetch parties and groups
-        // Assuming API base URL is configured or proxy is set up. Using relative path for now or hardcoded if needed.
-        // For development, we might need full URL if CORS is an issue or proxy not set.
         const fetchOptions = async () => {
             try {
                 const partiesRes = await fetch(`${API_BASE_URL}/parties`);
@@ -31,6 +31,11 @@ export function CustomerStep({ data, updateData }: CustomerStepProps) {
         fetchOptions();
     }, []);
 
+    const handleChange = (field: string, value: any) => {
+        updateData({ ...data, [field]: value });
+        clearError?.(field);
+    };
+
     const addEmail = () => {
         const emails = data.emails || [];
         updateData({ ...data, emails: [...emails, ""] });
@@ -40,6 +45,7 @@ export function CustomerStep({ data, updateData }: CustomerStepProps) {
         const emails = [...(data.emails || [])];
         emails[index] = value;
         updateData({ ...data, emails });
+        clearError?.("emails");
     };
 
     const removeEmail = (index: number) => {
@@ -57,6 +63,7 @@ export function CustomerStep({ data, updateData }: CustomerStepProps) {
         const phoneNumbers = [...(data.phoneNumbers || [])];
         phoneNumbers[index] = value;
         updateData({ ...data, phoneNumbers });
+        clearError?.("phoneNumbers");
     };
 
     const removePhone = (index: number) => {
@@ -70,42 +77,45 @@ export function CustomerStep({ data, updateData }: CustomerStepProps) {
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Name
+                        Name <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         value={data.name || ""}
-                        onChange={(e) => updateData({ ...data, name: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        onChange={(e) => handleChange("name", e.target.value)}
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.name)}`}
                         placeholder="John Doe"
                     />
+                    <FieldError error={errors.name} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Username
+                        Username <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         value={data.username || ""}
-                        onChange={(e) => updateData({ ...data, username: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        onChange={(e) => handleChange("username", e.target.value)}
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.username)}`}
                         placeholder="johndoe"
                     />
+                    <FieldError error={errors.username} />
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Password
+                        Password <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="password"
                         value={data.password || ""}
-                        onChange={(e) => updateData({ ...data, password: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        onChange={(e) => handleChange("password", e.target.value)}
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.password)}`}
                         placeholder="********"
                     />
+                    <FieldError error={errors.password} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
@@ -125,18 +135,19 @@ export function CustomerStep({ data, updateData }: CustomerStepProps) {
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
                     Emails
                 </label>
-                {(data.emails || []).map((email: string, index: number) => (
+                {(data.emails || []).map((emailVal: string, index: number) => (
                     <div key={index} className="flex gap-2 mb-2">
                         <input
-                            type="email"
-                            value={email}
+                            type="text"
+                            value={emailVal}
                             onChange={(e) => updateEmail(index, e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                            className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.emails)}`}
                             placeholder="john@example.com"
                         />
                         <button onClick={() => removeEmail(index)} className="text-red-500">Remove</button>
                     </div>
                 ))}
+                <FieldError error={errors.emails} />
                 <button onClick={addEmail} className="text-cyan-500 text-sm">+ Add Email</button>
             </div>
 
@@ -145,18 +156,19 @@ export function CustomerStep({ data, updateData }: CustomerStepProps) {
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
                     Phone Numbers
                 </label>
-                {(data.phoneNumbers || []).map((phone: string, index: number) => (
+                {(data.phoneNumbers || []).map((phoneVal: string, index: number) => (
                     <div key={index} className="flex gap-2 mb-2">
                         <input
                             type="text"
-                            value={phone}
+                            value={phoneVal}
                             onChange={(e) => updatePhone(index, e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                            className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.phoneNumbers)}`}
                             placeholder="+1 555 000 0000"
                         />
                         <button onClick={() => removePhone(index)} className="text-red-500">Remove</button>
                     </div>
                 ))}
+                <FieldError error={errors.phoneNumbers} />
                 <button onClick={addPhone} className="text-cyan-500 text-sm">+ Add Phone</button>
             </div>
 
@@ -231,21 +243,27 @@ export function CustomerStep({ data, updateData }: CustomerStepProps) {
                         Max Ceiling Value
                     </label>
                     {ceilingType === "amount" ? (
-                        <input
-                            type="number"
-                            value={data.creditLimitAmount || ""}
-                            onChange={(e) => updateData({ ...data, creditLimitAmount: e.target.value, creditLimitLiters: null })}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                            placeholder="10000"
-                        />
+                        <>
+                            <input
+                                type="number"
+                                value={data.creditLimitAmount || ""}
+                                onChange={(e) => { updateData({ ...data, creditLimitAmount: e.target.value, creditLimitLiters: null }); clearError?.("creditLimitAmount"); }}
+                                className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.creditLimitAmount)}`}
+                                placeholder="10000"
+                            />
+                            <FieldError error={errors.creditLimitAmount} />
+                        </>
                     ) : (
-                        <input
-                            type="number"
-                            value={data.creditLimitLiters || ""}
-                            onChange={(e) => updateData({ ...data, creditLimitLiters: e.target.value, creditLimitAmount: null })}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                            placeholder="500"
-                        />
+                        <>
+                            <input
+                                type="number"
+                                value={data.creditLimitLiters || ""}
+                                onChange={(e) => { updateData({ ...data, creditLimitLiters: e.target.value, creditLimitAmount: null }); clearError?.("creditLimitLiters"); }}
+                                className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.creditLimitLiters)}`}
+                                placeholder="500"
+                            />
+                            <FieldError error={errors.creditLimitLiters} />
+                        </>
                     )}
                 </div>
             </div>

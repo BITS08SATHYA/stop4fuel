@@ -13,6 +13,8 @@ import {
     Supplier
 } from "@/lib/api/station";
 import { Truck, Plus, Edit2, Trash2, Phone, Mail, User, Search } from "lucide-react";
+import { useFormValidation, required, email, phone } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function SuppliersPage() {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -34,9 +36,17 @@ export default function SuppliersPage() {
     // Form State
     const [name, setName] = useState("");
     const [contactPerson, setContactPerson] = useState("");
-    const [phone, setPhone] = useState("");
-    const [email, setEmail] = useState("");
+    const [phoneNum, setPhoneNum] = useState("");
+    const [emailAddr, setEmailAddr] = useState("");
     const [active, setActive] = useState(true);
+    const [apiError, setApiError] = useState("");
+
+    const validationRules = useMemo(() => ({
+        name: [required("Supplier name is required")],
+        phoneNum: [phone("Invalid phone number")],
+        emailAddr: [email("Invalid email address")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -58,9 +68,11 @@ export default function SuppliersPage() {
         setEditingId(s.id);
         setName(s.name);
         setContactPerson(s.contactPerson || "");
-        setPhone(s.phone || "");
-        setEmail(s.email || "");
+        setPhoneNum(s.phone || "");
+        setEmailAddr(s.email || "");
         setActive(s.active);
+        clearAllErrors();
+        setApiError("");
         setIsModalOpen(true);
     };
 
@@ -86,8 +98,10 @@ export default function SuppliersPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ name, phoneNum, emailAddr })) return;
         try {
-            const payload = { name, contactPerson, phone, email, active };
+            const payload = { name, contactPerson, phone: phoneNum, email: emailAddr, active };
             if (editingId) {
                 await updateSupplier(editingId, payload as any);
             } else {
@@ -98,7 +112,7 @@ export default function SuppliersPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save supplier", err);
-            alert("Error saving supplier details");
+            setApiError("Error saving supplier details");
         }
     };
 
@@ -106,9 +120,11 @@ export default function SuppliersPage() {
         setEditingId(null);
         setName("");
         setContactPerson("");
-        setPhone("");
-        setEmail("");
+        setPhoneNum("");
+        setEmailAddr("");
         setActive(true);
+        clearAllErrors();
+        setApiError("");
     };
 
     return (
@@ -262,6 +278,7 @@ export default function SuppliersPage() {
                 title={editingId ? "Edit Supplier" : "Add New Supplier"}
             >
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2 font-bold tracking-tight">
@@ -269,12 +286,12 @@ export default function SuppliersPage() {
                             </label>
                             <input
                                 type="text"
-                                required
                                 value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
+                                onChange={(e) => { setName(e.target.value); clearError("name"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm ${inputErrorClass(errors.name)}`}
                                 placeholder="e.g. Acme Petroleum Ltd."
                             />
+                            <FieldError error={errors.name} />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -292,23 +309,25 @@ export default function SuppliersPage() {
                                 <label className="block text-sm font-medium text-foreground mb-1.5">Phone Number</label>
                                 <input
                                     type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                    value={phoneNum}
+                                    onChange={(e) => { setPhoneNum(e.target.value); clearError("phoneNum"); }}
+                                    className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.phoneNum)}`}
                                     placeholder="+91 00000 00000"
                                 />
+                                <FieldError error={errors.phoneNum} />
                             </div>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5 font-bold tracking-tight">Email Address</label>
                             <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                type="text"
+                                value={emailAddr}
+                                onChange={(e) => { setEmailAddr(e.target.value); clearError("emailAddr"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.emailAddr)}`}
                                 placeholder="order@supplier.com"
                             />
+                            <FieldError error={errors.emailAddr} />
                         </div>
                     </div>
 

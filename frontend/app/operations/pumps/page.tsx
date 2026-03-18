@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import { getPumps, createPump, updatePump, deletePump, Pump } from "@/lib/api/station";
 import { Activity, Plus, Edit2, Trash2, Search } from "lucide-react";
+import { useFormValidation, required } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function PumpsPage() {
     const [pumps, setPumps] = useState<Pump[]>([]);
@@ -17,6 +19,12 @@ export default function PumpsPage() {
     // Form State
     const [name, setName] = useState("");
     const [active, setActive] = useState(true);
+    const [apiError, setApiError] = useState("");
+
+    const validationRules = useMemo(() => ({
+        name: [required("Pump name is required")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -44,14 +52,18 @@ export default function PumpsPage() {
             setName("");
             setActive(true);
         }
+        clearAllErrors();
+        setApiError("");
         setIsModalOpen(true);
     };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ name })) return;
         try {
             const payload = { name, active };
-            
+
             if (editingPump) {
                 await updatePump(editingPump.id, payload);
             } else {
@@ -61,7 +73,7 @@ export default function PumpsPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save pump", err);
-            alert("Error saving pump details");
+            setApiError("Error saving pump details");
         }
     };
 
@@ -161,16 +173,17 @@ export default function PumpsPage() {
                 title={editingPump ? "Edit Pump" : "Add New Pump"}
             >
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Pump Name / Identifier</label>
                         <input
                             type="text"
-                            required
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setName(e.target.value); clearError("name"); }}
+                            className={`w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.name)}`}
                             placeholder="e.g. Pump 1"
                         />
+                        <FieldError error={errors.name} />
                     </div>
                     
                     <div className="flex items-center gap-2 pt-2">

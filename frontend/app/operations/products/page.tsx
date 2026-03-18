@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -16,6 +16,8 @@ import {
 } from "@/lib/api/station";
 import { Package, Plus, Edit2, Trash2, Fuel, Box, Truck, Award, Search } from "lucide-react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { useFormValidation, required, min } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -39,6 +41,16 @@ export default function ProductsPage() {
     const [supplierId, setSupplierId] = useState("");
     const [gradeTypeId, setGradeTypeId] = useState("");
     const [active, setActive] = useState(true);
+    const [apiError, setApiError] = useState("");
+
+    const validationRules = useMemo(() => ({
+        name: [required("Product name is required")],
+        hsnCode: [required("HSN code is required")],
+        price: [required("Price is required"), min(0, "Price must be at least 0")],
+        category: [required("Category is required")],
+        unit: [required("Unit is required")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -88,11 +100,15 @@ export default function ProductsPage() {
             setGradeTypeId("");
             setActive(true);
         }
+        clearAllErrors();
+        setApiError("");
         setIsModalOpen(true);
     };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ name, hsnCode, price, category, unit })) return;
         try {
             const payload = {
                 name,
@@ -116,7 +132,7 @@ export default function ProductsPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save product", err);
-            alert("Error saving product details");
+            setApiError("Error saving product details");
         }
     };
 
@@ -342,6 +358,7 @@ export default function ProductsPage() {
                 title={editingProduct ? "Edit Product" : "Add New Product"}
             >
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
@@ -349,12 +366,12 @@ export default function ProductsPage() {
                             </label>
                             <input
                                 type="text"
-                                required
                                 value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                onChange={(e) => { setName(e.target.value); clearError("name"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${inputErrorClass(errors.name)}`}
                                 placeholder="e.g. Premium Petrol"
                             />
+                            <FieldError error={errors.name} />
                         </div>
 
                         <div>
@@ -363,12 +380,12 @@ export default function ProductsPage() {
                             </label>
                             <input
                                 type="text"
-                                required
                                 value={hsnCode}
-                                onChange={(e) => setHsnCode(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                onChange={(e) => { setHsnCode(e.target.value); clearError("hsnCode"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${inputErrorClass(errors.hsnCode)}`}
                                 placeholder="e.g. 2710"
                             />
+                            <FieldError error={errors.hsnCode} />
                         </div>
 
                         <div>
@@ -378,13 +395,12 @@ export default function ProductsPage() {
                             <input
                                 type="number"
                                 step="0.01"
-                                required
-                                min="0"
                                 value={price}
-                                onChange={(e) => setPrice(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
+                                onChange={(e) => { setPrice(e.target.value); clearError("price"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono ${inputErrorClass(errors.price)}`}
                                 placeholder="0.00"
                             />
+                            <FieldError error={errors.price} />
                         </div>
 
                         <div>
@@ -392,14 +408,14 @@ export default function ProductsPage() {
                                 Category <span className="text-red-500">*</span>
                             </label>
                             <select
-                                required
                                 value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
+                                onChange={(e) => { setCategory(e.target.value); clearError("category"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none ${inputErrorClass(errors.category)}`}
                             >
                                 <option value="Fuel">Fuel</option>
                                 <option value="Non-Fuel">Non-Fuel (Lubes, Items)</option>
                             </select>
+                            <FieldError error={errors.category} />
                         </div>
 
                         <div>
@@ -407,16 +423,16 @@ export default function ProductsPage() {
                                 Unit <span className="text-red-500">*</span>
                             </label>
                             <select
-                                required
                                 value={unit}
-                                onChange={(e) => setUnit(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
+                                onChange={(e) => { setUnit(e.target.value); clearError("unit"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none ${inputErrorClass(errors.unit)}`}
                             >
                                 <option value="Liters">Liters</option>
                                 <option value="Pieces">Pieces</option>
                                 <option value="Kg">Kg</option>
                                 <option value="Box">Box</option>
                             </select>
+                            <FieldError error={errors.unit} />
                         </div>
 
                         {category === 'Non-Fuel' && (
