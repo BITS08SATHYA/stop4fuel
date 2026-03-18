@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
@@ -19,6 +19,8 @@ import {
     Supplier,
 } from "@/lib/api/station";
 import { ClipboardList, Plus, Search, Package, Trash2, CheckCircle, XCircle, Eye } from "lucide-react";
+import { useFormValidation, required, min } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 const STATUS_COLORS: Record<string, string> = {
     DRAFT: "bg-gray-500/10 text-gray-500",
@@ -55,6 +57,12 @@ export default function PurchaseOrdersPage() {
     const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
     const [remarks, setRemarks] = useState("");
     const [lineItems, setLineItems] = useState<LineItem[]>([{ productId: "", orderedQty: "", unitPrice: "" }]);
+    const [apiError, setApiError] = useState("");
+    const validationRules = useMemo(() => ({
+        supplierId: [required("Supplier is required")],
+        orderDate: [required("Order date is required")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -99,6 +107,8 @@ export default function PurchaseOrdersPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ supplierId, orderDate })) return;
         try {
             const items = lineItems
                 .filter((li) => li.productId && li.orderedQty)
@@ -130,7 +140,7 @@ export default function PurchaseOrdersPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save PO", err);
-            alert("Error saving purchase order");
+            setApiError("Error saving purchase order");
         }
     };
 
@@ -140,7 +150,7 @@ export default function PurchaseOrdersPage() {
             await cancelPurchaseOrder(id);
             loadData();
         } catch (err: any) {
-            alert(err.message || "Error cancelling order");
+            setApiError(err.message || "Error cancelling order");
         }
     };
 
@@ -170,7 +180,7 @@ export default function PurchaseOrdersPage() {
                     receivedQty: Number(qty),
                 }));
             if (items.length === 0) {
-                alert("Please enter quantities for at least one item");
+                setApiError("Please enter quantities for at least one item");
                 return;
             }
             await receivePurchaseOrder(receiveOrder.id!, items);
@@ -178,11 +188,13 @@ export default function PurchaseOrdersPage() {
             setReceiveOrder(null);
             loadData();
         } catch (err: any) {
-            alert(err.message || "Error receiving delivery");
+            setApiError(err.message || "Error receiving delivery");
         }
     };
 
     const handleEdit = (order: PurchaseOrder) => {
+        clearAllErrors();
+        setApiError("");
         setEditingId(order.id!);
         setSupplierId(String(order.supplier.id));
         setOrderDate(order.orderDate);
@@ -227,7 +239,7 @@ export default function PurchaseOrdersPage() {
                         </p>
                     </div>
                     <button
-                        onClick={() => { resetForm(); setIsModalOpen(true); }}
+                        onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
                         className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                     >
                         <Plus className="w-5 h-5" />
@@ -348,19 +360,22 @@ export default function PurchaseOrdersPage() {
             {/* Create/Edit PO Modal */}
             <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title={editingId ? "Edit Purchase Order" : "Create Purchase Order"}>
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Supplier</label>
-                            <select required value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground">
+                            <select value={supplierId} onChange={(e) => { setSupplierId(e.target.value); clearError("supplierId"); }} className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.supplierId)}`}>
                                 <option value="">Select supplier...</option>
                                 {suppliers.map((s) => (
                                     <option key={s.id} value={s.id}>{s.name}</option>
                                 ))}
                             </select>
+                            <FieldError error={errors.supplierId} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Order Date</label>
-                            <input type="date" required value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground" />
+                            <input type="date" value={orderDate} onChange={(e) => { setOrderDate(e.target.value); clearError("orderDate"); }} className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.orderDate)}`} />
+                            <FieldError error={errors.orderDate} />
                         </div>
                     </div>
                     <div>
