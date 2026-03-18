@@ -4,251 +4,195 @@
 <meta charset="UTF-8">
 <title>Customer Monthly Statement</title>
 <style>
-  @page { size: legal portrait; margin: 8mm; }
+  @page { size: A4 portrait; margin: 7mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; line-height: 1.3; color: #000; background: #fff; }
-
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; line-height: 1.25; color: #000; background: #fff; }
   .stmt { max-width: 210mm; margin: 0 auto; border: 2px solid #000; }
 
-  /* Header */
-  .stmt-hdr { border-bottom: 2px solid #000; padding: 10px 14px; }
-  .stmt-hdr-top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .stmt-hdr-left h1 { font-size: 15pt; font-weight: 900; }
-  .stmt-hdr-left .tag { font-size: 8pt; color: #555; }
-  .stmt-hdr-left .addr { font-size: 8pt; line-height: 1.3; margin-top: 2px; }
-  .stmt-hdr-right { text-align: right; }
-  .stmt-hdr-right .doc-type { font-size: 13pt; font-weight: 900; border: 2.5px solid #000; padding: 3px 14px; display: inline-block; margin-bottom: 4px; }
-  .stmt-hdr-right .stmt-no { font-size: 12pt; font-weight: 900; color: #c00; }
-  .stmt-hdr-right .date { font-size: 9pt; margin-top: 2px; }
+  /* 3-column header */
+  .top-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 2px solid #000; }
+  .top-bar > div { padding: 6px 10px; }
+  .top-bar > div:not(:last-child) { border-right: 1.5px solid #000; }
 
-  .gst-bar { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding: 3px 14px; background: #f0f0f0; font-size: 8pt; font-weight: 700; }
+  .co-name { font-size: 12pt; font-weight: 900; }
+  .co-tag { font-size: 7pt; color: #555; }
+  .co-addr { font-size: 7.5pt; line-height: 1.3; margin-top: 1px; }
+  .co-gst { font-size: 7pt; font-weight: 700; margin-top: 2px; }
 
-  /* Customer + Statement Info */
-  .stmt-info { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1.5px solid #000; }
-  .stmt-info-box { padding: 8px 14px; }
-  .stmt-info-box:first-child { border-right: 1.5px solid #000; }
-  .lbl { font-size: 7pt; font-weight: 700; text-transform: uppercase; color: #555; letter-spacing: 0.5px; margin-bottom: 2px; }
-  .cname { font-size: 11pt; font-weight: 900; }
-  .det { font-size: 8.5pt; line-height: 1.4; }
-  .det span { color: #555; }
+  .cust-name { font-size: 10pt; font-weight: 900; }
+  .cust-det { font-size: 7.5pt; line-height: 1.35; }
+  .cust-det span { color: #555; }
 
-  /* Period highlight */
-  .period-bar { background: #222; color: #fff; padding: 5px 14px; font-size: 9pt; font-weight: 700; text-align: center; border-bottom: 1.5px solid #000; letter-spacing: 0.5px; }
+  .stmt-title { font-size: 11pt; font-weight: 900; text-align: center; }
+  .stmt-no { font-size: 11pt; font-weight: 900; color: #c00; text-align: center; }
+  .stmt-meta { font-size: 7.5pt; line-height: 1.4; margin-top: 3px; }
+  .stmt-meta span { color: #555; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 7pt; font-weight: 700; }
+  .badge-partial { background: #fff3cd; color: #856404; border: 1px solid #856404; }
+  .badge-unpaid { background: #f8d7da; color: #721c24; border: 1px solid #721c24; }
+  .badge-paid { background: #d4edda; color: #155724; border: 1px solid #155724; }
+
+  /* Period bar */
+  .period { background: #222; color: #fff; padding: 3px 10px; font-size: 8pt; font-weight: 700; text-align: center; border-bottom: 1.5px solid #000; }
 
   /* Tables */
+  .section { padding: 4px 8px; }
   table { width: 100%; border-collapse: collapse; }
-  th { font-size: 7pt; font-weight: 700; text-transform: uppercase; background: #e0e0e0; border: 1px solid #999; padding: 2px 4px; text-align: center; }
-  td { border: 1px solid #ccc; padding: 2px 4px; font-size: 8pt; }
+  th { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; background: #e0e0e0; border: 1px solid #999; padding: 1.5px 3px; text-align: center; }
+  td { border: 1px solid #ddd; padding: 1px 3px; font-size: 7.5pt; }
   .r { text-align: right; }
   .l { text-align: left; }
   .c { text-align: center; }
   .b { font-weight: 700; }
   .bb { font-weight: 900; }
-  .tot td { background: #d0d0d0; font-weight: 800; border: 1px solid #999; }
-  .sub td { background: #eee; font-weight: 700; font-size: 7.5pt; }
-  .section { padding: 6px 14px; }
-  .section-title { font-size: 9pt; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; padding-bottom: 2px; border-bottom: 1.5px solid #000; }
+  .tot td { background: #d0d0d0; font-weight: 800; border: 1px solid #999; font-size: 7.5pt; }
 
-  /* Summary */
-  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1.5px solid #000; }
-  .summary-box { padding: 8px 14px; }
-  .summary-box:first-child { border-right: 1.5px solid #000; }
+  .st { font-size: 7.5pt; font-weight: 800; text-transform: uppercase; background: #222; color: #fff; padding: 2px 4px; margin-bottom: 1px; margin-top: 3px; }
 
-  .amt-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9pt; }
-  .amt-row.grand { border-top: 2px solid #000; margin-top: 4px; padding-top: 4px; font-size: 12pt; font-weight: 900; }
-  .amt-words { font-size: 8pt; font-style: italic; color: #555; margin-top: 6px; border: 1px dashed #999; padding: 3px 6px; background: #fafafa; }
+  /* Bottom grid */
+  .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1.5px solid #000; }
+  .bottom-grid > div { padding: 5px 8px; }
+  .bottom-grid > div:first-child { border-right: 1.5px solid #000; }
 
-  /* Badge */
-  .badge { display: inline-block; padding: 2px 10px; border-radius: 3px; font-size: 8pt; font-weight: 700; }
-  .badge-paid { background: #d4edda; color: #155724; border: 1px solid #155724; }
-  .badge-unpaid { background: #f8d7da; color: #721c24; border: 1px solid #721c24; }
-  .badge-partial { background: #fff3cd; color: #856404; border: 1px solid #856404; }
+  .stitle { font-size: 7pt; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #000; margin-bottom: 2px; padding-bottom: 1px; }
+
+  .amt-row { display: flex; justify-content: space-between; padding: 1px 0; font-size: 8pt; }
+  .amt-row.grand { border-top: 2px solid #000; margin-top: 3px; padding-top: 3px; font-size: 11pt; font-weight: 900; }
+  .amt-words { font-size: 7pt; font-style: italic; color: #555; margin-top: 3px; border: 1px dashed #999; padding: 2px 4px; background: #fafafa; }
 
   /* Footer */
   .stmt-footer { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #000; }
-  .stmt-footer-left { padding: 8px 14px; border-right: 1.5px solid #000; font-size: 7.5pt; color: #555; line-height: 1.4; }
-  .stmt-footer-right { padding: 8px 14px; text-align: right; }
-  .stmt-footer-right .sign-line { border-top: 1px solid #000; margin-top: 35px; padding-top: 3px; font-size: 8pt; display: inline-block; min-width: 160px; }
-
-  .page-break { page-break-before: always; }
+  .stmt-footer-left { padding: 5px 8px; border-right: 1.5px solid #000; font-size: 7pt; color: #555; line-height: 1.35; }
+  .stmt-footer-right { padding: 5px 8px; text-align: right; }
+  .sign-line { border-top: 1px solid #000; margin-top: 25px; padding-top: 2px; font-size: 7.5pt; display: inline-block; min-width: 140px; }
 </style>
 </head>
 <body>
 
-<!-- =================== STATEMENT 1: Statement Customer (multiple bills, partial payment) =================== -->
 <div class="stmt">
-  <!-- Header -->
-  <div class="stmt-hdr">
-    <div class="stmt-hdr-top">
-      <div class="stmt-hdr-left">
-        <h1>SATHYA FUELS</h1>
-        <div class="tag">Indian Oil Corporation Retail Outlet</div>
-        <div class="addr">
-          No. 45, GST Road, Tambaram<br>
-          Chennai - 600045, Tamil Nadu<br>
-          Ph: 044-2234 5678 | Mob: 98765 43210
-        </div>
-      </div>
-      <div class="stmt-hdr-right">
-        <div class="doc-type">CREDIT STATEMENT</div><br>
-        <div class="stmt-no">S26/007</div>
-        <div class="date">Statement Date: 01 Apr 2026</div>
-        <div style="margin-top:4px;">
-          <span class="badge badge-partial">PARTIALLY PAID</span>
-        </div>
-      </div>
+  <!-- 3-COLUMN HEADER -->
+  <div class="top-bar">
+    <!-- Col 1: Company -->
+    <div>
+      <div class="co-name">SATHYA FUELS</div>
+      <div class="co-tag">Indian Oil Corporation Retail Outlet</div>
+      <div class="co-addr">No. 45, GST Road, Tambaram<br>Chennai - 600045, Tamil Nadu<br>Ph: 044-2234 5678</div>
+      <div class="co-gst">GSTIN: 33AABCS1234F1Z5</div>
     </div>
-  </div>
-
-  <!-- GST Bar -->
-  <div class="gst-bar">
-    <span>Our GSTIN: 33AABCS1234F1Z5</span>
-    <span>SAP Code: 150234</span>
-  </div>
-
-  <!-- Customer + Statement Info -->
-  <div class="stmt-info">
-    <div class="stmt-info-box">
-      <div class="lbl">Customer</div>
-      <div class="cname">ABC Transport Pvt Ltd</div>
-      <div class="det">
+    <!-- Col 2: Customer -->
+    <div>
+      <div class="cust-name">ABC Transport Pvt Ltd</div>
+      <div class="cust-det">
         <span>GSTIN:</span> 33AABCA9876B1Z8<br>
-        <span>Address:</span> 12, Industrial Estate, Guindy, Chennai - 600032<br>
-        <span>Phone:</span> 98765 11111<br>
-        <span>Contact:</span> Mr. Rajesh Kumar (Manager)
+        <span>Addr:</span> 12, Industrial Estate, Guindy, Chennai - 32<br>
+        <span>Ph:</span> 98765 11111<br>
+        <span>Contact:</span> Rajesh Kumar (Manager)<br>
+        <span>Prev Bal:</span> <b>&#8377;0.00</b>
       </div>
     </div>
-    <div class="stmt-info-box">
-      <div class="lbl">Statement Details</div>
-      <div class="det" style="font-size:9pt;">
-        <span>Statement No:</span> <b>S26/007</b><br>
-        <span>Period:</span> <b>01 Mar 2026 — 31 Mar 2026</b><br>
-        <span>No. of Bills:</span> <b>18</b><br>
-        <span>No. of Vehicles:</span> <b>5</b><br>
-        <span>Credit Limit:</span> &#8377;5,00,000<br>
-        <span>Previous Balance:</span> &#8377;0.00
+    <!-- Col 3: Statement -->
+    <div style="text-align:center;">
+      <div class="stmt-title">CREDIT STATEMENT</div>
+      <div class="stmt-no">S26/007</div>
+      <div class="stmt-meta">
+        <span>Date:</span> <b>01 Apr 2026</b><br>
+        <span>Period:</span> <b>01 Mar — 31 Mar 2026</b>
       </div>
+      <div style="margin-top:3px;"><span class="badge badge-partial">PARTIALLY PAID</span></div>
     </div>
   </div>
 
-  <!-- Period Bar -->
-  <div class="period-bar">
-    CREDIT BILLS — 01 MARCH 2026 to 31 MARCH 2026
-  </div>
+  <!-- Period bar -->
+  <div class="period">CREDIT BILLS — 01 MARCH 2026 TO 31 MARCH 2026</div>
 
-  <!-- Bills Table -->
+  <!-- Bills table -->
   <div class="section">
     <table>
-      <thead>
-        <tr>
-          <th style="width:3%">#</th>
-          <th style="width:7%">Date</th>
-          <th style="width:8%">Bill No</th>
-          <th style="width:13%">Vehicle</th>
-          <th style="width:10%">Driver</th>
-          <th style="width:7%">Indent</th>
-          <th style="width:8%">Product</th>
-          <th style="width:8%">Qty (L)</th>
-          <th style="width:8%">Rate</th>
-          <th style="width:8%">Gross</th>
-          <th style="width:6%">Disc</th>
-          <th style="width:10%">Net Amt</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th style="width:3%">#</th>
+        <th style="width:6%">Date</th>
+        <th style="width:7%">Bill No</th>
+        <th style="width:12%">Vehicle</th>
+        <th style="width:9%">Driver</th>
+        <th style="width:7%">Indent</th>
+        <th style="width:6%">Prod</th>
+        <th style="width:8%">Qty (L)</th>
+        <th style="width:8%">Rate</th>
+        <th style="width:9%">Gross</th>
+        <th style="width:7%">Disc</th>
+        <th style="width:10%">Net Amt</th>
+      </tr></thead>
       <tbody>
-        <tr><td class="c">1</td><td class="c">01 Mar</td><td class="c">A26/101</td><td>TN 01 AB 1234</td><td>Murugan</td><td class="c">IND/401</td><td class="c">HSD</td><td class="r">200.00</td><td class="r">89.62</td><td class="r">17,924</td><td class="r">200</td><td class="r bb">17,724</td></tr>
-        <tr><td class="c">2</td><td class="c">02 Mar</td><td class="c">A26/108</td><td>TN 01 AB 1234</td><td>Murugan</td><td class="c">IND/402</td><td class="c">HSD</td><td class="r">180.00</td><td class="r">89.62</td><td class="r">16,132</td><td class="r">180</td><td class="r bb">15,952</td></tr>
-        <tr><td class="c">3</td><td class="c">03 Mar</td><td class="c">A26/115</td><td>TN 01 CD 5678</td><td>Selvam</td><td class="c">IND/403</td><td class="c">HSD</td><td class="r">300.00</td><td class="r">89.62</td><td class="r">26,886</td><td class="r">300</td><td class="r bb">26,586</td></tr>
-        <tr><td class="c">4</td><td class="c">05 Mar</td><td class="c">A26/122</td><td>TN 01 EF 9012</td><td>Kumar</td><td class="c">IND/404</td><td class="c">P</td><td class="r">50.00</td><td class="r">102.61</td><td class="r">5,131</td><td class="r">50</td><td class="r bb">5,081</td></tr>
-        <tr><td class="c">5</td><td class="c">07 Mar</td><td class="c">A26/130</td><td>TN 01 AB 1234</td><td>Murugan</td><td class="c">IND/405</td><td class="c">HSD</td><td class="r">250.00</td><td class="r">89.62</td><td class="r">22,405</td><td class="r">250</td><td class="r bb">22,155</td></tr>
-        <tr><td class="c">6</td><td class="c">08 Mar</td><td class="c">A26/135</td><td>GENSET(ABC)</td><td>—</td><td class="c">—</td><td class="c">HSD</td><td class="r">100.00</td><td class="r">89.62</td><td class="r">8,962</td><td class="r">100</td><td class="r bb">8,862</td></tr>
-        <tr><td class="c">7</td><td class="c">10 Mar</td><td class="c">A26/142</td><td>TN 01 CD 5678</td><td>Selvam</td><td class="c">IND/406</td><td class="c">HSD</td><td class="r">280.00</td><td class="r">89.62</td><td class="r">25,094</td><td class="r">280</td><td class="r bb">24,814</td></tr>
-        <tr><td class="c">8</td><td class="c">12 Mar</td><td class="c">A26/150</td><td>TN 01 GH 3456</td><td>Ravi</td><td class="c">IND/407</td><td class="c">P</td><td class="r">40.00</td><td class="r">102.61</td><td class="r">4,104</td><td class="r">40</td><td class="r bb">4,064</td></tr>
-        <tr><td class="c">9</td><td class="c">14 Mar</td><td class="c">A26/158</td><td>TN 01 AB 1234</td><td>Murugan</td><td class="c">IND/408</td><td class="c">HSD</td><td class="r">220.00</td><td class="r">89.62</td><td class="r">19,716</td><td class="r">220</td><td class="r bb">19,496</td></tr>
-        <tr><td class="c">10</td><td class="c">15 Mar</td><td class="c">A26/162</td><td>TN 01 EF 9012</td><td>Kumar</td><td class="c">IND/409</td><td class="c">HSD</td><td class="r">150.00</td><td class="r">89.62</td><td class="r">13,443</td><td class="r">150</td><td class="r bb">13,293</td></tr>
-        <tr><td class="c">11</td><td class="c">17 Mar</td><td class="c">A26/170</td><td>TN 01 CD 5678</td><td>Selvam</td><td class="c">IND/410</td><td class="c">HSD</td><td class="r">260.00</td><td class="r">89.62</td><td class="r">23,301</td><td class="r">260</td><td class="r bb">23,041</td></tr>
-        <tr><td class="c">12</td><td class="c">19 Mar</td><td class="c">A26/178</td><td>GENSET(ABC)</td><td>—</td><td class="c">—</td><td class="c">HSD</td><td class="r">120.00</td><td class="r">89.62</td><td class="r">10,754</td><td class="r">120</td><td class="r bb">10,634</td></tr>
-        <tr><td class="c">13</td><td class="c">20 Mar</td><td class="c">A26/182</td><td>TN 01 AB 1234</td><td>Murugan</td><td class="c">IND/411</td><td class="c">HSD</td><td class="r">190.00</td><td class="r">89.62</td><td class="r">17,028</td><td class="r">190</td><td class="r bb">16,838</td></tr>
-        <tr><td class="c">14</td><td class="c">22 Mar</td><td class="c">A26/190</td><td>TN 01 GH 3456</td><td>Ravi</td><td class="c">IND/412</td><td class="c">P</td><td class="r">35.00</td><td class="r">102.61</td><td class="r">3,591</td><td class="r">35</td><td class="r bb">3,556</td></tr>
-        <tr><td class="c">15</td><td class="c">24 Mar</td><td class="c">A26/198</td><td>TN 01 CD 5678</td><td>Selvam</td><td class="c">IND/413</td><td class="c">HSD</td><td class="r">310.00</td><td class="r">89.62</td><td class="r">27,782</td><td class="r">310</td><td class="r bb">27,472</td></tr>
-        <tr><td class="c">16</td><td class="c">26 Mar</td><td class="c">A26/205</td><td>TN 01 AB 1234</td><td>Murugan</td><td class="c">IND/414</td><td class="c">HSD</td><td class="r">200.00</td><td class="r">89.62</td><td class="r">17,924</td><td class="r">200</td><td class="r bb">17,724</td></tr>
-        <tr><td class="c">17</td><td class="c">28 Mar</td><td class="c">A26/212</td><td>TN 01 EF 9012</td><td>Kumar</td><td class="c">IND/415</td><td class="c">P</td><td class="r">45.00</td><td class="r">102.61</td><td class="r">4,617</td><td class="r">45</td><td class="r bb">4,572</td></tr>
-        <tr><td class="c">18</td><td class="c">30 Mar</td><td class="c">A26/220</td><td>TN 01 CD 5678</td><td>Selvam</td><td class="c">IND/416</td><td class="c">HSD</td><td class="r">240.00</td><td class="r">89.62</td><td class="r">21,509</td><td class="r">240</td><td class="r bb">21,269</td></tr>
-        <tr class="tot">
-          <td colspan="7">TOTAL (18 bills)</td>
-          <td class="r">3,170.00</td>
-          <td></td>
-          <td class="r">2,86,203</td>
-          <td class="r">3,170</td>
-          <td class="r">2,83,133</td>
-        </tr>
+        <tr><td class="c">1</td><td class="c">01/03</td><td class="c">A26/101</td><td>TN01 AB 1234</td><td>Murugan</td><td class="c">401</td><td class="c">HSD</td><td class="r">200</td><td class="r">89.62</td><td class="r">17,924</td><td class="r">200</td><td class="r bb">17,724</td></tr>
+        <tr><td class="c">2</td><td class="c">02/03</td><td class="c">A26/108</td><td>TN01 AB 1234</td><td>Murugan</td><td class="c">402</td><td class="c">HSD</td><td class="r">180</td><td class="r">89.62</td><td class="r">16,132</td><td class="r">180</td><td class="r bb">15,952</td></tr>
+        <tr><td class="c">3</td><td class="c">03/03</td><td class="c">A26/115</td><td>TN01 CD 5678</td><td>Selvam</td><td class="c">403</td><td class="c">HSD</td><td class="r">300</td><td class="r">89.62</td><td class="r">26,886</td><td class="r">300</td><td class="r bb">26,586</td></tr>
+        <tr><td class="c">4</td><td class="c">05/03</td><td class="c">A26/122</td><td>TN01 EF 9012</td><td>Kumar</td><td class="c">404</td><td class="c">P</td><td class="r">50</td><td class="r">102.61</td><td class="r">5,131</td><td class="r">50</td><td class="r bb">5,081</td></tr>
+        <tr><td class="c">5</td><td class="c">07/03</td><td class="c">A26/130</td><td>TN01 AB 1234</td><td>Murugan</td><td class="c">405</td><td class="c">HSD</td><td class="r">250</td><td class="r">89.62</td><td class="r">22,405</td><td class="r">250</td><td class="r bb">22,155</td></tr>
+        <tr><td class="c">6</td><td class="c">08/03</td><td class="c">A26/135</td><td>GENSET(ABC)</td><td>—</td><td class="c">—</td><td class="c">HSD</td><td class="r">100</td><td class="r">89.62</td><td class="r">8,962</td><td class="r">100</td><td class="r bb">8,862</td></tr>
+        <tr><td class="c">7</td><td class="c">10/03</td><td class="c">A26/142</td><td>TN01 CD 5678</td><td>Selvam</td><td class="c">406</td><td class="c">HSD</td><td class="r">280</td><td class="r">89.62</td><td class="r">25,094</td><td class="r">280</td><td class="r bb">24,814</td></tr>
+        <tr><td class="c">8</td><td class="c">12/03</td><td class="c">A26/150</td><td>TN01 GH 3456</td><td>Ravi</td><td class="c">407</td><td class="c">P</td><td class="r">40</td><td class="r">102.61</td><td class="r">4,104</td><td class="r">40</td><td class="r bb">4,064</td></tr>
+        <tr><td class="c">9</td><td class="c">14/03</td><td class="c">A26/158</td><td>TN01 AB 1234</td><td>Murugan</td><td class="c">408</td><td class="c">HSD</td><td class="r">220</td><td class="r">89.62</td><td class="r">19,716</td><td class="r">220</td><td class="r bb">19,496</td></tr>
+        <tr><td class="c">10</td><td class="c">15/03</td><td class="c">A26/162</td><td>TN01 EF 9012</td><td>Kumar</td><td class="c">409</td><td class="c">HSD</td><td class="r">150</td><td class="r">89.62</td><td class="r">13,443</td><td class="r">150</td><td class="r bb">13,293</td></tr>
+        <tr><td class="c">11</td><td class="c">17/03</td><td class="c">A26/170</td><td>TN01 CD 5678</td><td>Selvam</td><td class="c">410</td><td class="c">HSD</td><td class="r">260</td><td class="r">89.62</td><td class="r">23,301</td><td class="r">260</td><td class="r bb">23,041</td></tr>
+        <tr><td class="c">12</td><td class="c">19/03</td><td class="c">A26/178</td><td>GENSET(ABC)</td><td>—</td><td class="c">—</td><td class="c">HSD</td><td class="r">120</td><td class="r">89.62</td><td class="r">10,754</td><td class="r">120</td><td class="r bb">10,634</td></tr>
+        <tr><td class="c">13</td><td class="c">20/03</td><td class="c">A26/182</td><td>TN01 AB 1234</td><td>Murugan</td><td class="c">411</td><td class="c">HSD</td><td class="r">190</td><td class="r">89.62</td><td class="r">17,028</td><td class="r">190</td><td class="r bb">16,838</td></tr>
+        <tr><td class="c">14</td><td class="c">22/03</td><td class="c">A26/190</td><td>TN01 GH 3456</td><td>Ravi</td><td class="c">412</td><td class="c">P</td><td class="r">35</td><td class="r">102.61</td><td class="r">3,591</td><td class="r">35</td><td class="r bb">3,556</td></tr>
+        <tr><td class="c">15</td><td class="c">24/03</td><td class="c">A26/198</td><td>TN01 CD 5678</td><td>Selvam</td><td class="c">413</td><td class="c">HSD</td><td class="r">310</td><td class="r">89.62</td><td class="r">27,782</td><td class="r">310</td><td class="r bb">27,472</td></tr>
+        <tr><td class="c">16</td><td class="c">26/03</td><td class="c">A26/205</td><td>TN01 AB 1234</td><td>Murugan</td><td class="c">414</td><td class="c">HSD</td><td class="r">200</td><td class="r">89.62</td><td class="r">17,924</td><td class="r">200</td><td class="r bb">17,724</td></tr>
+        <tr><td class="c">17</td><td class="c">28/03</td><td class="c">A26/212</td><td>TN01 EF 9012</td><td>Kumar</td><td class="c">415</td><td class="c">P</td><td class="r">45</td><td class="r">102.61</td><td class="r">4,617</td><td class="r">45</td><td class="r bb">4,572</td></tr>
+        <tr><td class="c">18</td><td class="c">30/03</td><td class="c">A26/220</td><td>TN01 CD 5678</td><td>Selvam</td><td class="c">416</td><td class="c">HSD</td><td class="r">240</td><td class="r">89.62</td><td class="r">21,509</td><td class="r">240</td><td class="r bb">21,269</td></tr>
+        <tr class="tot"><td colspan="7">TOTAL (18 bills)</td><td class="r">3,170</td><td></td><td class="r">2,86,203</td><td class="r">3,170</td><td class="r">2,83,133</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- Product Summary + Vehicle Summary side by side -->
-  <div class="summary-grid">
-    <div class="summary-box">
-      <div class="section-title">Product Summary</div>
+  <!-- Product + Vehicle summaries side by side -->
+  <div class="bottom-grid">
+    <div>
+      <div class="stitle">Product Summary</div>
       <table>
-        <tr><th class="l">Product</th><th>Bills</th><th>Qty (L)</th><th>Gross</th><th>Disc</th><th>Net Amt</th></tr>
-        <tr><td class="b">High Speed Diesel (HSD)</td><td class="c">14</td><td class="r">3,000.00</td><td class="r">2,68,860</td><td class="r">3,000</td><td class="r bb">2,65,860</td></tr>
-        <tr><td class="b">Petrol (MS)</td><td class="c">4</td><td class="r">170.00</td><td class="r">17,443</td><td class="r">170</td><td class="r bb">17,273</td></tr>
-        <tr class="tot"><td>Total</td><td class="c">18</td><td class="r">3,170.00</td><td class="r">2,86,203</td><td class="r">3,170</td><td class="r">2,83,133</td></tr>
+        <tr><th class="l">Product</th><th>Bills</th><th>Qty (L)</th><th>Disc</th><th>Net Amt</th></tr>
+        <tr><td class="b">HSD</td><td class="c">14</td><td class="r">3,000</td><td class="r">3,000</td><td class="r bb">2,65,860</td></tr>
+        <tr><td class="b">Petrol</td><td class="c">4</td><td class="r">170</td><td class="r">170</td><td class="r bb">17,273</td></tr>
+        <tr class="tot"><td>Total</td><td class="c">18</td><td class="r">3,170</td><td class="r">3,170</td><td class="r">2,83,133</td></tr>
       </table>
-    </div>
-    <div class="summary-box">
-      <div class="section-title">Vehicle Summary</div>
-      <table>
-        <tr><th class="l">Vehicle</th><th>Bills</th><th>Qty (L)</th><th>Net Amt</th></tr>
-        <tr><td class="b">TN 01 AB 1234</td><td class="c">6</td><td class="r">1,240</td><td class="r bb">1,09,889</td></tr>
-        <tr><td class="b">TN 01 CD 5678</td><td class="c">5</td><td class="r">1,390</td><td class="r bb">1,23,182</td></tr>
-        <tr><td class="b">TN 01 EF 9012</td><td class="c">3</td><td class="r">415</td><td class="r bb">22,946</td></tr>
-        <tr><td class="b">TN 01 GH 3456</td><td class="c">2</td><td class="r">75</td><td class="r bb">7,620</td></tr>
-        <tr><td class="b">GENSET(ABC)</td><td class="c">2</td><td class="r">220</td><td class="r bb">19,496</td></tr>
-        <tr class="tot"><td>Total</td><td class="c">18</td><td class="r">3,170</td><td class="r">2,83,133</td></tr>
-      </table>
-    </div>
-  </div>
 
-  <!-- Payment History + Balance -->
-  <div class="summary-grid">
-    <div class="summary-box">
-      <div class="section-title">Payments Received</div>
+      <div class="stitle" style="margin-top:4px;">Vehicle Summary</div>
+      <table>
+        <tr><th class="l">Vehicle</th><th>Bills</th><th>Qty</th><th>Net Amt</th></tr>
+        <tr><td>TN01 AB 1234</td><td class="c">6</td><td class="r">1,240</td><td class="r bb">1,09,889</td></tr>
+        <tr><td>TN01 CD 5678</td><td class="c">5</td><td class="r">1,390</td><td class="r bb">1,23,182</td></tr>
+        <tr><td>TN01 EF 9012</td><td class="c">3</td><td class="r">415</td><td class="r bb">22,946</td></tr>
+        <tr><td>TN01 GH 3456</td><td class="c">2</td><td class="r">75</td><td class="r bb">7,620</td></tr>
+        <tr><td>GENSET(ABC)</td><td class="c">2</td><td class="r">220</td><td class="r bb">19,496</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="stitle">Payments Received</div>
       <table>
         <tr><th>#</th><th>Date</th><th>Mode</th><th>Reference</th><th>Amount</th></tr>
-        <tr><td class="c">1</td><td class="c">05 Apr 2026</td><td class="c">Cheque</td><td>IOB #789456</td><td class="r bb">1,00,000</td></tr>
-        <tr><td class="c">2</td><td class="c">12 Apr 2026</td><td class="c">Bank Transfer</td><td>SBI UTR#923456</td><td class="r bb">80,000</td></tr>
+        <tr><td class="c">1</td><td class="c">05 Apr</td><td class="c">Cheque</td><td>IOB #789456</td><td class="r bb">1,00,000</td></tr>
+        <tr><td class="c">2</td><td class="c">12 Apr</td><td class="c">Bank Txfr</td><td>SBI UTR#923456</td><td class="r bb">80,000</td></tr>
         <tr class="tot"><td colspan="4">Total Received</td><td class="r">1,80,000</td></tr>
       </table>
-    </div>
-    <div class="summary-box">
-      <div class="section-title">Balance Summary</div>
-      <div class="amt-row"><span>Total Amount (Gross)</span><span>2,86,203.00</span></div>
-      <div class="amt-row"><span>Total Discount</span><span>(-) 3,170.00</span></div>
-      <div class="amt-row"><span><b>Net Amount</b></span><span><b>2,83,133.00</b></span></div>
+
+      <div class="stitle" style="margin-top:4px;">Balance</div>
+      <div class="amt-row"><span>Net Amount</span><span class="b">2,83,133.00</span></div>
       <div class="amt-row"><span>Rounding</span><span>(-) 33.00</span></div>
-      <div class="amt-row"><span><b>Statement Amount</b></span><span><b>2,83,100.00</b></span></div>
-      <div class="amt-row"><span>Amount Received</span><span>(-) 1,80,000.00</span></div>
-      <div class="amt-row grand"><span>BALANCE DUE</span><span style="color:#c00;">&#8377; 1,03,100.00</span></div>
-      <div class="amt-words">
-        <b>Balance in words:</b> Rupees One Lakh Three Thousand and One Hundred Only
-      </div>
+      <div class="amt-row"><span><b>Statement Amount</b></span><span class="b">2,83,100.00</span></div>
+      <div class="amt-row"><span>Received</span><span>(-) 1,80,000.00</span></div>
+      <div class="amt-row grand"><span>BALANCE DUE</span><span style="color:#c00;">&#8377; 1,03,100</span></div>
+      <div class="amt-words"><b>In words:</b> Rupees One Lakh Three Thousand and One Hundred Only</div>
     </div>
   </div>
 
   <!-- Footer -->
   <div class="stmt-footer">
     <div class="stmt-footer-left">
-      <b>Terms & Conditions:</b><br>
-      1. Payment is due within 15 days of statement date.<br>
-      2. Late payments may attract interest at 18% per annum.<br>
-      3. Disputes must be raised within 7 days of statement receipt.<br>
-      4. Subject to Chennai jurisdiction only.<br>
-      5. This is a computer-generated statement.
+      <b>Terms:</b> Payment due within 15 days. Late payments attract 18% p.a. interest. Disputes within 7 days. Subject to Chennai jurisdiction. Computer-generated statement.
     </div>
     <div class="stmt-footer-right">
-      <div style="font-size: 8pt; color: #555;">For SATHYA FUELS</div>
+      <div style="font-size:7pt; color:#555;">For SATHYA FUELS</div>
       <div class="sign-line">Authorized Signatory</div>
     </div>
   </div>

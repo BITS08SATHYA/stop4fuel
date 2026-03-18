@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cash Invoice</title>
+<style>
+  @page { size: A4 portrait; margin: 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; line-height: 1.3; color: #000; background: #fff; }
+  .inv { max-width: 210mm; margin: 0 auto; border: 2px solid #000; }
+
+  .inv-hdr { border-bottom: 2px solid #000; padding: 10px 14px; }
+  .inv-hdr-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .inv-hdr-left h1 { font-size: 16pt; font-weight: 900; }
+  .inv-hdr-left .tag { font-size: 8pt; color: #555; }
+  .inv-hdr-left .addr { font-size: 8pt; line-height: 1.3; margin-top: 2px; }
+  .inv-hdr-right { text-align: right; }
+  .inv-hdr-right .doc-type { font-size: 14pt; font-weight: 900; border: 2.5px solid #000; padding: 3px 12px; display: inline-block; margin-bottom: 4px; }
+  .inv-hdr-right .bill-no { font-size: 12pt; font-weight: 900; color: #c00; }
+  .inv-hdr-right .date { font-size: 9pt; margin-top: 2px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 3px; font-size: 8pt; font-weight: 700; }
+  .badge-cash { background: #d4edda; color: #155724; border: 1px solid #155724; }
+  .badge-paid { background: #d4edda; color: #155724; }
+
+  .gst-bar { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding: 3px 14px; background: #f0f0f0; font-size: 8pt; font-weight: 700; }
+
+  .inv-parties { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1.5px solid #000; }
+  .inv-party { padding: 8px 14px; }
+  .inv-party:first-child { border-right: 1.5px solid #000; }
+  .lbl { font-size: 7pt; font-weight: 700; text-transform: uppercase; color: #555; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .name { font-size: 11pt; font-weight: 900; }
+  .det { font-size: 8.5pt; line-height: 1.4; }
+  .det span { color: #555; }
+
+  .section { padding: 6px 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 7pt; font-weight: 700; text-transform: uppercase; background: #e0e0e0; border: 1px solid #999; padding: 2px 5px; text-align: center; }
+  td { border: 1px solid #ccc; padding: 2.5px 5px; font-size: 8.5pt; }
+  .r { text-align: right; }
+  .c { text-align: center; }
+  .b { font-weight: 700; }
+  .bb { font-weight: 900; }
+  .tot td { background: #d0d0d0; font-weight: 800; border: 1px solid #999; }
+  .nozzle-info { font-size: 7pt; color: #666; }
+
+  .inv-totals { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #000; }
+  .inv-totals-left { padding: 8px 14px; border-right: 1.5px solid #000; }
+  .inv-totals-right { padding: 8px 14px; }
+  .amt-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9pt; }
+  .amt-row.total { border-top: 2px solid #000; margin-top: 4px; padding-top: 4px; font-size: 12pt; font-weight: 900; }
+  .amt-words { font-size: 8pt; font-style: italic; color: #555; margin-top: 6px; border: 1px dashed #999; padding: 3px 6px; background: #fafafa; }
+
+  .inv-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1.5px solid #000; }
+  .inv-meta-box { padding: 6px 14px; border-right: 1.5px solid #000; }
+  .inv-meta-box:last-child { border-right: none; }
+  .inv-meta-box .mlbl { font-size: 7pt; font-weight: 700; text-transform: uppercase; color: #555; }
+  .inv-meta-box .mval { font-size: 10pt; font-weight: 700; }
+  .inv-meta-box .msub { font-size: 8pt; color: #555; }
+
+  .inv-footer { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #000; }
+  .inv-footer-left { padding: 8px 14px; border-right: 1.5px solid #000; font-size: 7.5pt; color: #555; line-height: 1.4; }
+  .inv-footer-right { padding: 8px 14px; text-align: right; }
+  .sign-line { border-top: 1px solid #000; margin-top: 35px; padding-top: 3px; font-size: 8pt; display: inline-block; min-width: 160px; }
+</style>
+</head>
+<body>
+
+<div class="inv">
+  <div class="inv-hdr">
+    <div class="inv-hdr-top">
+      <div class="inv-hdr-left">
+        <h1>SATHYA FUELS</h1>
+        <div class="tag">Indian Oil Corporation Retail Outlet</div>
+        <div class="addr">No. 45, GST Road, Tambaram<br>Chennai - 600045, Tamil Nadu<br>Ph: 044-2234 5678 | Mob: 98765 43210</div>
+      </div>
+      <div class="inv-hdr-right">
+        <div class="doc-type">TAX INVOICE</div><br>
+        <div class="bill-no">A26/051</div>
+        <div class="date">18 Mar 2026 | 04:12 PM</div>
+        <div style="margin-top:4px;">
+          <span class="badge badge-cash">CASH</span>
+          <span class="badge badge-paid">PAID</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gst-bar">
+    <span>GSTIN: 33AABCS1234F1Z5</span>
+    <span>Shift: #47</span>
+  </div>
+
+  <div class="inv-parties">
+    <div class="inv-party">
+      <div class="lbl">Bill To</div>
+      <div class="name">Walk-in Customer</div>
+      <div class="det">
+        <span>Customer GST:</span> —<br>
+        <span>Phone:</span> 98765 88888
+      </div>
+    </div>
+    <div class="inv-party">
+      <div class="lbl">Vehicle Details</div>
+      <div class="name">TN 09 CD 5678</div>
+      <div class="det">
+        <span>Type:</span> Car — Sedan<br>
+        <span>KM Reading:</span> 45,230
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:4%">#</th>
+          <th style="width:24%">Product / HSN</th>
+          <th style="width:10%">Nozzle</th>
+          <th class="r" style="width:11%">Qty (L)</th>
+          <th class="r" style="width:11%">Rate / L</th>
+          <th class="r" style="width:13%">Gross Amt</th>
+          <th class="r" style="width:11%">Disc.</th>
+          <th class="r" style="width:14%">Net Amt</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="c">1</td>
+          <td><div class="b">Petrol (MS)</div><div class="nozzle-info">HSN: 27101990</div></td>
+          <td class="c"><div>N3-A</div><div class="nozzle-info">Pump 3</div></td>
+          <td class="r">40.00</td><td class="r">102.61</td><td class="r">4,104.40</td>
+          <td class="r">—</td>
+          <td class="r bb">4,104.40</td>
+        </tr>
+        <tr class="tot">
+          <td colspan="3" class="r b">TOTAL</td>
+          <td class="r b">40.00</td><td></td><td class="r b">4,104.40</td><td class="r b">—</td><td class="r b">4,104.40</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="inv-totals">
+    <div class="inv-totals-left">
+      <div class="amt-words"><b>Amount in words:</b> Rupees Four Thousand One Hundred and Four Only</div>
+    </div>
+    <div class="inv-totals-right">
+      <div class="amt-row"><span>Gross Amount</span><span>4,104.40</span></div>
+      <div class="amt-row"><span>Discount</span><span>0.00</span></div>
+      <div class="amt-row"><span>Rounding</span><span>(-) 0.40</span></div>
+      <div class="amt-row total"><span>NET AMOUNT</span><span>&#8377; 4,104.00</span></div>
+    </div>
+  </div>
+
+  <div class="inv-meta">
+    <div class="inv-meta-box">
+      <div class="mlbl">Payment Mode</div>
+      <div class="mval">UPI</div>
+      <div class="msub">PhonePe | Ref: UP892341</div>
+    </div>
+    <div class="inv-meta-box">
+      <div class="mlbl">Meter Reading</div>
+      <div class="mval" style="font-size:9pt;">Open: <span style="color:#555;">35,000.00</span> &nbsp; Close: <span style="color:#555;">35,040.00</span></div>
+      <div class="msub">N3-A: 40.00 L</div>
+    </div>
+    <div class="inv-meta-box">
+      <div class="mlbl">Raised By</div>
+      <div class="mval">Sathya Kumar</div>
+      <div class="msub">Shift #47 | 18 Mar 2026</div>
+    </div>
+  </div>
+
+  <div class="inv-footer">
+    <div class="inv-footer-left">
+      <b>Terms & Conditions:</b><br>
+      1. Goods once sold will not be taken back.<br>
+      2. Subject to Chennai jurisdiction only.<br>
+      3. This is a computer-generated invoice.
+    </div>
+    <div class="inv-footer-right">
+      <div style="font-size:8pt; color:#555;">For SATHYA FUELS</div>
+      <div class="sign-line">Authorized Signatory</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
