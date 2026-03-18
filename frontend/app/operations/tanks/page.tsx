@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import { getTanks, getFuelProducts, createTank, updateTank, deleteTank, Tank, Product } from "@/lib/api/station";
 import { Droplets, Plus, Edit2, Trash2, Search } from "lucide-react";
+import { useFormValidation, required, min } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function TanksPage() {
     const [tanks, setTanks] = useState<Tank[]>([]);
@@ -20,6 +22,14 @@ export default function TanksPage() {
     const [capacity, setCapacity] = useState("");
     const [productId, setProductId] = useState("");
     const [active, setActive] = useState(true);
+    const [apiError, setApiError] = useState("");
+
+    const validationRules = useMemo(() => ({
+        name: [required("Tank name is required")],
+        capacity: [required("Capacity is required"), min(1, "Capacity must be at least 1")],
+        productId: [required("Fuel product is required")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -52,11 +62,15 @@ export default function TanksPage() {
             setProductId("");
             setActive(true);
         }
+        clearAllErrors();
+        setApiError("");
         setIsModalOpen(true);
     };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ name, capacity, productId })) return;
         try {
             const payload = {
                 name,
@@ -74,7 +88,7 @@ export default function TanksPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save tank", err);
-            alert("Error saving tank details");
+            setApiError("Error saving tank details");
         }
     };
 
@@ -181,42 +195,42 @@ export default function TanksPage() {
                 title={editingTank ? "Edit Tank" : "Add New Tank"}
             >
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Tank Name</label>
                         <input
                             type="text"
-                            required
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setName(e.target.value); clearError("name"); }}
+                            className={`w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.name)}`}
                             placeholder="e.g. Tank 1"
                         />
+                        <FieldError error={errors.name} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Capacity (Liters)</label>
                         <input
                             type="number"
-                            required
-                            min="0"
                             value={capacity}
-                            onChange={(e) => setCapacity(e.target.value)}
-                            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setCapacity(e.target.value); clearError("capacity"); }}
+                            className={`w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.capacity)}`}
                             placeholder="e.g. 10000"
                         />
+                        <FieldError error={errors.capacity} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Fuel Product</label>
                         <select
-                            required
                             value={productId}
-                            onChange={(e) => setProductId(e.target.value)}
-                            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setProductId(e.target.value); clearError("productId"); }}
+                            className={`w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.productId)}`}
                         >
                             <option value="">Select a product...</option>
                             {products.map(p => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                         </select>
+                        <FieldError error={errors.productId} />
                     </div>
                     <div className="flex items-center gap-2 pt-2">
                         <input
