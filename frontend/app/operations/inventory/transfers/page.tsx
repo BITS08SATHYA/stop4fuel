@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
@@ -16,6 +16,8 @@ import {
     CashierStock,
 } from "@/lib/api/station";
 import { ArrowLeftRight, Plus, Search, Warehouse, ShoppingBag, ArrowRight } from "lucide-react";
+import { useFormValidation, required, min } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function StockTransferPage() {
     const [transfers, setTransfers] = useState<StockTransfer[]>([]);
@@ -32,6 +34,12 @@ export default function StockTransferPage() {
     const [direction, setDirection] = useState<"GODOWN_TO_CASHIER" | "CASHIER_TO_GODOWN">("GODOWN_TO_CASHIER");
     const [remarks, setRemarks] = useState("");
     const [transferredBy, setTransferredBy] = useState("");
+    const [apiError, setApiError] = useState("");
+    const validationRules = useMemo(() => ({
+        productId: [required("Product is required")],
+        quantity: [required("Quantity is required"), min(0.01, "Quantity must be greater than 0")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -70,9 +78,11 @@ export default function StockTransferPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ productId, quantity })) return;
         const available = getAvailableStock();
         if (Number(quantity) > available) {
-            alert(`Insufficient stock. Available: ${available}`);
+            setApiError(`Insufficient stock. Available: ${available}`);
             return;
         }
         try {
@@ -91,7 +101,7 @@ export default function StockTransferPage() {
             loadData();
         } catch (err: any) {
             console.error("Failed to create transfer", err);
-            alert(err.message || "Error creating transfer");
+            setApiError(err.message || "Error creating transfer");
         }
     };
 
@@ -129,7 +139,7 @@ export default function StockTransferPage() {
                         </p>
                     </div>
                     <button
-                        onClick={() => { resetForm(); setIsModalOpen(true); }}
+                        onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
                         className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                     >
                         <Plus className="w-5 h-5" />
@@ -223,6 +233,7 @@ export default function StockTransferPage() {
 
             <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title="New Stock Transfer">
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} />
                     {/* Direction Toggle */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">Transfer Direction</label>
@@ -261,16 +272,16 @@ export default function StockTransferPage() {
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Product</label>
                         <select
-                            required
                             value={productId}
-                            onChange={(e) => setProductId(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                            onChange={(e) => { setProductId(e.target.value); clearError("productId"); }}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.productId)}`}
                         >
                             <option value="">Select a product...</option>
                             {products.map((p) => (
                                 <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
                             ))}
                         </select>
+                        <FieldError error={errors.productId} />
                     </div>
 
                     {productId && (
@@ -284,14 +295,14 @@ export default function StockTransferPage() {
                         <label className="block text-sm font-medium text-foreground mb-1.5">Quantity</label>
                         <input
                             type="number"
-                            required
                             value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                            onChange={(e) => { setQuantity(e.target.value); clearError("quantity"); }}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.quantity)}`}
                             placeholder="0"
                             min="0.01"
                             step="any"
                         />
+                        <FieldError error={errors.quantity} />
                     </div>
 
                     <div>

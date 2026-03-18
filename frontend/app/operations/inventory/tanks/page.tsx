@@ -14,6 +14,8 @@ import {
     deleteTankInventory
 } from "@/lib/api/station";
 import { Droplets, Plus, Calendar, Ruler, TrendingDown, Trash2, Edit2, Search } from "lucide-react";
+import { useFormValidation, required, min } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function TankInventoryPage() {
     const [inventories, setInventories] = useState<TankInventory[]>([]);
@@ -43,7 +45,16 @@ export default function TankInventoryPage() {
     const [incomeStock, setIncomeStock] = useState("");
     const [closeDip, setCloseDip] = useState("");
     const [closeStock, setCloseStock] = useState("");
-    
+    const [apiError, setApiError] = useState("");
+    const validationRules = useMemo(() => ({
+        tankId: [required("Tank is required")],
+        openDip: [required("Open dip is required")],
+        openStock: [required("Open stock is required")],
+        closeDip: [required("Close dip is required")],
+        closeStock: [required("Close stock is required")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
+
     // Derived Calculations
     const [totalStock, setTotalStock] = useState(0);
     const [saleStock, setSaleStock] = useState(0);
@@ -87,6 +98,8 @@ export default function TankInventoryPage() {
     }, [openStock, incomeStock, closeStock]);
 
     const handleEdit = (inv: TankInventory) => {
+        clearAllErrors();
+        setApiError("");
         setEditingId(inv.id);
         setDate(inv.date);
         setTankId(String(inv.tank.id));
@@ -100,6 +113,8 @@ export default function TankInventoryPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ tankId, openDip, openStock, closeDip, closeStock })) return;
         try {
             const payload = {
                 date,
@@ -121,7 +136,7 @@ export default function TankInventoryPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save tank inventory", err);
-            alert("Error saving tank dip details");
+            setApiError("Error saving tank dip details");
         }
     };
 
@@ -132,7 +147,7 @@ export default function TankInventoryPage() {
             loadData();
         } catch (err) {
             console.error("Failed to delete", err);
-            alert("Error deleting record");
+            setApiError("Error deleting record");
         }
     };
 
@@ -159,7 +174,7 @@ export default function TankInventoryPage() {
                         </p>
                     </div>
                     <button
-                        onClick={() => { resetForm(); setIsModalOpen(true); }}
+                        onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
                         className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                     >
                         <Plus className="w-5 h-5" />
@@ -293,6 +308,7 @@ export default function TankInventoryPage() {
                 title={editingId ? "Edit Tank Reading" : "Record Daily Tank Reading"}
             >
                 <form onSubmit={handleSave} className="space-y-6">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
                             <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
@@ -309,16 +325,16 @@ export default function TankInventoryPage() {
                         <div className="col-span-1">
                             <label className="block text-sm font-medium text-foreground mb-1.5">Selected Tank</label>
                             <select
-                                required
                                 value={tankId}
-                                onChange={(e) => setTankId(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                onChange={(e) => { setTankId(e.target.value); clearError("tankId"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.tankId)}`}
                             >
                                 <option value="">Select Tank...</option>
                                 {tanks.map(t => (
                                     <option key={t.id} value={t.id}>{t.name} ({t.product.name} - Cap: {t.capacity}L)</option>
                                 ))}
                             </select>
+                            <FieldError error={errors.tankId} />
                         </div>
                     </div>
 
@@ -328,29 +344,28 @@ export default function TankInventoryPage() {
                                 <label className="block text-sm font-medium text-foreground mb-1.5">Open Dip (cm)</label>
                                 <input
                                     type="text"
-                                    required
                                     value={openDip}
-                                    onChange={(e) => setOpenDip(e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                    onChange={(e) => { setOpenDip(e.target.value); clearError("openDip"); }}
+                                    className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.openDip)}`}
                                     placeholder="e.g. 150.5"
                                 />
+                                <FieldError error={errors.openDip} />
                             </div>
                             <div className="col-span-1">
                                 <label className="block text-sm font-medium text-foreground mb-1.5">Open Stock (L)</label>
                                 <input
                                     type="number"
-                                    required
                                     value={openStock}
-                                    onChange={(e) => setOpenStock(e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                    onChange={(e) => { setOpenStock(e.target.value); clearError("openStock"); }}
+                                    className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.openStock)}`}
                                     placeholder="0"
                                 />
+                                <FieldError error={errors.openStock} />
                             </div>
                             <div className="col-span-1">
                                 <label className="block text-sm font-medium text-foreground mb-1.5 text-blue-500">Income (+ L)</label>
                                 <input
                                     type="number"
-                                    required
                                     value={incomeStock}
                                     onChange={(e) => setIncomeStock(e.target.value)}
                                     className="w-full bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/50 border rounded-xl px-4 py-3 text-blue-700 dark:text-blue-400"
@@ -364,23 +379,23 @@ export default function TankInventoryPage() {
                                 <label className="block text-sm font-medium text-foreground mb-1.5">Close Dip (cm)</label>
                                 <input
                                     type="text"
-                                    required
                                     value={closeDip}
-                                    onChange={(e) => setCloseDip(e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                    onChange={(e) => { setCloseDip(e.target.value); clearError("closeDip"); }}
+                                    className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.closeDip)}`}
                                     placeholder="e.g. 142.2"
                                 />
+                                <FieldError error={errors.closeDip} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-foreground mb-1.5">Close Stock (L)</label>
                                 <input
                                     type="number"
-                                    required
                                     value={closeStock}
-                                    onChange={(e) => setCloseStock(e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                    onChange={(e) => { setCloseStock(e.target.value); clearError("closeStock"); }}
+                                    className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.closeStock)}`}
                                     placeholder="Reading"
                                 />
+                                <FieldError error={errors.closeStock} />
                             </div>
                         </div>
                     </div>

@@ -14,6 +14,8 @@ import {
     deleteNozzleInventory
 } from "@/lib/api/station";
 import { Fuel, Plus, Calendar, Hash, ArrowUpRight, Trash2, Edit2, Search } from "lucide-react";
+import { useFormValidation, required } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function NozzleInventoryPage() {
     const [inventories, setInventories] = useState<NozzleInventory[]>([]);
@@ -41,6 +43,13 @@ export default function NozzleInventoryPage() {
     const [openReading, setOpenReading] = useState("");
     const [closeReading, setCloseReading] = useState("");
     const [calculatedSales, setCalculatedSales] = useState(0);
+    const [apiError, setApiError] = useState("");
+    const validationRules = useMemo(() => ({
+        nozzleId: [required("Nozzle is required")],
+        openReading: [required("Open reading is required")],
+        closeReading: [required("Close reading is required")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -79,6 +88,8 @@ export default function NozzleInventoryPage() {
     }, [openReading, closeReading]);
 
     const handleEdit = (inv: NozzleInventory) => {
+        clearAllErrors();
+        setApiError("");
         setEditingId(inv.id);
         setDate(inv.date);
         setNozzleId(String(inv.nozzle.id));
@@ -89,6 +100,8 @@ export default function NozzleInventoryPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ nozzleId, openReading, closeReading })) return;
         try {
             const payload = {
                 date,
@@ -107,7 +120,7 @@ export default function NozzleInventoryPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save nozzle inventory", err);
-            alert("Error saving inventory details");
+            setApiError("Error saving inventory details");
         }
     };
 
@@ -118,7 +131,7 @@ export default function NozzleInventoryPage() {
             loadData();
         } catch (err) {
             console.error("Failed to delete", err);
-            alert("Error deleting record");
+            setApiError("Error deleting record");
         }
     };
 
@@ -143,7 +156,7 @@ export default function NozzleInventoryPage() {
                         </p>
                     </div>
                     <button
-                        onClick={() => { resetForm(); setIsModalOpen(true); }}
+                        onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
                         className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                     >
                         <Plus className="w-5 h-5" />
@@ -278,6 +291,7 @@ export default function NozzleInventoryPage() {
                 title={editingId ? "Edit Nozzle Reading" : "Record Daily Nozzle Reading"}
             >
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
@@ -294,16 +308,16 @@ export default function NozzleInventoryPage() {
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Selected Nozzle</label>
                             <select
-                                required
                                 value={nozzleId}
-                                onChange={(e) => setNozzleId(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                onChange={(e) => { setNozzleId(e.target.value); clearError("nozzleId"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.nozzleId)}`}
                             >
                                 <option value="">Select Nozzle...</option>
                                 {nozzles.map(n => (
                                     <option key={n.id} value={n.id}>{n.nozzleName} ({n.pump.name} - {n.tank.product.name})</option>
                                 ))}
                             </select>
+                            <FieldError error={errors.nozzleId} />
                         </div>
 
                         <div>
@@ -311,12 +325,12 @@ export default function NozzleInventoryPage() {
                             <input
                                 type="number"
                                 step="0.01"
-                                required
                                 value={openReading}
-                                onChange={(e) => setOpenReading(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+                                onChange={(e) => { setOpenReading(e.target.value); clearError("openReading"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono ${inputErrorClass(errors.openReading)}`}
                                 placeholder="0.00"
                             />
+                            <FieldError error={errors.openReading} />
                         </div>
 
                         <div>
@@ -324,12 +338,12 @@ export default function NozzleInventoryPage() {
                             <input
                                 type="number"
                                 step="0.01"
-                                required
                                 value={closeReading}
-                                onChange={(e) => setCloseReading(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+                                onChange={(e) => { setCloseReading(e.target.value); clearError("closeReading"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono ${inputErrorClass(errors.closeReading)}`}
                                 placeholder="0.00"
                             />
+                            <FieldError error={errors.closeReading} />
                         </div>
                     </div>
 
