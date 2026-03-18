@@ -14,6 +14,8 @@ import { Modal } from "@/components/ui/modal";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { useFormValidation, required, min } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import {
     getLeaveTypes,
     createLeaveType,
@@ -63,6 +65,19 @@ export default function LeaveManagementPage() {
     const [balanceEmployeeId, setBalanceEmployeeId] = useState("");
     const [balanceYear, setBalanceYear] = useState(new Date().getFullYear().toString());
 
+    // Validation
+    const { errors: reqErrors, validate: validateReq, clearError: clearReqError, clearAllErrors: clearAllReqErrors } = useFormValidation({
+        employeeId: [required("Employee is required")],
+        leaveTypeId: [required("Leave type is required")],
+        fromDate: [required("From date is required")],
+        toDate: [required("To date is required")],
+    });
+    const { errors: typeErrors, validate: validateType, clearError: clearTypeError, clearAllErrors: clearAllTypeErrors } = useFormValidation({
+        typeName: [required("Type name is required")],
+        maxDaysPerYear: [required("Max days is required"), min(1, "Must be at least 1")],
+    });
+    const [apiError, setApiError] = useState("");
+
     useEffect(() => {
         loadData();
     }, []);
@@ -107,6 +122,7 @@ export default function LeaveManagementPage() {
 
     const handleSubmitRequest = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateReq({ employeeId: selectedEmployeeId, leaveTypeId: selectedLeaveTypeId, fromDate, toDate })) return;
         try {
             await createLeaveRequest(Number(selectedEmployeeId), {
                 leaveType: { id: Number(selectedLeaveTypeId) } as LeaveType,
@@ -119,7 +135,7 @@ export default function LeaveManagementPage() {
             resetRequestForm();
             loadData();
         } catch (e) {
-            alert("Failed to submit request");
+            setApiError("Failed to submit request");
         }
     };
 
@@ -137,7 +153,7 @@ export default function LeaveManagementPage() {
             await approveLeaveRequest(id, { approvedBy: "Manager" });
             loadData();
         } catch (e) {
-            alert("Failed to approve");
+            setApiError("Failed to approve");
         }
     };
 
@@ -148,12 +164,13 @@ export default function LeaveManagementPage() {
             await rejectLeaveRequest(id, { remarks });
             loadData();
         } catch (e) {
-            alert("Failed to reject");
+            setApiError("Failed to reject");
         }
     };
 
     const handleSaveType = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateType({ typeName, maxDaysPerYear })) return;
         try {
             const data = {
                 typeName,
@@ -171,7 +188,7 @@ export default function LeaveManagementPage() {
             resetTypeForm();
             loadData();
         } catch (e) {
-            alert("Failed to save leave type");
+            setApiError("Failed to save leave type");
         }
     };
 
@@ -242,7 +259,7 @@ export default function LeaveManagementPage() {
                     </div>
                     {activeTab === "requests" && (
                         <button
-                            onClick={() => setIsRequestModalOpen(true)}
+                            onClick={() => { clearAllReqErrors(); setApiError(""); setIsRequestModalOpen(true); }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
                         >
                             <Plus className="w-5 h-5" />
@@ -254,6 +271,8 @@ export default function LeaveManagementPage() {
                             onClick={() => {
                                 setEditingType(null);
                                 resetTypeForm();
+                                clearAllTypeErrors();
+                                setApiError("");
                                 setIsTypeModalOpen(true);
                             }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -507,38 +526,39 @@ export default function LeaveManagementPage() {
             {/* Request Modal */}
             <Modal isOpen={isRequestModalOpen} onClose={() => setIsRequestModalOpen(false)} title="New Leave Request">
                 <form onSubmit={handleSubmitRequest} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Employee <span className="text-red-500">*</span>
                             </label>
                             <select
-                                required
                                 value={selectedEmployeeId}
-                                onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
+                                onChange={(e) => { setSelectedEmployeeId(e.target.value); clearReqError("employeeId"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none ${inputErrorClass(reqErrors.employeeId)}`}
                             >
                                 <option value="">Select Employee</option>
                                 {employees.filter(e => e.status === "Active").map((emp) => (
                                     <option key={emp.id} value={emp.id}>{emp.name}</option>
                                 ))}
                             </select>
+                            <FieldError error={reqErrors.employeeId} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Leave Type <span className="text-red-500">*</span>
                             </label>
                             <select
-                                required
                                 value={selectedLeaveTypeId}
-                                onChange={(e) => setSelectedLeaveTypeId(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
+                                onChange={(e) => { setSelectedLeaveTypeId(e.target.value); clearReqError("leaveTypeId"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none ${inputErrorClass(reqErrors.leaveTypeId)}`}
                             >
                                 <option value="">Select Type</option>
                                 {leaveTypes.map((lt) => (
                                     <option key={lt.id} value={lt.id}>{lt.typeName}</option>
                                 ))}
                             </select>
+                            <FieldError error={reqErrors.leaveTypeId} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -546,11 +566,11 @@ export default function LeaveManagementPage() {
                             </label>
                             <input
                                 type="date"
-                                required
                                 value={fromDate}
-                                onChange={(e) => setFromDate(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                onChange={(e) => { setFromDate(e.target.value); clearReqError("fromDate"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(reqErrors.fromDate)}`}
                             />
+                            <FieldError error={reqErrors.fromDate} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -558,11 +578,11 @@ export default function LeaveManagementPage() {
                             </label>
                             <input
                                 type="date"
-                                required
                                 value={toDate}
-                                onChange={(e) => setToDate(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                onChange={(e) => { setToDate(e.target.value); clearReqError("toDate"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(reqErrors.toDate)}`}
                             />
+                            <FieldError error={reqErrors.toDate} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Days</label>
@@ -599,18 +619,19 @@ export default function LeaveManagementPage() {
             {/* Type Modal */}
             <Modal isOpen={isTypeModalOpen} onClose={() => setIsTypeModalOpen(false)} title={editingType ? "Edit Leave Type" : "Add Leave Type"}>
                 <form onSubmit={handleSaveType} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">
                             Type Name <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
-                            required
                             value={typeName}
-                            onChange={(e) => setTypeName(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setTypeName(e.target.value); clearTypeError("typeName"); }}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(typeErrors.typeName)}`}
                             placeholder="e.g., Casual Leave"
                         />
+                        <FieldError error={typeErrors.typeName} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -618,11 +639,11 @@ export default function LeaveManagementPage() {
                         </label>
                         <input
                             type="number"
-                            required
                             value={maxDaysPerYear}
-                            onChange={(e) => setMaxDaysPerYear(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setMaxDaysPerYear(e.target.value); clearTypeError("maxDaysPerYear"); }}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(typeErrors.maxDaysPerYear)}`}
                         />
+                        <FieldError error={typeErrors.maxDaysPerYear} />
                     </div>
                     <div className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 rounded-xl border border-border">
                         <div>
