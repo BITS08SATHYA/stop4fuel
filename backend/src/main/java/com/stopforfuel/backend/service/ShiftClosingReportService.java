@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
 import com.stopforfuel.backend.repository.*;
@@ -31,6 +32,10 @@ public class ShiftClosingReportService {
     private final EmployeeAdvanceRepository employeeAdvanceRepository;
     private final StatementRepository statementRepository;
     private final ShiftTransactionService shiftTransactionService;
+    private final NozzleInventoryRepository nozzleInventoryRepository;
+    private final TankInventoryRepository tankInventoryRepository;
+    private final ProductRepository productRepository;
+    private final CompanyRepository companyRepository;
 
     @Transactional
     public ShiftClosingReport generateReport(Long shiftId) {
@@ -682,5 +687,261 @@ public class ShiftClosingReportService {
                 shiftTransactionRepository.save(txn);
             }
         }
+    }
+
+    // === PRINT DATA ===
+
+    public ShiftReportPrintData getPrintData(Long shiftId) {
+        ShiftClosingReport report = reportRepository.findByShiftId(shiftId)
+                .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
+        Shift shift = report.getShift();
+
+        ShiftReportPrintData data = new ShiftReportPrintData();
+
+        // Header
+        List<Company> companies = companyRepository.findByScid(shift.getScid() != null ? shift.getScid() : 1L);
+        data.setCompanyName(!companies.isEmpty() ? companies.get(0).getName() : "StopForFuel");
+        data.setEmployeeName(shift.getAttendant() != null ? shift.getAttendant().getName() : "-");
+        data.setShiftId(shift.getId());
+        data.setShiftStart(shift.getStartTime());
+        data.setShiftEnd(shift.getEndTime());
+        data.setReportStatus(report.getStatus());
+
+        // Meter Readings
+        List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
+        for (NozzleInventory ni : nozzleInvs) {
+            ShiftReportPrintData.MeterReading mr = new ShiftReportPrintData.MeterReading();
+            mr.setPumpName(ni.getNozzle().getPump() != null ? ni.getNozzle().getPump().getName() : "-");
+            mr.setNozzleName(ni.getNozzle().getNozzleName());
+            mr.setProductName(ni.getNozzle().getTank() != null && ni.getNozzle().getTank().getProduct() != null
+                    ? ni.getNozzle().getTank().getProduct().getName() : "-");
+            mr.setOpenReading(ni.getOpenMeterReading());
+            mr.setCloseReading(ni.getCloseMeterReading());
+            mr.setSales(ni.getSales());
+            data.getMeterReadings().add(mr);
+        }
+
+        // Tank Readings
+        List<TankInventory> tankInvs = tankInventoryRepository.findByShiftId(shiftId);
+        for (TankInventory ti : tankInvs) {
+            ShiftReportPrintData.TankReading tr = new ShiftReportPrintData.TankReading();
+            tr.setTankName(ti.getTank().getName());
+            tr.setProductName(ti.getTank().getProduct() != null ? ti.getTank().getProduct().getName() : "-");
+            tr.setOpenDip(ti.getOpenDip());
+            tr.setOpenStock(ti.getOpenStock());
+            tr.setIncomeStock(ti.getIncomeStock());
+            tr.setTotalStock(ti.getTotalStock());
+            tr.setCloseDip(ti.getCloseDip());
+            tr.setCloseStock(ti.getCloseStock());
+            tr.setSaleStock(ti.getSaleStock());
+            data.getTankReadings().add(tr);
+        }
+
+        // Sales Difference (tank sale vs meter sale by product)
+        Map<String, double[]> tankSalesByProduct = new LinkedHashMap<>();
+        for (TankInventory ti : tankInvs) {
+            String productName = ti.getTank().getProduct() != null ? ti.getTank().getProduct().getName() : "Unknown";
+            double sale = ti.getSaleStock() != null ? ti.getSaleStock() : 0;
+            tankSalesByProduct.merge(productName, new double[]{sale}, (o, n) -> new double[]{o[0] + n[0]});
+        }
+        Map<String, double[]> meterSalesByProduct = new LinkedHashMap<>();
+        for (NozzleInventory ni : nozzleInvs) {
+            String productName = ni.getNozzle().getTank() != null && ni.getNozzle().getTank().getProduct() != null
+                    ? ni.getNozzle().getTank().getProduct().getName() : "Unknown";
+            double sale = ni.getSales() != null ? ni.getSales() : 0;
+            meterSalesByProduct.merge(productName, new double[]{sale}, (o, n) -> new double[]{o[0] + n[0]});
+        }
+        Set<String> allProducts = new LinkedHashSet<>();
+        allProducts.addAll(tankSalesByProduct.keySet());
+        allProducts.addAll(meterSalesByProduct.keySet());
+        for (String product : allProducts) {
+            double tankSale = tankSalesByProduct.containsKey(product) ? tankSalesByProduct.get(product)[0] : 0;
+            double meterSale = meterSalesByProduct.containsKey(product) ? meterSalesByProduct.get(product)[0] : 0;
+            ShiftReportPrintData.SalesDifference sd = new ShiftReportPrintData.SalesDifference();
+            sd.setProductName(product);
+            sd.setTankSale(tankSale);
+            sd.setMeterSale(meterSale);
+            sd.setDifference(tankSale - meterSale);
+            data.getSalesDifferences().add(sd);
+        }
+
+        // Credit Bill Details (grouped by customer)
+        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+        List<InvoiceBill> creditBills = invoices.stream()
+                .filter(inv -> "CREDIT".equals(inv.getBillType()))
+                .sorted(Comparator.comparing(inv -> inv.getCustomer() != null ? inv.getCustomer().getName() : ""))
+                .collect(Collectors.toList());
+
+        for (InvoiceBill bill : creditBills) {
+            ShiftReportPrintData.CreditBillDetail cbd = new ShiftReportPrintData.CreditBillDetail();
+            cbd.setCustomerName(bill.getCustomer() != null ? bill.getCustomer().getName() : "-");
+            cbd.setBillNo(bill.getBillNo());
+            cbd.setVehicleNo(bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-");
+            cbd.setAmount(bill.getNetAmount());
+
+            // Compact products: "P:500 HSD:200"
+            StringBuilder prodStr = new StringBuilder();
+            if (bill.getProducts() != null) {
+                for (InvoiceProduct ip : bill.getProducts()) {
+                    String pName = ip.getProduct() != null ? abbreviateProduct(ip.getProduct().getName()) : "?";
+                    double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
+                    if (prodStr.length() > 0) prodStr.append(" ");
+                    prodStr.append(pName).append(":").append(String.format("%.0f", qty));
+                }
+            }
+            cbd.setProducts(prodStr.toString());
+            data.getCreditBillDetails().add(cbd);
+        }
+
+        // Stock Summary (all products - fuel and non-fuel)
+        List<Product> allProductEntities = productRepository.findByActive(true);
+        for (Product product : allProductEntities) {
+            ShiftReportPrintData.StockSummaryRow row = new ShiftReportPrintData.StockSummaryRow();
+            row.setProductName(product.getName());
+            row.setRate(product.getPrice());
+
+            // For fuel products, use tank data
+            if ("FUEL".equalsIgnoreCase(product.getCategory())) {
+                double open = 0, receipt = 0, total = 0, sales = 0;
+                for (TankInventory ti : tankInvs) {
+                    if (ti.getTank().getProduct() != null && ti.getTank().getProduct().getId().equals(product.getId())) {
+                        open += ti.getOpenStock() != null ? ti.getOpenStock() : 0;
+                        receipt += ti.getIncomeStock() != null ? ti.getIncomeStock() : 0;
+                        total += ti.getTotalStock() != null ? ti.getTotalStock() : 0;
+                        sales += ti.getSaleStock() != null ? ti.getSaleStock() : 0;
+                    }
+                }
+                row.setOpenStock(open);
+                row.setReceipt(receipt);
+                row.setTotalStock(total);
+                row.setSales(sales);
+            } else {
+                // Non-fuel: calculate from invoices
+                double sales = 0;
+                for (InvoiceBill inv : invoices) {
+                    if (inv.getProducts() != null) {
+                        for (InvoiceProduct ip : inv.getProducts()) {
+                            if (ip.getProduct() != null && ip.getProduct().getId().equals(product.getId())) {
+                                sales += ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
+                            }
+                        }
+                    }
+                }
+                if (sales == 0) continue; // skip non-fuel with zero sales
+                row.setSales(sales);
+                row.setOpenStock(0.0);
+                row.setReceipt(0.0);
+                row.setTotalStock(0.0);
+            }
+
+            BigDecimal salesAmt = product.getPrice() != null && row.getSales() != null
+                    ? product.getPrice().multiply(BigDecimal.valueOf(row.getSales()))
+                    : BigDecimal.ZERO;
+            row.setAmount(salesAmt.setScale(2, RoundingMode.HALF_UP));
+            data.getStockSummary().add(row);
+        }
+
+        // Advance Entry Details (individual transactions)
+        List<ShiftTransaction> allTxns = shiftTransactionRepository.findByShiftId(shiftId);
+        for (ShiftTransaction txn : allTxns) {
+            String txnType = txn.getClass().getSimpleName().replace("Transaction", "").toUpperCase();
+            if ("CASH".equals(txnType) || "NIGHTCASH".equals(txnType)) continue; // skip cash-in transactions
+            if ("EXPENSE".equals(txnType)) {
+                // Check if it's an auto-created expense for advance/repayment — skip those
+                if (txn.getRemarks() != null && (txn.getRemarks().startsWith("Auto: Advance #")
+                        || txn.getRemarks().startsWith("Auto: Inflow Repayment"))) {
+                    continue;
+                }
+            }
+
+            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
+            entry.setType(txnType);
+            entry.setDescription(txn.getRemarks() != null ? txn.getRemarks() : "-");
+            entry.setAmount(txn.getReceivedAmount());
+            data.getAdvanceEntries().add(entry);
+        }
+
+        // Add cash advances as advance entries
+        List<CashAdvance> cashAdvances = cashAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        for (CashAdvance ca : cashAdvances) {
+            if ("CANCELLED".equals(ca.getStatus())) continue;
+            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
+            entry.setType("HOME_ADVANCE".equals(ca.getAdvanceType()) ? "HOME_ADV" : "CASH_ADV");
+            entry.setDescription(ca.getRecipientName() != null ? ca.getRecipientName() : "-");
+            entry.setAmount(ca.getAmount());
+            entry.setReference(ca.getPurpose());
+            data.getAdvanceEntries().add(entry);
+        }
+
+        // Add inflow repayments
+        List<CashInflowRepayment> repayments = repaymentRepository.findByShiftIdOrderByRepaymentDateDesc(shiftId);
+        for (CashInflowRepayment r : repayments) {
+            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
+            entry.setType("REPAYMENT");
+            entry.setDescription(r.getCashInflow() != null ? r.getCashInflow().getSource() : "-");
+            entry.setAmount(r.getAmount());
+            data.getAdvanceEntries().add(entry);
+        }
+
+        // Add incentive from invoices
+        BigDecimal incentiveTotal = BigDecimal.ZERO;
+        for (InvoiceBill inv : invoices) {
+            if (inv.getTotalDiscount() != null && inv.getTotalDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                incentiveTotal = incentiveTotal.add(inv.getTotalDiscount());
+            }
+        }
+        if (incentiveTotal.compareTo(BigDecimal.ZERO) > 0) {
+            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
+            entry.setType("INCENTIVE");
+            entry.setDescription("Discounts given");
+            entry.setAmount(incentiveTotal);
+            data.getAdvanceEntries().add(entry);
+        }
+
+        // Add salary advances
+        if (shift.getStartTime() != null) {
+            java.time.LocalDate shiftDate = shift.getStartTime().toLocalDate();
+            List<EmployeeAdvance> empAdvances = employeeAdvanceRepository.findByAdvanceDateBetween(shiftDate, shiftDate);
+            for (EmployeeAdvance ea : empAdvances) {
+                ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
+                entry.setType("SAL_ADV");
+                entry.setDescription(ea.getEmployee() != null ? ea.getEmployee().getName() : "-");
+                entry.setAmount(ea.getAmount() != null ? BigDecimal.valueOf(ea.getAmount()) : BigDecimal.ZERO);
+                data.getAdvanceEntries().add(entry);
+            }
+        }
+
+        // Payment Entries (bill and statement payments)
+        List<Payment> shiftPayments = paymentRepository.findByShiftId(shiftId);
+        for (Payment p : shiftPayments) {
+            ShiftReportPrintData.PaymentEntryDetail pe = new ShiftReportPrintData.PaymentEntryDetail();
+            pe.setCustomerName(p.getCustomer() != null ? p.getCustomer().getName() : "-");
+            pe.setPaymentMode(p.getPaymentMode() != null ? p.getPaymentMode().getModeName() : "CASH");
+            pe.setAmount(p.getAmount());
+
+            if (p.getInvoiceBill() != null) {
+                pe.setType("BILL");
+                pe.setReference(p.getInvoiceBill().getBillNo());
+            } else if (p.getStatement() != null) {
+                pe.setType("STMT");
+                pe.setReference(p.getStatement().getStatementNo());
+            } else {
+                pe.setType("OTHER");
+                pe.setReference("-");
+            }
+            data.getPaymentEntries().add(pe);
+        }
+
+        return data;
+    }
+
+    private String abbreviateProduct(String name) {
+        if (name == null) return "?";
+        String upper = name.toUpperCase();
+        if (upper.contains("PETROL") || upper.equals("MS")) return "P";
+        if (upper.contains("XTRA") || upper.contains("XP") || upper.contains("PREMIUM")) return "XP";
+        if (upper.contains("DIESEL") || upper.equals("HSD") || upper.contains("HIGH SPEED")) return "HSD";
+        // For non-fuel, return first 3 chars
+        return name.length() > 4 ? name.substring(0, 4) : name;
     }
 }

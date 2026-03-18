@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.ReportAuditLog;
 import com.stopforfuel.backend.entity.ShiftClosingReport;
 import com.stopforfuel.backend.service.ShiftClosingReportService;
@@ -66,5 +67,10 @@ public class ShiftClosingReportController {
     @GetMapping("/{reportId}/audit-log")
     public List<ReportAuditLog> getAuditLog(@PathVariable Long reportId) {
         return reportService.getAuditLog(reportId);
+    }
+
+    @GetMapping("/{shiftId}/print-data")
+    public ShiftReportPrintData getPrintData(@PathVariable Long shiftId) {
+        return reportService.getPrintData(shiftId);
     }
 }

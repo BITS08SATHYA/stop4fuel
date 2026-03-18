@@ -1511,6 +1511,26 @@ export const createExternalCashInflow = (inflow: Partial<ExternalCashInflow>): P
         body: JSON.stringify(inflow),
     }).then(handleResponse);
 
+// --- Print Data Types ---
+export interface ShiftReportPrintData {
+    companyName: string;
+    employeeName: string;
+    shiftId: number;
+    shiftStart: string;
+    shiftEnd: string;
+    reportStatus: string;
+    meterReadings: { pumpName: string; nozzleName: string; productName: string; openReading: number; closeReading: number; sales: number }[];
+    tankReadings: { tankName: string; productName: string; openDip: string; openStock: number; incomeStock: number; totalStock: number; closeDip: string; closeStock: number; saleStock: number }[];
+    salesDifferences: { productName: string; tankSale: number; meterSale: number; difference: number }[];
+    creditBillDetails: { customerName: string; billNo: string; vehicleNo: string; products: string; amount: number }[];
+    stockSummary: { productName: string; openStock: number; receipt: number; totalStock: number; sales: number; rate: number; amount: number }[];
+    advanceEntries: { type: string; description: string; amount: number; reference?: string }[];
+    paymentEntries: { type: string; customerName: string; reference: string; paymentMode: string; amount: number }[];
+}
+
+export const getShiftReportPrintData = (shiftId: number): Promise<ShiftReportPrintData> =>
+    fetch(`${API_BASE_URL}/shift-reports/${shiftId}/print-data`).then(handleResponse);
+
 export const recordCashInflowRepayment = (inflowId: number, repayment: Partial<CashInflowRepayment>): Promise<CashInflowRepayment> =>
     fetch(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {
         method: 'POST',
