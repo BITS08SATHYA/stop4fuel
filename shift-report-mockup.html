@@ -4,54 +4,55 @@
 <meta charset="UTF-8">
 <title>Shift Closing Report</title>
 <style>
-  @page { size: legal landscape; margin: 5mm; }
+  @page { size: legal portrait; margin: 6mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 5.5pt; line-height: 1.15; color: #000; background: #fff; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 8pt; line-height: 1.2; color: #000; background: #fff; }
 
-  .page { width: 100%; height: 100vh; padding: 4px 5px; page-break-after: always; display: flex; flex-direction: column; }
+  .page { width: 100%; min-height: 100vh; padding: 5px 6px; page-break-after: always; display: flex; flex-direction: column; }
   .page:last-child { page-break-after: auto; }
 
-  /* Header */
-  .hdr { text-align: center; border-bottom: 1.5px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
-  .hdr .co { font-size: 10pt; font-weight: 800; letter-spacing: 0.5px; }
-  .hdr .addr { font-size: 5.5pt; color: #333; }
-  .hdr .sub { font-size: 7pt; font-weight: 700; margin-top: 1px; }
-  .hdr2 { font-size: 6pt; font-weight: 700; text-align: center; border-bottom: 1px solid #000; padding-bottom: 1px; margin-bottom: 2px; }
+  .hdr { text-align: center; border-bottom: 2px solid #000; padding-bottom: 3px; margin-bottom: 4px; }
+  .hdr .co { font-size: 13pt; font-weight: 900; }
+  .hdr .addr { font-size: 7pt; color: #333; }
+  .hdr .sub { font-size: 8.5pt; font-weight: 700; margin-top: 1px; }
+  .hdr .dateline { font-size: 7.5pt; }
 
-  .body { flex: 1; display: grid; gap: 5px; }
-  .g3 { grid-template-columns: 38% 28% 34%; }
-  .g3b { grid-template-columns: 34% 33% 33%; }
+  .hdr2 { text-align: center; font-size: 7pt; font-weight: 700; border-bottom: 1.5px solid #000; padding-bottom: 2px; margin-bottom: 4px; }
 
-  .st { font-size: 6pt; font-weight: 800; text-transform: uppercase; background: #000; color: #fff; padding: 1px 3px; margin-bottom: 1px; margin-top: 3px; letter-spacing: 0.3px; }
+  .cols { display: grid; gap: 8px; flex: 1; }
+  .c2 { grid-template-columns: 1fr 1fr; }
+
+  .st { font-size: 7.5pt; font-weight: 800; text-transform: uppercase; background: #222; color: #fff; padding: 2px 4px; margin-bottom: 2px; margin-top: 5px; }
   .st:first-child { margin-top: 0; }
 
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 0px 2px; font-size: 5.5pt; }
-  th { font-size: 5pt; font-weight: 700; text-transform: uppercase; background: #e8e8e8; border-bottom: 1px solid #999; text-align: center; padding: 1px 2px; }
-  td { border-bottom: 0.5px solid #ddd; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+  th { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; background: #e0e0e0; border-bottom: 1px solid #999; padding: 1.5px 3px; text-align: center; }
+  td { padding: 1px 3px; font-size: 7.5pt; border-bottom: 0.5px solid #ddd; }
   .r { text-align: right; }
   .l { text-align: left; }
   .c { text-align: center; }
   .b { font-weight: 700; }
-  .bb { font-weight: 800; }
-  .tot td { background: #d5d5d5; font-weight: 800; border-top: 1px solid #000; border-bottom: 1px solid #000; }
-  .sub td { background: #f0f0f0; font-weight: 700; font-size: 5pt; }
-  .grp td { background: #e8e8e8; font-weight: 700; font-size: 5pt; }
-  .stripe:nth-child(even) td { background: #f9f9f9; }
+  .bb { font-weight: 900; }
+  .tot td { background: #d0d0d0; font-weight: 800; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; font-size: 7.5pt; }
+  .sub td { background: #eee; font-weight: 700; font-size: 7pt; }
+  .grp td { background: #e8e8e8; font-weight: 700; font-size: 7pt; }
+  tr:nth-child(even) td { background: rgba(0,0,0,0.02); }
+  .tot td, .sub td, .grp td { background: revert; }
 
-  /* Meter table special */
-  .mtbl { margin-bottom: 2px; }
-  .mtbl td, .mtbl th { font-size: 5pt; padding: 0 1.5px; text-align: right; }
-  .mtbl .lbl { text-align: left; font-weight: 700; background: #e8e8e8; font-size: 5.5pt; }
-  .mtbl .diff td { font-weight: 800; border-top: 1px solid #666; }
+  /* Meter */
+  .mtbl td, .mtbl th { font-size: 7pt; padding: 0.5px 2px; text-align: right; }
+  .mtbl .lbl { text-align: left; font-weight: 800; background: #e0e0e0; font-size: 7.5pt; }
+  .mtbl .diff td { font-weight: 900; border-top: 1px solid #666; }
 
   /* Summary boxes */
-  .sbox { display: inline-block; border: 2px solid #000; padding: 2px 6px; text-align: center; vertical-align: top; }
-  .sbox .sl { font-size: 5pt; font-weight: 700; text-transform: uppercase; }
-  .sbox .sv { font-size: 9pt; font-weight: 900; }
-  .sboxes { text-align: center; margin: 3px 0 2px 0; }
+  .sboxes { display: flex; gap: 6px; justify-content: center; margin: 5px 0; }
+  .sbox { border: 2.5px solid #000; padding: 3px 10px; text-align: center; flex: 1; }
+  .sbox .sl { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; }
+  .sbox .sv { font-size: 12pt; font-weight: 900; }
 
-  .footer { border-top: 1px solid #000; padding-top: 2px; margin-top: auto; font-size: 5.5pt; display: flex; justify-content: space-between; }
+  .footer { border-top: 1.5px solid #000; padding-top: 3px; margin-top: auto; font-size: 7.5pt; display: flex; justify-content: space-between; }
+
+  .note { font-size: 6.5pt; color: #555; border: 1px solid #aaa; padding: 2px 4px; margin-top: 3px; background: #fafafa; }
 </style>
 </head>
 <body>
@@ -61,47 +62,51 @@
   <div class="hdr">
     <div class="co">SRI SINGARAVELAN TRADING COMPANY</div>
     <div class="addr">23-D, Salem Main Road, Rasipuram, Namakkal - 637408</div>
-    <div class="sub">SHIFT SALES REPORT — 04/04/2022 &nbsp;&nbsp;|&nbsp;&nbsp; Today: 05/04/2022</div>
+    <div class="sub">SHIFT SALES REPORT</div>
+    <div class="dateline">04/04/2022 &nbsp;|&nbsp; Today: 05/04/2022 &nbsp;|&nbsp; Shift: 07:59 — 07:57 &nbsp;|&nbsp; Cashier: <b>SANKAR</b></div>
   </div>
 
-  <div class="body g3">
-    <!-- ===== COL 1: Meters + Tanks + Sales Diff ===== -->
+  <div class="cols c2">
+    <!-- ===== LEFT: Meters + Tanks + Gross/Net + SalesDiff ===== -->
     <div>
       <div class="st">Meterwise</div>
-      <!-- MS -->
       <table class="mtbl">
-        <tr><td class="lbl" colspan="7">MS : 1055</td></tr>
-        <tr><th></th><th>GVR A2</th><th>GVR B2</th><th>MS-B1</th><th>MS-B2</th><th colspan="2"></th></tr>
-        <tr><td class="l b">Open</td><td>88334</td><td>26122</td><td>2492764</td><td>406597</td><td colspan="2"></td></tr>
-        <tr><td class="l b">Close</td><td>88329</td><td>26117</td><td>2491984</td><td>406312</td><td colspan="2"></td></tr>
-        <tr class="diff"><td class="l b">Sales</td><td class="bb">5</td><td class="bb">5</td><td class="bb">780</td><td class="bb">285</td><td colspan="2"></td></tr>
+        <tr><td class="lbl" colspan="5">MS : 1055</td></tr>
+        <tr><th></th><th>GVR A2</th><th>GVR B2</th><th>MS-B1</th><th>MS-B2</th></tr>
+        <tr><td class="l b">Open</td><td>88334</td><td>26122</td><td>2492764</td><td>406597</td></tr>
+        <tr><td class="l b">Close</td><td>88329</td><td>26117</td><td>2491984</td><td>406312</td></tr>
+        <tr class="diff"><td class="l b">Sales</td><td>5</td><td>5</td><td>780</td><td>285</td></tr>
       </table>
       <table class="mtbl">
         <tr><td class="lbl" colspan="3">XP : 96</td></tr>
         <tr><th></th><th>XP A1</th><th>XP A2</th></tr>
         <tr><td class="l b">Open</td><td>534944</td><td>202476</td></tr>
         <tr><td class="l b">Close</td><td>534845</td><td>202469</td></tr>
-        <tr class="diff"><td class="l b">Sales</td><td class="bb">99</td><td class="bb">7</td></tr>
+        <tr class="diff"><td class="l b">Sales</td><td>99</td><td>7</td></tr>
       </table>
       <table class="mtbl">
         <tr><td class="lbl" colspan="4">HSD 1 : 945</td><td class="lbl" colspan="3">HSD 2 : 824</td></tr>
         <tr><th></th><th>A1</th><th>B1</th><th>NEW A2</th><th>W.P 4</th><th>W.P 2</th><th>NEW A1</th></tr>
         <tr><td class="l b">Open</td><td>350890</td><td>215464</td><td>151450</td><td>1932897</td><td>2641516</td><td>88642</td></tr>
         <tr><td class="l b">Close</td><td>350105</td><td>215405</td><td>151349</td><td>1932497</td><td>2641097</td><td>88637</td></tr>
-        <tr class="diff"><td class="l b">Sales</td><td class="bb">785</td><td class="bb">59</td><td class="bb">101</td><td class="bb">400</td><td class="bb">419</td><td class="bb">5</td></tr>
+        <tr class="diff"><td class="l b">Sales</td><td>785</td><td>59</td><td>101</td><td>400</td><td>419</td><td>5</td></tr>
       </table>
 
-      <!-- Gross/Net -->
       <div class="st">Sales Summary</div>
       <table>
-        <tr><th></th><th>XP</th><th>MS</th><th>HSD</th><th></th><th>XP</th><th>MS</th><th>HSD</th></tr>
-        <tr><td class="l b">Credit</td><td class="r">0</td><td class="r">109.22</td><td class="r">987.07</td><td class="l b">Gross</td><td class="r">106</td><td class="r">1075</td><td class="r">1769</td></tr>
-        <tr><td class="l b">Cash</td><td class="r">96</td><td class="r">945.33</td><td class="r">762.92</td><td class="l b">Test</td><td class="r">10</td><td class="r">20</td><td class="r">30</td></tr>
-        <tr><td class="l b">Test</td><td class="r">10</td><td class="r">20</td><td class="r">30</td><td class="l bb">Net</td><td class="r bb">96</td><td class="r bb">1055</td><td class="r bb">1739</td></tr>
-        <tr class="tot"><td class="l">Gross</td><td class="r">106</td><td class="r">1074.55</td><td class="r">1779.99</td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="l">Gross Sales</th><th>XP</th><th>MS</th><th>HSD</th></tr>
+        <tr><td class="b">Credit</td><td class="r">0</td><td class="r">109.22</td><td class="r">987.07</td></tr>
+        <tr><td class="b">Cash</td><td class="r">96</td><td class="r">945.33</td><td class="r">762.92</td></tr>
+        <tr><td class="b">Testing</td><td class="r">10</td><td class="r">20</td><td class="r">30</td></tr>
+        <tr class="tot"><td>Gross</td><td class="r">106</td><td class="r">1074.55</td><td class="r">1779.99</td></tr>
+      </table>
+      <table>
+        <tr><th class="l">Net Sales</th><th>XP</th><th>MS</th><th>HSD</th></tr>
+        <tr><td class="b">Gross</td><td class="r">106</td><td class="r">1075</td><td class="r">1769</td></tr>
+        <tr><td class="b">Testing</td><td class="r">10</td><td class="r">20</td><td class="r">30</td></tr>
+        <tr class="tot"><td>Net</td><td class="r bb">96</td><td class="r bb">1055</td><td class="r bb">1739</td></tr>
       </table>
 
-      <!-- Tankwise -->
       <div class="st">Tankwise</div>
       <table>
         <tr><th class="l">Tank</th><th>O.Dip</th><th>O.Stock</th><th>Inc</th><th>Total</th><th>C.Dip</th><th>C.Stock</th><th>Sales</th></tr>
@@ -111,25 +116,43 @@
         <tr><td class="b">HSD 2</td><td class="r">119.4</td><td class="r">12199</td><td class="r">0</td><td class="r">12199</td><td class="r">110.4</td><td class="r">11070</td><td class="r bb">1129</td></tr>
       </table>
 
-      <!-- Sales Diff -->
       <div class="st">Sales Difference</div>
       <table>
-        <tr><th class="l">Tank</th><th>Tankwise</th><th>Meterwise</th><th>Diff</th></tr>
+        <tr><th class="l">Tank</th><th>Tankwise</th><th>Meterwise</th><th>Difference</th></tr>
         <tr><td class="b">XP</td><td class="r">59</td><td class="r">96</td><td class="r bb" style="color:#c00">-37</td></tr>
         <tr><td class="b">MS</td><td class="r">1041</td><td class="r">1055</td><td class="r bb" style="color:#c00">-14</td></tr>
         <tr><td class="b">HSD 1</td><td class="r">823</td><td class="r">945</td><td class="r bb" style="color:#c00">-122</td></tr>
         <tr><td class="b">HSD 2</td><td class="r">1129</td><td class="r">824</td><td class="r bb">305</td></tr>
       </table>
+
+      <div class="st">Cash Bill Sales (Litres)</div>
+      <table>
+        <tr><th></th><th>XP</th><th>MS</th><th>HSD</th></tr>
+        <tr><td class="b">Cash</td><td class="r">96.00</td><td class="r">753.73</td><td class="r">762.92</td></tr>
+        <tr><td class="b">CCMS</td><td class="r">0</td><td class="r">0</td><td class="r">0</td></tr>
+        <tr><td class="b">Card</td><td class="r">0</td><td class="r">191.60</td><td class="r">0</td></tr>
+        <tr class="tot"><td>Total</td><td class="r">96.00</td><td class="r">945.33</td><td class="r">762.92</td></tr>
+      </table>
+
+      <div class="st">Stock Reference</div>
+      <table>
+        <tr><th></th><th>Price</th><th>Sales</th><th>Avail. Stock</th></tr>
+        <tr><td class="b">XP</td><td class="r">114.23</td><td class="r">96</td><td class="r bb">10,421</td></tr>
+        <tr><td class="b">MS</td><td class="r">109.92</td><td class="r">1,055</td><td class="r bb">7,990</td></tr>
+        <tr><td class="b">HSD</td><td class="r">100.01</td><td class="r">1,739</td><td class="r bb">24,702</td></tr>
+        <tr><td class="b">2T Oil</td><td class="r"></td><td class="r">3.88</td><td class="r"></td></tr>
+        <tr><td class="b">Other</td><td class="r"></td><td class="r">1.0</td><td class="r"></td></tr>
+      </table>
     </div>
 
-    <!-- ===== COL 2: Revenue + Advances + Summaries ===== -->
+    <!-- ===== RIGHT: Revenue + Advances + Income + Credit Bills ===== -->
     <div>
       <div class="st">Revenue</div>
       <table>
         <tr><th class="l">Item</th><th>Litres</th><th>Rate</th><th>Amount</th></tr>
         <tr><td>XP</td><td class="r">96</td><td class="r">114.23</td><td class="r">10,966.08</td></tr>
-        <tr><td>MS</td><td class="r">1055</td><td class="r">109.92</td><td class="r">1,15,965.60</td></tr>
-        <tr><td>HSD</td><td class="r">1739</td><td class="r">100.01</td><td class="r">1,73,917.39</td></tr>
+        <tr><td>MS</td><td class="r">1,055</td><td class="r">109.92</td><td class="r">1,15,965.60</td></tr>
+        <tr><td>HSD</td><td class="r">1,739</td><td class="r">100.01</td><td class="r">1,73,917.39</td></tr>
         <tr><td>OIL</td><td class="r"></td><td class="r"></td><td class="r">1,450.00</td></tr>
         <tr><td>Income Bill</td><td class="r"></td><td class="r"></td><td class="r">39,244.00</td></tr>
         <tr><td>Income Credit Stmt</td><td class="r"></td><td class="r"></td><td class="r">7,822.55</td></tr>
@@ -150,75 +173,50 @@
         <tr class="tot"><td>TOTAL</td><td class="r">3,07,785.96</td></tr>
       </table>
 
+      <!-- Summary boxes spanning full right column width -->
       <div class="sboxes">
-        <div class="sbox"><div class="sl">Turnover</div><div class="sv">3,49,365.62</div></div>
-        <div class="sbox"><div class="sl">Balance</div><div class="sv">41,579.66</div></div>
-      </div>
-      <div class="sboxes" style="margin-top:0;">
-        <div class="sbox"><div class="sl">Cash Bill Amt</div><div class="sv">1,92,625.27</div></div>
+        <div class="sbox"><div class="sl">Turnover</div><div class="sv">3,49,365</div></div>
+        <div class="sbox"><div class="sl">Balance</div><div class="sv">41,580</div></div>
+        <div class="sbox"><div class="sl">Cash Bill</div><div class="sv">1,92,625</div></div>
       </div>
 
-      <div class="st">Cash Bill Sales (Litres)</div>
-      <table>
-        <tr><th></th><th>XP</th><th>MS</th><th>HSD</th></tr>
-        <tr><td class="b">Cash</td><td class="r">96.00</td><td class="r">753.73</td><td class="r">762.92</td></tr>
-        <tr><td class="b">CCMS</td><td class="r">0</td><td class="r">0</td><td class="r">0</td></tr>
-        <tr><td class="b">Card</td><td class="r">0</td><td class="r">191.60</td><td class="r">0</td></tr>
-        <tr class="tot"><td>Total</td><td class="r">96.00</td><td class="r">945.33</td><td class="r">762.92</td></tr>
-      </table>
-
-      <div class="st">Stock Reference</div>
-      <table>
-        <tr><th></th><th colspan="2">Yesterday</th><th>Today</th></tr>
-        <tr><th></th><th>Price</th><th>Sales</th><th>Avail. Stock</th></tr>
-        <tr><td class="b">XP</td><td class="r">114.23</td><td class="r">96</td><td class="r bb">10,421</td></tr>
-        <tr><td class="b">MS</td><td class="r">109.92</td><td class="r">1055</td><td class="r bb">7,990</td></tr>
-        <tr><td class="b">HSD</td><td class="r">100.01</td><td class="r">1739</td><td class="r bb">24,702</td></tr>
-        <tr><td class="b">2T Oil</td><td class="r"></td><td class="r">3.88</td><td class="r"></td></tr>
-        <tr><td class="b">Other</td><td class="r"></td><td class="r">1.0</td><td class="r"></td></tr>
-      </table>
-    </div>
-
-    <!-- ===== COL 3: Credit Bills + Income Bills ===== -->
-    <div>
       <div class="st">Income Bills (Payments Received)</div>
       <table>
-        <tr><th>#</th><th class="l">Customer / Vehicle</th><th>Bill</th><th>Mode</th><th>Amt</th></tr>
-        <tr><td class="c">1</td><td>Kumaran BM / TN30AB4695</td><td class="c">A22/4</td><td class="c">Cash</td><td class="r">9,811</td></tr>
+        <tr><th>#</th><th class="l">Customer / Vehicle</th><th>Bill</th><th>Mode</th><th>Amount</th></tr>
+        <tr><td class="c">1</td><td>Kumaran BM / TN30 AB 4695</td><td class="c">A22/4</td><td class="c">Cash</td><td class="r">9,811</td></tr>
         <tr><td class="c">2</td><td>Kumaran BM / GENSET</td><td class="c">A22/6</td><td class="c">Cash</td><td class="r">29,433</td></tr>
         <tr class="tot"><td colspan="4">Total (2 bills)</td><td class="r">39,244</td></tr>
       </table>
-      <table style="margin-top:1px;">
-        <tr><th>#</th><th class="l">Customer</th><th>Stmt</th><th>Mode</th><th>Amt</th></tr>
+      <table>
+        <tr><th>#</th><th class="l">Customer</th><th>Stmt#</th><th>Mode</th><th>Amount</th></tr>
         <tr><td class="c">1</td><td>SBI CAR (P.RAVI)</td><td class="c">9403</td><td class="c">Cash</td><td class="r">7,822.55</td></tr>
-        <tr class="tot"><td colspan="4">Stmt Total</td><td class="r">7,822.55</td></tr>
       </table>
 
-      <div class="st">Credit Bills (21 bills) — &#8377;1,10,722.23</div>
+      <div class="st">Credit Bills (21) — &#8377;1,10,722</div>
       <table>
         <tr><th>#</th><th class="l">Customer</th><th>Bill</th><th class="l">Vehicle</th><th>Prod</th><th>Qty</th><th>Amt</th></tr>
-        <tr class="stripe"><td class="c">1</td><td>AEE/DRDA</td><td class="c">A22/63</td><td>TN28 G 0236</td><td class="c">HSD</td><td class="r">45</td><td class="r">4,500</td></tr>
-        <tr class="stripe"><td class="c">2</td><td>AEE/PWD</td><td class="c">A22/62</td><td>TN07 G 1751</td><td class="c">HSD</td><td class="r">53</td><td class="r">5,300</td></tr>
-        <tr class="stripe"><td class="c">3</td><td>EFGM Trust</td><td class="c">A22/66</td><td>NEW(EFGM)</td><td class="c">HSD</td><td class="r">5</td><td class="r">500</td></tr>
-        <tr class="stripe"><td class="c">4</td><td>EFGM Trust</td><td class="c">A22/67</td><td>NEW(EFGM)</td><td class="c">HSD</td><td class="r">5</td><td class="r">500</td></tr>
-        <tr class="stripe"><td class="c">5</td><td>EFGM Trust</td><td class="c">A22/70</td><td>NEW(EFGM)</td><td class="c">HSD</td><td class="r">38</td><td class="r">3,800</td></tr>
-        <tr class="stripe"><td class="c">6</td><td>Haniman</td><td class="c">A22/59</td><td>TN30 BJ 0703</td><td class="c">PET</td><td class="r">27</td><td class="r">3,016</td></tr>
-        <tr class="stripe"><td class="c">7</td><td>Haniman</td><td class="c">A22/69</td><td>TN77 D 9055</td><td class="c">HSD</td><td class="r">23</td><td class="r">2,300</td></tr>
-        <tr class="stripe"><td class="c">8</td><td>Haniman_Cl</td><td class="c">A22/64</td><td>GENSET(HAN)</td><td class="c">HSD</td><td class="r">60</td><td class="r">6,000</td></tr>
-        <tr class="stripe"><td class="c">9</td><td>Kalyan Jwl</td><td class="c">A22/74</td><td>TN28 AS 9898</td><td class="c">HSD</td><td class="r">30</td><td class="r">3,000</td></tr>
-        <tr class="stripe"><td class="c">10</td><td>Kumaran BM</td><td class="c">A22/56</td><td>TN28 AT 7210</td><td class="c">HSD</td><td class="r">40</td><td class="r">4,007</td></tr>
-        <tr class="stripe"><td class="c">11</td><td>Kumaran BM</td><td class="c">A22/57</td><td>GENSET(KBM)</td><td class="c">HSD</td><td class="r">400</td><td class="r">40,004</td></tr>
-        <tr class="stripe"><td class="c">12</td><td>PEPSI</td><td class="c">A22/61</td><td>TN28 BX 0212</td><td class="c">HSD</td><td class="r">37</td><td class="r">3,700</td></tr>
-        <tr class="stripe"><td class="c">13</td><td>RCMS</td><td class="c">A22/68</td><td>TN28 AV 1964</td><td class="c">HSD</td><td class="r">45</td><td class="r">4,500</td></tr>
-        <tr class="stripe"><td class="c">14</td><td>RMC</td><td class="c">A22/72</td><td>TN28 AT 4555</td><td class="c">HSD</td><td class="r">50</td><td class="r">5,000</td></tr>
-        <tr class="stripe"><td class="c">15</td><td>S.Murali</td><td class="c">A22/71</td><td>TN28 BW 4599</td><td class="c">HSD</td><td class="r">32</td><td class="r">3,200</td></tr>
-        <tr class="stripe"><td class="c">16</td><td>SRV Intl</td><td class="c">A22/65</td><td>TN28 BZ 9490</td><td class="c">PET</td><td class="r">32</td><td class="r">3,570</td></tr>
-        <tr class="stripe"><td class="c">17</td><td>SRV Intl</td><td class="c">A22/73</td><td>NEW(SRV)</td><td class="c">PET</td><td class="r">46</td><td class="r">5,089</td></tr>
-        <tr class="stripe"><td class="c">18</td><td>SRV Public</td><td class="c">A22/54</td><td>TN28 BV 1706</td><td class="c">HSD</td><td class="r">56</td><td class="r">5,600</td></tr>
-        <tr class="stripe"><td class="c">19</td><td>SRV Public</td><td class="c">A22/58</td><td>TN28 BV 1795</td><td class="c">HSD</td><td class="r">68</td><td class="r">6,800</td></tr>
-        <tr class="stripe"><td class="c">20</td><td>SSVTC</td><td class="c">A22/55</td><td>TN28 BV 7326</td><td class="c">PET</td><td class="r">1</td><td class="r">110</td></tr>
-        <tr class="stripe"><td class="c">21</td><td>SSVTC</td><td class="c">A22/60</td><td>TN28 BY 1146</td><td class="c">PET</td><td class="r">2</td><td class="r">220</td></tr>
-        <tr class="tot"><td colspan="2">21 bills</td><td colspan="3">HSD:16 PET:5</td><td class="r bb">1096</td><td class="r bb">1,10,722</td></tr>
+        <tr><td class="c">1</td><td>AEE/DRDA</td><td class="c">A22/63</td><td>TN28 G 0236</td><td class="c">HSD</td><td class="r">45</td><td class="r">4,500</td></tr>
+        <tr><td class="c">2</td><td>AEE/PWD</td><td class="c">A22/62</td><td>TN07 G 1751</td><td class="c">HSD</td><td class="r">53</td><td class="r">5,301</td></tr>
+        <tr><td class="c">3</td><td>EFGM Trust</td><td class="c">A22/66</td><td>NEW(EFGM)</td><td class="c">HSD</td><td class="r">5</td><td class="r">500</td></tr>
+        <tr><td class="c">4</td><td>EFGM Trust</td><td class="c">A22/67</td><td>NEW(EFGM)</td><td class="c">HSD</td><td class="r">5</td><td class="r">500</td></tr>
+        <tr><td class="c">5</td><td>EFGM Trust</td><td class="c">A22/70</td><td>NEW(EFGM)</td><td class="c">HSD</td><td class="r">38</td><td class="r">3,800</td></tr>
+        <tr><td class="c">6</td><td>Haniman</td><td class="c">A22/59</td><td>TN30 BJ 0703</td><td class="c">PET</td><td class="r">27</td><td class="r">3,016</td></tr>
+        <tr><td class="c">7</td><td>Haniman</td><td class="c">A22/69</td><td>TN77 D 9055</td><td class="c">HSD</td><td class="r">23</td><td class="r">2,300</td></tr>
+        <tr><td class="c">8</td><td>Haniman_Cl</td><td class="c">A22/64</td><td>GENSET(HAN)</td><td class="c">HSD</td><td class="r">60</td><td class="r">6,001</td></tr>
+        <tr><td class="c">9</td><td>Kalyan Jwl</td><td class="c">A22/74</td><td>TN28 AS 9898</td><td class="c">HSD</td><td class="r">30</td><td class="r">3,000</td></tr>
+        <tr><td class="c">10</td><td>Kumaran BM</td><td class="c">A22/56</td><td>TN28 AT 7210</td><td class="c">HSD</td><td class="r">40</td><td class="r">4,007</td></tr>
+        <tr><td class="c">11</td><td>Kumaran BM</td><td class="c">A22/57</td><td>GENSET(KBM)</td><td class="c">HSD</td><td class="r">400</td><td class="r">40,004</td></tr>
+        <tr><td class="c">12</td><td>PEPSI</td><td class="c">A22/61</td><td>TN28 BX 0212</td><td class="c">HSD</td><td class="r">37</td><td class="r">3,700</td></tr>
+        <tr><td class="c">13</td><td>RCMS</td><td class="c">A22/68</td><td>TN28 AV 1964</td><td class="c">HSD</td><td class="r">45</td><td class="r">4,500</td></tr>
+        <tr><td class="c">14</td><td>RMC</td><td class="c">A22/72</td><td>TN28 AT 4555</td><td class="c">HSD</td><td class="r">50</td><td class="r">5,001</td></tr>
+        <tr><td class="c">15</td><td>S.Murali</td><td class="c">A22/71</td><td>TN28 BW 4599</td><td class="c">HSD</td><td class="r">32</td><td class="r">3,200</td></tr>
+        <tr><td class="c">16</td><td>SRV Intl</td><td class="c">A22/65</td><td>TN28 BZ 9490</td><td class="c">PET</td><td class="r">32</td><td class="r">3,570</td></tr>
+        <tr><td class="c">17</td><td>SRV Intl</td><td class="c">A22/73</td><td>NEW(SRV)</td><td class="c">PET</td><td class="r">46</td><td class="r">5,089</td></tr>
+        <tr><td class="c">18</td><td>SRV Public</td><td class="c">A22/54</td><td>TN28 BV 1706</td><td class="c">HSD</td><td class="r">56</td><td class="r">5,601</td></tr>
+        <tr><td class="c">19</td><td>SRV Public</td><td class="c">A22/58</td><td>TN28 BV 1795</td><td class="c">HSD</td><td class="r">68</td><td class="r">6,801</td></tr>
+        <tr><td class="c">20</td><td>SSVTC</td><td class="c">A22/55</td><td>TN28 BV 7326</td><td class="c">PET</td><td class="r">1</td><td class="r">110</td></tr>
+        <tr><td class="c">21</td><td>SSVTC</td><td class="c">A22/60</td><td>TN28 BY 1146</td><td class="c">PET</td><td class="r">2</td><td class="r">220</td></tr>
+        <tr class="tot"><td colspan="4">21 bills (HSD:16 PET:5)</td><td></td><td class="r bb">1,096</td><td class="r bb">1,10,722</td></tr>
       </table>
     </div>
   </div>
@@ -226,7 +224,7 @@
   <div class="footer">
     <span>SHIFT: 04/04/2022 07:59 — 05/04/2022 07:57</span>
     <span>CASHIER: <b>SANKAR</b></span>
-    <span>Signature: ________________</span>
+    <span>Signature: __________________</span>
   </div>
 </div>
 
@@ -234,33 +232,38 @@
 <div class="page">
   <div class="hdr2">SRI SINGARAVELAN TRADING COMPANY — 04/04/2022 Shift Report (Page 2) — CASHIER: SANKAR</div>
 
-  <div class="body g3b">
-    <!-- ===== COL 1: Card Advance + Cash Advance + CCMS ===== -->
+  <div class="cols c2">
+    <!-- ===== LEFT: Card Advance + Cash Advance + CCMS + Home ===== -->
     <div>
-      <div class="st">Card Advance (18 entries) — &#8377;21,060.52</div>
+      <div class="st">Card Advance (18) — &#8377;21,060.52</div>
       <table>
-        <tr><th>#</th><th>Batch</th><th>Txn</th><th>Adv ID</th><th>Last4</th><th>Amount</th><th>Prod</th></tr>
-        <tr class="stripe"><td class="c">1</td><td class="c">4</td><td class="r">8660</td><td class="r">35104</td><td class="c">3286</td><td class="r">200</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">2</td><td class="c">4</td><td class="r">8660</td><td class="r">35105</td><td class="c">0228</td><td class="r">500</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">3</td><td class="c">4</td><td class="r">8660</td><td class="r">35106</td><td class="c">6359</td><td class="r">487</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">4</td><td class="c">4</td><td class="r">8661</td><td class="r">35107</td><td class="c">2761</td><td class="r">200</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">5</td><td class="c">4</td><td class="r">8661</td><td class="r">35108</td><td class="c">5922</td><td class="r">600</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">6</td><td class="c">4</td><td class="r">8661</td><td class="r">35109</td><td class="c">9139</td><td class="r">660</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">7</td><td class="c">4</td><td class="r">8661</td><td class="r">35110</td><td class="c">8836</td><td class="r">200</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">8</td><td class="c">4</td><td class="r">8661</td><td class="r">35111</td><td class="c">1016</td><td class="r">500</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">9</td><td class="c">4</td><td class="r">8661</td><td class="r">35112</td><td class="c">3269</td><td class="r">200</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">10</td><td class="c">4</td><td class="r">8661</td><td class="r">35113</td><td class="c">3059</td><td class="r">120</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">11</td><td class="c">4</td><td class="r">8661</td><td class="r">35114</td><td class="c">3804</td><td class="r">110</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">12</td><td class="c">4</td><td class="r">8661</td><td class="r">35115</td><td class="c">2574</td><td class="r">500</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">13</td><td class="c">6</td><td class="r">8661</td><td class="r">35116</td><td class="c">1272</td><td class="r">1,000</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">14</td><td class="c">4</td><td class="r">8661</td><td class="r">35117</td><td class="c">5457</td><td class="r">300</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">15</td><td class="c">4</td><td class="r">8661</td><td class="r">35118</td><td class="c">2946</td><td class="r">600</td><td class="c">P</td></tr>
-        <tr class="stripe"><td class="c">16</td><td class="c">4</td><td class="r">8661</td><td class="r">35119</td><td class="c">8345</td><td class="r">330</td><td class="c">P</td></tr>
+        <tr><th>#</th><th>Batch</th><th>Txn ID</th><th>Adv ID</th><th>Last4</th><th>Amount</th><th>P</th></tr>
+        <tr><td class="c">1</td><td class="c">4</td><td class="r">8660</td><td class="r">35104</td><td class="c">3286</td><td class="r">200</td><td class="c">P</td></tr>
+        <tr><td class="c">2</td><td class="c">4</td><td class="r">8660</td><td class="r">35105</td><td class="c">0228</td><td class="r">500</td><td class="c">P</td></tr>
+        <tr><td class="c">3</td><td class="c">4</td><td class="r">8660</td><td class="r">35106</td><td class="c">6359</td><td class="r">487</td><td class="c">P</td></tr>
+        <tr><td class="c">4</td><td class="c">4</td><td class="r">8661</td><td class="r">35107</td><td class="c">2761</td><td class="r">200</td><td class="c">P</td></tr>
+        <tr><td class="c">5</td><td class="c">4</td><td class="r">8661</td><td class="r">35108</td><td class="c">5922</td><td class="r">600</td><td class="c">P</td></tr>
+        <tr><td class="c">6</td><td class="c">4</td><td class="r">8661</td><td class="r">35109</td><td class="c">9139</td><td class="r">660</td><td class="c">P</td></tr>
+        <tr><td class="c">7</td><td class="c">4</td><td class="r">8661</td><td class="r">35110</td><td class="c">8836</td><td class="r">200</td><td class="c">P</td></tr>
+        <tr><td class="c">8</td><td class="c">4</td><td class="r">8661</td><td class="r">35111</td><td class="c">1016</td><td class="r">500</td><td class="c">P</td></tr>
+        <tr><td class="c">9</td><td class="c">4</td><td class="r">8661</td><td class="r">35112</td><td class="c">3269</td><td class="r">200</td><td class="c">P</td></tr>
+        <tr><td class="c">10</td><td class="c">4</td><td class="r">8661</td><td class="r">35113</td><td class="c">3059</td><td class="r">120</td><td class="c">P</td></tr>
+        <tr><td class="c">11</td><td class="c">4</td><td class="r">8661</td><td class="r">35114</td><td class="c">3804</td><td class="r">110</td><td class="c">P</td></tr>
+        <tr><td class="c">12</td><td class="c">4</td><td class="r">8661</td><td class="r">35115</td><td class="c">2574</td><td class="r">500</td><td class="c">P</td></tr>
+        <tr><td class="c">13</td><td class="c">6</td><td class="r">8661</td><td class="r">35116</td><td class="c">1272</td><td class="r">1,000</td><td class="c">P</td></tr>
+        <tr><td class="c">14</td><td class="c">4</td><td class="r">8661</td><td class="r">35117</td><td class="c">5457</td><td class="r">300</td><td class="c">P</td></tr>
+        <tr><td class="c">15</td><td class="c">4</td><td class="r">8661</td><td class="r">35118</td><td class="c">2946</td><td class="r">600</td><td class="c">P</td></tr>
+        <tr><td class="c">16</td><td class="c">4</td><td class="r">8661</td><td class="r">35119</td><td class="c">8345</td><td class="r">330</td><td class="c">P</td></tr>
         <tr class="grp"><td colspan="7" class="l">Bank: PhonePe</td></tr>
-        <tr class="stripe"><td class="c">17</td><td class="c">0</td><td class="r">0</td><td class="r">35120</td><td class="c">-</td><td class="r">9,550</td><td class="c">P</td></tr>
-        <tr class="grp"><td colspan="7" class="l">Bank: ICICI / Batch: 0000</td></tr>
-        <tr class="stripe"><td class="c">18</td><td class="c">0</td><td class="r">8661</td><td class="r">35121</td><td class="c">-</td><td class="r">5,004</td><td class="c">P</td></tr>
+        <tr><td class="c">17</td><td class="c">0</td><td class="r">0</td><td class="r">35120</td><td class="c">—</td><td class="r">9,550</td><td class="c">P</td></tr>
+        <tr class="grp"><td colspan="7" class="l">Bank: ICICI / Batch 0000</td></tr>
+        <tr><td class="c">18</td><td class="c">0</td><td class="r">8661</td><td class="r">35121</td><td class="c">—</td><td class="r">5,004</td><td class="c">P</td></tr>
         <tr class="tot"><td colspan="5">Total (18)</td><td class="r">21,061</td><td></td></tr>
+      </table>
+      <table style="width:60%; margin-top:2px;">
+        <tr><th class="l">Bank</th><th>Count</th><th>Amount</th></tr>
+        <tr><td>ICICI BANK</td><td class="c">17</td><td class="r">11,511</td></tr>
+        <tr><td>PhonePe</td><td class="c">1</td><td class="r">9,550</td></tr>
       </table>
 
       <div class="st">CCMS Advance (1) — &#8377;2,000</div>
@@ -271,7 +274,7 @@
 
       <div class="st">Cash Advance (3) — &#8377;8,373</div>
       <table>
-        <tr><th>#</th><th>ID</th><th class="l">Rcvd By</th><th class="l">Desc</th><th>Amount</th></tr>
+        <tr><th>#</th><th>ID</th><th class="l">Received By</th><th class="l">Description</th><th>Amount</th></tr>
         <tr><td class="c">1</td><td class="c">2738</td><td>SANKAR</td><td>NS</td><td class="r">7,823</td></tr>
         <tr><td class="c">2</td><td class="c">2739</td><td>SANKAR</td><td>NBS</td><td class="r">450</td></tr>
         <tr><td class="c">3</td><td class="c">2740</td><td>SANKAR</td><td>NBS NATRAJ</td><td class="r">100</td></tr>
@@ -280,12 +283,12 @@
 
       <div class="st">Home Advance (1) — &#8377;1,61,000</div>
       <table>
-        <tr><th>#</th><th>ID</th><th class="l">Rcvd By</th><th>Amount</th></tr>
+        <tr><th>#</th><th>ID</th><th class="l">Received By</th><th>Amount</th></tr>
         <tr><td class="c">1</td><td class="c">1717</td><td>HOME</td><td class="r">1,61,000</td></tr>
       </table>
     </div>
 
-    <!-- ===== COL 2: Expenses + Incentive ===== -->
+    <!-- ===== RIGHT: Expenses + Incentive + Product Inventory ===== -->
     <div>
       <div class="st">Expenses (4) — &#8377;4,076</div>
       <table>
@@ -299,50 +302,46 @@
 
       <div class="st">Incentive (8) — &#8377;554.01</div>
       <table>
-        <tr><th>#</th><th>Bill</th><th class="l">Vehicle</th><th class="l">Cust</th><th>Qty</th><th>Disc</th><th>Amt</th></tr>
-        <tr><td class="c">1</td><td class="c">A22/6</td><td>GENSET(KBM)</td><td>Kumaran</td><td class="r">300</td><td class="r">0.50</td><td class="r">300</td></tr>
-        <tr><td class="c">2</td><td class="c">C22/190</td><td>TN63 BY 4494</td><td>-</td><td class="r">73</td><td class="r">0.50</td><td class="r">36.51</td></tr>
-        <tr><td class="c">3</td><td class="c">C22/192</td><td>TN28 AX 3747</td><td>-</td><td class="r">76</td><td class="r">0.50</td><td class="r">38</td></tr>
-        <tr><td class="c">4</td><td class="c">C22/193</td><td>TN54 F 1166</td><td>-</td><td class="r">43</td><td class="r">0.50</td><td class="r">21.50</td></tr>
-        <tr><td class="c">5</td><td class="c">C22/194</td><td>TN34 AC 4434</td><td>-</td><td class="r">94</td><td class="r">0.50</td><td class="r">47</td></tr>
-        <tr><td class="c">6</td><td class="c">C22/196</td><td>TN90 D 9009</td><td>-</td><td class="r">110</td><td class="r">0.50</td><td class="r">55</td></tr>
-        <tr><td class="c">7</td><td class="c">C22/197</td><td>TN34 W 4888</td><td>-</td><td class="r">102</td><td class="r">0.50</td><td class="r">51</td></tr>
-        <tr><td class="c">8</td><td class="c">C22/171</td><td>TN30 CX 7840</td><td>-</td><td class="r">10</td><td class="r">0.50</td><td class="r">5</td></tr>
+        <tr><th>#</th><th>Bill</th><th class="l">Vehicle</th><th class="l">Customer</th><th>Qty</th><th>Disc</th><th>Amt</th></tr>
+        <tr><td class="c">1</td><td class="c">A22/6</td><td>GENSET(KBM)</td><td>Kumaran BM</td><td class="r">300</td><td class="r">0.50</td><td class="r">300</td></tr>
+        <tr><td class="c">2</td><td class="c">C22/190</td><td>TN63 BY 4494</td><td>—</td><td class="r">73</td><td class="r">0.50</td><td class="r">36.51</td></tr>
+        <tr><td class="c">3</td><td class="c">C22/192</td><td>TN28 AX 3747</td><td>—</td><td class="r">76</td><td class="r">0.50</td><td class="r">38</td></tr>
+        <tr><td class="c">4</td><td class="c">C22/193</td><td>TN54 F 1166</td><td>—</td><td class="r">43</td><td class="r">0.50</td><td class="r">21.50</td></tr>
+        <tr><td class="c">5</td><td class="c">C22/194</td><td>TN34 AC 4434</td><td>—</td><td class="r">94</td><td class="r">0.50</td><td class="r">47</td></tr>
+        <tr><td class="c">6</td><td class="c">C22/196</td><td>TN90 D 9009</td><td>—</td><td class="r">110</td><td class="r">0.50</td><td class="r">55</td></tr>
+        <tr><td class="c">7</td><td class="c">C22/197</td><td>TN34 W 4888</td><td>—</td><td class="r">102</td><td class="r">0.50</td><td class="r">51</td></tr>
+        <tr><td class="c">8</td><td class="c">C22/171</td><td>TN30 CX 7840</td><td>—</td><td class="r">10</td><td class="r">0.50</td><td class="r">5</td></tr>
         <tr class="tot"><td colspan="6">Total</td><td class="r">554.01</td></tr>
       </table>
-    </div>
 
-    <!-- ===== COL 3: Product Inventory (non-zero only) ===== -->
-    <div>
-      <div class="st">Product Inventory (Non-zero items)</div>
+      <div class="st">Product Inventory (Non-Zero)</div>
       <table>
-        <tr><th>#</th><th class="l">Product</th><th>Open</th><th>Rcpt</th><th>Total</th><th>Sale</th><th>SaleL</th><th>Close</th><th>Rate</th><th>Amt</th></tr>
+        <tr><th>#</th><th class="l">Product</th><th>Open</th><th>Rcpt</th><th>Total</th><th>Sale</th><th>Close</th><th>Rate</th><th>Amt</th></tr>
       </table>
-      <div style="font-size:5pt; font-weight:700; background:#ddd; padding:1px 2px; margin-top:1px;">2T OIL</div>
+      <div style="font-size:6.5pt; font-weight:700; background:#ddd; padding:1px 3px; margin:1px 0;">2T OIL</div>
       <table>
-        <tr><td class="c">1</td><td>2T_LOOSE_OIL</td><td class="r">52</td><td class="r">0</td><td class="r">52</td><td class="r">3</td><td class="r">3.0</td><td class="r">49</td><td class="r">300</td><td class="r bb">900</td></tr>
-        <tr><td class="c">2</td><td>2T_40ML_POUCH</td><td class="r">1765</td><td class="r">0</td><td class="r">1765</td><td class="r">22</td><td class="r">0.88</td><td class="r">1743</td><td class="r">13</td><td class="r bb">286</td></tr>
-        <tr class="sub"><td colspan="6"></td><td class="r">3.88</td><td colspan="2"></td><td class="r">1,186</td></tr>
+        <tr><td class="c">1</td><td>2T_LOOSE_OIL</td><td class="r">52</td><td class="r">0</td><td class="r">52</td><td class="r">3</td><td class="r">49</td><td class="r">300</td><td class="r bb">900</td></tr>
+        <tr><td class="c">2</td><td>2T_40ML_POUCH</td><td class="r">1765</td><td class="r">0</td><td class="r">1765</td><td class="r">22</td><td class="r">1743</td><td class="r">13</td><td class="r bb">286</td></tr>
+        <tr class="sub"><td colspan="5"></td><td class="r b">3.88L</td><td colspan="2"></td><td class="r">1,186</td></tr>
       </table>
-      <div style="font-size:5pt; font-weight:700; background:#ddd; padding:1px 2px;">OTHER OIL (non-zero)</div>
+      <div style="font-size:6.5pt; font-weight:700; background:#ddd; padding:1px 3px; margin:1px 0;">OTHER OIL (non-zero stock)</div>
       <table>
-        <tr><td class="c">3</td><td>15_40_1_LITER</td><td class="r">23</td><td class="r">0</td><td class="r">23</td><td class="r">1</td><td class="r">1.0</td><td class="r">22</td><td class="r">264</td><td class="r bb">264</td></tr>
-        <tr><td class="c">4</td><td>4T_1_LITER</td><td class="r">26</td><td class="r">0</td><td class="r">26</td><td class="r">0</td><td class="r">0</td><td class="r">26</td><td class="r">332</td><td class="r">0</td></tr>
-        <tr><td class="c">5</td><td>2T_40ML_POUCH*</td><td class="r">1765</td><td class="r">0</td><td class="r">1765</td><td class="r">22</td><td class="r">0.88</td><td class="r">1743</td><td class="r">13</td><td class="r">286</td></tr>
-        <tr><td class="c">6</td><td>20_40_1_LITER</td><td class="r">2</td><td class="r">0</td><td class="r">2</td><td class="r">0</td><td class="r">0</td><td class="r">2</td><td class="r">228</td><td class="r">0</td></tr>
-        <tr><td class="c">7</td><td>20_40_5_LITER</td><td class="r">4</td><td class="r">0</td><td class="r">4</td><td class="r">0</td><td class="r">0</td><td class="r">4</td><td class="r">1064</td><td class="r">0</td></tr>
-        <tr><td class="c">8</td><td>RR3_GEM_1_KG</td><td class="r">4</td><td class="r">0</td><td class="r">4</td><td class="r">0</td><td class="r">0</td><td class="r">4</td><td class="r">309</td><td class="r">0</td></tr>
-        <tr><td class="c">9</td><td>ADON_PETROL</td><td class="r">15</td><td class="r">0</td><td class="r">15</td><td class="r">0</td><td class="r">0</td><td class="r">15</td><td class="r">9</td><td class="r">0</td></tr>
-        <tr class="sub"><td colspan="6"></td><td class="r">1.0</td><td colspan="2"></td><td class="r">264</td></tr>
+        <tr><td class="c">3</td><td>15_40_1_LITER</td><td class="r">23</td><td class="r">0</td><td class="r">23</td><td class="r">1</td><td class="r">22</td><td class="r">264</td><td class="r bb">264</td></tr>
+        <tr><td class="c">4</td><td>4T_1_LITER</td><td class="r">26</td><td class="r">0</td><td class="r">26</td><td class="r">0</td><td class="r">26</td><td class="r">332</td><td class="r">0</td></tr>
+        <tr><td class="c">5</td><td>20_40_1_LITER</td><td class="r">2</td><td class="r">0</td><td class="r">2</td><td class="r">0</td><td class="r">2</td><td class="r">228</td><td class="r">0</td></tr>
+        <tr><td class="c">6</td><td>20_40_5_LITER</td><td class="r">4</td><td class="r">0</td><td class="r">4</td><td class="r">0</td><td class="r">4</td><td class="r">1064</td><td class="r">0</td></tr>
+        <tr><td class="c">7</td><td>RR3_GEM_1_KG</td><td class="r">4</td><td class="r">0</td><td class="r">4</td><td class="r">0</td><td class="r">4</td><td class="r">309</td><td class="r">0</td></tr>
+        <tr><td class="c">8</td><td>ADON_PETROL</td><td class="r">15</td><td class="r">0</td><td class="r">15</td><td class="r">0</td><td class="r">15</td><td class="r">9</td><td class="r">0</td></tr>
+        <tr class="sub"><td colspan="5"></td><td class="r b">1.0L</td><td colspan="2"></td><td class="r">264</td></tr>
       </table>
-      <div style="font-size:5pt; font-weight:700; background:#ddd; padding:1px 2px;">OTHER PRODUCTS (non-zero stock)</div>
+      <div style="font-size:6.5pt; font-weight:700; background:#ddd; padding:1px 3px; margin:1px 0;">OTHER PRODUCTS (non-zero stock)</div>
       <table>
-        <tr><td class="c">10</td><td>DISTEL_WATER</td><td class="r">40</td><td class="r">0</td><td class="r">40</td><td class="r">0</td><td class="r">0</td><td class="r">40</td><td class="r">12</td><td class="r">0</td></tr>
-        <tr><td class="c">11</td><td>ACID</td><td class="r">29</td><td class="r">0</td><td class="r">29</td><td class="r">0</td><td class="r">0</td><td class="r">29</td><td class="r">30</td><td class="r">0</td></tr>
+        <tr><td class="c">9</td><td>DISTEL_WATER</td><td class="r">40</td><td class="r">0</td><td class="r">40</td><td class="r">0</td><td class="r">40</td><td class="r">12</td><td class="r">0</td></tr>
+        <tr><td class="c">10</td><td>ACID</td><td class="r">29</td><td class="r">0</td><td class="r">29</td><td class="r">0</td><td class="r">29</td><td class="r">30</td><td class="r">0</td></tr>
       </table>
 
-      <div style="margin-top:6px; padding:2px; border:1.5px solid #000; font-size:5.5pt;">
-        <b>Zero-stock products omitted:</b> 2T_1BY2_LITER, 2T_1_LITER, 15_40_5_LITER, 15_40_10_LITER, 20_40_1BY2_LITER, 20_40_10_LITER, 90_1_LITER, 90_5_LITER, 140_1_LITER, 140_5_LITER, RR3_GEM_1BY2_KG, RR3_GEM_3_KG, ADON_DIESEL, KOOL_PLUS_1BY2L, KOOL_PLUS_1_LITER, BREAK_OIL_1BY2L, YELLOW_CLOTH, BLUE_CLOTH + more
+      <div class="note">
+        <b>Zero-stock products omitted:</b> 2T_1BY2L, 2T_1L, 15_40_5L, 15_40_10L, 20_40_1BY2L, 20_40_10L, 90_1L, 90_5L, 140_1L, 140_5L, RR3_1BY2KG, RR3_3KG, ADON_DIESEL, KOOL_1BY2L, KOOL_1L, BREAK_1BY2L, YELLOW_CLOTH, BLUE_CLOTH
       </div>
     </div>
   </div>
