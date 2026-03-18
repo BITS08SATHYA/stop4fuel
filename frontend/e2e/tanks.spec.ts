@@ -35,8 +35,9 @@ test.describe("Tanks Form Validation", () => {
 
   test("submits successfully with valid data", async ({ page }) => {
     await page.getByPlaceholder("e.g. Tank 1").fill("Tank 1");
-    await page.getByPlaceholder("e.e. 10000").or(page.getByPlaceholder("e.g. 10000")).fill("5000");
-    await page.locator("select").selectOption("1");
+    await page.getByPlaceholder("e.g. 10000").fill("5000");
+    // Select the fuel product dropdown inside the modal form
+    await page.locator("form select").selectOption({ index: 1 });
     await clickSubmitButton(page, "Save Tank");
     await expect(page.getByText("Tank name is required")).not.toBeVisible();
   });
