@@ -2,24 +2,29 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.repository.ShiftRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ShiftService {
 
     private final ShiftRepository repository;
+    private final ShiftClosingReportService shiftClosingReportService;
+
+    public ShiftService(ShiftRepository repository,
+                        @Lazy ShiftClosingReportService shiftClosingReportService) {
+        this.repository = repository;
+        this.shiftClosingReportService = shiftClosingReportService;
+    }
 
     public List<Shift> getAllShifts() {
         return repository.findAll();
     }
 
     public Shift openShift(Shift shift) {
-        // Ensure no other shift is open (basic logic for now)
         repository.findByStatus("OPEN").ifPresent(s -> {
             throw new RuntimeException("A shift is already open. Close it before opening a new one.");
         });
@@ -35,10 +40,15 @@ public class ShiftService {
     public Shift closeShift(Long id) {
         Shift shift = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Shift not found"));
-        
+
         shift.setEndTime(LocalDateTime.now());
         shift.setStatus("CLOSED");
-        return repository.save(shift);
+        Shift closed = repository.save(shift);
+
+        // Auto-generate shift closing report
+        shiftClosingReportService.generateReport(closed.getId());
+
+        return closed;
     }
 
     public Shift getActiveShift() {
