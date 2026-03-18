@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -72,6 +73,7 @@ function formatCurrency(val?: number) {
 }
 
 export default function ShiftsPage() {
+    const router = useRouter();
     const [activeShift, setActiveShift] = useState<Shift | null>(null);
     const [pastShifts, setPastShifts] = useState<Shift[]>([]);
     const [transactions, setTransactions] = useState<ShiftTransaction[]>([]);
@@ -172,8 +174,9 @@ export default function ShiftsPage() {
         if (!activeShift) return;
         if (!confirm("Are you sure you want to close this shift?")) return;
         try {
-            await closeShift(activeShift.id);
-            loadData();
+            const closedShiftId = activeShift.id;
+            await closeShift(closedShiftId);
+            router.push(`/operations/shifts/report/${closedShiftId}`);
         } catch (err: any) {
             alert(err.message || "Failed to close shift");
         }
@@ -532,6 +535,14 @@ export default function ShiftsPage() {
                                     <p className="text-xs text-muted-foreground">{formatDateTime(shift.startTime)}</p>
                                     {shift.endTime && (
                                         <p className="text-xs text-muted-foreground">to {formatDateTime(shift.endTime)}</p>
+                                    )}
+                                    {(shift.status === "CLOSED" || shift.status === "RECONCILED") && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); router.push(`/operations/shifts/report/${shift.id}`); }}
+                                            className="mt-2 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                        >
+                                            View Report
+                                        </button>
                                     )}
                                 </button>
                             ))}

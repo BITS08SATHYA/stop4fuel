@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface StationExpenseRepository extends JpaRepository<StationExpense, Long> {
     List<StationExpense> findAllByOrderByExpenseDateDesc();
+    List<StationExpense> findByShiftId(Long shiftId);
     List<StationExpense> findByExpenseDateBetweenOrderByExpenseDateDesc(LocalDate from, LocalDate to);
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM StationExpense e WHERE e.expenseDate BETWEEN :from AND :to")

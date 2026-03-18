@@ -1381,3 +1381,139 @@ export const deleteStationExpense = (id: number): Promise<void> =>
 
 export const getExpenseSummary = (from: string, to: string): Promise<ExpenseSummary> =>
     fetch(`${API_BASE_URL}/station-expenses/summary?from=${from}&to=${to}`).then(handleResponse);
+
+// --- Shift Closing Report Types ---
+export interface ReportLineItem {
+    id: number;
+    section: string; // REVENUE, ADVANCE
+    category: string;
+    label: string;
+    quantity?: number;
+    rate?: number;
+    amount: number;
+    sourceEntityType?: string;
+    sourceEntityId?: number;
+    sortOrder: number;
+    originalAmount?: number;
+    transferredFromReportId?: number;
+    transferredToReportId?: number;
+}
+
+export interface ReportCashBillBreakdown {
+    id: number;
+    productName: string;
+    cashLitres: number;
+    cardLitres: number;
+    ccmsLitres: number;
+    upiLitres: number;
+    chequeLitres: number;
+    totalLitres: number;
+}
+
+export interface ReportAuditLog {
+    id: number;
+    action: string;
+    description: string;
+    lineItemId?: number;
+    previousValue?: number;
+    newValue?: number;
+    performedBy: string;
+    performedAt: string;
+}
+
+export interface ShiftClosingReport {
+    id: number;
+    shift: Shift;
+    reportDate: string;
+    status: string; // DRAFT, FINALIZED
+    finalizedBy?: string;
+    finalizedAt?: string;
+    totalRevenue: number;
+    totalAdvances: number;
+    balance: number;
+    cashBillAmount: number;
+    creditBillAmount: number;
+    lineItems: ReportLineItem[];
+    cashBillBreakdowns: ReportCashBillBreakdown[];
+    auditLogs: ReportAuditLog[];
+}
+
+export interface ExternalCashInflow {
+    id: number;
+    amount: number;
+    inflowDate: string;
+    source: string;
+    purpose?: string;
+    remarks?: string;
+    status: string;
+    repaidAmount: number;
+    shiftId?: number;
+}
+
+export interface CashInflowRepayment {
+    id: number;
+    cashInflow?: ExternalCashInflow;
+    amount: number;
+    repaymentDate: string;
+    remarks?: string;
+}
+
+// --- Shift Closing Report API ---
+export const generateShiftReport = (shiftId: number): Promise<ShiftClosingReport> =>
+    fetch(`${API_BASE_URL}/shift-reports/${shiftId}/generate`, { method: 'POST' }).then(handleResponse);
+
+export const getShiftReport = (shiftId: number): Promise<ShiftClosingReport> =>
+    fetch(`${API_BASE_URL}/shift-reports/${shiftId}`).then(handleResponse);
+
+export const getAllShiftReports = (status?: string): Promise<ShiftClosingReport[]> => {
+    const qs = status ? `?status=${status}` : '';
+    return fetch(`${API_BASE_URL}/shift-reports${qs}`).then(handleResponse);
+};
+
+export const editReportLineItem = (reportId: number, lineItemId: number, amount: number, reason?: string): Promise<ShiftClosingReport> =>
+    fetch(`${API_BASE_URL}/shift-reports/${reportId}/line-items/${lineItemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, reason }),
+    }).then(handleResponse);
+
+export const transferReportEntry = (reportId: number, lineItemId: number, targetReportId: number, reason?: string): Promise<ShiftClosingReport> =>
+    fetch(`${API_BASE_URL}/shift-reports/${reportId}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineItemId, targetReportId, reason }),
+    }).then(handleResponse);
+
+export const finalizeShiftReport = (reportId: number, finalizedBy?: string): Promise<ShiftClosingReport> =>
+    fetch(`${API_BASE_URL}/shift-reports/${reportId}/finalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finalizedBy }),
+    }).then(handleResponse);
+
+export const recomputeShiftReport = (reportId: number): Promise<ShiftClosingReport> =>
+    fetch(`${API_BASE_URL}/shift-reports/${reportId}/recompute`, { method: 'POST' }).then(handleResponse);
+
+export const getReportAuditLog = (reportId: number): Promise<ReportAuditLog[]> =>
+    fetch(`${API_BASE_URL}/shift-reports/${reportId}/audit-log`).then(handleResponse);
+
+// --- External Cash Inflow API ---
+export const getExternalCashInflows = (): Promise<ExternalCashInflow[]> =>
+    fetch(`${API_BASE_URL}/cash-inflows`).then(handleResponse);
+
+export const getExternalCashInflowsByShift = (shiftId: number): Promise<ExternalCashInflow[]> =>
+    fetch(`${API_BASE_URL}/cash-inflows/shift/${shiftId}`).then(handleResponse);
+
+export const createExternalCashInflow = (inflow: Partial<ExternalCashInflow>): Promise<ExternalCashInflow> =>
+    fetch(`${API_BASE_URL}/cash-inflows`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inflow),
+    }).then(handleResponse);
+
+export const recordCashInflowRepayment = (inflowId: number, repayment: Partial<CashInflowRepayment>): Promise<CashInflowRepayment> =>
+    fetch(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(repayment),
+    }).then(handleResponse);
