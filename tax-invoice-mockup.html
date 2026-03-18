@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tax Invoice — Model</title>
+<style>
+  @page { size: A4 portrait; margin: 10mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 9pt; line-height: 1.4; color: #000; background: #fff; }
+
+  .invoice { max-width: 210mm; margin: 0 auto; border: 2px solid #000; padding: 0; }
+
+  /* ===== HEADER ===== */
+  .inv-header { border-bottom: 2px solid #000; padding: 10px 14px; }
+  .inv-header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .inv-header-left h1 { font-size: 16pt; font-weight: bold; margin-bottom: 2px; }
+  .inv-header-left .tagline { font-size: 8pt; color: #555; margin-bottom: 4px; }
+  .inv-header-left .addr { font-size: 8pt; line-height: 1.3; }
+  .inv-header-right { text-align: right; }
+  .inv-header-right .inv-type { font-size: 14pt; font-weight: bold; border: 2px solid #000; padding: 3px 12px; display: inline-block; margin-bottom: 4px; }
+  .inv-header-right .bill-no { font-size: 11pt; font-weight: bold; color: #c00; }
+  .inv-header-right .date { font-size: 9pt; margin-top: 2px; }
+
+  .gst-bar { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding: 4px 14px; background: #f0f0f0; font-size: 8.5pt; font-weight: bold; }
+
+  /* ===== BILL TO / VEHICLE ===== */
+  .inv-parties { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1.5px solid #000; }
+  .inv-party { padding: 8px 14px; }
+  .inv-party:first-child { border-right: 1.5px solid #000; }
+  .inv-party .label { font-size: 7pt; font-weight: bold; text-transform: uppercase; color: #555; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .inv-party .name { font-size: 10pt; font-weight: bold; }
+  .inv-party .detail { font-size: 8.5pt; line-height: 1.4; }
+  .inv-party .detail span { color: #555; }
+
+  /* ===== PRODUCT TABLE ===== */
+  .inv-table { width: 100%; border-collapse: collapse; }
+  .inv-table th { background: #e0e0e0; border: 1px solid #000; padding: 4px 6px; font-size: 8pt; font-weight: bold; text-transform: uppercase; }
+  .inv-table td { border: 1px solid #999; padding: 4px 6px; font-size: 9pt; }
+  .inv-table .r { text-align: right; }
+  .inv-table .c { text-align: center; }
+  .inv-table .b { font-weight: bold; }
+  .inv-table .product-row td { border-bottom: 1px solid #ccc; }
+  .inv-table .subtotal-row { background: #f5f5f5; }
+  .inv-table .subtotal-row td { border-top: 1.5px solid #000; font-weight: bold; }
+  .inv-table .nozzle-info { font-size: 7.5pt; color: #666; }
+
+  /* ===== TOTALS ===== */
+  .inv-totals { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #000; }
+  .inv-totals-left { padding: 8px 14px; border-right: 1.5px solid #000; }
+  .inv-totals-right { padding: 8px 14px; }
+  .amount-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9pt; }
+  .amount-row.total { border-top: 1.5px solid #000; margin-top: 4px; padding-top: 4px; font-size: 11pt; font-weight: bold; }
+  .amount-row .label { color: #333; }
+  .amount-words { font-size: 8pt; font-style: italic; color: #555; margin-top: 6px; border: 1px dashed #999; padding: 3px 6px; background: #fafafa; }
+
+  /* ===== PAYMENT / METER ===== */
+  .inv-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1.5px solid #000; }
+  .inv-meta-box { padding: 6px 14px; border-right: 1.5px solid #000; }
+  .inv-meta-box:last-child { border-right: none; }
+  .inv-meta-box .label { font-size: 7pt; font-weight: bold; text-transform: uppercase; color: #555; }
+  .inv-meta-box .value { font-size: 10pt; font-weight: bold; }
+  .inv-meta-box .sub { font-size: 8pt; color: #555; }
+
+  /* ===== FOOTER ===== */
+  .inv-footer { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #000; }
+  .inv-footer-left { padding: 8px 14px; border-right: 1.5px solid #000; font-size: 7.5pt; color: #555; line-height: 1.4; }
+  .inv-footer-right { padding: 8px 14px; text-align: right; }
+  .inv-footer-right .sign-line { border-top: 1px solid #000; margin-top: 30px; padding-top: 3px; font-size: 8pt; display: inline-block; min-width: 150px; }
+
+  /* ===== BADGE ===== */
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 8pt; font-weight: bold; }
+  .badge-credit { background: #ffeeba; color: #856404; border: 1px solid #856404; }
+  .badge-cash { background: #d4edda; color: #155724; border: 1px solid #155724; }
+  .badge-paid { background: #d4edda; color: #155724; }
+  .badge-unpaid { background: #f8d7da; color: #721c24; }
+
+  /* ===== DUPLICATE INVOICE (2 per page) ===== */
+  .page-break { page-break-after: always; }
+  .separator { border-top: 2px dashed #999; margin: 15px 0; text-align: center; font-size: 7pt; color: #999; padding-top: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ===================== CREDIT INVOICE ===================== -->
+<div class="invoice">
+  <!-- Header -->
+  <div class="inv-header">
+    <div class="inv-header-top">
+      <div class="inv-header-left">
+        <h1>SATHYA FUELS</h1>
+        <div class="tagline">Indian Oil Corporation Retail Outlet</div>
+        <div class="addr">
+          No. 45, GST Road, Tambaram<br>
+          Chennai - 600045, Tamil Nadu<br>
+          Ph: 044-2234 5678 | Mob: 98765 43210
+        </div>
+      </div>
+      <div class="inv-header-right">
+        <div class="inv-type">TAX INVOICE</div><br>
+        <div class="bill-no">C26/034</div>
+        <div class="date">18 Mar 2026 | 02:35 PM</div>
+        <div style="margin-top:4px;">
+          <span class="badge badge-credit">CREDIT</span>
+          <span class="badge badge-unpaid">NOT PAID</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GST Bar -->
+  <div class="gst-bar">
+    <span>GSTIN: 33AABCS1234F1Z5</span>
+    <span>SAP Code: 150234</span>
+    <span>Shift: #47</span>
+  </div>
+
+  <!-- Bill To / Vehicle -->
+  <div class="inv-parties">
+    <div class="inv-party">
+      <div class="label">Bill To</div>
+      <div class="name">ABC Transport Pvt Ltd</div>
+      <div class="detail">
+        <span>GSTIN:</span> 33AABCA9876B1Z8<br>
+        <span>Address:</span> 12, Industrial Estate, Guindy, Chennai - 600032<br>
+        <span>Phone:</span> 98765 11111<br>
+        <span>Driver:</span> Murugan K &nbsp;|&nbsp; <span>Ph:</span> 90876 54321
+      </div>
+    </div>
+    <div class="inv-party">
+      <div class="label">Vehicle Details</div>
+      <div class="name">TN 01 AB 1234</div>
+      <div class="detail">
+        <span>Type:</span> Lorry — 10 Wheeler<br>
+        <span>KM Reading:</span> 1,24,580<br>
+        <span>Indent No:</span> IND/2026/0456<br>
+        <span>Signatory:</span> Rajesh S &nbsp;|&nbsp; <span>Ph:</span> 98765 22222
+      </div>
+    </div>
+  </div>
+
+  <!-- Products Table -->
+  <table class="inv-table">
+    <thead>
+      <tr>
+        <th style="width:5%">#</th>
+        <th style="width:25%">Product / HSN</th>
+        <th style="width:10%">Nozzle</th>
+        <th class="r" style="width:12%">Qty (L)</th>
+        <th class="r" style="width:12%">Rate / L</th>
+        <th class="r" style="width:12%">Gross Amt</th>
+        <th class="r" style="width:10%">Disc.</th>
+        <th class="r" style="width:14%">Net Amt</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="product-row">
+        <td class="c">1</td>
+        <td>
+          <div class="b">Petrol (MS)</div>
+          <div class="nozzle-info">HSN: 27101990</div>
+        </td>
+        <td class="c">
+          <div>N1-A</div>
+          <div class="nozzle-info">Pump 1</div>
+        </td>
+        <td class="r">500.00</td>
+        <td class="r">102.61</td>
+        <td class="r">51,305.00</td>
+        <td class="r">
+          <div>1,025.00</div>
+          <div class="nozzle-info">@ 2.05/L</div>
+        </td>
+        <td class="r b">50,280.00</td>
+      </tr>
+      <tr class="product-row">
+        <td class="c">2</td>
+        <td>
+          <div class="b">High Speed Diesel (HSD)</div>
+          <div class="nozzle-info">HSN: 27101930</div>
+        </td>
+        <td class="c">
+          <div>N2-A</div>
+          <div class="nozzle-info">Pump 2</div>
+        </td>
+        <td class="r">300.00</td>
+        <td class="r">89.62</td>
+        <td class="r">26,886.00</td>
+        <td class="r">
+          <div>538.00</div>
+          <div class="nozzle-info">@ 1.79/L</div>
+        </td>
+        <td class="r b">26,348.00</td>
+      </tr>
+      <tr class="product-row">
+        <td class="c">3</td>
+        <td>
+          <div class="b">Engine Oil 5W-30 (1L)</div>
+          <div class="nozzle-info">HSN: 27101950</div>
+        </td>
+        <td class="c">
+          <div>-</div>
+        </td>
+        <td class="r">2</td>
+        <td class="r">450.00</td>
+        <td class="r">900.00</td>
+        <td class="r">-</td>
+        <td class="r b">900.00</td>
+      </tr>
+
+      <!-- Subtotals -->
+      <tr class="subtotal-row">
+        <td colspan="3" class="r b">TOTAL</td>
+        <td class="r b">802.00</td>
+        <td class="r">-</td>
+        <td class="r b">79,091.00</td>
+        <td class="r b">1,563.00</td>
+        <td class="r b">77,528.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Totals Section -->
+  <div class="inv-totals">
+    <div class="inv-totals-left">
+      <div class="amount-words">
+        <strong>Amount in words:</strong> Rupees Seventy Seven Thousand Five Hundred and Twenty Eight Only
+      </div>
+      <div style="margin-top: 8px; font-size: 8pt; color: #555;">
+        <strong>Note:</strong> Fuel prices include all applicable taxes (Central Excise, VAT/GST, Cess).
+        Retail selling price is as per Oil Marketing Company notification.
+      </div>
+    </div>
+    <div class="inv-totals-right">
+      <div class="amount-row">
+        <span class="label">Gross Amount</span>
+        <span>79,091.00</span>
+      </div>
+      <div class="amount-row">
+        <span class="label">Total Discount</span>
+        <span>(-) 1,563.00</span>
+      </div>
+      <div class="amount-row">
+        <span class="label">Rounding</span>
+        <span>0.00</span>
+      </div>
+      <div class="amount-row total">
+        <span>NET AMOUNT</span>
+        <span>&#8377; 77,528.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment / Meter Info -->
+  <div class="inv-meta">
+    <div class="inv-meta-box">
+      <div class="label">Payment Mode</div>
+      <div class="value">CREDIT</div>
+      <div class="sub">Payment Status: Not Paid</div>
+    </div>
+    <div class="inv-meta-box">
+      <div class="label">Meter Readings</div>
+      <div class="value" style="font-size: 9pt;">
+        Open: <span style="color:#555;">45,210.50</span> &nbsp; Close: <span style="color:#555;">45,710.50</span>
+      </div>
+      <div class="sub">N1-A: 500.00 L &nbsp;|&nbsp; N2-A: 300.00 L</div>
+    </div>
+    <div class="inv-meta-box">
+      <div class="label">Raised By</div>
+      <div class="value">Sathya Kumar</div>
+      <div class="sub">Shift #47 | 18 Mar 2026</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="inv-footer">
+    <div class="inv-footer-left">
+      <strong>Terms & Conditions:</strong><br>
+      1. Goods once sold will not be taken back.<br>
+      2. Subject to Chennai jurisdiction only.<br>
+      3. Credit bills must be settled within 15 days.<br>
+      4. This is a computer-generated invoice.<br>
+      5. E&OE (Errors and Omissions Excepted).
+    </div>
+    <div class="inv-footer-right">
+      <div style="font-size: 8pt; color: #555;">For SATHYA FUELS</div>
+      <div class="sign-line">Authorized Signatory</div>
+    </div>
+  </div>
+</div>
+
+<div class="separator">&#9986; CUT HERE — CUSTOMER COPY ABOVE | STATION COPY BELOW &#9986;</div>
+
+<!-- ===================== CASH INVOICE (STATION COPY) ===================== -->
+<div class="invoice">
+  <!-- Header -->
+  <div class="inv-header">
+    <div class="inv-header-top">
+      <div class="inv-header-left">
+        <h1>SATHYA FUELS</h1>
+        <div class="tagline">Indian Oil Corporation Retail Outlet</div>
+        <div class="addr">
+          No. 45, GST Road, Tambaram<br>
+          Chennai - 600045, Tamil Nadu<br>
+          Ph: 044-2234 5678 | Mob: 98765 43210
+        </div>
+      </div>
+      <div class="inv-header-right">
+        <div class="inv-type">TAX INVOICE</div><br>
+        <div class="bill-no">A26/051</div>
+        <div class="date">18 Mar 2026 | 04:12 PM</div>
+        <div style="margin-top:4px;">
+          <span class="badge badge-cash">CASH</span>
+          <span class="badge badge-paid">PAID</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GST Bar -->
+  <div class="gst-bar">
+    <span>GSTIN: 33AABCS1234F1Z5</span>
+    <span>SAP Code: 150234</span>
+    <span>Shift: #47</span>
+  </div>
+
+  <!-- Bill To / Vehicle -->
+  <div class="inv-parties">
+    <div class="inv-party">
+      <div class="label">Bill To</div>
+      <div class="name">Walk-in Customer</div>
+      <div class="detail">
+        <span>Customer GST:</span> —<br>
+        <span>Phone:</span> 98765 88888
+      </div>
+    </div>
+    <div class="inv-party">
+      <div class="label">Vehicle Details</div>
+      <div class="name">TN 09 CD 5678</div>
+      <div class="detail">
+        <span>Type:</span> Car — Sedan<br>
+        <span>KM Reading:</span> 45,230
+      </div>
+    </div>
+  </div>
+
+  <!-- Products Table -->
+  <table class="inv-table">
+    <thead>
+      <tr>
+        <th style="width:5%">#</th>
+        <th style="width:25%">Product / HSN</th>
+        <th style="width:10%">Nozzle</th>
+        <th class="r" style="width:12%">Qty (L)</th>
+        <th class="r" style="width:12%">Rate / L</th>
+        <th class="r" style="width:12%">Gross Amt</th>
+        <th class="r" style="width:10%">Disc.</th>
+        <th class="r" style="width:14%">Net Amt</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="product-row">
+        <td class="c">1</td>
+        <td>
+          <div class="b">Petrol (MS)</div>
+          <div class="nozzle-info">HSN: 27101990</div>
+        </td>
+        <td class="c">
+          <div>N3-A</div>
+          <div class="nozzle-info">Pump 3</div>
+        </td>
+        <td class="r">40.00</td>
+        <td class="r">102.61</td>
+        <td class="r">4,104.40</td>
+        <td class="r">-</td>
+        <td class="r b">4,104.40</td>
+      </tr>
+
+      <tr class="subtotal-row">
+        <td colspan="3" class="r b">TOTAL</td>
+        <td class="r b">40.00</td>
+        <td class="r">-</td>
+        <td class="r b">4,104.40</td>
+        <td class="r b">-</td>
+        <td class="r b">4,104.40</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Totals Section -->
+  <div class="inv-totals">
+    <div class="inv-totals-left">
+      <div class="amount-words">
+        <strong>Amount in words:</strong> Rupees Four Thousand One Hundred and Four and Forty Paise Only
+      </div>
+    </div>
+    <div class="inv-totals-right">
+      <div class="amount-row">
+        <span class="label">Gross Amount</span>
+        <span>4,104.40</span>
+      </div>
+      <div class="amount-row">
+        <span class="label">Discount</span>
+        <span>0.00</span>
+      </div>
+      <div class="amount-row total">
+        <span>NET AMOUNT</span>
+        <span>&#8377; 4,104.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment / Meter Info -->
+  <div class="inv-meta">
+    <div class="inv-meta-box">
+      <div class="label">Payment Mode</div>
+      <div class="value">UPI</div>
+      <div class="sub">PhonePe | Ref: UP892341</div>
+    </div>
+    <div class="inv-meta-box">
+      <div class="label">Meter Reading</div>
+      <div class="value" style="font-size: 9pt;">
+        Open: <span style="color:#555;">35,000.00</span> &nbsp; Close: <span style="color:#555;">35,040.00</span>
+      </div>
+      <div class="sub">N3-A: 40.00 L</div>
+    </div>
+    <div class="inv-meta-box">
+      <div class="label">Raised By</div>
+      <div class="value">Sathya Kumar</div>
+      <div class="sub">Shift #47 | 18 Mar 2026</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="inv-footer">
+    <div class="inv-footer-left">
+      <strong>Terms & Conditions:</strong><br>
+      1. Goods once sold will not be taken back.<br>
+      2. Subject to Chennai jurisdiction only.<br>
+      3. This is a computer-generated invoice.
+    </div>
+    <div class="inv-footer-right">
+      <div style="font-size: 8pt; color: #555;">For SATHYA FUELS</div>
+      <div class="sign-line">Authorized Signatory</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
