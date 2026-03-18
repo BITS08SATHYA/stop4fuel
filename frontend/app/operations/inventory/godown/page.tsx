@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
@@ -14,6 +14,8 @@ import {
     Product,
 } from "@/lib/api/station";
 import { Warehouse, Plus, Search, Edit2, Trash2, AlertTriangle } from "lucide-react";
+import { useFormValidation, required, min } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function GodownStockPage() {
     const [stocks, setStocks] = useState<GodownStock[]>([]);
@@ -29,6 +31,12 @@ export default function GodownStockPage() {
     const [reorderLevel, setReorderLevel] = useState("");
     const [maxStock, setMaxStock] = useState("");
     const [location, setLocation] = useState("");
+    const [apiError, setApiError] = useState("");
+    const validationRules = useMemo(() => ({
+        productId: [required("Product is required")],
+        currentStock: [required("Current stock is required"), min(0)],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -50,6 +58,8 @@ export default function GodownStockPage() {
     }, []);
 
     const handleEdit = (stock: GodownStock) => {
+        clearAllErrors();
+        setApiError("");
         setEditingId(stock.id);
         setProductId(String(stock.product.id));
         setCurrentStock(String(stock.currentStock));
@@ -61,6 +71,8 @@ export default function GodownStockPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ productId, currentStock })) return;
         try {
             const payload = {
                 product: { id: Number(productId) },
@@ -79,7 +91,7 @@ export default function GodownStockPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save godown stock", err);
-            alert("Error saving godown stock");
+            setApiError("Error saving godown stock");
         }
     };
 
@@ -90,7 +102,7 @@ export default function GodownStockPage() {
             loadData();
         } catch (err) {
             console.error("Failed to delete", err);
-            alert("Error deleting record");
+            setApiError("Error deleting record");
         }
     };
 
@@ -141,7 +153,7 @@ export default function GodownStockPage() {
                             </div>
                         )}
                         <button
-                            onClick={() => { resetForm(); setIsModalOpen(true); }}
+                            onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                         >
                             <Plus className="w-5 h-5" />
@@ -257,25 +269,27 @@ export default function GodownStockPage() {
 
             <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title={editingId ? "Edit Godown Stock" : "Add Godown Stock"}>
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} />
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Product</label>
                         <select
-                            required
                             value={productId}
-                            onChange={(e) => setProductId(e.target.value)}
+                            onChange={(e) => { setProductId(e.target.value); clearError("productId"); }}
                             disabled={!!editingId}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground disabled:opacity-50"
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground disabled:opacity-50 ${inputErrorClass(errors.productId)}`}
                         >
                             <option value="">Select a product...</option>
                             {products.map((p) => (
                                 <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
                             ))}
                         </select>
+                        <FieldError error={errors.productId} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Current Stock</label>
-                            <input type="number" required value={currentStock} onChange={(e) => setCurrentStock(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground" placeholder="0" min="0" step="any" />
+                            <input type="number" value={currentStock} onChange={(e) => { setCurrentStock(e.target.value); clearError("currentStock"); }} className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.currentStock)}`} placeholder="0" min="0" step="any" />
+                            <FieldError error={errors.currentStock} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Reorder Level</label>
