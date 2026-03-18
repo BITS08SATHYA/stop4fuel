@@ -14,6 +14,8 @@ import {
     deleteProductInventory
 } from "@/lib/api/station";
 import { Box, Plus, Calendar, Archive, TrendingUp, Trash2, Edit2, Search } from "lucide-react";
+import { useFormValidation, required } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 export default function ProductInventoryPage() {
     const [inventories, setInventories] = useState<ProductInventory[]>([]);
@@ -41,7 +43,14 @@ export default function ProductInventoryPage() {
     const [openStock, setOpenStock] = useState("");
     const [incomeStock, setIncomeStock] = useState("");
     const [closeStock, setCloseStock] = useState("");
-    
+    const [apiError, setApiError] = useState("");
+    const validationRules = useMemo(() => ({
+        productId: [required("Product is required")],
+        openStock: [required("Opening stock is required")],
+        closeStock: [required("Closing stock is required")],
+    }), []);
+    const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
+
     // Derived Calculations
     const [totalStock, setTotalStock] = useState(0);
     const [sales, setSales] = useState(0);
@@ -82,6 +91,8 @@ export default function ProductInventoryPage() {
     }, [openStock, incomeStock, closeStock]);
 
     const handleEdit = (inv: ProductInventory) => {
+        clearAllErrors();
+        setApiError("");
         setEditingId(inv.id);
         setDate(inv.date);
         setProductId(String(inv.product.id));
@@ -93,6 +104,8 @@ export default function ProductInventoryPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError("");
+        if (!validate({ productId, openStock, closeStock })) return;
         try {
             const payload = {
                 date,
@@ -112,7 +125,7 @@ export default function ProductInventoryPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save product inventory", err);
-            alert("Error saving non-fuel inventory details");
+            setApiError("Error saving inventory details");
         }
     };
 
@@ -123,7 +136,7 @@ export default function ProductInventoryPage() {
             loadData();
         } catch (err) {
             console.error("Failed to delete", err);
-            alert("Error deleting record");
+            setApiError("Error deleting record");
         }
     };
 
@@ -153,7 +166,7 @@ export default function ProductInventoryPage() {
                         </p>
                     </div>
                     <button
-                        onClick={() => { resetForm(); setIsModalOpen(true); }}
+                        onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
                         className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                     >
                         <Plus className="w-5 h-5" />
@@ -302,6 +315,7 @@ export default function ProductInventoryPage() {
                 title={editingId ? "Edit Inventory Check" : "Daily Non-Fuel Inventory Check"}
             >
                 <form onSubmit={handleSave} className="space-y-4">
+                    <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
@@ -319,35 +333,34 @@ export default function ProductInventoryPage() {
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-foreground mb-1.5">Select Product</label>
                             <select
-                                required
                                 value={productId}
-                                onChange={(e) => setProductId(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                onChange={(e) => { setProductId(e.target.value); clearError("productId"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.productId)}`}
                             >
                                 <option value="">Select a Product...</option>
                                 {products.map(p => (
                                     <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
                                 ))}
                             </select>
+                            <FieldError error={errors.productId} />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Opening Stock</label>
                             <input
                                 type="number"
-                                required
                                 value={openStock}
-                                onChange={(e) => setOpenStock(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                onChange={(e) => { setOpenStock(e.target.value); clearError("openStock"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.openStock)}`}
                                 placeholder="0"
                             />
+                            <FieldError error={errors.openStock} />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">New Arrivals (+)</label>
                             <input
                                 type="number"
-                                required
                                 value={incomeStock}
                                 onChange={(e) => setIncomeStock(e.target.value)}
                                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground border-blue-200"
@@ -359,12 +372,12 @@ export default function ProductInventoryPage() {
                             <label className="block text-sm font-medium text-foreground mb-1.5 font-bold">Actual Closing Physical Stock</label>
                             <input
                                 type="number"
-                                required
                                 value={closeStock}
-                                onChange={(e) => setCloseStock(e.target.value)}
-                                className="w-full bg-primary/5 border-primary/30 border rounded-xl px-4 py-3 text-foreground text-center text-xl font-bold"
+                                onChange={(e) => { setCloseStock(e.target.value); clearError("closeStock"); }}
+                                className={`w-full bg-primary/5 border-primary/30 border rounded-xl px-4 py-3 text-foreground text-center text-xl font-bold ${inputErrorClass(errors.closeStock)}`}
                                 placeholder="Count them now"
                             />
+                            <FieldError error={errors.closeStock} />
                         </div>
                     </div>
 
