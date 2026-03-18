@@ -1,13 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { mockApiRoutes, mockApiRoute, expectFieldError, expectNoFieldError, clickAddButton, clickSubmitButton } from "./fixtures/test-helpers";
+import { mockApiRoutes, expectFieldError, expectNoFieldError, clickAddButton, clickSubmitButton } from "./fixtures/test-helpers";
+
+const fuelProducts = [
+  { id: 1, name: "Petrol", hsnCode: "2710", price: 100, category: "Fuel", unit: "Liters", active: true },
+];
 
 test.describe("Tanks Form Validation", () => {
   test.beforeEach(async ({ page }) => {
+    // Mock fuel products BEFORE the generic catch-all
+    await page.route("**/api/products/category/Fuel", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fuelProducts) });
+    });
     await mockApiRoutes(page);
-    // Mock fuel products for the dropdown
-    await mockApiRoute(page, "**/api/products/fuel", [
-      { id: 1, name: "Petrol", hsnCode: "2710", price: 100, category: "Fuel", unit: "Liters", active: true },
-    ]);
     await page.goto("/operations/tanks");
     await clickAddButton(page, "Add New Tank");
   });
