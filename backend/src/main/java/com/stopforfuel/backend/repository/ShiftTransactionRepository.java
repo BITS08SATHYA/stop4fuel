@@ -28,5 +28,17 @@ public interface ShiftTransactionRepository extends JpaRepository<ShiftTransacti
     @Query("SELECT COALESCE(SUM(st.receivedAmount), 0) FROM ShiftTransaction st WHERE st.shiftId = :shiftId AND TYPE(st) = com.stopforfuel.backend.entity.transaction.ExpenseTransaction")
     BigDecimal sumExpenseByShift(@Param("shiftId") Long shiftId);
 
+    @Query("SELECT COALESCE(SUM(st.receivedAmount), 0) FROM ShiftTransaction st WHERE st.shiftId = :shiftId AND TYPE(st) = com.stopforfuel.backend.entity.transaction.ChequeTransaction")
+    BigDecimal sumChequeByShift(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(st.receivedAmount), 0) FROM ShiftTransaction st WHERE st.shiftId = :shiftId AND TYPE(st) = com.stopforfuel.backend.entity.transaction.BankTransaction")
+    BigDecimal sumBankByShift(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(st.receivedAmount), 0) FROM ShiftTransaction st WHERE st.shiftId = :shiftId AND TYPE(st) = com.stopforfuel.backend.entity.transaction.CcmsTransaction")
+    BigDecimal sumCcmsByShift(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(st.receivedAmount), 0) FROM ShiftTransaction st WHERE st.shiftId = :shiftId AND TYPE(st) = com.stopforfuel.backend.entity.transaction.NightCashTransaction")
+    BigDecimal sumNightCashByShift(@Param("shiftId") Long shiftId);
+
     void deleteByShiftId(Long shiftId);
 }

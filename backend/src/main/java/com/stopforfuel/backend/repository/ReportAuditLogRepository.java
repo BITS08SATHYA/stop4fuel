@@ -1,0 +1,11 @@
+package com.stopforfuel.backend.repository;
+
+import com.stopforfuel.backend.entity.ReportAuditLog;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+@Repository
+public interface ReportAuditLogRepository extends JpaRepository<ReportAuditLog, Long> {
+    List<ReportAuditLog> findByReportIdOrderByPerformedAtDesc(Long reportId);
+}
