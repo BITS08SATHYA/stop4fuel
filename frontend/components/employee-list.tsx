@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { GlassCard } from "@/components/ui/glass-card";
+import { useFormValidation, required, email, phone, min } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -154,6 +156,27 @@ export function EmployeeList() {
     const [showAdvanceForm, setShowAdvanceForm] = useState(false);
     const [newAdvance, setNewAdvance] = useState({ amount: "", advanceDate: "", advanceType: "SALARY_ADVANCE", remarks: "" });
 
+    const { errors: empErrors, validate: validateEmp, clearError: clearEmpError, clearAllErrors: clearAllEmpErrors } = useFormValidation({
+        name: [required("Employee name is required")],
+        designation: [required("Designation is required")],
+        email: [required("Email is required"), email()],
+        phone: [required("Phone is required"), phone()],
+        salary: [required("Salary is required"), min(0)],
+        joinDate: [required("Join date is required")],
+    });
+
+    const { errors: salaryErrors, validate: validateSalary, clearError: clearSalaryError, clearAllErrors: clearAllSalaryErrors } = useFormValidation({
+        newSalary: [required("New salary is required"), min(0)],
+        effectiveDate: [required("Effective date is required")],
+    });
+
+    const { errors: advanceErrors, validate: validateAdvance, clearError: clearAdvanceError, clearAllErrors: clearAllAdvanceErrors } = useFormValidation({
+        amount: [required("Amount is required"), min(1, "Amount must be at least 1")],
+        advanceDate: [required("Date is required")],
+    });
+
+    const [apiError, setApiError] = useState("");
+
     useEffect(() => {
         fetchEmployees();
     }, []);
@@ -204,6 +227,7 @@ export function EmployeeList() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateEmp(currentEmployee)) return;
         setIsLoading(true);
         try {
             const url = isEditing ? `${API_BASE}/${currentEmployee.id}` : API_BASE;
@@ -218,7 +242,7 @@ export function EmployeeList() {
             setCurrentEmployee(emptyEmployee);
             setIsEditing(false);
         } catch (error) {
-            console.error("Failed to save employee", error);
+            setApiError("Failed to save employee");
         } finally {
             setIsLoading(false);
         }
@@ -226,6 +250,7 @@ export function EmployeeList() {
 
     const handleSalaryRevision = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateSalary(salaryRevision)) return;
         if (!profileEmployee) return;
         try {
             const res = await fetch(`${API_BASE}/${profileEmployee.id}/salary-revision`, {
@@ -250,6 +275,7 @@ export function EmployeeList() {
 
     const handleAddAdvance = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateAdvance(newAdvance)) return;
         if (!profileEmployee) return;
         try {
             const res = await fetch(`${API_BASE}/${profileEmployee.id}/advances`, {
@@ -324,6 +350,8 @@ export function EmployeeList() {
                         setCurrentEmployee(emptyEmployee);
                         setIsEditing(false);
                         setFormTab("personal");
+                        clearAllEmpErrors();
+                        setApiError("");
                         setShowForm(true);
                     }}
                     className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
@@ -413,6 +441,8 @@ export function EmployeeList() {
                                                     setCurrentEmployee(emp);
                                                     setIsEditing(true);
                                                     setFormTab("personal");
+                                                    clearAllEmpErrors();
+                                                    setApiError("");
                                                     setShowForm(true);
                                                 }}
                                                 className="p-2 hover:bg-muted rounded-md"
@@ -479,23 +509,28 @@ export function EmployeeList() {
 
                         {/* Form */}
                         <form onSubmit={handleSubmit} className="p-6">
+                            <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
                             {formTab === "personal" && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Name *</label>
-                                        <input required className={inputClass} value={currentEmployee.name} onChange={(e) => set("name", e.target.value)} />
+                                        <input className={`${inputClass} ${inputErrorClass(empErrors.name)}`} value={currentEmployee.name} onChange={(e) => { set("name", e.target.value); clearEmpError("name"); }} />
+                                        <FieldError error={empErrors.name} />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Designation *</label>
-                                        <input required className={inputClass} value={currentEmployee.designation} onChange={(e) => set("designation", e.target.value)} />
+                                        <input className={`${inputClass} ${inputErrorClass(empErrors.designation)}`} value={currentEmployee.designation} onChange={(e) => { set("designation", e.target.value); clearEmpError("designation"); }} />
+                                        <FieldError error={empErrors.designation} />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Email *</label>
-                                        <input type="email" required className={inputClass} value={currentEmployee.email} onChange={(e) => set("email", e.target.value)} />
+                                        <input className={`${inputClass} ${inputErrorClass(empErrors.email)}`} value={currentEmployee.email} onChange={(e) => { set("email", e.target.value); clearEmpError("email"); }} />
+                                        <FieldError error={empErrors.email} />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Phone *</label>
-                                        <input required className={inputClass} value={currentEmployee.phone} onChange={(e) => set("phone", e.target.value)} />
+                                        <input className={`${inputClass} ${inputErrorClass(empErrors.phone)}`} value={currentEmployee.phone} onChange={(e) => { set("phone", e.target.value); clearEmpError("phone"); }} />
+                                        <FieldError error={empErrors.phone} />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Additional Phones</label>
@@ -507,11 +542,13 @@ export function EmployeeList() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Salary *</label>
-                                        <input type="number" required className={inputClass} value={currentEmployee.salary} onChange={(e) => set("salary", Number(e.target.value))} />
+                                        <input type="number" className={`${inputClass} ${inputErrorClass(empErrors.salary)}`} value={currentEmployee.salary} onChange={(e) => { set("salary", Number(e.target.value)); clearEmpError("salary"); }} />
+                                        <FieldError error={empErrors.salary} />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Join Date *</label>
-                                        <input type="date" required className={inputClass} value={currentEmployee.joinDate} onChange={(e) => set("joinDate", e.target.value)} />
+                                        <input type="date" className={`${inputClass} ${inputErrorClass(empErrors.joinDate)}`} value={currentEmployee.joinDate} onChange={(e) => { set("joinDate", e.target.value); clearEmpError("joinDate"); }} />
+                                        <FieldError error={empErrors.joinDate} />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Status</label>
@@ -759,7 +796,7 @@ export function EmployeeList() {
                                 {/* Add revision button */}
                                 <div className="flex justify-end">
                                     <button
-                                        onClick={() => setShowSalaryForm(!showSalaryForm)}
+                                        onClick={() => { clearAllSalaryErrors(); setShowSalaryForm(!showSalaryForm); }}
                                         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                                     >
                                         <Plus className="w-4 h-4" />
@@ -775,26 +812,25 @@ export function EmployeeList() {
                                                 <label className="text-sm font-medium">New Salary *</label>
                                                 <input
                                                     type="number"
-                                                    required
-                                                    className={inputClass}
+                                                    className={`${inputClass} ${inputErrorClass(salaryErrors.newSalary)}`}
                                                     value={salaryRevision.newSalary}
-                                                    onChange={(e) => setSalaryRevision({ ...salaryRevision, newSalary: e.target.value })}
+                                                    onChange={(e) => { setSalaryRevision({ ...salaryRevision, newSalary: e.target.value }); clearSalaryError("newSalary"); }}
                                                 />
+                                                <FieldError error={salaryErrors.newSalary} />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium">Effective Date *</label>
                                                 <input
                                                     type="date"
-                                                    required
-                                                    className={inputClass}
+                                                    className={`${inputClass} ${inputErrorClass(salaryErrors.effectiveDate)}`}
                                                     value={salaryRevision.effectiveDate}
-                                                    onChange={(e) => setSalaryRevision({ ...salaryRevision, effectiveDate: e.target.value })}
+                                                    onChange={(e) => { setSalaryRevision({ ...salaryRevision, effectiveDate: e.target.value }); clearSalaryError("effectiveDate"); }}
                                                 />
+                                                <FieldError error={salaryErrors.effectiveDate} />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-sm font-medium">Reason *</label>
+                                                <label className="text-sm font-medium">Reason</label>
                                                 <input
-                                                    required
                                                     className={inputClass}
                                                     value={salaryRevision.reason}
                                                     onChange={(e) => setSalaryRevision({ ...salaryRevision, reason: e.target.value })}
@@ -863,7 +899,7 @@ export function EmployeeList() {
                                 {/* Record advance button */}
                                 <div className="flex justify-end">
                                     <button
-                                        onClick={() => setShowAdvanceForm(!showAdvanceForm)}
+                                        onClick={() => { clearAllAdvanceErrors(); setShowAdvanceForm(!showAdvanceForm); }}
                                         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                                     >
                                         <Plus className="w-4 h-4" />
@@ -879,21 +915,21 @@ export function EmployeeList() {
                                                 <label className="text-sm font-medium">Amount *</label>
                                                 <input
                                                     type="number"
-                                                    required
-                                                    className={inputClass}
+                                                    className={`${inputClass} ${inputErrorClass(advanceErrors.amount)}`}
                                                     value={newAdvance.amount}
-                                                    onChange={(e) => setNewAdvance({ ...newAdvance, amount: e.target.value })}
+                                                    onChange={(e) => { setNewAdvance({ ...newAdvance, amount: e.target.value }); clearAdvanceError("amount"); }}
                                                 />
+                                                <FieldError error={advanceErrors.amount} />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium">Date *</label>
                                                 <input
                                                     type="date"
-                                                    required
-                                                    className={inputClass}
+                                                    className={`${inputClass} ${inputErrorClass(advanceErrors.advanceDate)}`}
                                                     value={newAdvance.advanceDate}
-                                                    onChange={(e) => setNewAdvance({ ...newAdvance, advanceDate: e.target.value })}
+                                                    onChange={(e) => { setNewAdvance({ ...newAdvance, advanceDate: e.target.value }); clearAdvanceError("advanceDate"); }}
                                                 />
+                                                <FieldError error={advanceErrors.advanceDate} />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-medium">Type *</label>
