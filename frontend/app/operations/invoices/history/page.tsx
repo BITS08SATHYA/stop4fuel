@@ -8,6 +8,7 @@ import {
     Search, Filter, ChevronDown, ChevronRight,
     Package, RotateCcw, Pencil, Trash2, Plus, X, Save
 } from "lucide-react";
+import { FormErrorBanner } from "@/components/ui/field-error";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles,
@@ -260,7 +261,7 @@ export default function InvoiceHistoryPage() {
             setExpandedRowId(null);
             refresh();
         } catch (e: any) {
-            alert(e.message || "Failed to delete invoice");
+            setEditError(e.message || "Failed to delete invoice");
         } finally {
             setDeleting(false);
         }
@@ -687,6 +688,7 @@ export default function InvoiceHistoryPage() {
             {/* Delete Confirmation Modal */}
             <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Invoice">
                 <div className="space-y-4">
+                    <FormErrorBanner message={editError} onDismiss={() => setEditError("")} />
                     <p className="text-sm text-foreground">
                         Are you sure you want to delete invoice <strong className="font-mono">{deleteConfirm?.billNo}</strong>?
                         This action cannot be undone.
