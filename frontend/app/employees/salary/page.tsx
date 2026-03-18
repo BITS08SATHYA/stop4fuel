@@ -13,6 +13,7 @@ import {
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { FormErrorBanner } from "@/components/ui/field-error";
 import {
     getMonthlyPayments,
     processMonthlyPayroll,
@@ -34,6 +35,7 @@ export default function SalaryProcessingPage() {
     const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(now.getFullYear());
     const [processing, setProcessing] = useState(false);
+    const [apiError, setApiError] = useState("");
 
     useEffect(() => {
         loadPayments();
@@ -56,7 +58,7 @@ export default function SalaryProcessingPage() {
             const data = await processMonthlyPayroll(selectedMonth, selectedYear);
             setPayments(data);
         } catch (e) {
-            alert("Failed to process payroll");
+            setApiError("Failed to process payroll");
         }
         setProcessing(false);
     };
@@ -66,7 +68,7 @@ export default function SalaryProcessingPage() {
             await markSalaryAsPaid(id, "CASH");
             loadPayments();
         } catch (e) {
-            alert("Failed to mark as paid");
+            setApiError("Failed to mark as paid");
         }
     };
 
@@ -125,6 +127,8 @@ export default function SalaryProcessingPage() {
                         </button>
                     </div>
                 </div>
+
+                <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
 
                 {/* Stats */}
                 {payments.length > 0 && (

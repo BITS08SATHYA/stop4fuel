@@ -12,6 +12,7 @@ import {
     AlertCircle,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { FormErrorBanner } from "@/components/ui/field-error";
 import { Badge } from "@/components/ui/badge";
 import {
     getEmployees,
@@ -35,6 +36,7 @@ export default function AttendancePage() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
     const [searchQuery, setSearchQuery] = useState("");
     const [saving, setSaving] = useState<number | null>(null);
+    const [apiError, setApiError] = useState("");
 
     useEffect(() => {
         loadData();
@@ -71,7 +73,7 @@ export default function AttendancePage() {
             });
             await loadData();
         } catch (e) {
-            alert("Failed to mark attendance");
+            setApiError("Failed to mark attendance");
         }
         setSaving(null);
     };
@@ -145,6 +147,8 @@ export default function AttendancePage() {
                         <p className="text-xs text-muted-foreground">Unmarked</p>
                     </GlassCard>
                 </div>
+
+                <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
 
                 {/* Search */}
                 <div className="mb-4">
