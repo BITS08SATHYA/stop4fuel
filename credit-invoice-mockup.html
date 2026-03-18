@@ -30,10 +30,10 @@
   .item { margin-bottom: 4px; }
   .item-name { font-weight: 900; font-size: 9pt; }
   .item-detail { font-size: 7pt; color: #555; }
-  .item-calc { display: flex; justify-content: space-between; font-size: 8.5pt; margin-top: 1px; }
-  .item-calc .qty { }
-  .item-calc .rate { color: #555; }
-  .item-calc .amt { font-weight: 700; }
+  .item-nums { display: grid; grid-template-columns: 1fr 1fr 1fr; font-size: 8.5pt; margin-top: 1px; }
+  .item-nums .qty { text-align: left; }
+  .item-nums .rate { text-align: center; color: #555; }
+  .item-nums .amt { text-align: right; font-weight: 700; }
   .item-disc { font-size: 7.5pt; text-align: right; color: #555; }
 </style>
 </head>
@@ -84,13 +84,17 @@
 
   <div class="dline"></div>
   <div class="center bold sm">ITEMS</div>
-  <div class="dline"></div>
+  <div class="item-nums" style="font-size:7pt; font-weight:700; color:#555; border-bottom:1px solid #000; padding-bottom:1px; margin-bottom:2px;">
+    <span class="qty">QTY</span>
+    <span class="rate">RATE</span>
+    <span class="amt">AMOUNT</span>
+  </div>
 
   <!-- Product 1 -->
   <div class="item">
     <div class="item-name">Petrol (MS)</div>
     <div class="item-detail">N1-A / Pump 1 | HSN: 27101990</div>
-    <div class="item-calc">
+    <div class="item-nums">
       <span class="qty">500.00 L</span>
       <span class="rate">x 102.61</span>
       <span class="amt">51,305.00</span>
@@ -104,7 +108,7 @@
   <div class="item">
     <div class="item-name">Diesel (HSD)</div>
     <div class="item-detail">N2-A / Pump 2 | HSN: 27101930</div>
-    <div class="item-calc">
+    <div class="item-nums">
       <span class="qty">300.00 L</span>
       <span class="rate">x 89.62</span>
       <span class="amt">26,886.00</span>
@@ -118,7 +122,7 @@
   <div class="item">
     <div class="item-name">Engine Oil 5W-30 (1L)</div>
     <div class="item-detail">HSN: 27101950</div>
-    <div class="item-calc">
+    <div class="item-nums">
       <span class="qty">2 pcs</span>
       <span class="rate">x 450.00</span>
       <span class="amt">900.00</span>
