@@ -109,4 +109,31 @@ class VehicleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("INACTIVE"));
     }
+
+    // --- searchVehicles endpoint tests ---
+
+    @Test
+    void searchVehicles_returnsMatchingVehicles() throws Exception {
+        when(vehicleService.searchVehicles("TN01")).thenReturn(List.of(testVehicle));
+
+        mockMvc.perform(get("/api/vehicles/search").param("q", "TN01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].vehicleNumber").value("TN01AB1234"));
+    }
+
+    @Test
+    void searchVehicles_emptyResults() throws Exception {
+        when(vehicleService.searchVehicles("XYZ")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/vehicles/search").param("q", "XYZ"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void searchVehicles_missingParam_returns400() throws Exception {
+        mockMvc.perform(get("/api/vehicles/search"))
+                .andExpect(status().isBadRequest());
+    }
 }
