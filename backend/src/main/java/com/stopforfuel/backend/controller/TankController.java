@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Tank;
 import com.stopforfuel.backend.service.TankService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,12 +38,12 @@ public class TankController {
     }
 
     @PostMapping
-    public Tank createTank(@RequestBody Tank tank) {
+    public Tank createTank(@Valid @RequestBody Tank tank) {
         return tankService.createTank(tank);
     }
 
     @PutMapping("/{id}")
-    public Tank updateTank(@PathVariable Long id, @RequestBody Tank tank) {
+    public Tank updateTank(@PathVariable Long id, @Valid @RequestBody Tank tank) {
         return tankService.updateTank(id, tank);
     }
 

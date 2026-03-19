@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.ProductInventory;
 import com.stopforfuel.backend.service.ProductInventoryService;
 import lombok.RequiredArgsConstructor;
@@ -33,12 +34,12 @@ public class ProductInventoryController {
     }
 
     @PostMapping
-    public ProductInventory create(@RequestBody ProductInventory inventory) {
+    public ProductInventory create(@Valid @RequestBody ProductInventory inventory) {
         return service.save(inventory);
     }
 
     @PutMapping("/{id}")
-    public ProductInventory update(@PathVariable Long id, @RequestBody ProductInventory inventory) {
+    public ProductInventory update(@PathVariable Long id, @Valid @RequestBody ProductInventory inventory) {
         return service.update(id, inventory);
     }
 

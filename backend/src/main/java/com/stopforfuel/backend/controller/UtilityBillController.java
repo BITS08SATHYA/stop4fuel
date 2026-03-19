@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.UtilityBill;
 import com.stopforfuel.backend.service.UtilityBillService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,12 +31,12 @@ public class UtilityBillController {
     }
 
     @PostMapping
-    public UtilityBill createBill(@RequestBody UtilityBill bill) {
+    public UtilityBill createBill(@Valid @RequestBody UtilityBill bill) {
         return utilityBillService.createBill(bill);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UtilityBill> updateBill(@PathVariable Long id, @RequestBody UtilityBill bill) {
+    public ResponseEntity<UtilityBill> updateBill(@PathVariable Long id, @Valid @RequestBody UtilityBill bill) {
         try {
             return ResponseEntity.ok(utilityBillService.updateBill(id, bill));
         } catch (RuntimeException e) {

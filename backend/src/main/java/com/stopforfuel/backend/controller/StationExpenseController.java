@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.StationExpense;
 import com.stopforfuel.backend.service.StationExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +30,12 @@ public class StationExpenseController {
     }
 
     @PostMapping
-    public StationExpense createExpense(@RequestBody StationExpense expense) {
+    public StationExpense createExpense(@Valid @RequestBody StationExpense expense) {
         return stationExpenseService.createExpense(expense);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StationExpense> updateExpense(@PathVariable Long id, @RequestBody StationExpense expense) {
+    public ResponseEntity<StationExpense> updateExpense(@PathVariable Long id, @Valid @RequestBody StationExpense expense) {
         try {
             return ResponseEntity.ok(stationExpenseService.updateExpense(id, expense));
         } catch (RuntimeException e) {

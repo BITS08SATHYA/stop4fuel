@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.UpiCompany;
 import com.stopforfuel.backend.repository.UpiCompanyRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ public class UpiCompanyController {
     }
 
     @PostMapping
-    public UpiCompany create(@RequestBody UpiCompany upiCompany) {
+    public UpiCompany create(@Valid @RequestBody UpiCompany upiCompany) {
         return repository.save(upiCompany);
     }
 }

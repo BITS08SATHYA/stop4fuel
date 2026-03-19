@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.EmployeeAdvance;
 import com.stopforfuel.backend.entity.SalaryHistory;
@@ -37,12 +38,12 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public Employee createEmployee(@RequestBody Employee employee) {
+    public Employee createEmployee(@Valid @RequestBody Employee employee) {
         return employeeService.createEmployee(employee);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
+    public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @Valid @RequestBody Employee employee) {
         try {
             return ResponseEntity.ok(employeeService.updateEmployee(id, employee));
         } catch (RuntimeException e) {
@@ -62,7 +63,7 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/salary-revision")
-    public SalaryHistory addSalaryRevision(@PathVariable Long id, @RequestBody SalaryHistory history) {
+    public SalaryHistory addSalaryRevision(@PathVariable Long id, @Valid @RequestBody SalaryHistory history) {
         Employee employee = new Employee();
         employee.setId(id);
         history.setEmployee(employee);
@@ -75,7 +76,7 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/advances")
-    public EmployeeAdvance addAdvance(@PathVariable Long id, @RequestBody EmployeeAdvance advance) {
+    public EmployeeAdvance addAdvance(@PathVariable Long id, @Valid @RequestBody EmployeeAdvance advance) {
         Employee employee = new Employee();
         employee.setId(id);
         advance.setEmployee(employee);

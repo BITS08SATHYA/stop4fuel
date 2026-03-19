@@ -3,6 +3,8 @@ package com.stopforfuel.backend.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.Column;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +16,8 @@ import java.time.LocalDate;
 @Setter
 public class Company extends BaseEntity {
 
+    @NotBlank(message = "Company name is required")
+    @Size(max = 255, message = "Company name must not exceed 255 characters")
     @Column(nullable = false)
     private String name;
 
