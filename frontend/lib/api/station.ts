@@ -225,6 +225,7 @@ export interface Payment {
     invoiceBill?: InvoiceBill;
     shiftId?: number;
     remarks?: string;
+    proofImageKey?: string;
 }
 
 export interface LedgerEntry {
@@ -636,6 +637,18 @@ export const recordBillPayment = (invoiceBillId: number, payment: Partial<Paymen
         body: JSON.stringify(payment),
     }).then(handleResponse);
 
+export const uploadPaymentProof = (paymentId: number, file: File): Promise<Payment> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${API_BASE_URL}/payments/${paymentId}/upload-proof`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const getPaymentProofUrl = (paymentId: number): Promise<{ url: string }> =>
+    fetch(`${API_BASE_URL}/payments/${paymentId}/proof-url`).then(handleResponse);
+
 // Ledger
 export const getOpeningBalance = (customerId: number, asOfDate: string): Promise<number> =>
     fetch(`${API_BASE_URL}/ledger/opening-balance?customerId=${customerId}&asOfDate=${asOfDate}`).then(handleResponse);
@@ -760,6 +773,9 @@ export interface Incentive {
     discountRate: number;
     active: boolean;
 }
+
+export const getAllIncentives = (): Promise<Incentive[]> =>
+    fetch(`${API_BASE_URL}/incentives`).then(handleResponse);
 
 export const getIncentivesByCustomer = (customerId: number): Promise<Incentive[]> =>
     fetch(`${API_BASE_URL}/incentives/customer/${customerId}`).then(handleResponse);
@@ -1199,6 +1215,36 @@ export const getEmployees = (): Promise<EmployeeType[]> =>
 
 export const getActiveEmployees = (): Promise<EmployeeType[]> =>
     fetch(`${API_BASE_URL}/employees/active`).then(handleResponse);
+
+export const uploadEmployeePhoto = (id: number, file: File): Promise<EmployeeType> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${API_BASE_URL}/employees/${id}/upload-photo`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const uploadEmployeeAadharDoc = (id: number, file: File): Promise<EmployeeType> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${API_BASE_URL}/employees/${id}/upload-aadhar-doc`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const uploadEmployeePanDoc = (id: number, file: File): Promise<EmployeeType> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${API_BASE_URL}/employees/${id}/upload-pan-doc`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const getEmployeeFileUrl = (id: number, type: string): Promise<{ url: string }> =>
+    fetch(`${API_BASE_URL}/employees/${id}/file-url?type=${type}`).then(handleResponse);
 
 // ────────────────────────────────────────────────────────────
 // Leave Management Types & APIs
