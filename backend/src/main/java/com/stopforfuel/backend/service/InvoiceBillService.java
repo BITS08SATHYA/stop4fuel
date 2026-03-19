@@ -69,7 +69,7 @@ public class InvoiceBillService {
             invoice.setVehicle(vehicle);
         }
 
-        // --- Validate all products are active ---
+        // --- Validate all products are active and have sufficient inventory ---
         if (invoice.getProducts() != null) {
             for (InvoiceProduct ip : invoice.getProducts()) {
                 if (ip.getProduct() != null && ip.getProduct().getId() != null) {
@@ -78,6 +78,54 @@ public class InvoiceBillService {
                     if (!prod.isActive()) {
                         throw new RuntimeException(
                                 "Cannot create invoice: Product '" + prod.getName() + "' is disabled.");
+                    }
+
+                    // Check inventory availability
+                    BigDecimal requiredQty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
+                    if (requiredQty.compareTo(BigDecimal.ZERO) > 0) {
+                        // Check tank inventory if nozzle is specified (fuel products)
+                        if (ip.getNozzle() != null && ip.getNozzle().getId() != null) {
+                            Nozzle nozzle = nozzleRepository.findById(ip.getNozzle().getId()).orElse(null);
+                            if (nozzle != null && nozzle.getTank() != null) {
+                                TankInventory tankInv = tankInventoryRepository
+                                        .findTopByTankIdOrderByDateDescIdDesc(nozzle.getTank().getId());
+                                if (tankInv == null) {
+                                    throw new RuntimeException(
+                                            "Cannot create invoice: No inventory record found for tank linked to product '"
+                                            + prod.getName() + "'.");
+                                }
+                                double available = tankInv.getCloseStock() != null ? tankInv.getCloseStock() : 0.0;
+                                if (available <= 0) {
+                                    throw new RuntimeException(
+                                            "Cannot create invoice: Tank stock for product '" + prod.getName()
+                                            + "' is empty (0 liters available).");
+                                }
+                                if (available < requiredQty.doubleValue()) {
+                                    throw new RuntimeException(
+                                            "Cannot create invoice: Insufficient tank stock for product '"
+                                            + prod.getName() + "'. Available: " + String.format("%.2f", available)
+                                            + ", Required: " + requiredQty + ".");
+                                }
+                            }
+                        }
+
+                        // Check product inventory
+                        ProductInventory productInv = productInventoryRepository
+                                .findTopByProductIdOrderByDateDescIdDesc(prod.getId());
+                        if (productInv != null) {
+                            double available = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
+                            if (available <= 0) {
+                                throw new RuntimeException(
+                                        "Cannot create invoice: Product '" + prod.getName()
+                                        + "' is out of stock (0 available).");
+                            }
+                            if (available < requiredQty.doubleValue()) {
+                                throw new RuntimeException(
+                                        "Cannot create invoice: Insufficient stock for product '"
+                                        + prod.getName() + "'. Available: " + String.format("%.2f", available)
+                                        + ", Required: " + requiredQty + ".");
+                            }
+                        }
                     }
                 }
             }
