@@ -9,7 +9,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "product_inventory")
+@Table(name = "product_inventory", indexes = {
+    @Index(name = "idx_product_inv_shift_id", columnList = "shift_id"),
+    @Index(name = "idx_product_inv_product_id", columnList = "product_id"),
+    @Index(name = "idx_product_inv_date", columnList = "date"),
+    @Index(name = "idx_product_inv_product_date", columnList = "product_id, date DESC")
+})
 @Getter
 @Setter
 public class ProductInventory extends BaseEntity {

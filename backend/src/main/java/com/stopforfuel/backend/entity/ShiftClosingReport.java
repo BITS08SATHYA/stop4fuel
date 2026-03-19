@@ -9,7 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "shift_closing_reports")
+@Table(name = "shift_closing_reports", indexes = {
+    @Index(name = "idx_shift_report_status", columnList = "status"),
+    @Index(name = "idx_shift_report_scid", columnList = "scid")
+})
 @Getter
 @Setter
 public class ShiftClosingReport extends BaseEntity {
