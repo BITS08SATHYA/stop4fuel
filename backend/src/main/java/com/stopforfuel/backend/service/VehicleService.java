@@ -27,6 +27,13 @@ public class VehicleService {
         return vehicleRepository.findAll();
     }
 
+    public List<Vehicle> searchVehicles(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        return vehicleRepository.findByVehicleNumberContainingIgnoreCase(query.trim());
+    }
+
     public List<Vehicle> getVehiclesByCustomerId(Long customerId) {
         return vehicleRepository.findByCustomerId(customerId);
     }

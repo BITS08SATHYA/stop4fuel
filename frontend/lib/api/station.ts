@@ -540,6 +540,9 @@ export const getVehicles = (search?: string): Promise<Vehicle[]> => {
 export const getVehiclesByCustomer = (customerId: number): Promise<Vehicle[]> =>
     fetch(`${API_BASE_URL}/vehicles/customer/${customerId}`).then(handleResponse);
 
+export const searchVehicles = (query: string): Promise<Vehicle[]> =>
+    fetch(`${API_BASE_URL}/vehicles/search?q=${encodeURIComponent(query)}`).then(handleResponse);
+
 // Payment Modes
 export const getPaymentModes = (): Promise<PaymentMode[]> =>
     fetch(`${API_BASE_URL}/payment-modes`).then(handleResponse);
