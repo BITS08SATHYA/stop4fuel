@@ -15,6 +15,11 @@ public class IncentiveController {
 
     private final IncentiveService service;
 
+    @GetMapping
+    public List<Incentive> getAll() {
+        return service.getAll();
+    }
+
     @GetMapping("/customer/{customerId}")
     public List<Incentive> getByCustomer(@PathVariable Long customerId) {
         return service.getByCustomer(customerId);
