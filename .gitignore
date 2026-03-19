@@ -31,5 +31,8 @@ Thumbs.db
 .env.*.local
 *.log
 
+# === Uploads ===
+uploads/
+
 # === Claude Code ===
 .claude/
