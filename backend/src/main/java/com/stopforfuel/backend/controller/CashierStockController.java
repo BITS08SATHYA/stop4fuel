@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.CashierStock;
 import com.stopforfuel.backend.service.CashierStockService;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,12 @@ public class CashierStockController {
     }
 
     @PostMapping
-    public CashierStock create(@RequestBody CashierStock stock) {
+    public CashierStock create(@Valid @RequestBody CashierStock stock) {
         return service.save(stock);
     }
 
     @PutMapping("/{id}")
-    public CashierStock update(@PathVariable Long id, @RequestBody CashierStock stock) {
+    public CashierStock update(@PathVariable Long id, @Valid @RequestBody CashierStock stock) {
         return service.update(id, stock);
     }
 

@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,14 +19,17 @@ public class Statement extends BaseEntity {
     @Column(name = "statement_no", nullable = false, unique = true)
     private String statementNo; // e.g., "S26/12"
 
+    @NotNull(message = "Customer is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Customer customer;
 
+    @NotNull(message = "From date is required")
     @Column(name = "from_date", nullable = false)
     private LocalDate fromDate;
 
+    @NotNull(message = "To date is required")
     @Column(name = "to_date", nullable = false)
     private LocalDate toDate;
 

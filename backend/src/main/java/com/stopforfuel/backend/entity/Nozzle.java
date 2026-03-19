@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,6 +14,7 @@ import java.time.LocalDate;
 @Setter
 public class Nozzle extends BaseEntity {
 
+    @NotBlank(message = "Nozzle name is required")
     @Column(name = "nozzle_name", nullable = false)
     private String nozzleName;
 
@@ -24,13 +27,13 @@ public class Nozzle extends BaseEntity {
     @Column(name = "stamping_expiry_date")
     private LocalDate stampingExpiryDate;
 
-    /** Which tank feeds this nozzle */
+    @NotNull(message = "Tank is required for nozzle")
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "tank_id", nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Tank tank;
 
-    /** Which pump this nozzle sits on */
+    @NotNull(message = "Pump is required for nozzle")
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "pump_id", nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

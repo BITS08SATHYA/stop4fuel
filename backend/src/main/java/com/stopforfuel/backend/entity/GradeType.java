@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,9 +16,7 @@ public class GradeType extends BaseEntity {
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private OilType oilType;
 
-    /**
-     * The specific variant/grade name, e.g., "20W-40", "20W-50", "Premium 95"
-     */
+    @NotBlank(message = "Grade name is required")
     @Column(nullable = false, unique = true)
     private String name;
 

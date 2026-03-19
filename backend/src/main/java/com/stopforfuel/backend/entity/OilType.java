@@ -3,6 +3,7 @@ package com.stopforfuel.backend.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,6 +13,7 @@ import lombok.Setter;
 @Setter
 public class OilType extends SimpleBaseEntity {
 
+    @NotBlank(message = "Oil type name is required")
     @Column(nullable = false, unique = true)
     private String name;
 

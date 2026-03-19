@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.service.NozzleInventoryService;
 import lombok.RequiredArgsConstructor;
@@ -33,12 +34,12 @@ public class NozzleInventoryController {
     }
 
     @PostMapping
-    public NozzleInventory create(@RequestBody NozzleInventory inventory) {
+    public NozzleInventory create(@Valid @RequestBody NozzleInventory inventory) {
         return service.save(inventory);
     }
 
     @PutMapping("/{id}")
-    public NozzleInventory update(@PathVariable Long id, @RequestBody NozzleInventory inventory) {
+    public NozzleInventory update(@PathVariable Long id, @Valid @RequestBody NozzleInventory inventory) {
         return service.update(id, inventory);
     }
 

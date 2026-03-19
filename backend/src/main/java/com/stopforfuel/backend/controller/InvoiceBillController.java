@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.service.InvoiceBillService;
@@ -57,12 +58,12 @@ public class InvoiceBillController {
     }
 
     @PostMapping
-    public InvoiceBill create(@RequestBody InvoiceBill invoice) {
+    public InvoiceBill create(@Valid @RequestBody InvoiceBill invoice) {
         return service.createInvoice(invoice);
     }
 
     @PutMapping("/{id}")
-    public InvoiceBill update(@PathVariable Long id, @RequestBody InvoiceBill invoice) {
+    public InvoiceBill update(@PathVariable Long id, @Valid @RequestBody InvoiceBill invoice) {
         return service.updateInvoice(id, invoice);
     }
 

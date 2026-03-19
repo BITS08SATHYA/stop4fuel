@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,9 +24,11 @@ public class Customer extends User {
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Party party;
 
+    @PositiveOrZero(message = "Credit limit amount must be zero or positive")
     @Column(name = "credit_limit_amount")
     private BigDecimal creditLimitAmount;
 
+    @PositiveOrZero(message = "Credit limit liters must be zero or positive")
     @Column(name = "credit_limit_liters")
     private BigDecimal creditLimitLiters;
 

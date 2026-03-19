@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.service.ShiftService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class ShiftController {
     }
 
     @PostMapping("/open")
-    public Shift open(@RequestBody Shift shift) {
+    public Shift open(@Valid @RequestBody Shift shift) {
         return service.openShift(shift);
     }
 

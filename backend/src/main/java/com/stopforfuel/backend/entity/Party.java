@@ -19,6 +19,7 @@ public class Party {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @jakarta.validation.constraints.NotBlank(message = "Party type is required")
     @Column(name = "party_type", nullable = false)
     private String partyType; // e.g., "Local", "Statement"
 }
