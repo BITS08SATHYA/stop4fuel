@@ -159,4 +159,56 @@ class VehicleServiceTest {
 
         assertEquals("INACTIVE", vehicleService.toggleStatus(1L).getStatus());
     }
+
+    // --- searchVehicles tests ---
+
+    @Test
+    void searchVehicles_withQuery_returnsMatching() {
+        when(vehicleRepository.findByVehicleNumberContainingIgnoreCase("TN01"))
+                .thenReturn(List.of(testVehicle));
+
+        List<Vehicle> results = vehicleService.searchVehicles("TN01");
+        assertEquals(1, results.size());
+        assertEquals("TN01AB1234", results.get(0).getVehicleNumber());
+    }
+
+    @Test
+    void searchVehicles_nullQuery_returnsEmpty() {
+        List<Vehicle> results = vehicleService.searchVehicles(null);
+        assertTrue(results.isEmpty());
+        verify(vehicleRepository, never()).findByVehicleNumberContainingIgnoreCase(any());
+    }
+
+    @Test
+    void searchVehicles_emptyQuery_returnsEmpty() {
+        List<Vehicle> results = vehicleService.searchVehicles("");
+        assertTrue(results.isEmpty());
+        verify(vehicleRepository, never()).findByVehicleNumberContainingIgnoreCase(any());
+    }
+
+    @Test
+    void searchVehicles_blankQuery_returnsEmpty() {
+        List<Vehicle> results = vehicleService.searchVehicles("   ");
+        assertTrue(results.isEmpty());
+        verify(vehicleRepository, never()).findByVehicleNumberContainingIgnoreCase(any());
+    }
+
+    @Test
+    void searchVehicles_trimsWhitespace() {
+        when(vehicleRepository.findByVehicleNumberContainingIgnoreCase("TN01"))
+                .thenReturn(List.of(testVehicle));
+
+        List<Vehicle> results = vehicleService.searchVehicles("  TN01  ");
+        assertEquals(1, results.size());
+        verify(vehicleRepository).findByVehicleNumberContainingIgnoreCase("TN01");
+    }
+
+    @Test
+    void searchVehicles_noMatch_returnsEmpty() {
+        when(vehicleRepository.findByVehicleNumberContainingIgnoreCase("XYZ"))
+                .thenReturn(List.of());
+
+        List<Vehicle> results = vehicleService.searchVehicles("XYZ");
+        assertTrue(results.isEmpty());
+    }
 }
