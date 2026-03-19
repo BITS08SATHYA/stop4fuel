@@ -34,6 +34,7 @@ public class ShiftClosingReportService {
     private final ShiftTransactionService shiftTransactionService;
     private final NozzleInventoryRepository nozzleInventoryRepository;
     private final TankInventoryRepository tankInventoryRepository;
+    private final ProductInventoryRepository productInventoryRepository;
     private final ProductRepository productRepository;
     private final CompanyRepository companyRepository;
 
@@ -793,15 +794,22 @@ public class ShiftClosingReportService {
             data.getCreditBillDetails().add(cbd);
         }
 
-        // Stock Summary (all products - fuel and non-fuel)
+        // Stock Summary — only products with sales > 0
+        // Build a map of ProductInventory records for this shift by product ID
+        List<ProductInventory> shiftProductInvs = productInventoryRepository.findByShiftId(shiftId);
+        Map<Long, ProductInventory> productInvMap = new HashMap<>();
+        for (ProductInventory pi : shiftProductInvs) {
+            productInvMap.put(pi.getProduct().getId(), pi);
+        }
+
         List<Product> allProductEntities = productRepository.findByActive(true);
         for (Product product : allProductEntities) {
             ShiftReportPrintData.StockSummaryRow row = new ShiftReportPrintData.StockSummaryRow();
             row.setProductName(product.getName());
             row.setRate(product.getPrice());
 
-            // For fuel products, use tank data
             if ("FUEL".equalsIgnoreCase(product.getCategory())) {
+                // For fuel products, use tank data
                 double open = 0, receipt = 0, total = 0, sales = 0;
                 for (TankInventory ti : tankInvs) {
                     if (ti.getTank().getProduct() != null && ti.getTank().getProduct().getId().equals(product.getId())) {
@@ -811,27 +819,39 @@ public class ShiftClosingReportService {
                         sales += ti.getSaleStock() != null ? ti.getSaleStock() : 0;
                     }
                 }
+                if (sales == 0) continue; // skip fuel with zero sales
                 row.setOpenStock(open);
                 row.setReceipt(receipt);
                 row.setTotalStock(total);
                 row.setSales(sales);
             } else {
-                // Non-fuel: calculate from invoices
-                double sales = 0;
-                for (InvoiceBill inv : invoices) {
-                    if (inv.getProducts() != null) {
-                        for (InvoiceProduct ip : inv.getProducts()) {
-                            if (ip.getProduct() != null && ip.getProduct().getId().equals(product.getId())) {
-                                sales += ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
+                // Non-fuel: use ProductInventory records from the shift
+                ProductInventory pi = productInvMap.get(product.getId());
+                if (pi != null) {
+                    double sales = pi.getSales() != null ? pi.getSales() : 0;
+                    if (sales == 0) continue; // skip non-fuel with zero sales
+                    row.setOpenStock(pi.getOpenStock() != null ? pi.getOpenStock() : 0);
+                    row.setReceipt(pi.getIncomeStock() != null ? pi.getIncomeStock() : 0);
+                    row.setTotalStock(pi.getTotalStock() != null ? pi.getTotalStock() : 0);
+                    row.setSales(sales);
+                } else {
+                    // Fallback: calculate from invoices (if no ProductInventory exists)
+                    double sales = 0;
+                    for (InvoiceBill inv : invoices) {
+                        if (inv.getProducts() != null) {
+                            for (InvoiceProduct ip : inv.getProducts()) {
+                                if (ip.getProduct() != null && ip.getProduct().getId().equals(product.getId())) {
+                                    sales += ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
+                                }
                             }
                         }
                     }
+                    if (sales == 0) continue;
+                    row.setSales(sales);
+                    row.setOpenStock(0.0);
+                    row.setReceipt(0.0);
+                    row.setTotalStock(0.0);
                 }
-                if (sales == 0) continue; // skip non-fuel with zero sales
-                row.setSales(sales);
-                row.setOpenStock(0.0);
-                row.setReceipt(0.0);
-                row.setTotalStock(0.0);
             }
 
             BigDecimal salesAmt = product.getPrice() != null && row.getSales() != null
