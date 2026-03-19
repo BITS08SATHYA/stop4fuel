@@ -10,7 +10,11 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "godown_stock")
+@Table(name = "godown_stock", indexes = {
+    @Index(name = "idx_godown_stock_scid", columnList = "scid")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uk_godown_stock_product_scid", columnNames = {"product_id", "scid"})
+})
 @Getter
 @Setter
 public class GodownStock extends BaseEntity {

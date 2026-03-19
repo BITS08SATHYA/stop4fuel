@@ -6,7 +6,10 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "invoice_product")
+@Table(name = "invoice_product", indexes = {
+    @Index(name = "idx_inv_product_invoice_id", columnList = "invoice_bill_id"),
+    @Index(name = "idx_inv_product_product_id", columnList = "product_id")
+})
 @Getter
 @Setter
 public class InvoiceProduct extends BaseEntity {

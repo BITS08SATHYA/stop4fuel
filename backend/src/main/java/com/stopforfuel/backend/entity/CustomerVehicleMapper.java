@@ -5,7 +5,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "customer_vehicle_mapper")
+@Table(name = "customer_vehicle_mapper", indexes = {
+    @Index(name = "idx_cvm_customer_id", columnList = "customer_id"),
+    @Index(name = "idx_cvm_vehicle_id", columnList = "vehicle_id")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uk_cvm_customer_vehicle", columnNames = {"customer_id", "vehicle_id"})
+})
 @Getter
 @Setter
 public class CustomerVehicleMapper extends BaseEntity {

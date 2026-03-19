@@ -8,7 +8,10 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "incentive", uniqueConstraints = {
+@Table(name = "incentive", indexes = {
+    @Index(name = "idx_incentive_customer_id", columnList = "customer_id"),
+    @Index(name = "idx_incentive_cust_prod_active", columnList = "customer_id, product_id, active")
+}, uniqueConstraints = {
     @UniqueConstraint(columnNames = {"customer_id", "product_id"})
 })
 @Getter

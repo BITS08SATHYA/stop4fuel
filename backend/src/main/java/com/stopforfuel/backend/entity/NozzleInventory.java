@@ -8,7 +8,12 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "nozzle_inventory")
+@Table(name = "nozzle_inventory", indexes = {
+    @Index(name = "idx_nozzle_inv_shift_id", columnList = "shift_id"),
+    @Index(name = "idx_nozzle_inv_nozzle_id", columnList = "nozzle_id"),
+    @Index(name = "idx_nozzle_inv_date", columnList = "date"),
+    @Index(name = "idx_nozzle_inv_nozzle_date", columnList = "nozzle_id, date DESC")
+})
 @Getter
 @Setter
 public class NozzleInventory extends BaseEntity {
