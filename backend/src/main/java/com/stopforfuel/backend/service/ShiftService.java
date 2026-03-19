@@ -13,11 +13,14 @@ public class ShiftService {
 
     private final ShiftRepository repository;
     private final ShiftClosingReportService shiftClosingReportService;
+    private final ProductInventoryService productInventoryService;
 
     public ShiftService(ShiftRepository repository,
-                        @Lazy ShiftClosingReportService shiftClosingReportService) {
+                        @Lazy ShiftClosingReportService shiftClosingReportService,
+                        @Lazy ProductInventoryService productInventoryService) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
+        this.productInventoryService = productInventoryService;
     }
 
     public List<Shift> getAllShifts() {
@@ -34,7 +37,12 @@ public class ShiftService {
         if (shift.getScid() == null) {
             shift.setScid(1L);
         }
-        return repository.save(shift);
+        Shift saved = repository.save(shift);
+
+        // Auto-create ProductInventory records for all active products
+        productInventoryService.autoCreateForShift(saved);
+
+        return saved;
     }
 
     public Shift closeShift(Long id) {
@@ -44,6 +52,9 @@ public class ShiftService {
         shift.setEndTime(LocalDateTime.now());
         shift.setStatus("CLOSED");
         Shift closed = repository.save(shift);
+
+        // Finalize rate/amount on ProductInventory records
+        productInventoryService.finalizeForShift(closed.getId());
 
         // Auto-generate shift closing report
         shiftClosingReportService.generateReport(closed.getId());

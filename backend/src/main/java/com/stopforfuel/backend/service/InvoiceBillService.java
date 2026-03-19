@@ -26,6 +26,7 @@ public class InvoiceBillService {
     private final ProductInventoryRepository productInventoryRepository;
     private final com.stopforfuel.backend.repository.NozzleRepository nozzleRepository;
     private final ProductRepository productRepository;
+    private final CashierStockRepository cashierStockRepository;
     private final CustomerService customerService;
     private final IncentiveService incentiveService;
     private final ShiftService shiftService;
@@ -392,6 +393,17 @@ public class InvoiceBillService {
                 double total = productInv.getTotalStock() != null ? productInv.getTotalStock() : 0.0;
                 productInv.setSales(total - productInv.getCloseStock());
                 productInventoryRepository.save(productInv);
+            }
+
+            // --- 4. CashierStock deduction (non-fuel products) ---
+            if (invoiceProduct.getNozzle() == null || invoiceProduct.getNozzle().getId() == null) {
+                Long scid = invoiceProduct.getInvoiceBill() != null && invoiceProduct.getInvoiceBill().getScid() != null
+                        ? invoiceProduct.getInvoiceBill().getScid() : 1L;
+                cashierStockRepository.findByProductIdAndScid(productId, scid).ifPresent(cashierStock -> {
+                    double current = cashierStock.getCurrentStock() != null ? cashierStock.getCurrentStock() : 0.0;
+                    cashierStock.setCurrentStock(Math.max(0, current - qty));
+                    cashierStockRepository.save(cashierStock);
+                });
             }
         }
     }
