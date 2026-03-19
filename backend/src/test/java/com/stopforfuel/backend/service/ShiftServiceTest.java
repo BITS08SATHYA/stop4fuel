@@ -23,6 +23,12 @@ class ShiftServiceTest {
     @Mock
     private ShiftRepository repository;
 
+    @Mock
+    private ShiftClosingReportService shiftClosingReportService;
+
+    @Mock
+    private ProductInventoryService productInventoryService;
+
     @InjectMocks
     private ShiftService shiftService;
 
