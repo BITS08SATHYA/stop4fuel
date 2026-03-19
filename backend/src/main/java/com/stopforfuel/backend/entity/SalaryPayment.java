@@ -8,7 +8,12 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "salary_payments")
+@Table(name = "salary_payments", indexes = {
+    @Index(name = "idx_salary_pay_employee_id", columnList = "employee_id"),
+    @Index(name = "idx_salary_pay_month_year", columnList = "month, year")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uk_salary_pay_emp_month_year", columnNames = {"employee_id", "month", "year"})
+})
 @Getter
 @Setter
 public class SalaryPayment extends BaseEntity {

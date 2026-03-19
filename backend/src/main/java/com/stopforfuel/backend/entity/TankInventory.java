@@ -9,7 +9,12 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "tank_inventory")
+@Table(name = "tank_inventory", indexes = {
+    @Index(name = "idx_tank_inv_shift_id", columnList = "shift_id"),
+    @Index(name = "idx_tank_inv_tank_id", columnList = "tank_id"),
+    @Index(name = "idx_tank_inv_date", columnList = "date"),
+    @Index(name = "idx_tank_inv_tank_date", columnList = "tank_id, date DESC")
+})
 @Getter
 @Setter
 public class TankInventory extends BaseEntity {

@@ -10,7 +10,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "shift_transaction")
+@Table(name = "shift_transaction", indexes = {
+    @Index(name = "idx_shift_txn_shift_id", columnList = "shift_id"),
+    @Index(name = "idx_shift_txn_scid", columnList = "scid"),
+    @Index(name = "idx_shift_txn_type", columnList = "txn_type")
+})
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "txn_type", discriminatorType = DiscriminatorType.STRING)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "txnType")

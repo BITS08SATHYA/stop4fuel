@@ -10,7 +10,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payment")
+@Table(name = "payment", indexes = {
+    @Index(name = "idx_payment_shift_id", columnList = "shift_id"),
+    @Index(name = "idx_payment_customer_id", columnList = "customer_id"),
+    @Index(name = "idx_payment_statement_id", columnList = "statement_id"),
+    @Index(name = "idx_payment_invoice_bill_id", columnList = "invoice_bill_id"),
+    @Index(name = "idx_payment_scid", columnList = "scid")
+})
 @Getter
 @Setter
 public class Payment extends BaseEntity {

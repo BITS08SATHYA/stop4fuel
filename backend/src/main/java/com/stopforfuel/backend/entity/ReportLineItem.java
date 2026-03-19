@@ -6,7 +6,10 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "report_line_items")
+@Table(name = "report_line_items", indexes = {
+    @Index(name = "idx_rli_report_id", columnList = "report_id"),
+    @Index(name = "idx_rli_report_section", columnList = "report_id, section")
+})
 @Getter
 @Setter
 public class ReportLineItem extends SimpleBaseEntity {

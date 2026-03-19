@@ -11,7 +11,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "purchase_invoice")
+@Table(name = "purchase_invoice", indexes = {
+    @Index(name = "idx_purch_inv_scid", columnList = "scid"),
+    @Index(name = "idx_purch_inv_status", columnList = "status"),
+    @Index(name = "idx_purch_inv_supplier_id", columnList = "supplier_id"),
+    @Index(name = "idx_purch_inv_invoice_date", columnList = "invoice_date")
+})
 @Getter
 @Setter
 public class PurchaseInvoice extends BaseEntity {

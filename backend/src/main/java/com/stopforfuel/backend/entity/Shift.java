@@ -6,7 +6,10 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "shifts")
+@Table(name = "shifts", indexes = {
+    @Index(name = "idx_shifts_status", columnList = "status"),
+    @Index(name = "idx_shifts_scid", columnList = "scid")
+})
 @Getter
 @Setter
 public class Shift extends BaseEntity {

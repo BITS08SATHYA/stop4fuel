@@ -9,7 +9,13 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "attendance")
+@Table(name = "attendance", indexes = {
+    @Index(name = "idx_attendance_employee_id", columnList = "employee_id"),
+    @Index(name = "idx_attendance_date", columnList = "date"),
+    @Index(name = "idx_attendance_emp_date", columnList = "employee_id, date")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uk_attendance_employee_date", columnNames = {"employee_id", "date"})
+})
 @Getter
 @Setter
 public class Attendance extends BaseEntity {

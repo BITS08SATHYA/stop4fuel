@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "cashier_stock")
+@Table(name = "cashier_stock", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_cashier_stock_product_scid", columnNames = {"product_id", "scid"})
+})
 @Getter
 @Setter
 public class CashierStock extends BaseEntity {
