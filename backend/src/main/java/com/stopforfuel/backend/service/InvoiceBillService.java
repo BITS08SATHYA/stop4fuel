@@ -266,6 +266,25 @@ public class InvoiceBillService {
                 if (customerName != null) cardTxn.setCustomerName(customerName);
                 txn = cardTxn;
                 break;
+            case "CHEQUE":
+                ChequeTransaction chequeTxn = new ChequeTransaction();
+                chequeTxn.setReceivedAmount(amount);
+                chequeTxn.setRemarks(remark);
+                txn = chequeTxn;
+                break;
+            case "BANK TRANSFER":
+            case "BANK":
+                BankTransaction bankTxn = new BankTransaction();
+                bankTxn.setReceivedAmount(amount);
+                bankTxn.setRemarks(remark);
+                txn = bankTxn;
+                break;
+            case "CCMS":
+                CcmsTransaction ccmsTxn = new CcmsTransaction();
+                ccmsTxn.setReceivedAmount(amount);
+                ccmsTxn.setRemarks(remark);
+                txn = ccmsTxn;
+                break;
             default:
                 CashTransaction cashTxn = new CashTransaction();
                 cashTxn.setReceivedAmount(amount);

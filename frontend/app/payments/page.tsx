@@ -6,12 +6,12 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import {
-    CreditCard, Receipt, FileText, Search, Check, IndianRupee, Clock
+    CreditCard, Receipt, FileText, Search, Check, IndianRupee, Clock, ImageIcon, Paperclip, ExternalLink
 } from "lucide-react";
 import {
     getPayments, getPaymentModes, getOutstandingStatements,
     getCustomers, recordStatementPayment, recordBillPayment,
-    getOutstandingBills,
+    getOutstandingBills, uploadPaymentProof, getPaymentProofUrl,
     type Payment, type PaymentMode, type Statement, type InvoiceBill, type Customer, type PageResponse
 } from "@/lib/api/station";
 
@@ -55,6 +55,7 @@ export default function PaymentsPage() {
     const [payModeId, setPayModeId] = useState<number | "">("");
     const [payReference, setPayReference] = useState("");
     const [payRemarks, setPayRemarks] = useState("");
+    const [proofFile, setProofFile] = useState<File | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
@@ -168,10 +169,21 @@ export default function PaymentsPage() {
                 paymentDate: new Date().toISOString(),
             };
 
+            let saved: Payment;
             if (payTarget === "statement") {
-                await recordStatementPayment(Number((selectedTarget as Statement).id), paymentData);
+                saved = await recordStatementPayment(Number((selectedTarget as Statement).id), paymentData);
             } else {
-                await recordBillPayment(Number((selectedTarget as InvoiceBill).id), paymentData);
+                saved = await recordBillPayment(Number((selectedTarget as InvoiceBill).id), paymentData);
+            }
+
+            // Upload proof image if selected
+            if (proofFile && saved.id) {
+                try {
+                    await uploadPaymentProof(saved.id, proofFile);
+                } catch {
+                    // Payment saved but proof upload failed — non-blocking
+                    console.error("Proof upload failed");
+                }
             }
 
             setShowPayModal(false);
@@ -194,6 +206,7 @@ export default function PaymentsPage() {
         setPayModeId("");
         setPayReference("");
         setPayRemarks("");
+        setProofFile(null);
         setError("");
         setOutstandingStatements([]);
         setOutstandingBills([]);
@@ -296,12 +309,13 @@ export default function PaymentsPage() {
                                     <th className="text-left py-3 px-4">Mode</th>
                                     <th className="text-left py-3 px-4">Reference</th>
                                     <th className="text-left py-3 px-4">Remarks</th>
+                                    <th className="text-center py-3 px-4">Proof</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {payments.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                                        <td colSpan={8} className="text-center py-8 text-muted-foreground">
                                             No payments recorded yet
                                         </td>
                                     </tr>
@@ -338,6 +352,26 @@ export default function PaymentsPage() {
                                             <td className="py-3 px-4">{p.paymentMode?.modeName || "-"}</td>
                                             <td className="py-3 px-4 text-muted-foreground">{p.referenceNo || "-"}</td>
                                             <td className="py-3 px-4 text-muted-foreground">{p.remarks || "-"}</td>
+                                            <td className="py-3 px-4 text-center">
+                                                {p.proofImageKey ? (
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const data = await getPaymentProofUrl(p.id!);
+                                                                window.open(data.url, '_blank');
+                                                            } catch {
+                                                                alert("Failed to load proof image");
+                                                            }
+                                                        }}
+                                                        className="text-primary hover:text-primary/80 transition-colors"
+                                                        title="View proof"
+                                                    >
+                                                        <ImageIcon className="w-4 h-4 inline" />
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-muted-foreground/30">-</span>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))
                                 )}
@@ -635,6 +669,34 @@ export default function PaymentsPage() {
                                         placeholder="Any notes..."
                                         className="w-full px-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Proof Image Upload */}
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                                    <Paperclip className="w-3.5 h-3.5 inline mr-1" />
+                                    Attach Proof (optional)
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <label className="flex-1 flex items-center gap-2 px-4 py-2.5 bg-card border border-border border-dashed rounded-lg text-muted-foreground text-sm cursor-pointer hover:border-primary/50 transition-colors">
+                                        <ImageIcon className="w-4 h-4" />
+                                        {proofFile ? proofFile.name : "Cheque scan, UPI screenshot..."}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                                        />
+                                    </label>
+                                    {proofFile && (
+                                        <button
+                                            onClick={() => setProofFile(null)}
+                                            className="text-xs text-rose-400 hover:underline"
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </>
