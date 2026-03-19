@@ -17,6 +17,10 @@ public class Tank extends BaseEntity {
     @Column(nullable = false)
     private Double capacity;
 
+    /** Current available stock in liters */
+    @Column(nullable = false)
+    private Double availableStock = 0.0;
+
     /** Which product (fuel type) this tank holds */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", nullable = false)
