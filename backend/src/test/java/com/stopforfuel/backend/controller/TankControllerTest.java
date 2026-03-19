@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.entity.Tank;
 import com.stopforfuel.backend.service.TankService;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,11 +35,18 @@ class TankControllerTest {
 
     @BeforeEach
     void setUp() {
+        Product testProduct = new Product();
+        testProduct.setId(1L);
+        testProduct.setName("Diesel");
+        testProduct.setCategory("FUEL");
+        testProduct.setUnit("LITERS");
+
         testTank = new Tank();
         testTank.setId(1L);
         testTank.setName("Tank A");
         testTank.setCapacity(10000.0);
         testTank.setActive(true);
+        testTank.setProduct(testProduct);
     }
 
     @Test
