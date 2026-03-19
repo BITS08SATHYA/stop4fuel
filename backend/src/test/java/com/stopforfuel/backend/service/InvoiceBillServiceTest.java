@@ -41,6 +41,8 @@ class InvoiceBillServiceTest {
     @Mock
     private ProductRepository productRepository;
     @Mock
+    private CashierStockRepository cashierStockRepository;
+    @Mock
     private CustomerService customerService;
     @Mock
     private IncentiveService incentiveService;
