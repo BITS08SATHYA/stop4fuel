@@ -13,6 +13,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.stopforfuel.backend.entity.PaymentMode;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -37,9 +39,14 @@ class PaymentControllerTest {
 
     @BeforeEach
     void setUp() {
+        PaymentMode paymentMode = new PaymentMode();
+        paymentMode.setId(1L);
+        paymentMode.setModeName("CASH");
+
         testPayment = new Payment();
         testPayment.setId(1L);
         testPayment.setAmount(new BigDecimal("10000"));
+        testPayment.setPaymentMode(paymentMode);
     }
 
     @Test
