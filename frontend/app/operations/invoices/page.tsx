@@ -679,8 +679,8 @@ export default function InvoicesPage() {
                         {billType === "CASH" && (
                             <div>
                                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Payment Method</label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {["CASH", "CARD", "UPI"].map(mode => (
+                                <div className="grid grid-cols-3 gap-2">
+                                    {["CASH", "CARD", "UPI", "CHEQUE", "BANK", "CCMS"].map(mode => (
                                         <button
                                             key={mode}
                                             onClick={() => setPaymentMode(mode)}

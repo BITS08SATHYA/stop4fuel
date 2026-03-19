@@ -8,7 +8,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -23,6 +25,7 @@ public class PaymentService {
     private final PaymentModeRepository paymentModeRepository;
     private final ShiftService shiftService;
     private final ShiftTransactionService shiftTransactionService;
+    private final S3StorageService s3StorageService;
 
     public Page<Payment> getPayments(Pageable pageable) {
         return paymentRepository.findAll(pageable);
@@ -285,6 +288,42 @@ public class PaymentService {
                     .orElseThrow(() -> new RuntimeException("Payment mode not found"));
             payment.setPaymentMode(mode);
         }
+    }
+
+    /**
+     * Upload a proof image for a payment (cheque scan, UPI screenshot, etc.).
+     */
+    @Transactional
+    public Payment uploadProofImage(Long paymentId, MultipartFile file) throws IOException {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
+
+        // Delete old proof if exists
+        if (payment.getProofImageKey() != null) {
+            s3StorageService.delete(payment.getProofImageKey());
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        String ext = (originalFilename != null && originalFilename.contains("."))
+                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                : ".jpg";
+        String key = "payments/" + paymentId + "/proof-" + System.currentTimeMillis() + ext;
+
+        s3StorageService.upload(key, file);
+        payment.setProofImageKey(key);
+        return paymentRepository.save(payment);
+    }
+
+    /**
+     * Get a presigned URL for a payment's proof image.
+     */
+    public String getProofImageUrl(Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
+        if (payment.getProofImageKey() == null) {
+            return null;
+        }
+        return s3StorageService.getPresignedUrl(payment.getProofImageKey());
     }
 
     // Summary DTOs (inner classes for simplicity)

@@ -45,6 +45,9 @@ public class Payment extends BaseEntity {
     @Column(name = "remarks")
     private String remarks;
 
+    @Column(name = "proof_image_key")
+    private String proofImageKey;
+
     @PrePersist
     @Override
     protected void onCreate() {
