@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.GradeType;
+import com.stopforfuel.backend.entity.OilType;
 import com.stopforfuel.backend.repository.GradeTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,13 +27,23 @@ class GradeTypeServiceTest {
     private GradeTypeService gradeTypeService;
 
     private GradeType testGrade;
+    private OilType dieselOilType;
+    private OilType petrolOilType;
 
     @BeforeEach
     void setUp() {
+        dieselOilType = new OilType();
+        dieselOilType.setId(1L);
+        dieselOilType.setName("DIESEL");
+
+        petrolOilType = new OilType();
+        petrolOilType.setId(2L);
+        petrolOilType.setName("PETROL");
+
         testGrade = new GradeType();
         testGrade.setId(1L);
         testGrade.setName("Premium Diesel");
-        testGrade.setOilType("DIESEL");
+        testGrade.setOilType(dieselOilType);
         testGrade.setActive(true);
         testGrade.setScid(1L);
     }
@@ -74,7 +85,7 @@ class GradeTypeServiceTest {
     void updateGrade_updatesFields() {
         GradeType details = new GradeType();
         details.setName("Updated Grade");
-        details.setOilType("PETROL");
+        details.setOilType(petrolOilType);
         details.setDescription("Updated desc");
         details.setActive(false);
 
@@ -83,7 +94,7 @@ class GradeTypeServiceTest {
 
         GradeType result = gradeTypeService.updateGrade(1L, details);
         assertEquals("Updated Grade", result.getName());
-        assertEquals("PETROL", result.getOilType());
+        assertEquals("PETROL", result.getOilType().getName());
         assertFalse(result.isActive());
     }
 
