@@ -1,8 +1,6 @@
 package com.stopforfuel.backend.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,11 +10,10 @@ import lombok.Setter;
 @Setter
 public class GradeType extends BaseEntity {
 
-    /**
-     * The fluid/oil type category, e.g., "Engine Oil", "Gear Oil", "Diesel", "Petrol"
-     */
-    @Column(name = "oil_type")
-    private String oilType;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "oil_type_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private OilType oilType;
 
     /**
      * The specific variant/grade name, e.g., "20W-40", "20W-50", "Premium 95"

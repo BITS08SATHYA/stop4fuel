@@ -25,6 +25,11 @@ public class GradeTypeController {
         return service.getActiveGrades();
     }
 
+    @GetMapping("/oil-type/{oilTypeId}")
+    public List<GradeType> getByOilType(@PathVariable Long oilTypeId) {
+        return service.getActiveGradesByOilType(oilTypeId);
+    }
+
     @GetMapping("/{id}")
     public GradeType getById(@PathVariable Long id) {
         return service.getGradeById(id);
