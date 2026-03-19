@@ -40,6 +40,11 @@ public class Product extends BaseEntity {
     private Supplier supplier;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "oil_type_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private OilType oilType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "grade_id")
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     @com.fasterxml.jackson.annotation.JsonProperty("gradeType")

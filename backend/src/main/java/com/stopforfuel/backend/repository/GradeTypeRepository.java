@@ -10,5 +10,6 @@ import java.util.Optional;
 @Repository
 public interface GradeTypeRepository extends JpaRepository<GradeType, Long> {
     List<GradeType> findByActiveTrue();
+    List<GradeType> findByOilTypeIdAndActiveTrue(Long oilTypeId);
     Optional<GradeType> findByName(String name);
 }

@@ -44,6 +44,7 @@ public class ProductService {
         product.setVolume(productDetails.getVolume());
         product.setBrand(productDetails.getBrand());
         product.setSupplier(productDetails.getSupplier());
+        product.setOilType(productDetails.getOilType());
         product.setGrade(productDetails.getGrade());
         return productRepository.save(product);
     }
