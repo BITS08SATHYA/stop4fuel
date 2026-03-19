@@ -34,9 +34,16 @@ export interface Supplier {
     active: boolean;
 }
 
+export interface OilType {
+    id: number;
+    name: string;
+    description?: string;
+    active: boolean;
+}
+
 export interface GradeType {
     id: number;
-    oilType?: string;
+    oilType?: OilType;
     name: string;
     description?: string;
     active: boolean;
@@ -53,6 +60,7 @@ export interface Product {
     brand?: string;
     active: boolean;
     supplier?: Supplier;
+    oilType?: OilType;
     gradeType?: GradeType;
 }
 
@@ -60,6 +68,7 @@ export interface Tank {
     id: number;
     name: string;
     capacity: number;
+    availableStock: number;
     product: Product;
     active: boolean;
 }
@@ -435,6 +444,33 @@ export const deleteSupplier = (id: number): Promise<void> =>
 export const toggleSupplierStatus = (id: number): Promise<Supplier> =>
     fetch(`${API_BASE_URL}/suppliers/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
 
+// Oil Types
+export const getOilTypes = (): Promise<OilType[]> =>
+    fetch(`${API_BASE_URL}/oil-types`).then(handleResponse);
+
+export const getActiveOilTypes = (): Promise<OilType[]> =>
+    fetch(`${API_BASE_URL}/oil-types/active`).then(handleResponse);
+
+export const createOilType = (oilType: Partial<OilType>): Promise<OilType> =>
+    fetch(`${API_BASE_URL}/oil-types`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oilType),
+    }).then(handleResponse);
+
+export const updateOilType = (id: number, oilType: Partial<OilType>): Promise<OilType> =>
+    fetch(`${API_BASE_URL}/oil-types/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oilType),
+    }).then(handleResponse);
+
+export const deleteOilType = (id: number): Promise<void> =>
+    fetch(`${API_BASE_URL}/oil-types/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const toggleOilTypeStatus = (id: number): Promise<OilType> =>
+    fetch(`${API_BASE_URL}/oil-types/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
+
 // Grade Types
 export const getGradeTypes = (): Promise<GradeType[]> =>
     fetch(`${API_BASE_URL}/grades`).then(handleResponse);
@@ -461,6 +497,9 @@ export const deleteGradeType = (id: number): Promise<void> =>
 
 export const toggleGradeStatus = (id: number): Promise<GradeType> =>
     fetch(`${API_BASE_URL}/grades/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
+
+export const getGradesByOilType = (oilTypeId: number): Promise<GradeType[]> =>
+    fetch(`${API_BASE_URL}/grades/oil-type/${oilTypeId}`).then(handleResponse);
 
 // Invoices
 export const getInvoices = (): Promise<InvoiceBill[]> =>
@@ -1049,6 +1088,74 @@ export const receivePurchaseOrder = (id: number, items: ReceiveItemDTO[]): Promi
 
 export const cancelPurchaseOrder = (id: number): Promise<PurchaseOrder> =>
     fetch(`${API_BASE_URL}/purchase-orders/${id}/cancel`, { method: 'PATCH' }).then(handleResponse);
+
+// --- Purchase Invoices ---
+export interface PurchaseInvoiceItem {
+    id?: number;
+    product: Product;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+}
+
+export interface PurchaseInvoice {
+    id?: number;
+    supplier: Supplier;
+    purchaseOrder?: PurchaseOrder;
+    invoiceNumber: string;
+    invoiceDate: string;
+    deliveryDate?: string;
+    invoiceType: 'FUEL' | 'NON_FUEL';
+    status: 'PENDING' | 'VERIFIED' | 'PAID';
+    totalAmount: number;
+    remarks?: string;
+    pdfFilePath?: string;
+    items: PurchaseInvoiceItem[];
+}
+
+export const getPurchaseInvoices = (status?: string, supplierId?: number, type?: string): Promise<PurchaseInvoice[]> => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (supplierId) params.append('supplierId', String(supplierId));
+    if (type) params.append('type', type);
+    const qs = params.toString();
+    return fetch(`${API_BASE_URL}/purchase-invoices${qs ? `?${qs}` : ''}`).then(handleResponse);
+};
+
+export const getPurchaseInvoiceById = (id: number): Promise<PurchaseInvoice> =>
+    fetch(`${API_BASE_URL}/purchase-invoices/${id}`).then(handleResponse);
+
+export const createPurchaseInvoice = (invoice: Partial<PurchaseInvoice>): Promise<PurchaseInvoice> =>
+    fetch(`${API_BASE_URL}/purchase-invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoice),
+    }).then(handleResponse);
+
+export const updatePurchaseInvoice = (id: number, invoice: Partial<PurchaseInvoice>): Promise<PurchaseInvoice> =>
+    fetch(`${API_BASE_URL}/purchase-invoices/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoice),
+    }).then(handleResponse);
+
+export const deletePurchaseInvoice = (id: number): Promise<void> =>
+    fetch(`${API_BASE_URL}/purchase-invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const updatePurchaseInvoiceStatus = (id: number, status: string): Promise<PurchaseInvoice> =>
+    fetch(`${API_BASE_URL}/purchase-invoices/${id}/status?status=${status}`, { method: 'PATCH' }).then(handleResponse);
+
+export const uploadPurchaseInvoicePdf = (id: number, file: File): Promise<PurchaseInvoice> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${API_BASE_URL}/purchase-invoices/${id}/upload-pdf`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const getPurchaseInvoicePdfUrl = (id: number): string =>
+    `${API_BASE_URL}/purchase-invoices/${id}/pdf`;
 
 // ────────────────────────────────────────────────────────────
 // Employee Management Types & APIs
