@@ -15,6 +15,10 @@ public class IncentiveService {
 
     private final IncentiveRepository repository;
 
+    public List<Incentive> getAll() {
+        return repository.findAllWithCustomerAndProduct();
+    }
+
     public List<Incentive> getByCustomer(Long customerId) {
         return repository.findByCustomerId(customerId);
     }

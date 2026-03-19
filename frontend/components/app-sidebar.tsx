@@ -43,6 +43,7 @@ import {
     Brain,
     Shield,
     UserCheck,
+    Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -57,6 +58,7 @@ const customerManagementNav = [
     { name: "Groups", href: "/customers/groups", icon: Users },
     { name: "Vehicles", href: "/customers/vehicles", icon: Truck },
     { name: "Mappings", href: "/customers/mappings", icon: Map },
+    { name: "Incentives", href: "/customers/incentives", icon: Tag },
 ];
 
 const employeeManagementNav = [
