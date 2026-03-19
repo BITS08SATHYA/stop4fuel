@@ -15,11 +15,24 @@ import {
     History,
     Banknote,
     ChevronRight,
+    FileText,
+    Upload,
+    Camera,
+    Download,
+    ExternalLink,
+    Loader2,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useFormValidation, required, email, phone, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import {
+    uploadEmployeePhoto,
+    uploadEmployeeAadharDoc,
+    uploadEmployeePanDoc,
+    getEmployeeFileUrl,
+} from "@/lib/api/station";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -140,7 +153,7 @@ export function EmployeeList() {
     const [isEditing, setIsEditing] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
-    const [formTab, setFormTab] = useState<"personal" | "additional" | "address" | "bank">("personal");
+    const [formTab, setFormTab] = useState<"personal" | "additional" | "address" | "bank" | "documents">("personal");
 
     // Profile modal state
     const [profileEmployee, setProfileEmployee] = useState<Employee | null>(null);
@@ -155,6 +168,14 @@ export function EmployeeList() {
     const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
     const [showAdvanceForm, setShowAdvanceForm] = useState(false);
     const [newAdvance, setNewAdvance] = useState({ amount: "", advanceDate: "", advanceType: "SALARY_ADVANCE", remarks: "" });
+
+    // Document upload state
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [uploadingAadhar, setUploadingAadhar] = useState(false);
+    const [uploadingPan, setUploadingPan] = useState(false);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [aadharPreview, setAadharPreview] = useState<string | null>(null);
+    const [panPreview, setPanPreview] = useState<string | null>(null);
 
     const { errors: empErrors, validate: validateEmp, clearError: clearEmpError, clearAllErrors: clearAllEmpErrors } = useFormValidation({
         name: [required("Employee name is required")],
@@ -308,6 +329,52 @@ export function EmployeeList() {
         }
     };
 
+    // ── Document upload handlers ──────────────────────────────────
+    const handlePhotoUpload = async (file: File) => {
+        if (!currentEmployee?.id) return;
+        setUploadingPhoto(true);
+        try {
+            const updated = await uploadEmployeePhoto(currentEmployee.id, file);
+            setCurrentEmployee({ ...currentEmployee, photoUrl: (updated as any).photoUrl });
+            setPhotoPreview(URL.createObjectURL(file));
+            fetchEmployees();
+        } catch (error) {
+            console.error("Failed to upload photo", error);
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
+    const handleAadharUpload = async (file: File) => {
+        if (!currentEmployee?.id) return;
+        setUploadingAadhar(true);
+        try {
+            const updated = await uploadEmployeeAadharDoc(currentEmployee.id, file);
+            setCurrentEmployee({ ...currentEmployee, aadharDocUrl: (updated as any).aadharDocUrl });
+            setAadharPreview(file.type.startsWith("image/") ? URL.createObjectURL(file) : file.name);
+            fetchEmployees();
+        } catch (error) {
+            console.error("Failed to upload Aadhar doc", error);
+        } finally {
+            setUploadingAadhar(false);
+        }
+    };
+
+    const handlePanUpload = async (file: File) => {
+        if (!currentEmployee?.id) return;
+        setUploadingPan(true);
+        try {
+            const updated = await uploadEmployeePanDoc(currentEmployee.id, file);
+            setCurrentEmployee({ ...currentEmployee, panDocUrl: (updated as any).panDocUrl });
+            setPanPreview(file.type.startsWith("image/") ? URL.createObjectURL(file) : file.name);
+            fetchEmployees();
+        } catch (error) {
+            console.error("Failed to upload PAN doc", error);
+        } finally {
+            setUploadingPan(false);
+        }
+    };
+
     const openProfile = (emp: Employee) => {
         setProfileEmployee(emp);
         setProfileTab("overview");
@@ -352,6 +419,9 @@ export function EmployeeList() {
                         setFormTab("personal");
                         clearAllEmpErrors();
                         setApiError("");
+                        setPhotoPreview(null);
+                        setAadharPreview(null);
+                        setPanPreview(null);
                         setShowForm(true);
                     }}
                     className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
@@ -407,7 +477,12 @@ export function EmployeeList() {
                         ) : (
                             filteredEmployees.map((emp) => (
                                 <tr key={emp.id} className="border-t hover:bg-muted/50">
-                                    <td className="p-4 font-medium">{emp.name}</td>
+                                    <td className="p-4 font-medium">
+                                        <div className="flex items-center gap-3">
+                                            <EmployeeAvatar employeeId={emp.id} name={emp.name} photoUrl={emp.photoUrl} size="sm" />
+                                            {emp.name}
+                                        </div>
+                                    </td>
                                     <td className="p-4">{emp.designation}</td>
                                     <td className="p-4">
                                         <div className="flex flex-col">
@@ -443,6 +518,9 @@ export function EmployeeList() {
                                                     setFormTab("personal");
                                                     clearAllEmpErrors();
                                                     setApiError("");
+                                                    setPhotoPreview(null);
+                                                    setAadharPreview(null);
+                                                    setPanPreview(null);
                                                     setShowForm(true);
                                                 }}
                                                 className="p-2 hover:bg-muted rounded-md"
@@ -490,6 +568,7 @@ export function EmployeeList() {
                                 { key: "additional", label: "Additional", icon: User },
                                 { key: "address", label: "Address", icon: MapPin },
                                 { key: "bank", label: "Bank Details", icon: Landmark },
+                                { key: "documents", label: "Documents", icon: FileText },
                             ] as const).map(({ key, label, icon: Icon }) => (
                                 <button
                                     key={key}
@@ -664,6 +743,154 @@ export function EmployeeList() {
                                 </div>
                             )}
 
+                            {formTab === "documents" && (
+                                !isEditing ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                                        <FileText className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                                        <p className="text-muted-foreground font-medium">Save employee first to upload documents</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Documents can be uploaded after creating the employee record.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {/* Photo Upload */}
+                                        <div className="space-y-3">
+                                            <label className="text-sm font-semibold flex items-center gap-2">
+                                                <Camera className="w-4 h-4" /> Employee Photo
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative">
+                                                    {photoPreview ? (
+                                                        <img src={photoPreview} alt="Preview" className="w-24 h-24 rounded-full object-cover" />
+                                                    ) : (
+                                                        <EmployeeAvatar employeeId={currentEmployee.id} name={currentEmployee.name} photoUrl={currentEmployee.photoUrl} size="lg" />
+                                                    )}
+                                                    {uploadingPhoto && (
+                                                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                                                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg,image/png,image/webp"
+                                                        id="photo-upload"
+                                                        className="hidden"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file) handlePhotoUpload(file);
+                                                            e.target.value = "";
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => document.getElementById("photo-upload")?.click()}
+                                                        disabled={uploadingPhoto}
+                                                        className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Upload className="w-4 h-4" />
+                                                        {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+                                                    </button>
+                                                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG or WebP. Max 5MB.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Aadhar Document */}
+                                        <div className="space-y-3">
+                                            <label className="text-sm font-semibold flex items-center gap-2">
+                                                <FileText className="w-4 h-4" /> Aadhar Document
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-16 h-16 rounded-lg border border-border flex items-center justify-center bg-muted/30 flex-shrink-0">
+                                                    {aadharPreview && aadharPreview.startsWith("blob:") ? (
+                                                        <img src={aadharPreview} alt="Aadhar" className="w-full h-full rounded-lg object-cover" />
+                                                    ) : currentEmployee.aadharDocUrl ? (
+                                                        <FileText className="w-6 h-6 text-blue-500" />
+                                                    ) : (
+                                                        <FileText className="w-6 h-6 text-muted-foreground/30" />
+                                                    )}
+                                                    {uploadingAadhar && (
+                                                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                                                        id="aadhar-upload"
+                                                        className="hidden"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file) handleAadharUpload(file);
+                                                            e.target.value = "";
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => document.getElementById("aadhar-upload")?.click()}
+                                                        disabled={uploadingAadhar}
+                                                        className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Upload className="w-4 h-4" />
+                                                        {uploadingAadhar ? "Uploading..." : currentEmployee.aadharDocUrl ? "Replace" : "Upload Aadhar"}
+                                                    </button>
+                                                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP or PDF. Max 10MB.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* PAN Document */}
+                                        <div className="space-y-3">
+                                            <label className="text-sm font-semibold flex items-center gap-2">
+                                                <FileText className="w-4 h-4" /> PAN Document
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-16 h-16 rounded-lg border border-border flex items-center justify-center bg-muted/30 flex-shrink-0">
+                                                    {panPreview && panPreview.startsWith("blob:") ? (
+                                                        <img src={panPreview} alt="PAN" className="w-full h-full rounded-lg object-cover" />
+                                                    ) : currentEmployee.panDocUrl ? (
+                                                        <FileText className="w-6 h-6 text-blue-500" />
+                                                    ) : (
+                                                        <FileText className="w-6 h-6 text-muted-foreground/30" />
+                                                    )}
+                                                    {uploadingPan && (
+                                                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                                                        id="pan-upload"
+                                                        className="hidden"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file) handlePanUpload(file);
+                                                            e.target.value = "";
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => document.getElementById("pan-upload")?.click()}
+                                                        disabled={uploadingPan}
+                                                        className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Upload className="w-4 h-4" />
+                                                        {uploadingPan ? "Uploading..." : currentEmployee.panDocUrl ? "Replace" : "Upload PAN"}
+                                                    </button>
+                                                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP or PDF. Max 10MB.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            )}
+
                             {/* Footer */}
                             <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
                                 <button
@@ -694,8 +921,33 @@ export function EmployeeList() {
             >
                 {profileEmployee && (
                     <div className="space-y-6">
+                        {/* Profile Header */}
+                        <div className="flex items-start gap-5 -mt-2">
+                            <EmployeeAvatar employeeId={profileEmployee.id} name={profileEmployee.name} photoUrl={profileEmployee.photoUrl} size="lg" />
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-xl font-bold truncate">{profileEmployee.name}</h3>
+                                <p className="text-sm text-muted-foreground">{profileEmployee.designation}{profileEmployee.department ? ` - ${profileEmployee.department}` : ""}</p>
+                                {profileEmployee.employeeCode && (
+                                    <p className="text-xs text-muted-foreground mt-0.5">ID: {profileEmployee.employeeCode}</p>
+                                )}
+                                <div className="flex items-center gap-3 mt-2">
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                            profileEmployee.status === "Active"
+                                                ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                                                : "bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300"
+                                        }`}
+                                    >
+                                        {profileEmployee.status}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">Joined {profileEmployee.joinDate}</span>
+                                    <span className="text-sm font-semibold">{formatRupees(profileEmployee.salary)}</span>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Profile Tabs */}
-                        <div className="flex border-b border-border -mt-2">
+                        <div className="flex border-b border-border">
                             {([
                                 { key: "overview", label: "Overview", icon: User },
                                 { key: "salary", label: "Salary History", icon: History },
@@ -718,42 +970,44 @@ export function EmployeeList() {
 
                         {/* ── Overview Tab ────────────────────────────── */}
                         {profileTab === "overview" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <GlassCard>
-                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                                        <User className="w-4 h-4" /> Personal Information
-                                    </h4>
-                                    <dl className="space-y-2 text-sm">
-                                        <DetailRow label="Name" value={profileEmployee.name} />
-                                        <DetailRow label="Designation" value={profileEmployee.designation} />
-                                        <DetailRow label="Email" value={profileEmployee.email} />
-                                        <DetailRow label="Phone" value={profileEmployee.phone} />
-                                        {profileEmployee.additionalPhones && (
-                                            <DetailRow label="Other Phones" value={profileEmployee.additionalPhones} />
-                                        )}
-                                        {profileEmployee.aadharNumber && (
-                                            <DetailRow label="Aadhar" value={profileEmployee.aadharNumber} />
-                                        )}
-                                        <DetailRow label="Join Date" value={profileEmployee.joinDate} />
-                                        <DetailRow
-                                            label="Status"
-                                            value={
-                                                <span
-                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                        profileEmployee.status === "Active"
-                                                            ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                                                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300"
-                                                    }`}
-                                                >
-                                                    {profileEmployee.status}
-                                                </span>
-                                            }
-                                        />
-                                        <DetailRow label="Salary" value={formatRupees(profileEmployee.salary)} />
-                                    </dl>
-                                </GlassCard>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <GlassCard>
+                                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                                            <User className="w-4 h-4" /> Personal Information
+                                        </h4>
+                                        <dl className="space-y-2 text-sm">
+                                            <DetailRow label="Email" value={profileEmployee.email} />
+                                            <DetailRow label="Phone" value={profileEmployee.phone} />
+                                            {profileEmployee.additionalPhones && (
+                                                <DetailRow label="Other Phones" value={profileEmployee.additionalPhones} />
+                                            )}
+                                            {profileEmployee.aadharNumber && (
+                                                <DetailRow label="Aadhar" value={profileEmployee.aadharNumber} />
+                                            )}
+                                            {profileEmployee.panNumber && (
+                                                <DetailRow label="PAN" value={profileEmployee.panNumber} />
+                                            )}
+                                        </dl>
+                                    </GlassCard>
 
-                                <div className="space-y-4">
+                                    <GlassCard>
+                                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                                            <User className="w-4 h-4" /> Additional Info
+                                        </h4>
+                                        <dl className="space-y-2 text-sm">
+                                            {profileEmployee.dateOfBirth && <DetailRow label="Date of Birth" value={profileEmployee.dateOfBirth} />}
+                                            {profileEmployee.gender && <DetailRow label="Gender" value={profileEmployee.gender} />}
+                                            {profileEmployee.maritalStatus && <DetailRow label="Marital Status" value={profileEmployee.maritalStatus} />}
+                                            {profileEmployee.bloodGroup && <DetailRow label="Blood Group" value={profileEmployee.bloodGroup} />}
+                                            {profileEmployee.emergencyContact && <DetailRow label="Emergency Contact" value={profileEmployee.emergencyContact} />}
+                                            {profileEmployee.emergencyPhone && <DetailRow label="Emergency Phone" value={profileEmployee.emergencyPhone} />}
+                                            {!profileEmployee.dateOfBirth && !profileEmployee.gender && !profileEmployee.bloodGroup && (
+                                                <p className="text-muted-foreground text-xs">No additional info available.</p>
+                                            )}
+                                        </dl>
+                                    </GlassCard>
+
                                     <GlassCard>
                                         <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
                                             <MapPin className="w-4 h-4" /> Address
@@ -778,6 +1032,27 @@ export function EmployeeList() {
                                         </dl>
                                     </GlassCard>
                                 </div>
+
+                                {/* Documents Section */}
+                                <GlassCard>
+                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                                        <FileText className="w-4 h-4" /> Documents
+                                    </h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <DocumentCard
+                                            label="Aadhar Document"
+                                            hasFile={!!profileEmployee.aadharDocUrl}
+                                            employeeId={profileEmployee.id}
+                                            fileType="aadhar-doc"
+                                        />
+                                        <DocumentCard
+                                            label="PAN Document"
+                                            hasFile={!!profileEmployee.panDocUrl}
+                                            employeeId={profileEmployee.id}
+                                            fileType="pan-doc"
+                                        />
+                                    </div>
+                                </GlassCard>
                             </div>
                         )}
 
@@ -1056,6 +1331,43 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
         <div className="flex justify-between">
             <dt className="text-muted-foreground">{label}</dt>
             <dd className="font-medium text-right">{value}</dd>
+        </div>
+    );
+}
+
+function DocumentCard({ label, hasFile, employeeId, fileType }: { label: string; hasFile: boolean; employeeId: number; fileType: string }) {
+    const [loading, setLoading] = useState(false);
+
+    const handleView = async () => {
+        setLoading(true);
+        try {
+            const { url } = await getEmployeeFileUrl(employeeId, fileType);
+            window.open(url, "_blank");
+        } catch (error) {
+            console.error("Failed to get file URL", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
+            <div className="flex items-center gap-2">
+                <FileText className={`w-5 h-5 ${hasFile ? "text-blue-500" : "text-muted-foreground/30"}`} />
+                <span className="text-sm font-medium">{label}</span>
+            </div>
+            {hasFile ? (
+                <button
+                    onClick={handleView}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                >
+                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
+                    View
+                </button>
+            ) : (
+                <span className="text-xs text-muted-foreground">No document</span>
+            )}
         </div>
     );
 }

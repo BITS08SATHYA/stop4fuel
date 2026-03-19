@@ -21,3 +21,8 @@ server:
 
 app:
   upload-dir: ${UPLOAD_DIR:uploads}
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:stopforfuel-uploads}
+    region: ${AWS_REGION:ap-south-1}
