@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
@@ -44,18 +46,22 @@ public class InvoiceBill extends BaseEntity {
     @Column(name = "customer_gst")
     private String customerGST;
 
+    @PositiveOrZero(message = "Gross amount must be zero or positive")
     @Column(name = "gross_amount", precision = 19, scale = 4)
     private BigDecimal grossAmount;
 
+    @PositiveOrZero(message = "Total discount must be zero or positive")
     @Column(name = "total_discount", precision = 19, scale = 4)
     private BigDecimal totalDiscount;
 
+    @PositiveOrZero(message = "Net amount must be zero or positive")
     @Column(name = "net_amount", precision = 19, scale = 4)
     private BigDecimal netAmount;
 
     @Column(name = "bill_no")
     private String billNo; // e.g., "C26/34", "A26/51"
 
+    @NotBlank(message = "Bill type is required")
     @Column(name = "bill_type", nullable = false)
     private String billType; // CASH, CREDIT
 

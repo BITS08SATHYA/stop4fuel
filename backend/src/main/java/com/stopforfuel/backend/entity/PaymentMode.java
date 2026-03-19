@@ -14,6 +14,7 @@ public class PaymentMode {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @jakarta.validation.constraints.NotBlank(message = "Payment mode name is required")
     @Column(name = "mode_name", nullable = false, unique = true)
     private String modeName; // CASH, CHEQUE, UPI, NEFT, CARD
 }

@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.CashAdvance;
 import com.stopforfuel.backend.service.CashAdvanceService;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,7 @@ public class CashAdvanceController {
     }
 
     @PostMapping
-    public CashAdvance create(@RequestBody CashAdvance advance) {
+    public CashAdvance create(@Valid @RequestBody CashAdvance advance) {
         return cashAdvanceService.create(advance);
     }
 

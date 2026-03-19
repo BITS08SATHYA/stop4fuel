@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.SalaryPayment;
 import com.stopforfuel.backend.service.SalaryPaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,7 @@ public class SalaryPaymentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SalaryPayment> updatePayment(@PathVariable Long id, @RequestBody SalaryPayment payment) {
+    public ResponseEntity<SalaryPayment> updatePayment(@PathVariable Long id, @Valid @RequestBody SalaryPayment payment) {
         try {
             return ResponseEntity.ok(salaryPaymentService.updatePayment(id, payment));
         } catch (RuntimeException e) {

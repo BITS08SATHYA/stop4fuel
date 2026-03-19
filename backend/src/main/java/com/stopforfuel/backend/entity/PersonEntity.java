@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,6 +13,8 @@ import lombok.Setter;
 @Setter
 public abstract class PersonEntity extends BaseEntity {
 
+    @NotBlank(message = "Name is required")
+    @Size(max = 255, message = "Name must not exceed 255 characters")
     @Column(nullable = false)
     private String name;
 

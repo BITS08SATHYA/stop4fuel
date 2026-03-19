@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Nozzle;
 import com.stopforfuel.backend.service.NozzleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,12 +43,12 @@ public class NozzleController {
     }
 
     @PostMapping
-    public Nozzle createNozzle(@RequestBody Nozzle nozzle) {
+    public Nozzle createNozzle(@Valid @RequestBody Nozzle nozzle) {
         return nozzleService.createNozzle(nozzle);
     }
 
     @PutMapping("/{id}")
-    public Nozzle updateNozzle(@PathVariable Long id, @RequestBody Nozzle nozzle) {
+    public Nozzle updateNozzle(@PathVariable Long id, @Valid @RequestBody Nozzle nozzle) {
         return nozzleService.updateNozzle(id, nozzle);
     }
 

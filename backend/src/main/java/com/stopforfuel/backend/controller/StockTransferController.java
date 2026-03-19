@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.StockTransfer;
 import com.stopforfuel.backend.service.StockTransferService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class StockTransferController {
     }
 
     @PostMapping
-    public StockTransfer create(@RequestBody StockTransfer transfer) {
+    public StockTransfer create(@Valid @RequestBody StockTransfer transfer) {
         return service.createTransfer(transfer);
     }
 }

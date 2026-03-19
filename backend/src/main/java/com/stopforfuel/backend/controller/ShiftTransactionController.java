@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
 import com.stopforfuel.backend.service.ShiftTransactionService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class ShiftTransactionController {
     }
 
     @PostMapping
-    public ShiftTransaction create(@RequestBody ShiftTransaction transaction) {
+    public ShiftTransaction create(@Valid @RequestBody ShiftTransaction transaction) {
         return service.create(transaction);
     }
 

@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.service.CustomerService;
@@ -35,7 +36,7 @@ public class CustomerController {
     }
 
     @PostMapping
-    public Customer createCustomer(@RequestBody Customer customer) {
+    public Customer createCustomer(@Valid @RequestBody Customer customer) {
         // TODO: Get scid from SecurityContext
         if (customer.getScid() == null) {
             customer.setScid(1L);
@@ -44,7 +45,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    public Customer updateCustomer(@PathVariable Long id, @RequestBody Customer customer) {
+    public Customer updateCustomer(@PathVariable Long id, @Valid @RequestBody Customer customer) {
         return customerService.updateCustomer(id, customer);
     }
 

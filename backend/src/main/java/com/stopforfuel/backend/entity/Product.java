@@ -1,6 +1,9 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,20 +15,22 @@ import java.math.BigDecimal;
 @Setter
 public class Product extends BaseEntity {
 
+    @NotBlank(message = "Product name is required")
+    @Size(max = 255, message = "Product name must not exceed 255 characters")
     @Column(nullable = false)
     private String name;
 
     @Column(name = "hsn_code")
     private String hsnCode;
 
-    /** Selling price: per liter for fuel, MRP for non-fuel */
+    @PositiveOrZero(message = "Price must be zero or positive")
     private BigDecimal price;
 
-    /** FUEL, LUBRICANT, ACCESSORY */
+    @NotBlank(message = "Category is required")
     @Column(nullable = false, columnDefinition = "varchar(255) default 'FUEL'")
     private String category = "FUEL";
 
-    /** LITERS (fuel), PIECES (non-fuel) */
+    @NotBlank(message = "Unit is required")
     @Column(nullable = false, columnDefinition = "varchar(255) default 'LITERS'")
     private String unit = "LITERS";
 

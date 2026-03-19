@@ -2,6 +2,7 @@ package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,9 +14,11 @@ import java.time.LocalDate;
 @Setter
 public class TankInventory extends BaseEntity {
 
+    @NotNull(message = "Date is required")
     @Column(nullable = false)
     private LocalDate date;
 
+    @NotNull(message = "Tank is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tank_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

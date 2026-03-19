@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.service.PurchaseInvoiceService;
 import lombok.RequiredArgsConstructor;
@@ -40,12 +41,12 @@ public class PurchaseInvoiceController {
     }
 
     @PostMapping
-    public PurchaseInvoice create(@RequestBody PurchaseInvoice invoice) {
+    public PurchaseInvoice create(@Valid @RequestBody PurchaseInvoice invoice) {
         return service.save(invoice);
     }
 
     @PutMapping("/{id}")
-    public PurchaseInvoice update(@PathVariable Long id, @RequestBody PurchaseInvoice invoice) {
+    public PurchaseInvoice update(@PathVariable Long id, @Valid @RequestBody PurchaseInvoice invoice) {
         return service.update(id, invoice);
     }
 

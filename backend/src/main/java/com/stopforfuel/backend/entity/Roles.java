@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +15,7 @@ public class Roles {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Role type is required")
     @Column(name = "role_type", nullable = false, unique = true)
     private String roleType; // e.g., "CUSTOMER", "EMPLOYEE", "DEALER"
 }

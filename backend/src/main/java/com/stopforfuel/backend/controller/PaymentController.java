@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Payment;
 import com.stopforfuel.backend.service.PaymentService;
 import lombok.RequiredArgsConstructor;
@@ -63,7 +64,7 @@ public class PaymentController {
     @PostMapping("/statement/{statementId}")
     public ResponseEntity<Payment> recordStatementPayment(
             @PathVariable Long statementId,
-            @RequestBody Payment payment) {
+            @Valid @RequestBody Payment payment) {
         Payment saved = paymentService.recordStatementPayment(statementId, payment);
         return ResponseEntity.ok(saved);
     }
@@ -75,7 +76,7 @@ public class PaymentController {
     @PostMapping("/bill/{invoiceBillId}")
     public ResponseEntity<Payment> recordBillPayment(
             @PathVariable Long invoiceBillId,
-            @RequestBody Payment payment) {
+            @Valid @RequestBody Payment payment) {
         Payment saved = paymentService.recordBillPayment(invoiceBillId, payment);
         return ResponseEntity.ok(saved);
     }

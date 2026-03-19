@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,6 +11,7 @@ import lombok.Setter;
 @Setter
 public class Pump extends BaseEntity {
 
+    @NotBlank(message = "Pump name is required")
     @Column(nullable = false)
     private String name;
 

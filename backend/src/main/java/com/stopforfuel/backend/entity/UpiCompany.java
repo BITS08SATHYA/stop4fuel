@@ -7,6 +7,7 @@ import lombok.Setter;
 @Table(name = "upi_company")
 @Getter @Setter
 public class UpiCompany extends SimpleBaseEntity {
+    @jakarta.validation.constraints.NotBlank(message = "UPI company name is required")
     @Column(name = "company_name", nullable = false)
     private String companyName;
 }

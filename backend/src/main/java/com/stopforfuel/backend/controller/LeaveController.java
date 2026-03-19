@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.LeaveBalance;
 import com.stopforfuel.backend.entity.LeaveRequest;
 import com.stopforfuel.backend.entity.LeaveType;
@@ -26,12 +27,12 @@ public class LeaveController {
     }
 
     @PostMapping("/leave-types")
-    public LeaveType createLeaveType(@RequestBody LeaveType leaveType) {
+    public LeaveType createLeaveType(@Valid @RequestBody LeaveType leaveType) {
         return leaveService.createLeaveType(leaveType);
     }
 
     @PutMapping("/leave-types/{id}")
-    public ResponseEntity<LeaveType> updateLeaveType(@PathVariable Long id, @RequestBody LeaveType leaveType) {
+    public ResponseEntity<LeaveType> updateLeaveType(@PathVariable Long id, @Valid @RequestBody LeaveType leaveType) {
         try {
             return ResponseEntity.ok(leaveService.updateLeaveType(id, leaveType));
         } catch (RuntimeException e) {
@@ -64,7 +65,7 @@ public class LeaveController {
 
     // Leave Requests
     @PostMapping("/employees/{employeeId}/leave-requests")
-    public LeaveRequest createLeaveRequest(@PathVariable Long employeeId, @RequestBody LeaveRequest request) {
+    public LeaveRequest createLeaveRequest(@PathVariable Long employeeId, @Valid @RequestBody LeaveRequest request) {
         return leaveService.createLeaveRequest(employeeId, request);
     }
 

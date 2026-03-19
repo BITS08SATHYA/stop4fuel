@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Attendance;
 import com.stopforfuel.backend.service.AttendanceService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/employees/{employeeId}/attendance")
-    public Attendance markAttendance(@PathVariable Long employeeId, @RequestBody Attendance attendance) {
+    public Attendance markAttendance(@PathVariable Long employeeId, @Valid @RequestBody Attendance attendance) {
         com.stopforfuel.backend.entity.Employee employee = new com.stopforfuel.backend.entity.Employee();
         employee.setId(employeeId);
         attendance.setEmployee(employee);

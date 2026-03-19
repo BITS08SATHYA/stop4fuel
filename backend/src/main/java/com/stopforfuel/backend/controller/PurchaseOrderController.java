@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.ReceiveItemDTO;
 import com.stopforfuel.backend.entity.PurchaseOrder;
 import com.stopforfuel.backend.service.PurchaseOrderService;
@@ -31,12 +32,12 @@ public class PurchaseOrderController {
     }
 
     @PostMapping
-    public PurchaseOrder create(@RequestBody PurchaseOrder order) {
+    public PurchaseOrder create(@Valid @RequestBody PurchaseOrder order) {
         return service.save(order);
     }
 
     @PutMapping("/{id}")
-    public PurchaseOrder update(@PathVariable Long id, @RequestBody PurchaseOrder order) {
+    public PurchaseOrder update(@PathVariable Long id, @Valid @RequestBody PurchaseOrder order) {
         return service.update(id, order);
     }
 
