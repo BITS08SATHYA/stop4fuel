@@ -12,9 +12,15 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    defer-datasource-initialization: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:db/seed-data.sql
+      separator: ;;
 
 server:
   port: ${SERVER_PORT:8080}
