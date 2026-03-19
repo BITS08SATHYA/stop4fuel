@@ -9,6 +9,7 @@ import {
     getNozzles,
     getCustomers,
     getIncentivesByCustomer,
+    searchVehicles,
     Product,
     Nozzle,
     InvoiceBill,
@@ -36,7 +37,8 @@ import {
     CheckCircle2,
     Trash2,
     ShieldAlert,
-    Ban
+    Ban,
+    Info
 } from "lucide-react";
 import Link from "next/link";
 
@@ -57,6 +59,11 @@ export default function InvoicesPage() {
     const [selectedVehicle, setSelectedVehicle] = useState<any>(undefined);
     const [isSaving, setIsSaving] = useState(false);
     const [isWalkIn, setIsWalkIn] = useState(false);
+
+    // Vehicle search (cross-customer)
+    const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
+    const [vehicleSearchResults, setVehicleSearchResults] = useState<Vehicle[]>([]);
+    const [vehicleSearchTimeout, setVehicleSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
     // Incentives
     const [incentives, setIncentives] = useState<Incentive[]>([]);
@@ -124,6 +131,26 @@ export default function InvoicesPage() {
         setSelectedVehicle(v);
     };
 
+    const handleVehicleSearch = (query: string) => {
+        setVehicleSearchQuery(query);
+        if (vehicleSearchTimeout) clearTimeout(vehicleSearchTimeout);
+        if (query.length < 2) {
+            setVehicleSearchResults([]);
+            return;
+        }
+        const timeout = setTimeout(async () => {
+            try {
+                const results = await searchVehicles(query);
+                // Exclude vehicles already shown in the customer's list
+                const customerVehicleIds = new Set(customerVehicles.map((v: any) => v.id));
+                setVehicleSearchResults(results.filter(v => !customerVehicleIds.has(v.id)));
+            } catch (err) {
+                console.error("Vehicle search failed", err);
+            }
+        }, 300);
+        setVehicleSearchTimeout(timeout);
+    };
+
     const addProductLine = () => {
         setSelectedProducts([...selectedProducts, {
             product: null,
@@ -184,6 +211,8 @@ export default function InvoicesPage() {
         setCurrentStep(1);
         setError("");
         setIsWalkIn(false);
+        setVehicleSearchQuery("");
+        setVehicleSearchResults([]);
     };
 
     const handleSave = async () => {
@@ -401,6 +430,51 @@ export default function InvoicesPage() {
         </div>
     );
 
+    const isNonOwnedVehicle = selectedVehicle && selectedCustomer && selectedVehicle.customer && selectedVehicle.customer.id !== selectedCustomer.id;
+
+    const renderVehicleCard = (v: any, showOwner?: boolean) => {
+        const isBlocked = v.status === "BLOCKED" || v.status === "INACTIVE";
+        const isSelected = selectedVehicle?.id === v.id;
+        return (
+            <button
+                key={v.id}
+                onClick={() => { selectVehicle(v); setVehicleSearchQuery(""); setVehicleSearchResults([]); }}
+                className={`p-5 rounded-2xl border-2 text-left transition-all ${
+                    isSelected
+                        ? "border-primary bg-primary/5 shadow-lg"
+                        : isBlocked
+                            ? "border-red-500/20 bg-red-500/5 opacity-70"
+                            : "border-border hover:border-primary/50 hover:bg-primary/5"
+                }`}
+            >
+                <div className="flex items-center justify-between mb-2">
+                    <p className="font-black text-lg text-foreground">{v.vehicleNumber}</p>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                        v.status === "ACTIVE" || !v.status ? "bg-green-500/10 text-green-500"
+                            : v.status === "BLOCKED" ? "bg-red-500/10 text-red-500"
+                            : "bg-yellow-500/10 text-yellow-500"
+                    }`}>
+                        {v.status || "ACTIVE"}
+                    </span>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                    {v.vehicleType && <p>Type: {v.vehicleType.name}</p>}
+                    {v.maxLitersPerMonth && (
+                        <p>Limit: {v.consumedLiters || 0} / {v.maxLitersPerMonth} L</p>
+                    )}
+                    {showOwner && v.customer && (
+                        <p className="text-amber-500 font-semibold">Owner: {v.customer.name}</p>
+                    )}
+                </div>
+                {isSelected && (
+                    <div className="mt-3 flex items-center gap-1 text-primary text-xs font-bold">
+                        <CheckCircle2 size={14} /> Selected
+                    </div>
+                )}
+            </button>
+        );
+    };
+
     const renderStep2 = () => (
         <div className="space-y-6">
             <GlassCard className="p-8">
@@ -416,49 +490,49 @@ export default function InvoicesPage() {
                     <div className="text-center py-12 text-muted-foreground">
                         <Truck className="w-12 h-12 mx-auto mb-3 opacity-40" />
                         <p className="font-medium">No vehicles found for this customer.</p>
-                        <p className="text-sm">Add vehicles in Customer Management first.</p>
+                        <p className="text-sm">You can search for any vehicle below.</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {customerVehicles.map((v: any) => {
-                            const isBlocked = v.status === "BLOCKED" || v.status === "INACTIVE";
-                            const isSelected = selectedVehicle?.id === v.id;
-                            return (
-                                <button
-                                    key={v.id}
-                                    onClick={() => selectVehicle(v)}
-                                    className={`p-5 rounded-2xl border-2 text-left transition-all ${
-                                        isSelected
-                                            ? "border-primary bg-primary/5 shadow-lg"
-                                            : isBlocked
-                                                ? "border-red-500/20 bg-red-500/5 opacity-70"
-                                                : "border-border hover:border-primary/50 hover:bg-primary/5"
-                                    }`}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="font-black text-lg text-foreground">{v.vehicleNumber}</p>
-                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                                            v.status === "ACTIVE" || !v.status ? "bg-green-500/10 text-green-500"
-                                                : v.status === "BLOCKED" ? "bg-red-500/10 text-red-500"
-                                                : "bg-yellow-500/10 text-yellow-500"
-                                        }`}>
-                                            {v.status || "ACTIVE"}
-                                        </span>
-                                    </div>
-                                    <div className="text-xs text-muted-foreground space-y-1">
-                                        {v.vehicleType && <p>Type: {v.vehicleType.name}</p>}
-                                        {v.maxLitersPerMonth && (
-                                            <p>Limit: {v.consumedLiters || 0} / {v.maxLitersPerMonth} L</p>
-                                        )}
-                                    </div>
-                                    {isSelected && (
-                                        <div className="mt-3 flex items-center gap-1 text-primary text-xs font-bold">
-                                            <CheckCircle2 size={14} /> Selected
-                                        </div>
-                                    )}
-                                </button>
-                            );
-                        })}
+                        {customerVehicles.map((v: any) => renderVehicleCard(v))}
+                    </div>
+                )}
+
+                {/* Cross-customer vehicle search */}
+                <div className="relative flex items-center gap-4 mt-8 mb-4">
+                    <div className="flex-1 border-t border-border"></div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Or search for another vehicle</span>
+                    <div className="flex-1 border-t border-border"></div>
+                </div>
+
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Search any vehicle number (e.g. TN38...)"
+                        className="w-full bg-background border border-border rounded-2xl py-4 pl-12 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+                        value={vehicleSearchQuery}
+                        onChange={(e) => handleVehicleSearch(e.target.value)}
+                    />
+                </div>
+
+                {vehicleSearchResults.length > 0 && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {vehicleSearchResults.map((v: any) => renderVehicleCard(v, true))}
+                    </div>
+                )}
+
+                {vehicleSearchQuery.length >= 2 && vehicleSearchResults.length === 0 && (
+                    <p className="text-sm text-muted-foreground mt-3 text-center">No other vehicles found matching &quot;{vehicleSearchQuery}&quot;</p>
+                )}
+
+                {/* Info banner for non-owned vehicle */}
+                {isNonOwnedVehicle && (
+                    <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3">
+                        <Info size={20} className="text-blue-500 shrink-0 mt-0.5" />
+                        <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                            This vehicle belongs to <span className="font-bold">{selectedVehicle.customer.name}</span>. The bill will be charged to <span className="font-bold">{selectedCustomer?.name}</span>.
+                        </p>
                     </div>
                 )}
 

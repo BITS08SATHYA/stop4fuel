@@ -555,7 +555,12 @@ export default function StatementsPage() {
                                                     <td className="py-2 px-3">
                                                         {bill.date ? new Date(bill.date).toLocaleDateString("en-IN") : "-"}
                                                     </td>
-                                                    <td className="py-2 px-3">{bill.vehicle?.vehicleNumber || "-"}</td>
+                                                    <td className="py-2 px-3">
+                                                        {bill.vehicle?.vehicleNumber || "-"}
+                                                        {bill.vehicle?.customer && selectedCustomerId && bill.vehicle.customer.id !== Number(selectedCustomerId) && (
+                                                            <span className="block text-[9px] text-amber-500 font-medium">(owned by {bill.vehicle.customer.name})</span>
+                                                        )}
+                                                    </td>
                                                     <td className="py-2 px-3 text-muted-foreground">
                                                         {bill.products?.map(p => p.product?.name).filter(Boolean).join(", ") || "-"}
                                                     </td>
@@ -650,7 +655,12 @@ export default function StatementsPage() {
                                                 <td className="py-2 px-3">
                                                     {bill.date ? new Date(bill.date).toLocaleDateString("en-IN") : "-"}
                                                 </td>
-                                                <td className="py-2 px-3">{bill.vehicle?.vehicleNumber || "-"}</td>
+                                                <td className="py-2 px-3">
+                                                    {bill.vehicle?.vehicleNumber || "-"}
+                                                    {bill.vehicle?.customer && detailStatement.customer && bill.vehicle.customer.id !== detailStatement.customer.id && (
+                                                        <span className="block text-[10px] text-amber-500 font-medium">(owned by {bill.vehicle.customer.name})</span>
+                                                    )}
+                                                </td>
                                                 <td className="py-2 px-3">{bill.indentNo || "-"}</td>
                                                 <td className="py-2 px-3 text-right font-medium">
                                                     {Number(bill.netAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}

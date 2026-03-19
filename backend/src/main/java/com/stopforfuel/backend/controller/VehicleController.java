@@ -20,6 +20,11 @@ public class VehicleController {
         return vehicleService.getAllVehicles(search);
     }
 
+    @GetMapping("/search")
+    public List<Vehicle> searchVehicles(@RequestParam String q) {
+        return vehicleService.searchVehicles(q);
+    }
+
     @GetMapping("/customer/{customerId}")
     public List<Vehicle> getVehiclesByCustomerId(@PathVariable Long customerId) {
         return vehicleService.getVehiclesByCustomerId(customerId);
