@@ -7,8 +7,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -93,5 +96,30 @@ public class PaymentController {
     public ResponseEntity<PaymentService.BillPaymentSummary> getBillSummary(
             @PathVariable Long invoiceBillId) {
         return ResponseEntity.ok(paymentService.getBillPaymentSummary(invoiceBillId));
+    }
+
+    /**
+     * Upload a proof image for a payment.
+     * POST /api/payments/{id}/upload-proof
+     */
+    @PostMapping("/{id}/upload-proof")
+    public ResponseEntity<Payment> uploadProof(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        Payment updated = paymentService.uploadProofImage(id, file);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Get a presigned URL for a payment's proof image.
+     * GET /api/payments/{id}/proof-url
+     */
+    @GetMapping("/{id}/proof-url")
+    public ResponseEntity<?> getProofUrl(@PathVariable Long id) {
+        String url = paymentService.getProofImageUrl(id);
+        if (url == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of("url", url));
     }
 }
