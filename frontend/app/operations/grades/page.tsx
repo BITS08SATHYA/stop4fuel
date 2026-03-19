@@ -9,12 +9,15 @@ import {
     updateGradeType,
     deleteGradeType,
     toggleGradeStatus,
-    GradeType
+    getActiveOilTypes,
+    GradeType,
+    OilType
 } from "@/lib/api/station";
 import { Award, Plus, Edit2, Trash2, FileText, CheckCircle2, XCircle, Search } from "lucide-react";
 
 export default function GradeTypesPage() {
     const [grades, setGrades] = useState<GradeType[]>([]);
+    const [oilTypes, setOilTypes] = useState<OilType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -23,7 +26,7 @@ export default function GradeTypesPage() {
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
     // Form State
-    const [oilType, setOilType] = useState("");
+    const [oilTypeId, setOilTypeId] = useState("");
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [active, setActive] = useState(true);
@@ -31,8 +34,12 @@ export default function GradeTypesPage() {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const data = await getGradeTypes();
-            setGrades(data);
+            const [gradeData, oilTypeData] = await Promise.all([
+                getGradeTypes(),
+                getActiveOilTypes()
+            ]);
+            setGrades(gradeData);
+            setOilTypes(oilTypeData);
         } catch (err) {
             console.error("Failed to load grades", err);
         } finally {
@@ -46,7 +53,7 @@ export default function GradeTypesPage() {
 
     const handleEdit = (grade: GradeType) => {
         setEditingId(grade.id);
-        setOilType(grade.oilType || "");
+        setOilTypeId(grade.oilType?.id?.toString() || "");
         setName(grade.name);
         setDescription(grade.description || "");
         setActive(grade.active);
@@ -76,11 +83,16 @@ export default function GradeTypesPage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const payload = { oilType, name, description, active };
+            const payload: any = {
+                name,
+                description,
+                active,
+                oilType: oilTypeId ? { id: Number(oilTypeId) } : null
+            };
             if (editingId) {
-                await updateGradeType(editingId, payload as any);
+                await updateGradeType(editingId, payload);
             } else {
-                await createGradeType(payload as any);
+                await createGradeType(payload);
             }
             setIsModalOpen(false);
             resetForm();
@@ -93,7 +105,7 @@ export default function GradeTypesPage() {
 
     const resetForm = () => {
         setEditingId(null);
-        setOilType("");
+        setOilTypeId("");
         setName("");
         setDescription("");
         setActive(true);
@@ -102,21 +114,22 @@ export default function GradeTypesPage() {
     // Filter then group grades by oilType for display
     const filteredGrades = grades.filter((g) => {
         const q = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery || g.name?.toLowerCase().includes(q) || g.oilType?.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q);
-        const matchesOilType = oilTypeFilter === "ALL" || (g.oilType || "Uncategorized") === oilTypeFilter;
+        const oilTypeName = g.oilType?.name || "Uncategorized";
+        const matchesSearch = !searchQuery || g.name?.toLowerCase().includes(q) || oilTypeName.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q);
+        const matchesOilType = oilTypeFilter === "ALL" || oilTypeName === oilTypeFilter;
         const matchesStatus = statusFilter === "ALL" || (g.active ? "ACTIVE" : "INACTIVE") === statusFilter;
         return matchesSearch && matchesOilType && matchesStatus;
     });
 
     const groupedGrades = filteredGrades.reduce<Record<string, GradeType[]>>((acc, g) => {
-        const key = g.oilType || "Uncategorized";
+        const key = g.oilType?.name || "Uncategorized";
         if (!acc[key]) acc[key] = [];
         acc[key].push(g);
         return acc;
     }, {});
 
-    // Get unique oil types for the filter dropdown
-    const oilTypes = [...new Set(grades.map(g => g.oilType || "Uncategorized"))];
+    // Get unique oil type names from existing grades for filter dropdown
+    const uniqueOilTypeNames = [...new Set(grades.map(g => g.oilType?.name || "Uncategorized"))];
 
     return (
         <div className="p-8 min-h-screen bg-background">
@@ -157,7 +170,7 @@ export default function GradeTypesPage() {
                         className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     >
                         <option value="ALL">All Oil Types</option>
-                        {oilTypes.map((type) => (
+                        {uniqueOilTypeNames.map((type) => (
                             <option key={type} value={type}>{type}</option>
                         ))}
                     </select>
@@ -225,7 +238,7 @@ export default function GradeTypesPage() {
                                                 </button>
                                             </div>
                                             {grade.oilType && (
-                                                <p className="text-xs text-primary/70 font-medium mb-2">{grade.oilType}</p>
+                                                <p className="text-xs text-primary/70 font-medium mb-2">{grade.oilType.name}</p>
                                             )}
                                             <p className="text-muted-foreground text-sm line-clamp-2 min-h-[2.5rem] mb-4">
                                                 {grade.description || "No description provided for this grade type."}
@@ -258,21 +271,18 @@ export default function GradeTypesPage() {
                             <label className="block text-sm font-bold text-foreground mb-1.5">
                                 Fluid / Oil Type <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 required
-                                list="oil-type-options"
-                                value={oilType}
-                                onChange={(e) => setOilType(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                placeholder="e.g. Engine Oil, Gear Oil, Diesel, Petrol"
-                            />
-                            <datalist id="oil-type-options">
-                                {oilTypes.map((type) => (
-                                    <option key={type} value={type} />
+                                value={oilTypeId}
+                                onChange={(e) => setOilTypeId(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
+                            >
+                                <option value="">Select Oil Type...</option>
+                                {oilTypes.map((ot) => (
+                                    <option key={ot.id} value={ot.id}>{ot.name}</option>
                                 ))}
-                            </datalist>
-                            <p className="text-xs text-muted-foreground mt-1">Select an existing type or type a new one</p>
+                            </select>
+                            <p className="text-xs text-muted-foreground mt-1">Select an oil type (manage oil types from the Oil Types page)</p>
                         </div>
 
                         <div>

@@ -70,6 +70,7 @@ const employeeManagementNav = [
 const productManagementNav = [
     { name: "Products", href: "/operations/products", icon: Package },
     { name: "Suppliers", href: "/operations/suppliers", icon: Truck },
+    { name: "Oil Types", href: "/operations/oil-types", icon: Droplets },
     { name: "Lubricant Grades", href: "/operations/grades", icon: Award },
 ];
 
@@ -89,6 +90,7 @@ const inventoryManagementNav = [
     { name: "Cashier Stock", href: "/operations/inventory/cashier", icon: ShoppingBag },
     { name: "Stock Transfer", href: "/operations/inventory/transfers", icon: ArrowLeftRight },
     { name: "Purchase Orders", href: "/operations/inventory/purchase-orders", icon: ClipboardList },
+    { name: "Purchase Invoices", href: "/operations/inventory/purchase-invoices", icon: FileText },
 ];
 
 const shiftManagementNav = [
