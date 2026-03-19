@@ -45,6 +45,9 @@ public class TankService {
         if (tank.getScid() == null) {
             tank.setScid(1L);
         }
+        if (tank.getAvailableStock() == null) {
+            tank.setAvailableStock(0.0);
+        }
         return tankRepository.save(tank);
     }
 
@@ -52,6 +55,9 @@ public class TankService {
         Tank tank = getTankById(id);
         tank.setName(tankDetails.getName());
         tank.setCapacity(tankDetails.getCapacity());
+        if (tankDetails.getAvailableStock() != null) {
+            tank.setAvailableStock(tankDetails.getAvailableStock());
+        }
         if (tankDetails.getProduct() != null && tankDetails.getProduct().getId() != null) {
             Product product = productRepository.findById(tankDetails.getProduct().getId())
                     .orElseThrow(() -> new RuntimeException("Product not found with id: " + tankDetails.getProduct().getId()));
