@@ -2,6 +2,7 @@ package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,11 +15,22 @@ import java.util.List;
 @Setter
 public class Employee extends BaseEntity {
 
+    @NotBlank(message = "Employee name is required")
+    @Size(max = 255, message = "Employee name must not exceed 255 characters")
     private String name;
+
     private String designation;
+
+    @Email(message = "Invalid email format")
     private String email;
+
+    @NotBlank(message = "Phone number is required")
+    @Size(max = 15, message = "Phone number must not exceed 15 characters")
     private String phone;
+
     private String additionalPhones;
+
+    @PositiveOrZero(message = "Salary must be zero or positive")
     private Double salary;
     private LocalDate joinDate;
     private String status = "Active";

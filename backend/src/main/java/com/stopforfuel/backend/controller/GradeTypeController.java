@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.GradeType;
 import com.stopforfuel.backend.service.GradeTypeService;
 import lombok.RequiredArgsConstructor;
@@ -36,12 +37,12 @@ public class GradeTypeController {
     }
 
     @PostMapping
-    public GradeType create(@RequestBody GradeType grade) {
+    public GradeType create(@Valid @RequestBody GradeType grade) {
         return service.createGrade(grade);
     }
 
     @PutMapping("/{id}")
-    public GradeType update(@PathVariable Long id, @RequestBody GradeType grade) {
+    public GradeType update(@PathVariable Long id, @Valid @RequestBody GradeType grade) {
         return service.updateGrade(id, grade);
     }
 

@@ -12,6 +12,7 @@ import lombok.Setter;
 @Setter
 public class VehicleType extends SimpleBaseEntity {
 
+    @jakarta.validation.constraints.NotBlank(message = "Vehicle type name is required")
     @Column(name = "type_name", nullable = false)
     private String typeName;
 

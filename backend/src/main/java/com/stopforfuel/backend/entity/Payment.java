@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,9 +18,12 @@ public class Payment extends BaseEntity {
     @Column(name = "payment_date", nullable = false)
     private LocalDateTime paymentDate;
 
+    @NotNull(message = "Payment amount is required")
+    @Positive(message = "Payment amount must be positive")
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
+    @NotNull(message = "Payment mode is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_mode_id", nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

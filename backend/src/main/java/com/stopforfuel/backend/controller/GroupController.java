@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.service.CustomerService;
@@ -28,12 +29,12 @@ public class GroupController {
     }
 
     @PostMapping
-    public Group createGroup(@RequestBody Group group) {
+    public Group createGroup(@Valid @RequestBody Group group) {
         return groupService.createGroup(group);
     }
 
     @PutMapping("/{id}")
-    public Group updateGroup(@PathVariable Long id, @RequestBody Group group) {
+    public Group updateGroup(@PathVariable Long id, @Valid @RequestBody Group group) {
         return groupService.updateGroup(id, group);
     }
 

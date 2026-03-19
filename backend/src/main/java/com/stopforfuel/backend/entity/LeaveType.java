@@ -10,9 +10,11 @@ import lombok.Setter;
 @Setter
 public class LeaveType extends SimpleBaseEntity {
 
+    @jakarta.validation.constraints.NotBlank(message = "Leave type name is required")
     @Column(nullable = false)
     private String typeName;
 
+    @jakarta.validation.constraints.PositiveOrZero(message = "Max days per year must be zero or positive")
     private Integer maxDaysPerYear;
 
     private Boolean carryForward = false;

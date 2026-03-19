@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.GodownStock;
 import com.stopforfuel.backend.service.GodownStockService;
 import lombok.RequiredArgsConstructor;
@@ -36,12 +37,12 @@ public class GodownStockController {
     }
 
     @PostMapping
-    public GodownStock create(@RequestBody GodownStock stock) {
+    public GodownStock create(@Valid @RequestBody GodownStock stock) {
         return service.save(stock);
     }
 
     @PutMapping("/{id}")
-    public GodownStock update(@PathVariable Long id, @RequestBody GodownStock stock) {
+    public GodownStock update(@PathVariable Long id, @Valid @RequestBody GodownStock stock) {
         return service.update(id, stock);
     }
 

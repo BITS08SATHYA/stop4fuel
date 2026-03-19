@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Pump;
 import com.stopforfuel.backend.service.PumpService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +33,12 @@ public class PumpController {
     }
 
     @PostMapping
-    public Pump createPump(@RequestBody Pump pump) {
+    public Pump createPump(@Valid @RequestBody Pump pump) {
         return pumpService.createPump(pump);
     }
 
     @PutMapping("/{id}")
-    public Pump updatePump(@PathVariable Long id, @RequestBody Pump pump) {
+    public Pump updatePump(@PathVariable Long id, @Valid @RequestBody Pump pump) {
         return pumpService.updatePump(id, pump);
     }
 

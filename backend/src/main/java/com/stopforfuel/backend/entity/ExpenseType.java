@@ -7,6 +7,7 @@ import lombok.Setter;
 @Table(name = "expense_type")
 @Getter @Setter
 public class ExpenseType extends SimpleBaseEntity {
+    @jakarta.validation.constraints.NotBlank(message = "Expense type name is required")
     @Column(name = "type_name", nullable = false)
     private String typeName;
 }

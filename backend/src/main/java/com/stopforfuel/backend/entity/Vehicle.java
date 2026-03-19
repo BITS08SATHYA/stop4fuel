@@ -1,6 +1,9 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,6 +15,8 @@ import java.math.BigDecimal;
 @Setter
 public class Vehicle extends SimpleBaseEntity {
 
+    @NotBlank(message = "Vehicle number is required")
+    @Size(max = 20, message = "Vehicle number must not exceed 20 characters")
     @Column(name = "vehicle_number", nullable = false, unique = true)
     private String vehicleNumber;
 
@@ -25,9 +30,11 @@ public class Vehicle extends SimpleBaseEntity {
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product preferredProduct;
 
+    @PositiveOrZero(message = "Max capacity must be zero or positive")
     @Column(name = "max_capacity")
     private BigDecimal maxCapacity;
 
+    @PositiveOrZero(message = "Max liters per month must be zero or positive")
     @Column(name = "max_liters_per_month")
     private BigDecimal maxLitersPerMonth;
 

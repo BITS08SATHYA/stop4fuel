@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Supplier;
 import com.stopforfuel.backend.service.SupplierService;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,12 @@ public class SupplierController {
     }
 
     @PostMapping
-    public Supplier create(@RequestBody Supplier supplier) {
+    public Supplier create(@Valid @RequestBody Supplier supplier) {
         return service.createSupplier(supplier);
     }
 
     @PutMapping("/{id}")
-    public Supplier update(@PathVariable Long id, @RequestBody Supplier supplier) {
+    public Supplier update(@PathVariable Long id, @Valid @RequestBody Supplier supplier) {
         return service.updateSupplier(id, supplier);
     }
 

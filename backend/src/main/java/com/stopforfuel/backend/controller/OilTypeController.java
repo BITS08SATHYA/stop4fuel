@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.OilType;
 import com.stopforfuel.backend.service.OilTypeService;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,12 @@ public class OilTypeController {
     }
 
     @PostMapping
-    public OilType create(@RequestBody OilType oilType) {
+    public OilType create(@Valid @RequestBody OilType oilType) {
         return service.createOilType(oilType);
     }
 
     @PutMapping("/{id}")
-    public OilType update(@PathVariable Long id, @RequestBody OilType oilType) {
+    public OilType update(@PathVariable Long id, @Valid @RequestBody OilType oilType) {
         return service.updateOilType(id, oilType);
     }
 

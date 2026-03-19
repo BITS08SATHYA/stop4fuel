@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Incentive;
 import com.stopforfuel.backend.service.IncentiveService;
 import lombok.RequiredArgsConstructor;
@@ -26,12 +27,12 @@ public class IncentiveController {
     }
 
     @PostMapping
-    public Incentive create(@RequestBody Incentive incentive) {
+    public Incentive create(@Valid @RequestBody Incentive incentive) {
         return service.create(incentive);
     }
 
     @PutMapping("/{id}")
-    public Incentive update(@PathVariable Long id, @RequestBody Incentive incentive) {
+    public Incentive update(@PathVariable Long id, @Valid @RequestBody Incentive incentive) {
         return service.update(id, incentive);
     }
 
