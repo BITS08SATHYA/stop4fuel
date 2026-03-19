@@ -11,8 +11,11 @@ import {
     Product,
     getActiveSuppliers,
     getActiveGradeTypes,
+    getActiveOilTypes,
+    getGradesByOilType,
     Supplier,
-    GradeType
+    GradeType,
+    OilType
 } from "@/lib/api/station";
 import { Package, Plus, Edit2, Trash2, Fuel, Box, Truck, Award, Search } from "lucide-react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
@@ -25,6 +28,7 @@ export default function ProductsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [oilTypes, setOilTypes] = useState<OilType[]>([]);
     const [gradeTypes, setGradeTypes] = useState<GradeType[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
@@ -39,6 +43,7 @@ export default function ProductsPage() {
     const [volume, setVolume] = useState("");
     const [brand, setBrand] = useState("");
     const [supplierId, setSupplierId] = useState("");
+    const [oilTypeId, setOilTypeId] = useState("");
     const [gradeTypeId, setGradeTypeId] = useState("");
     const [active, setActive] = useState(true);
     const [apiError, setApiError] = useState("");
@@ -57,11 +62,13 @@ export default function ProductsPage() {
         try {
             const pData = await getProducts();
             setProducts(pData);
-            const [sData, gData] = await Promise.all([
+            const [sData, oData, gData] = await Promise.all([
                 getActiveSuppliers(),
+                getActiveOilTypes(),
                 getActiveGradeTypes()
             ]);
             setSuppliers(sData);
+            setOilTypes(oData);
             setGradeTypes(gData);
         } catch (err) {
             console.error("Failed to load data", err);
@@ -85,6 +92,7 @@ export default function ProductsPage() {
             setVolume(product.volume ? product.volume.toString() : "");
             setBrand(product.brand || "");
             setSupplierId(product.supplier?.id.toString() || "");
+            setOilTypeId(product.oilType?.id.toString() || "");
             setGradeTypeId(product.gradeType?.id.toString() || "");
             setActive(product.active);
         } else {
@@ -97,6 +105,7 @@ export default function ProductsPage() {
             setVolume("");
             setBrand("");
             setSupplierId("");
+            setOilTypeId("");
             setGradeTypeId("");
             setActive(true);
         }
@@ -119,6 +128,7 @@ export default function ProductsPage() {
                 volume: volume ? Number(volume) : undefined,
                 brand: brand ? brand : undefined,
                 supplier: supplierId ? { id: Number(supplierId) } : undefined,
+                oilType: oilTypeId ? { id: Number(oilTypeId) } : undefined,
                 gradeType: gradeTypeId ? { id: Number(gradeTypeId) } : undefined,
                 active
             };
@@ -158,6 +168,23 @@ export default function ProductsPage() {
             }
         }
     }, [category, editingProduct]);
+
+    // Filter grades by selected oil type
+    const filteredGradeTypes = oilTypeId
+        ? gradeTypes.filter(g => g.oilType?.id === Number(oilTypeId))
+        : gradeTypes;
+
+    // Reset grade selection when oil type changes
+    useEffect(() => {
+        if (oilTypeId && gradeTypeId) {
+            const gradeStillValid = gradeTypes.some(
+                g => g.id === Number(gradeTypeId) && g.oilType?.id === Number(oilTypeId)
+            );
+            if (!gradeStillValid) {
+                setGradeTypeId("");
+            }
+        }
+    }, [oilTypeId]);
 
     const filtered = products.filter((p) => {
         const q = searchQuery.toLowerCase();
@@ -299,6 +326,11 @@ export default function ProductsPage() {
                                                     {product.supplier && (
                                                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                                             <Truck className="w-3 h-3" /> {product.supplier.name}
+                                                        </span>
+                                                    )}
+                                                    {product.oilType && (
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            {product.oilType.name}
                                                         </span>
                                                     )}
                                                     {product.gradeType && (
@@ -470,6 +502,22 @@ export default function ProductsPage() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
+                                        Oil Type <span className="text-muted-foreground font-normal text-xs">(Optional)</span>
+                                    </label>
+                                    <select
+                                        value={oilTypeId}
+                                        onChange={(e) => setOilTypeId(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
+                                    >
+                                        <option value="">Select Oil Type...</option>
+                                        {oilTypes.map(ot => (
+                                            <option key={ot.id} value={ot.id}>{ot.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
                                         <Award className="w-4 h-4 text-primary" /> Lubricant Grade <span className="text-muted-foreground font-normal text-xs">(Optional)</span>
                                     </label>
                                     <select
@@ -478,8 +526,10 @@ export default function ProductsPage() {
                                         className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
                                     >
                                         <option value="">Select Grade...</option>
-                                        {gradeTypes.map(g => (
-                                            <option key={g.id} value={g.id}>{g.name}</option>
+                                        {filteredGradeTypes.map(g => (
+                                            <option key={g.id} value={g.id}>
+                                                {g.name}{g.oilType ? ` (${g.oilType.name})` : ''}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>

@@ -21,6 +21,10 @@ public class GradeTypeService {
         return repository.findByActiveTrue();
     }
 
+    public List<GradeType> getActiveGradesByOilType(Long oilTypeId) {
+        return repository.findByOilTypeIdAndActiveTrue(oilTypeId);
+    }
+
     public GradeType getGradeById(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("GradeType not found with id: " + id));
