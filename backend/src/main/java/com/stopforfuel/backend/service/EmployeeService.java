@@ -8,7 +8,9 @@ import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +25,9 @@ public class EmployeeService {
 
     @Autowired
     private EmployeeAdvanceRepository employeeAdvanceRepository;
+
+    @Autowired
+    private S3StorageService s3StorageService;
 
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAll();
@@ -117,5 +122,97 @@ public class EmployeeService {
                 .orElseThrow(() -> new RuntimeException("Advance not found"));
         advance.setStatus(status);
         return employeeAdvanceRepository.save(advance);
+    }
+
+    // ── File Uploads ────────────────────────────────────────────────
+
+    public Employee uploadPhoto(Long id, MultipartFile file) throws IOException {
+        validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp"}, 5 * 1024 * 1024);
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        String ext = getExtension(file.getOriginalFilename());
+        String key = "employees/" + id + "/photo." + ext;
+        if (employee.getPhotoUrl() != null && !employee.getPhotoUrl().isEmpty()) {
+            s3StorageService.delete(employee.getPhotoUrl());
+        }
+        s3StorageService.upload(key, file);
+        employee.setPhotoUrl(key);
+        return employeeRepository.save(employee);
+    }
+
+    public Employee uploadAadharDoc(Long id, MultipartFile file) throws IOException {
+        validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp", "application/pdf"}, 10 * 1024 * 1024);
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        String ext = getExtension(file.getOriginalFilename());
+        String key = "employees/" + id + "/aadhar-doc." + ext;
+        if (employee.getAadharDocUrl() != null && !employee.getAadharDocUrl().isEmpty()) {
+            s3StorageService.delete(employee.getAadharDocUrl());
+        }
+        s3StorageService.upload(key, file);
+        employee.setAadharDocUrl(key);
+        return employeeRepository.save(employee);
+    }
+
+    public Employee uploadPanDoc(Long id, MultipartFile file) throws IOException {
+        validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp", "application/pdf"}, 10 * 1024 * 1024);
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        String ext = getExtension(file.getOriginalFilename());
+        String key = "employees/" + id + "/pan-doc." + ext;
+        if (employee.getPanDocUrl() != null && !employee.getPanDocUrl().isEmpty()) {
+            s3StorageService.delete(employee.getPanDocUrl());
+        }
+        s3StorageService.upload(key, file);
+        employee.setPanDocUrl(key);
+        return employeeRepository.save(employee);
+    }
+
+    public String getFilePresignedUrl(Long id, String type) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        String key;
+        switch (type) {
+            case "photo":
+                key = employee.getPhotoUrl();
+                break;
+            case "aadhar-doc":
+                key = employee.getAadharDocUrl();
+                break;
+            case "pan-doc":
+                key = employee.getPanDocUrl();
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid file type: " + type);
+        }
+        if (key == null || key.isEmpty()) {
+            throw new RuntimeException("No file uploaded for type: " + type);
+        }
+        return s3StorageService.getPresignedUrl(key);
+    }
+
+    private void validateFileType(MultipartFile file, String[] allowedTypes, long maxSize) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException("File size exceeds maximum allowed: " + (maxSize / (1024 * 1024)) + "MB");
+        }
+        String contentType = file.getContentType();
+        boolean valid = false;
+        for (String type : allowedTypes) {
+            if (type.equals(contentType)) {
+                valid = true;
+                break;
+            }
+        }
+        if (!valid) {
+            throw new IllegalArgumentException("Unsupported file type: " + contentType);
+        }
+    }
+
+    private String getExtension(String filename) {
+        if (filename == null || !filename.contains(".")) return "bin";
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 }
