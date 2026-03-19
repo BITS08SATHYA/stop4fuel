@@ -10,7 +10,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "employees")
+@Table(name = "employees", indexes = {
+    @Index(name = "idx_employees_scid", columnList = "scid"),
+    @Index(name = "idx_employees_status", columnList = "status"),
+    @Index(name = "idx_employees_employee_code", columnList = "employee_code")
+}, uniqueConstraints = {
+    @UniqueConstraint(name = "uk_employees_employee_code_scid", columnNames = {"employee_code", "scid"}),
+    @UniqueConstraint(name = "uk_employees_aadhar", columnNames = {"aadhar_number"})
+})
 @Getter
 @Setter
 public class Employee extends BaseEntity {
@@ -35,6 +42,7 @@ public class Employee extends BaseEntity {
     private LocalDate joinDate;
     private String status = "Active";
 
+    @Column(name = "aadhar_number")
     private String aadharNumber;
 
     @Column(columnDefinition = "TEXT")
@@ -53,6 +61,8 @@ public class Employee extends BaseEntity {
     // New fields
     private String panNumber;
     private String department;
+
+    @Column(name = "employee_code")
     private String employeeCode;
     private String emergencyContact;
     private String emergencyPhone;

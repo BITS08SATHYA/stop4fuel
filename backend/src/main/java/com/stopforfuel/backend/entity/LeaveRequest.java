@@ -8,7 +8,10 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "leave_requests")
+@Table(name = "leave_requests", indexes = {
+    @Index(name = "idx_leave_req_employee_id", columnList = "employee_id"),
+    @Index(name = "idx_leave_req_status", columnList = "status")
+})
 @Getter
 @Setter
 public class LeaveRequest extends BaseEntity {

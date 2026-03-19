@@ -7,7 +7,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "cash_advances")
+@Table(name = "cash_advances", indexes = {
+    @Index(name = "idx_cash_adv_shift_id", columnList = "shift_id"),
+    @Index(name = "idx_cash_adv_status", columnList = "status"),
+    @Index(name = "idx_cash_adv_advance_type", columnList = "advance_type")
+})
 @Getter
 @Setter
 public class CashAdvance extends BaseEntity {

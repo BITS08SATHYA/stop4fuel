@@ -11,7 +11,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "invoice_bill")
+@Table(name = "invoice_bill", indexes = {
+    @Index(name = "idx_invoice_bill_shift_id", columnList = "shift_id"),
+    @Index(name = "idx_invoice_bill_customer_id", columnList = "customer_id"),
+    @Index(name = "idx_invoice_bill_bill_type", columnList = "bill_type"),
+    @Index(name = "idx_invoice_bill_payment_status", columnList = "payment_status"),
+    @Index(name = "idx_invoice_bill_bill_date", columnList = "bill_date"),
+    @Index(name = "idx_invoice_bill_statement_id", columnList = "statement_id"),
+    @Index(name = "idx_invoice_bill_scid", columnList = "scid"),
+    @Index(name = "idx_invoice_bill_cust_type_date", columnList = "customer_id, bill_type, bill_date")
+})
 @Getter
 @Setter
 public class InvoiceBill extends BaseEntity {

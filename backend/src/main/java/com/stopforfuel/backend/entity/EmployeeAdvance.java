@@ -8,7 +8,10 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "employee_advances")
+@Table(name = "employee_advances", indexes = {
+    @Index(name = "idx_emp_adv_employee_id", columnList = "employee_id"),
+    @Index(name = "idx_emp_adv_advance_date", columnList = "advance_date")
+})
 @Getter
 @Setter
 public class EmployeeAdvance extends SimpleBaseEntity {
