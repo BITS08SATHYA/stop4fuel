@@ -102,6 +102,7 @@ const shiftManagementNav = [
 ];
 
 const invoiceManagementNav = [
+    { name: "Invoice Dashboard", href: "/operations/invoices/dashboard", icon: BarChart3 },
     { name: "Invoices", href: "/operations/invoices", icon: FileText },
     { name: "Invoice History", href: "/operations/invoices/history", icon: History },
 ];
