@@ -189,6 +189,48 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("search") String search,
             Pageable pageable);
 
+    // Daily invoice aggregation for dashboard analytics
+    @Query("SELECT CAST(ib.date AS LocalDate), ib.billType, COUNT(ib), COALESCE(SUM(ib.netAmount), 0) " +
+           "FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY CAST(ib.date AS LocalDate), ib.billType ORDER BY CAST(ib.date AS LocalDate)")
+    List<Object[]> getDailyInvoiceStats(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Payment mode distribution for cash invoices
+    @Query("SELECT ib.paymentMode, COUNT(ib), COALESCE(SUM(ib.netAmount), 0) " +
+           "FROM InvoiceBill ib WHERE ib.billType = 'CASH' AND ib.paymentMode IS NOT NULL " +
+           "AND ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY ib.paymentMode")
+    List<Object[]> getPaymentModeDistribution(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Top customers by revenue
+    @Query("SELECT c.name, COUNT(ib), COALESCE(SUM(ib.netAmount), 0) " +
+           "FROM InvoiceBill ib JOIN ib.customer c " +
+           "WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY c.id, c.name ORDER BY SUM(ib.netAmount) DESC")
+    List<Object[]> getTopCustomersByRevenue(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Hourly distribution
+    @Query("SELECT FUNCTION('HOUR', ib.date), COUNT(ib) " +
+           "FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY FUNCTION('HOUR', ib.date) ORDER BY FUNCTION('HOUR', ib.date)")
+    List<Object[]> getHourlyDistribution(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Invoice count summary
+    @Query("SELECT ib.billType, ib.paymentStatus, COUNT(ib), COALESCE(SUM(ib.netAmount), 0) " +
+           "FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY ib.billType, ib.paymentStatus")
+    List<Object[]> getInvoiceSummary(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
     // Product sales summary aggregation
     @Query("SELECT new com.stopforfuel.backend.dto.ProductSalesSummary(ip.product.id, p.name, SUM(ip.quantity), SUM(ip.amount), SUM(ip.grossAmount), COALESCE(SUM(ip.discountAmount),0)) "
          + "FROM InvoiceProduct ip JOIN ip.product p JOIN ip.invoiceBill ib "
@@ -203,4 +245,10 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("paymentStatus") String paymentStatus,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
+
+    // Cash advance linked invoices
+    List<InvoiceBill> findByCashAdvanceId(Long cashAdvanceId);
+
+    // Unassigned invoices in a shift (available for advance assignment)
+    List<InvoiceBill> findByShiftIdAndCashAdvanceIsNull(Long shiftId);
 }

@@ -115,6 +115,11 @@ public class InvoiceBill extends BaseEntity {
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Vehicle vehicle;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cash_advance_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "invoiceBills"})
+    private CashAdvance cashAdvance;
+
     @OneToMany(mappedBy = "invoiceBill", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceProduct> products = new ArrayList<>();
 
