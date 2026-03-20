@@ -913,6 +913,29 @@ export const createExpenseType = (type: Partial<ExpenseType>): Promise<ExpenseTy
     }).then(handleResponse);
 
 // Dashboard
+export interface DashboardDailyRevenue {
+    date: string;
+    revenue: number;
+    invoiceCount: number;
+    fuelVolume: number;
+}
+
+export interface DashboardProductSales {
+    productName: string;
+    quantity: number;
+    amount: number;
+}
+
+export interface DashboardTankStatus {
+    tankId: number;
+    tankName: string;
+    productName: string | null;
+    capacity: number;
+    currentStock: number;
+    active: boolean;
+    lastReadingDate: string | null;
+}
+
 export interface DashboardStats {
     todayRevenue: number;
     todayFuelVolume: number;
@@ -935,6 +958,13 @@ export interface DashboardStats {
     activeNozzles: number;
     totalOutstanding: number;
     totalCreditCustomers: number;
+    creditAging0to30: number;
+    creditAging31to60: number;
+    creditAging61to90: number;
+    creditAging90Plus: number;
+    dailyRevenue: DashboardDailyRevenue[];
+    productSales: DashboardProductSales[];
+    tankStatuses: DashboardTankStatus[];
     recentInvoices: RecentInvoiceItem[];
 }
 
