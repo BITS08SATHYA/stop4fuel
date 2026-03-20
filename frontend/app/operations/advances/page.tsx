@@ -35,6 +35,16 @@ interface Employee {
     designation: string;
 }
 
+interface StatementRef {
+    id: number;
+    statementNo: string;
+    customer: { id: number; name: string } | null;
+    totalAmount: number;
+    netAmount: number;
+    balanceAmount: number;
+    status: string;
+}
+
 interface CashAdvance {
     id: number;
     advanceDate: string;
@@ -51,6 +61,7 @@ interface CashAdvance {
     shiftId: number;
     utilizedAmount: number;
     employee: Employee | null;
+    statement: StatementRef | null;
     invoiceBills: InvoiceBill[];
 }
 
@@ -222,6 +233,30 @@ async function fetchAssignedInvoices(advanceId: number): Promise<InvoiceBill[]> 
     return res.json();
 }
 
+async function assignStatement(advanceId: number, statementId: number): Promise<CashAdvance> {
+    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/statement/${statementId}`, { method: "POST" });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || "Failed to assign statement");
+    }
+    return res.json();
+}
+
+async function unassignStatement(advanceId: number): Promise<CashAdvance> {
+    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/statement`, { method: "DELETE" });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || "Failed to unassign statement");
+    }
+    return res.json();
+}
+
+async function fetchOutstandingStatements(): Promise<StatementRef[]> {
+    const res = await fetch(`${API_BASE_URL}/statements/outstanding`);
+    if (!res.ok) return [];
+    return res.json();
+}
+
 // --- Page Component ---
 
 export default function CashAdvancesPage() {
@@ -252,13 +287,15 @@ export default function CashAdvancesPage() {
     const [returnAmount, setReturnAmount] = useState("");
     const [returnRemarks, setReturnRemarks] = useState("");
 
-    // Detail / Invoice Assignment Modal
+    // Detail / Invoice & Statement Assignment Modal
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [detailAdvance, setDetailAdvance] = useState<CashAdvance | null>(null);
     const [assignedInvoices, setAssignedInvoices] = useState<InvoiceBill[]>([]);
     const [availableInvoices, setAvailableInvoices] = useState<InvoiceBill[]>([]);
     const [showAssignPanel, setShowAssignPanel] = useState(false);
     const [invoiceSearch, setInvoiceSearch] = useState("");
+    const [availableStatements, setAvailableStatements] = useState<StatementRef[]>([]);
+    const [showStatementPanel, setShowStatementPanel] = useState(false);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -466,6 +503,39 @@ export default function CashAdvancesPage() {
             await loadData();
         } catch (err: any) {
             alert(err.message || "Failed to unassign invoice");
+        }
+    };
+
+    const handleOpenStatementPanel = async () => {
+        setShowStatementPanel(true);
+        try {
+            const stmts = await fetchOutstandingStatements();
+            setAvailableStatements(stmts);
+        } catch {
+            setAvailableStatements([]);
+        }
+    };
+
+    const handleAssignStatement = async (statementId: number) => {
+        if (!detailAdvance) return;
+        try {
+            const updated = await assignStatement(detailAdvance.id, statementId);
+            setDetailAdvance(updated);
+            setShowStatementPanel(false);
+            await loadData();
+        } catch (err: any) {
+            alert(err.message || "Failed to assign statement");
+        }
+    };
+
+    const handleUnassignStatement = async () => {
+        if (!detailAdvance) return;
+        try {
+            const updated = await unassignStatement(detailAdvance.id);
+            setDetailAdvance(updated);
+            await loadData();
+        } catch (err: any) {
+            alert(err.message || "Failed to unassign statement");
         }
     };
 
@@ -1170,6 +1240,96 @@ export default function CashAdvancesPage() {
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-xs font-bold text-foreground">{formatCurrency(inv.netAmount)}</span>
                                                     <ChevronRight className="w-3.5 h-3.5 text-primary" />
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Linked Statement */}
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-purple-500" />
+                                    Linked Statement
+                                </h3>
+                                {!detailAdvance.statement && detailAdvance.status !== "CANCELLED" && detailAdvance.status !== "RETURNED" && detailAdvance.status !== "SETTLED" && (
+                                    <button
+                                        onClick={handleOpenStatementPanel}
+                                        className="text-xs font-medium text-purple-500 hover:text-purple-400 flex items-center gap-1 transition-colors"
+                                    >
+                                        <Link2 className="w-3.5 h-3.5" />
+                                        Assign Statement
+                                    </button>
+                                )}
+                            </div>
+
+                            {detailAdvance.statement ? (
+                                <div className="flex items-center justify-between p-3 bg-card border border-border rounded-xl">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500">
+                                            <FileText className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-foreground">
+                                                Stmt #{detailAdvance.statement.statementNo}
+                                                <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${detailAdvance.statement.status === "PAID" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>
+                                                    {detailAdvance.statement.status}
+                                                </span>
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                {detailAdvance.statement.customer?.name || "-"} | Net: {formatCurrency(detailAdvance.statement.netAmount)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-sm font-bold text-foreground">{formatCurrency(detailAdvance.statement.totalAmount)}</span>
+                                        {detailAdvance.status !== "CANCELLED" && detailAdvance.status !== "RETURNED" && detailAdvance.status !== "SETTLED" && (
+                                            <button
+                                                onClick={handleUnassignStatement}
+                                                title="Unassign statement"
+                                                className="p-1 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all"
+                                            >
+                                                <Unlink className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-4 text-muted-foreground text-sm border border-dashed border-border rounded-xl">
+                                    No statement linked.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Statement Assignment Panel */}
+                        {showStatementPanel && (
+                            <div className="border border-purple-500/30 rounded-xl p-4 bg-purple-500/5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-sm font-bold text-foreground">Outstanding Statements</h4>
+                                    <button onClick={() => setShowStatementPanel(false)} className="text-xs text-muted-foreground hover:text-foreground">Close</button>
+                                </div>
+                                <div className="max-h-48 overflow-y-auto space-y-1.5">
+                                    {availableStatements.length === 0 ? (
+                                        <p className="text-center py-4 text-muted-foreground text-xs">No outstanding statements available.</p>
+                                    ) : (
+                                        availableStatements.map((stmt) => (
+                                            <div
+                                                key={stmt.id}
+                                                className="flex items-center justify-between p-2.5 bg-card border border-border rounded-lg hover:border-purple-500/30 transition-colors cursor-pointer"
+                                                onClick={() => handleAssignStatement(stmt.id)}
+                                            >
+                                                <div>
+                                                    <p className="text-xs font-medium text-foreground">
+                                                        Stmt #{stmt.statementNo}
+                                                    </p>
+                                                    <p className="text-[10px] text-muted-foreground">{stmt.customer?.name || "-"}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-foreground">{formatCurrency(stmt.balanceAmount)}</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-purple-500" />
                                                 </div>
                                             </div>
                                         ))

@@ -61,6 +61,11 @@ public class CashAdvance extends BaseEntity {
     @Column(name = "utilized_amount", precision = 19, scale = 4)
     private BigDecimal utilizedAmount;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "statement_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Statement statement;
+
     @OneToMany(mappedBy = "cashAdvance")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "cashAdvance", "products", "statement", "raisedBy"})
     private List<InvoiceBill> invoiceBills = new ArrayList<>();

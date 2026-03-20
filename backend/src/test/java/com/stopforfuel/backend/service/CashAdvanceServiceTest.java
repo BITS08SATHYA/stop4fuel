@@ -6,6 +6,7 @@ import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
 import com.stopforfuel.backend.repository.CashAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
+import com.stopforfuel.backend.repository.StatementRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,9 @@ class CashAdvanceServiceTest {
 
     @Mock
     private InvoiceBillRepository invoiceBillRepository;
+
+    @Mock
+    private StatementRepository statementRepository;
 
     @Mock
     private EmployeeRepository employeeRepository;

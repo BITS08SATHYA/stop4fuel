@@ -4,11 +4,13 @@ import com.stopforfuel.backend.entity.CashAdvance;
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Shift;
+import com.stopforfuel.backend.entity.Statement;
 import com.stopforfuel.backend.entity.transaction.CashTransaction;
 import com.stopforfuel.backend.entity.transaction.ExpenseTransaction;
 import com.stopforfuel.backend.repository.CashAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
+import com.stopforfuel.backend.repository.StatementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ public class CashAdvanceService {
 
     private final CashAdvanceRepository repository;
     private final InvoiceBillRepository invoiceBillRepository;
+    private final StatementRepository statementRepository;
     private final EmployeeRepository employeeRepository;
     private final ShiftService shiftService;
     private final ShiftTransactionService shiftTransactionService;
@@ -167,6 +170,38 @@ public class CashAdvanceService {
     }
 
     @Transactional
+    public CashAdvance assignStatement(Long advanceId, Long statementId) {
+        CashAdvance advance = repository.findById(advanceId)
+                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + advanceId));
+
+        if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
+            throw new RuntimeException("Cannot assign statement to a " + advance.getStatus().toLowerCase() + " advance");
+        }
+
+        Statement statement = statementRepository.findById(statementId)
+                .orElseThrow(() -> new RuntimeException("Statement not found with id: " + statementId));
+
+        advance.setStatement(statement);
+
+        // Include statement amount in utilized calculation
+        recalculateUtilizedAmount(advance);
+
+        return repository.save(advance);
+    }
+
+    @Transactional
+    public CashAdvance unassignStatement(Long advanceId) {
+        CashAdvance advance = repository.findById(advanceId)
+                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + advanceId));
+
+        advance.setStatement(null);
+
+        recalculateUtilizedAmount(advance);
+
+        return repository.save(advance);
+    }
+
+    @Transactional
     public CashAdvance cancel(Long id) {
         CashAdvance advance = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + id));
@@ -186,13 +221,21 @@ public class CashAdvanceService {
     }
 
     private void recalculateUtilizedAmount(CashAdvance advance) {
-        List<InvoiceBill> invoices = invoiceBillRepository.findByCashAdvanceId(advance.getId());
         BigDecimal utilized = BigDecimal.ZERO;
+
+        // Sum from assigned invoices
+        List<InvoiceBill> invoices = invoiceBillRepository.findByCashAdvanceId(advance.getId());
         for (InvoiceBill inv : invoices) {
             if (inv.getNetAmount() != null) {
                 utilized = utilized.add(inv.getNetAmount());
             }
         }
+
+        // Add statement net amount if assigned
+        if (advance.getStatement() != null && advance.getStatement().getNetAmount() != null) {
+            utilized = utilized.add(advance.getStatement().getNetAmount());
+        }
+
         advance.setUtilizedAmount(utilized);
         updateAdvanceStatus(advance);
     }
