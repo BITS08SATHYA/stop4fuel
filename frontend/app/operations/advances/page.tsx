@@ -5,8 +5,6 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import {
     Banknote,
-    Moon,
-    Sun,
     Wallet,
     ArrowDownLeft,
     ArrowUpRight,
@@ -81,10 +79,8 @@ interface InvoiceBill {
 // --- Constants ---
 
 const ADVANCE_TYPES = [
-    { value: "HOME_ADVANCE", label: "Home Advance", icon: Sun, color: "text-purple-500 bg-purple-500/10" },
-    { value: "NIGHT_ADVANCE", label: "Night Advance", icon: Moon, color: "text-indigo-500 bg-indigo-500/10" },
+    { value: "CASH_ADVANCE", label: "Cash Advance", icon: Banknote, color: "text-blue-500 bg-blue-500/10" },
     { value: "SALARY_ADVANCE", label: "Salary Advance", icon: Wallet, color: "text-emerald-500 bg-emerald-500/10" },
-    { value: "REGULAR_ADVANCE", label: "Regular Advance", icon: Banknote, color: "text-blue-500 bg-blue-500/10" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -96,7 +92,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 function getAdvanceTypeMeta(type: string) {
-    return ADVANCE_TYPES.find((t) => t.value === type) || ADVANCE_TYPES[3];
+    return ADVANCE_TYPES.find((t) => t.value === type) || ADVANCE_TYPES[0];
 }
 
 function formatDateTime(dt?: string | null) {
@@ -272,7 +268,7 @@ export default function CashAdvancesPage() {
 
     // Record Advance Modal
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [addType, setAddType] = useState("HOME_ADVANCE");
+    const [addType, setAddType] = useState("CASH_ADVANCE");
     const [addAmount, setAddAmount] = useState("");
     const [addRecipientName, setAddRecipientName] = useState("");
     const [addRecipientPhone, setAddRecipientPhone] = useState("");
@@ -355,7 +351,7 @@ export default function CashAdvancesPage() {
 
     // --- Handlers ---
     const resetAddForm = () => {
-        setAddType("HOME_ADVANCE");
+        setAddType("CASH_ADVANCE");
         setAddAmount("");
         setAddRecipientName("");
         setAddRecipientPhone("");
@@ -676,10 +672,8 @@ export default function CashAdvancesPage() {
                                 className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                             >
                                 <option value="ALL">All Types</option>
-                                <option value="HOME_ADVANCE">Home Advance</option>
-                                <option value="NIGHT_ADVANCE">Night Advance</option>
+                                <option value="CASH_ADVANCE">Cash Advance</option>
                                 <option value="SALARY_ADVANCE">Salary Advance</option>
-                                <option value="REGULAR_ADVANCE">Regular Advance</option>
                             </select>
                         </div>
 
@@ -850,7 +844,7 @@ export default function CashAdvancesPage() {
                     </div>
 
                     {/* Employee Selector (for salary advance) */}
-                    {(addType === "SALARY_ADVANCE" || addType === "HOME_ADVANCE") && employees.length > 0 && (
+                    {addType === "SALARY_ADVANCE" && employees.length > 0 && (
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Select Employee</label>
                             <select
