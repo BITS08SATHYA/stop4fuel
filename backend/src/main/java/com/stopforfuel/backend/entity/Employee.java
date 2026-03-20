@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -18,22 +19,17 @@ import java.util.List;
     @UniqueConstraint(name = "uk_employees_employee_code_scid", columnNames = {"employee_code", "scid"}),
     @UniqueConstraint(name = "uk_employees_aadhar", columnNames = {"aadhar_number"})
 })
+@PrimaryKeyJoinColumn(name = "id")
 @Getter
 @Setter
-public class Employee extends BaseEntity {
+public class Employee extends User {
 
-    @NotBlank(message = "Employee name is required")
-    @Size(max = 255, message = "Employee name must not exceed 255 characters")
-    private String name;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "designation_id")
+    private Designation designationEntity;
 
-    private String designation;
-
-    @Email(message = "Invalid email format")
-    private String email;
-
-    @NotBlank(message = "Phone number is required")
-    @Size(max = 15, message = "Phone number must not exceed 15 characters")
-    private String phone;
+    @Transient
+    private String designation; // Kept for backward compatibility in API
 
     private String additionalPhones;
 
@@ -41,16 +37,10 @@ public class Employee extends BaseEntity {
     private Double salary;
 
     @Column(name = "salary_day")
-    private Integer salaryDay; // Day of month salary is due (1-31)
-
-    private LocalDate joinDate;
-    private String status = "Active";
+    private Integer salaryDay;
 
     @Column(name = "aadhar_number")
     private String aadharNumber;
-
-    @Column(columnDefinition = "TEXT")
-    private String address;
 
     private String city;
     private String state;
@@ -62,7 +52,6 @@ public class Employee extends BaseEntity {
     private String bankIfsc;
     private String bankBranch;
 
-    // New fields
     private String panNumber;
     private String department;
 
@@ -84,4 +73,53 @@ public class Employee extends BaseEntity {
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"employee", "hibernateLazyInitializer", "handler"})
     private List<EmployeeAdvance> advances;
+
+    // Backward compatibility: single email/phone for API
+    @Transient
+    @JsonProperty("email")
+    public String getEmail() {
+        return getEmails() != null && !getEmails().isEmpty() ? getEmails().iterator().next() : null;
+    }
+
+    @JsonProperty("email")
+    public void setEmail(String email) {
+        if (email != null && !email.isBlank()) {
+            if (getEmails() == null) {
+                setEmails(new java.util.HashSet<>());
+            }
+            getEmails().clear();
+            getEmails().add(email);
+        }
+    }
+
+    @Transient
+    @JsonProperty("phone")
+    public String getPhone() {
+        return getPhoneNumbers() != null && !getPhoneNumbers().isEmpty() ? getPhoneNumbers().iterator().next() : null;
+    }
+
+    @JsonProperty("phone")
+    public void setPhone(String phone) {
+        if (phone != null && !phone.isBlank()) {
+            if (getPhoneNumbers() == null) {
+                setPhoneNumbers(new java.util.HashSet<>());
+            }
+            getPhoneNumbers().clear();
+            getPhoneNumbers().add(phone);
+        }
+    }
+
+    // Designation string getter/setter for backward compatibility
+    @JsonProperty("designation")
+    public String getDesignation() {
+        if (designationEntity != null) {
+            return designationEntity.getName();
+        }
+        return designation;
+    }
+
+    @JsonProperty("designation")
+    public void setDesignation(String designation) {
+        this.designation = designation;
+    }
 }

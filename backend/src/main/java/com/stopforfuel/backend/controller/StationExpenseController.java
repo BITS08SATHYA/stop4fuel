@@ -6,6 +6,7 @@ import com.stopforfuel.backend.service.StationExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -20,6 +21,7 @@ public class StationExpenseController {
     private StationExpenseService stationExpenseService;
 
     @GetMapping
+    @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
     public List<StationExpense> getAllExpenses(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
@@ -30,11 +32,13 @@ public class StationExpenseController {
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
     public StationExpense createExpense(@Valid @RequestBody StationExpense expense) {
         return stationExpenseService.createExpense(expense);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
     public ResponseEntity<StationExpense> updateExpense(@PathVariable Long id, @Valid @RequestBody StationExpense expense) {
         try {
             return ResponseEntity.ok(stationExpenseService.updateExpense(id, expense));
@@ -44,12 +48,14 @@ public class StationExpenseController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
     public ResponseEntity<Void> deleteExpense(@PathVariable Long id) {
         stationExpenseService.deleteExpense(id);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/summary")
+    @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
     public Map<String, Object> getExpenseSummary(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {

@@ -5,6 +5,7 @@ import com.stopforfuel.backend.entity.SalaryPayment;
 import com.stopforfuel.backend.service.SalaryPaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class SalaryPaymentController {
     private SalaryPaymentService salaryPaymentService;
 
     @GetMapping
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
     public List<SalaryPayment> getMonthlyPayments(
             @RequestParam Integer month,
             @RequestParam Integer year) {
@@ -25,11 +27,13 @@ public class SalaryPaymentController {
     }
 
     @GetMapping("/employee/{employeeId}")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
     public List<SalaryPayment> getEmployeePayments(@PathVariable Long employeeId) {
         return salaryPaymentService.getEmployeePayments(employeeId);
     }
 
     @PostMapping("/process")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public List<SalaryPayment> processMonthlyPayroll(
             @RequestParam Integer month,
             @RequestParam Integer year) {
@@ -37,6 +41,7 @@ public class SalaryPaymentController {
     }
 
     @PatchMapping("/{id}/pay")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public ResponseEntity<SalaryPayment> markAsPaid(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
@@ -49,6 +54,7 @@ public class SalaryPaymentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public ResponseEntity<SalaryPayment> updatePayment(@PathVariable Long id, @Valid @RequestBody SalaryPayment payment) {
         try {
             return ResponseEntity.ok(salaryPaymentService.updatePayment(id, payment));
