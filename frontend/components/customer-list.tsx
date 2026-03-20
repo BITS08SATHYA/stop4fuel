@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, MoreHorizontal, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
     const [searchQuery, setSearchQuery] = useState("");
     const [groups, setGroups] = useState<any[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<string>("");
-    const [showGroupFilter, setShowGroupFilter] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<string>("");
 
     useEffect(() => {
         fetchGroups();
@@ -23,7 +23,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
 
     useEffect(() => {
         fetchCustomers();
-    }, [page, searchQuery, selectedGroupId, refreshTrigger]);
+    }, [page, searchQuery, selectedGroupId, statusFilter, refreshTrigger]);
 
     const fetchGroups = async () => {
         try {
@@ -45,6 +45,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
             });
             if (searchQuery) queryParams.set("search", searchQuery);
             if (selectedGroupId) queryParams.set("groupId", selectedGroupId);
+            if (statusFilter) queryParams.set("status", statusFilter);
             const res = await fetch(`${API_BASE_URL}/customers?${queryParams}`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
@@ -131,10 +132,10 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
 
     return (
         <GlassCard className="h-full flex flex-col overflow-hidden relative">
-            {/* Toolbar */}
+            {/* Filter Bar */}
             <div className="flex items-center justify-between mb-6 shrink-0">
                 <h2 className="text-xl font-semibold text-foreground">All Customers</h2>
-                <div className="flex gap-3">
+                <div className="flex gap-3 items-center">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
@@ -142,40 +143,32 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
-                                setPage(0); // Reset to first page on search
+                                setPage(0);
                             }}
                             placeholder="Search customers..."
                             className="bg-secondary border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 w-64"
                         />
                     </div>
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowGroupFilter(!showGroupFilter)}
-                            className={`p-2 border rounded-lg transition-colors ${selectedGroupId ? 'bg-primary/10 border-primary text-primary' : 'bg-secondary border-border hover:bg-secondary/80 text-muted-foreground'}`}
-                        >
-                            <Filter className="w-4 h-4" />
-                        </button>
-                        {showGroupFilter && (
-                            <div className="absolute right-0 top-full mt-2 z-20 bg-popover border border-border rounded-lg shadow-lg py-2 min-w-[200px]">
-                                <div className="px-3 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Filter by Group</div>
-                                <button
-                                    onClick={() => { setSelectedGroupId(""); setPage(0); setShowGroupFilter(false); }}
-                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-muted ${!selectedGroupId ? 'text-primary font-medium' : 'text-foreground'}`}
-                                >
-                                    All Groups
-                                </button>
-                                {groups.map((group) => (
-                                    <button
-                                        key={group.id}
-                                        onClick={() => { setSelectedGroupId(group.id.toString()); setPage(0); setShowGroupFilter(false); }}
-                                        className={`w-full text-left px-4 py-2 text-sm hover:bg-muted ${selectedGroupId === group.id.toString() ? 'text-primary font-medium' : 'text-foreground'}`}
-                                    >
-                                        {group.groupName}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <select
+                        value={selectedGroupId}
+                        onChange={(e) => { setSelectedGroupId(e.target.value); setPage(0); }}
+                        className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    >
+                        <option value="">All Groups</option>
+                        {groups.map((group) => (
+                            <option key={group.id} value={group.id}>{group.groupName}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                        className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    >
+                        <option value="">All Status</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="BLOCKED">Blocked</option>
+                    </select>
                 </div>
             </div>
 
