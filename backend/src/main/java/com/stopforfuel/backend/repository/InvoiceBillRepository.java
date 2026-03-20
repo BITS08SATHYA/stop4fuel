@@ -246,6 +246,9 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
+    // Count unpaid bills for a vehicle under a specific customer
+    long countByVehicleIdAndCustomerIdAndPaymentStatus(Long vehicleId, Long customerId, String paymentStatus);
+
     // Cash advance linked invoices
     List<InvoiceBill> findByCashAdvanceId(Long cashAdvanceId);
 

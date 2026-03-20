@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Save, Edit, Trash2, Truck, X, ShieldAlert, ShieldCheck, ShieldOff, Tag, Plus } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Save, Edit, Trash2, Truck, X, ShieldAlert, ShieldCheck, ShieldOff, Tag, Plus, Download } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -546,13 +546,28 @@ export default function CustomerProfilePage() {
                             </p>
                         )}
                     </div>
-                    <button
-                        onClick={() => { setShowAddVehicle(true); setVehicleError(""); }}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
-                    >
-                        <Truck className="w-4 h-4" />
-                        Add Vehicle
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => {
+                                const link = document.createElement("a");
+                                link.href = `${API}/customers/${params.id}/vehicle-report/pdf`;
+                                link.target = "_blank";
+                                link.click();
+                            }}
+                            disabled={vehicles.length === 0}
+                            className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Download className="w-4 h-4" />
+                            Vehicle Report
+                        </button>
+                        <button
+                            onClick={() => { setShowAddVehicle(true); setVehicleError(""); }}
+                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
+                        >
+                            <Truck className="w-4 h-4" />
+                            Add Vehicle
+                        </button>
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">

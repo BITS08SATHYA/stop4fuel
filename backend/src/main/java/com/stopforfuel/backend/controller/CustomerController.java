@@ -4,8 +4,12 @@ import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.service.CustomerService;
+import com.stopforfuel.backend.service.JasperReportService;
 import com.stopforfuel.backend.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +24,9 @@ public class CustomerController {
 
     @Autowired
     private VehicleService vehicleService;
+
+    @Autowired
+    private JasperReportService jasperReportService;
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
@@ -88,4 +95,18 @@ public class CustomerController {
     public List<Vehicle> getVehiclesByCustomerId(@PathVariable Long id) {
         return vehicleService.getVehiclesByCustomerId(id);
     }
+
+    @GetMapping("/{id}/vehicle-report/pdf")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
+    public ResponseEntity<byte[]> downloadVehicleReport(@PathVariable Long id) {
+        Customer customer = customerService.getCustomerById(id);
+        List<Vehicle> vehicles = vehicleService.getVehiclesByCustomerId(id);
+        byte[] pdf = jasperReportService.generateCustomerVehicleReport(customer, vehicles);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"vehicle-report-" + customer.getName() + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
 }

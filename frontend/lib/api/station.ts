@@ -1840,3 +1840,6 @@ export const recordCashInflowRepayment = (inflowId: number, repayment: Partial<C
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(repayment),
     }).then(handleResponse);
+
+export const getCashInflowRepayments = (inflowId: number): Promise<CashInflowRepayment[]> =>
+    fetchWithAuth(`${API_BASE_URL}/cash-inflows/${inflowId}/repayments`).then(handleResponse);
