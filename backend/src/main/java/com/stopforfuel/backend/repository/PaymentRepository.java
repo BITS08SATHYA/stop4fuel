@@ -49,4 +49,44 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     // Sum all payments by a customer (total ever paid)
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.customer.id = :customerId")
     BigDecimal sumAllPaymentsByCustomer(@Param("customerId") Long customerId);
+
+    // Daily payment aggregation for dashboard analytics
+    @Query("SELECT CAST(p.paymentDate AS LocalDate), COUNT(p), COALESCE(SUM(p.amount), 0) " +
+           "FROM Payment p WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate " +
+           "GROUP BY CAST(p.paymentDate AS LocalDate) ORDER BY CAST(p.paymentDate AS LocalDate)")
+    List<Object[]> getDailyPaymentStats(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Payment mode breakdown
+    @Query("SELECT pm.modeName, COUNT(p), COALESCE(SUM(p.amount), 0) " +
+           "FROM Payment p JOIN p.paymentMode pm " +
+           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate " +
+           "GROUP BY pm.modeName ORDER BY SUM(p.amount) DESC")
+    List<Object[]> getPaymentModeBreakdown(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Top paying customers
+    @Query("SELECT c.name, COUNT(p), COALESCE(SUM(p.amount), 0) " +
+           "FROM Payment p JOIN p.customer c " +
+           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate " +
+           "GROUP BY c.id, c.name ORDER BY SUM(p.amount) DESC")
+    List<Object[]> getTopPayingCustomers(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Total collected in date range
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate")
+    BigDecimal sumPaymentsInDateRange(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Count payments in date range
+    @Query("SELECT COUNT(p) FROM Payment p " +
+           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate")
+    long countPaymentsInDateRange(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
 }
