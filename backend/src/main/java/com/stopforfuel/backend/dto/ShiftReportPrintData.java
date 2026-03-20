@@ -32,6 +32,9 @@ public class ShiftReportPrintData {
     private List<CreditBillDetail> creditBillDetails = new ArrayList<>();
     private List<StockSummaryRow> stockSummary = new ArrayList<>();
 
+    // Stock Position (godown + cashier balances at shift close)
+    private List<StockPositionRow> stockPosition = new ArrayList<>();
+
     // Back Page - Right Column
     private List<AdvanceEntryDetail> advanceEntries = new ArrayList<>();
     private List<PaymentEntryDetail> paymentEntries = new ArrayList<>();
@@ -93,6 +96,15 @@ public class ShiftReportPrintData {
         private String description;
         private BigDecimal amount;
         private String reference;
+    }
+
+    @Data
+    public static class StockPositionRow {
+        private String productName;
+        private Double godownStock;
+        private Double cashierStock;
+        private Double totalStock;
+        private boolean lowStock; // true if godown stock <= reorder level
     }
 
     @Data

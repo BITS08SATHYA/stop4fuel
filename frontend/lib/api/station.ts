@@ -1800,6 +1800,7 @@ export interface ShiftReportPrintData {
     salesDifferences: { productName: string; tankSale: number; meterSale: number; difference: number }[];
     creditBillDetails: { customerName: string; billNo: string; vehicleNo: string; products: string; amount: number }[];
     stockSummary: { productName: string; openStock: number; receipt: number; totalStock: number; sales: number; rate: number; amount: number }[];
+    stockPosition: { productName: string; godownStock: number; cashierStock: number; totalStock: number; lowStock: boolean }[];
     advanceEntries: { type: string; description: string; amount: number; reference?: string }[];
     paymentEntries: { type: string; customerName: string; reference: string; paymentMode: string; amount: number }[];
 }
