@@ -27,7 +27,7 @@ public class CashAdvance extends BaseEntity {
     private BigDecimal amount;
 
     @Column(name = "advance_type", nullable = false)
-    private String advanceType; // HOME_ADVANCE, NIGHT_ADVANCE, REGULAR_ADVANCE, SALARY_ADVANCE
+    private String advanceType; // CASH_ADVANCE, SALARY_ADVANCE
 
     @Column(name = "recipient_name")
     private String recipientName;
