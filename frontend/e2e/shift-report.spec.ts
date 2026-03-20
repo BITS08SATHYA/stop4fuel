@@ -407,3 +407,90 @@ test.describe("Shift Report - Error State", () => {
         await expect(page.getByText("Back to Shifts")).toBeVisible();
     });
 });
+
+test.describe("Shift Report - PDF Download", () => {
+    test("finalized report with PDF shows Download PDF button", async ({ page }) => {
+        const reportWithPdf = { ...mockReport, status: "FINALIZED", reportPdfUrl: "shift-reports/47/report.pdf", finalizedBy: "manager", finalizedAt: "2026-03-18T19:00:00" };
+        await page.route(`${API_BASE}/**`, async (route) => {
+            const url = route.request().url();
+            const method = route.request().method();
+            if (url.includes("/shift-reports/47/print-data") && method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockPrintData) });
+                return;
+            }
+            if (url.includes("/shift-reports/47/audit-log") && method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockAuditLogs) });
+                return;
+            }
+            if (url.includes("/shift-reports/47") && method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(reportWithPdf) });
+                return;
+            }
+            if (url.includes("/shift-reports") && !url.includes("/47") && method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([reportWithPdf]) });
+                return;
+            }
+            if (method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+            } else {
+                await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+            }
+        });
+        await page.goto("/operations/shifts/report/47");
+        await expect(page.getByRole("button", { name: /Download PDF/ })).toBeVisible();
+    });
+
+    test("finalized report without PDF does not show Download PDF button", async ({ page }) => {
+        await mockRoutes(page, { reportStatus: "FINALIZED" });
+        await page.goto("/operations/shifts/report/47");
+        await expect(screen(page).getByText("FINALIZED")).toBeVisible();
+        await expect(page.getByRole("button", { name: /Download PDF/ })).not.toBeVisible();
+    });
+
+    test("clicking Download PDF calls presigned URL endpoint", async ({ page }) => {
+        const reportWithPdf = { ...mockReport, status: "FINALIZED", reportPdfUrl: "shift-reports/47/report.pdf", finalizedBy: "manager", finalizedAt: "2026-03-18T19:00:00" };
+        let pdfUrlCalled = false;
+
+        await page.route(`${API_BASE}/**`, async (route) => {
+            const url = route.request().url();
+            const method = route.request().method();
+            if (url.includes("/shift-reports/47/pdf-url") && method === "GET") {
+                pdfUrlCalled = true;
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ url: "https://s3.example.com/report.pdf" }) });
+                return;
+            }
+            if (url.includes("/shift-reports/47/print-data") && method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockPrintData) });
+                return;
+            }
+            if (url.includes("/shift-reports/47/audit-log") && method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockAuditLogs) });
+                return;
+            }
+            if (url.includes("/shift-reports/47") && method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(reportWithPdf) });
+                return;
+            }
+            if (url.includes("/shift-reports") && !url.includes("/47") && method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([reportWithPdf]) });
+                return;
+            }
+            if (method === "GET") {
+                await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+            } else {
+                await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+            }
+        });
+
+        // Intercept window.open
+        await page.evaluate(() => {
+            (window as any).__openedUrls = [];
+            window.open = (url?: string | URL) => { (window as any).__openedUrls.push(url); return null; };
+        });
+
+        await page.goto("/operations/shifts/report/47");
+        await page.getByRole("button", { name: /Download PDF/ }).click();
+
+        await expect(() => expect(pdfUrlCalled).toBe(true)).toPass({ timeout: 5000 });
+    });
+});
