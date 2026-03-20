@@ -13,4 +13,5 @@ public interface ProductInventoryRepository extends JpaRepository<ProductInvento
     List<ProductInventory> findByProductId(Long productId);
     ProductInventory findTopByProductIdOrderByDateDescIdDesc(Long productId);
     List<ProductInventory> findByShiftId(Long shiftId);
+    ProductInventory findByShiftIdAndProductId(Long shiftId, Long productId);
 }
