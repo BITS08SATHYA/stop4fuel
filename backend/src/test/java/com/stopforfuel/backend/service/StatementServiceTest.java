@@ -1,8 +1,10 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
@@ -12,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +31,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class StatementServiceTest {
 
     @Mock
@@ -39,7 +44,16 @@ class StatementServiceTest {
     private CustomerRepository customerRepository;
 
     @Mock
+    private CompanyRepository companyRepository;
+
+    @Mock
     private BillSequenceService billSequenceService;
+
+    @Mock
+    private StatementPdfGenerator pdfGenerator;
+
+    @Mock
+    private S3StorageService s3StorageService;
 
     @InjectMocks
     private StatementService statementService;
@@ -275,5 +289,83 @@ class StatementServiceTest {
         List<InvoiceBill> result = statementService.previewBills(
                 1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), 5L, null);
         assertEquals(1, result.size());
+    }
+
+    @Test
+    void generateAndStorePdf_generatesAndUploadsToS3() {
+        testStatement.setScid(1L);
+        testStatement.setStatementDate(LocalDate.of(2026, 3, 15));
+        testStatement.setStatementPdfUrl(null);
+
+        Company company = new Company();
+        company.setName("Test Station");
+
+        when(statementRepository.findById(1L)).thenReturn(Optional.of(testStatement));
+        when(invoiceBillRepository.findByStatementId(1L)).thenReturn(List.of(testBill));
+        when(companyRepository.findByScid(1L)).thenReturn(List.of(company));
+        when(pdfGenerator.generate(eq(testStatement), anyList(), eq("Test Station")))
+                .thenReturn(new byte[]{1, 2, 3});
+        when(s3StorageService.upload(anyString(), any(byte[].class), eq("application/pdf")))
+                .thenAnswer(i -> i.getArgument(0));
+        when(statementRepository.save(any(Statement.class))).thenAnswer(i -> i.getArgument(0));
+
+        Statement result = statementService.generateAndStorePdf(1L);
+
+        assertNotNull(result.getStatementPdfUrl());
+        assertTrue(result.getStatementPdfUrl().contains("statements"));
+        verify(pdfGenerator).generate(eq(testStatement), anyList(), eq("Test Station"));
+        verify(s3StorageService).upload(anyString(), any(byte[].class), eq("application/pdf"));
+    }
+
+    @Test
+    void generateAndStorePdf_replacesExistingPdf_deletesOld() {
+        testStatement.setScid(1L);
+        testStatement.setStatementDate(LocalDate.of(2026, 3, 15));
+        testStatement.setStatementPdfUrl("statements/2026/03/1/statement.pdf");
+
+        Company company = new Company();
+        company.setName("Test Station");
+
+        when(statementRepository.findById(1L)).thenReturn(Optional.of(testStatement));
+        when(invoiceBillRepository.findByStatementId(1L)).thenReturn(List.of(testBill));
+        when(companyRepository.findByScid(1L)).thenReturn(List.of(company));
+        when(pdfGenerator.generate(any(), anyList(), anyString())).thenReturn(new byte[]{1, 2, 3});
+        when(s3StorageService.upload(anyString(), any(byte[].class), anyString()))
+                .thenAnswer(i -> i.getArgument(0));
+        when(statementRepository.save(any(Statement.class))).thenAnswer(i -> i.getArgument(0));
+
+        statementService.generateAndStorePdf(1L);
+
+        verify(s3StorageService).delete("statements/2026/03/1/statement.pdf");
+    }
+
+    @Test
+    void generateAndStorePdf_statementNotFound_throws() {
+        when(statementRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class,
+                () -> statementService.generateAndStorePdf(99L));
+    }
+
+    @Test
+    void getStatementPdfUrl_exists_returnsPresignedUrl() {
+        testStatement.setStatementPdfUrl("statements/2026/03/1/statement.pdf");
+        when(statementRepository.findById(1L)).thenReturn(Optional.of(testStatement));
+        when(s3StorageService.getPresignedUrl("statements/2026/03/1/statement.pdf"))
+                .thenReturn("https://s3.example.com/presigned-url");
+
+        String url = statementService.getStatementPdfUrl(1L);
+
+        assertEquals("https://s3.example.com/presigned-url", url);
+        verify(s3StorageService).getPresignedUrl("statements/2026/03/1/statement.pdf");
+    }
+
+    @Test
+    void getStatementPdfUrl_noPdf_throws() {
+        testStatement.setStatementPdfUrl(null);
+        when(statementRepository.findById(1L)).thenReturn(Optional.of(testStatement));
+
+        assertThrows(RuntimeException.class,
+                () -> statementService.getStatementPdfUrl(1L));
     }
 }

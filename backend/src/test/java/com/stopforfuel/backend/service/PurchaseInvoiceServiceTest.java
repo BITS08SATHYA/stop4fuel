@@ -11,6 +11,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,10 +27,13 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class PurchaseInvoiceServiceTest {
 
     @Mock
     private PurchaseInvoiceRepository repository;
+    @Mock
+    private S3StorageService s3StorageService;
 
     @InjectMocks
     private PurchaseInvoiceService purchaseInvoiceService;
@@ -195,5 +202,55 @@ class PurchaseInvoiceServiceTest {
 
         assertEquals("VERIFIED", result.getStatus());
         verify(repository).save(testInvoice);
+    }
+
+    @Test
+    void uploadPdf_uploadsToS3AndSavesKey() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "invoice.pdf", "application/pdf", new byte[]{1, 2, 3});
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+        when(s3StorageService.upload(anyString(), any(MultipartFile.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.save(any(PurchaseInvoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        PurchaseInvoice result = purchaseInvoiceService.uploadPdf(1L, file);
+
+        assertNotNull(result.getPdfFilePath());
+        assertTrue(result.getPdfFilePath().contains("purchase-invoices"));
+        verify(s3StorageService).upload(anyString(), eq(file));
+    }
+
+    @Test
+    void uploadPdf_replacesExistingFile_deletesOldKey() throws Exception {
+        testInvoice.setPdfFilePath("purchase-invoices/2026/03/1/invoice.pdf");
+        MockMultipartFile file = new MockMultipartFile("file", "invoice.pdf", "application/pdf", new byte[]{1, 2, 3});
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+        when(s3StorageService.upload(anyString(), any(MultipartFile.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.save(any(PurchaseInvoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        purchaseInvoiceService.uploadPdf(1L, file);
+
+        verify(s3StorageService).delete("purchase-invoices/2026/03/1/invoice.pdf");
+    }
+
+    @Test
+    void getPdfPresignedUrl_exists_returnsUrl() {
+        testInvoice.setPdfFilePath("purchase-invoices/2026/03/1/invoice.pdf");
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+        when(s3StorageService.getPresignedUrl("purchase-invoices/2026/03/1/invoice.pdf"))
+                .thenReturn("https://s3.example.com/test");
+
+        String url = purchaseInvoiceService.getPdfPresignedUrl(1L);
+
+        assertEquals("https://s3.example.com/test", url);
+        verify(s3StorageService).getPresignedUrl("purchase-invoices/2026/03/1/invoice.pdf");
+    }
+
+    @Test
+    void getPdfPresignedUrl_noPdf_throwsException() {
+        testInvoice.setPdfFilePath(null);
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+
+        assertThrows(RuntimeException.class,
+                () -> purchaseInvoiceService.getPdfPresignedUrl(1L));
     }
 }

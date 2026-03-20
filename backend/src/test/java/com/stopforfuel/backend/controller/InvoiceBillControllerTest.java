@@ -11,8 +11,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -99,5 +101,33 @@ class InvoiceBillControllerTest {
                 .andExpect(status().isOk());
 
         verify(service).deleteInvoice(1L);
+    }
+
+    @Test
+    void uploadFile_returnsOk() throws Exception {
+        MockMultipartFile mockFile = new MockMultipartFile("file", "test.jpg", "image/jpeg", new byte[]{1});
+        when(service.uploadFile(eq(1L), eq("bill-pic"), any())).thenReturn(testBill);
+
+        mockMvc.perform(multipart("/api/invoices/1/upload/bill-pic").file(mockFile))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void uploadFile_serviceThrowsIOException_returns500() throws Exception {
+        MockMultipartFile mockFile = new MockMultipartFile("file", "test.jpg", "image/jpeg", new byte[]{1});
+        when(service.uploadFile(eq(1L), eq("bill-pic"), any())).thenThrow(new IOException("S3 error"));
+
+        mockMvc.perform(multipart("/api/invoices/1/upload/bill-pic").file(mockFile))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void getFileUrl_returnsUrl() throws Exception {
+        when(service.getFilePresignedUrl(1L, "bill-pic")).thenReturn("https://s3.example.com/test");
+
+        mockMvc.perform(get("/api/invoices/1/file-url").param("type", "bill-pic"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.url").value("https://s3.example.com/test"));
     }
 }

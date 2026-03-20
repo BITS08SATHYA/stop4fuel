@@ -8,8 +8,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +55,8 @@ class InvoiceBillServiceTest {
     private ShiftTransactionService shiftTransactionService;
     @Mock
     private BillSequenceService billSequenceService;
+    @Mock
+    private S3StorageService s3StorageService;
 
     @InjectMocks
     private InvoiceBillService invoiceBillService;
@@ -253,5 +258,94 @@ class InvoiceBillServiceTest {
         invoiceBillService.deleteInvoice(1L);
 
         verify(repository).deleteById(1L);
+    }
+
+    @Test
+    void uploadFile_validBillPic_uploadsToS3AndSavesKey() throws Exception {
+        testInvoice.setId(1L);
+        testInvoice.setDate(LocalDateTime.of(2026, 3, 5, 10, 0));
+        testInvoice.setBillPic(null);
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1, 2, 3});
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+        when(s3StorageService.upload(anyString(), any(MultipartFile.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.save(any(InvoiceBill.class))).thenAnswer(i -> i.getArgument(0));
+
+        InvoiceBill result = invoiceBillService.uploadFile(1L, "bill-pic", file);
+
+        assertNotNull(result.getBillPic());
+        assertTrue(result.getBillPic().contains("bill-pic"));
+        verify(s3StorageService).upload(anyString(), eq(file));
+        verify(s3StorageService, never()).delete(anyString());
+    }
+
+    @Test
+    void uploadFile_replacesExistingFile_deletesOldKey() throws Exception {
+        testInvoice.setId(1L);
+        testInvoice.setDate(LocalDateTime.of(2026, 3, 5, 10, 0));
+        testInvoice.setBillPic("invoices/2026/03/05/1/bill-pic.jpg");
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1, 2, 3});
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+        when(s3StorageService.upload(anyString(), any(MultipartFile.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.save(any(InvoiceBill.class))).thenAnswer(i -> i.getArgument(0));
+
+        invoiceBillService.uploadFile(1L, "bill-pic", file);
+
+        verify(s3StorageService).delete("invoices/2026/03/05/1/bill-pic.jpg");
+    }
+
+    @Test
+    void uploadFile_invalidType_throwsException() throws Exception {
+        testInvoice.setId(1L);
+        testInvoice.setDate(LocalDateTime.of(2026, 3, 5, 10, 0));
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1, 2, 3});
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+        when(s3StorageService.upload(anyString(), any(MultipartFile.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> invoiceBillService.uploadFile(1L, "invalid", file));
+    }
+
+    @Test
+    void uploadFile_invoiceNotFound_throwsException() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1, 2, 3});
+
+        assertThrows(RuntimeException.class,
+                () -> invoiceBillService.uploadFile(99L, "bill-pic", file));
+    }
+
+    @Test
+    void getFilePresignedUrl_existingFile_returnsUrl() {
+        testInvoice.setId(1L);
+        testInvoice.setBillPic("invoices/2026/03/05/1/bill-pic.jpg");
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+        when(s3StorageService.getPresignedUrl("invoices/2026/03/05/1/bill-pic.jpg"))
+                .thenReturn("https://s3.example.com/test");
+
+        String url = invoiceBillService.getFilePresignedUrl(1L, "bill-pic");
+
+        assertEquals("https://s3.example.com/test", url);
+        verify(s3StorageService).getPresignedUrl("invoices/2026/03/05/1/bill-pic.jpg");
+    }
+
+    @Test
+    void getFilePresignedUrl_noFile_throwsException() {
+        testInvoice.setId(1L);
+        testInvoice.setBillPic(null);
+        when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
+
+        assertThrows(RuntimeException.class,
+                () -> invoiceBillService.getFilePresignedUrl(1L, "bill-pic"));
+    }
+
+    @Test
+    void uploadFile_emptyFile_throwsException() {
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[0]);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> invoiceBillService.uploadFile(1L, "bill-pic", file));
     }
 }
