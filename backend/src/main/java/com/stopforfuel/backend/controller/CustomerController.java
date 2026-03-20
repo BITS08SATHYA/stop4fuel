@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.stopforfuel.config.SecurityUtils;
+
 import java.util.List;
 
 @RestController
@@ -47,9 +49,8 @@ public class CustomerController {
     @PostMapping
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
     public Customer createCustomer(@Valid @RequestBody Customer customer) {
-        // TODO: Get scid from SecurityContext
         if (customer.getScid() == null) {
-            customer.setScid(1L);
+            customer.setScid(SecurityUtils.getScid());
         }
         return customerService.createCustomer(customer);
     }
