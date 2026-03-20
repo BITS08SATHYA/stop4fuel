@@ -4,6 +4,8 @@ import com.stopforfuel.backend.entity.CashAdvance;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
 import com.stopforfuel.backend.repository.CashAdvanceRepository;
+import com.stopforfuel.backend.repository.EmployeeRepository;
+import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +27,12 @@ class CashAdvanceServiceTest {
 
     @Mock
     private CashAdvanceRepository repository;
+
+    @Mock
+    private InvoiceBillRepository invoiceBillRepository;
+
+    @Mock
+    private EmployeeRepository employeeRepository;
 
     @Mock
     private ShiftService shiftService;
@@ -164,6 +173,7 @@ class CashAdvanceServiceTest {
 
     @Test
     void delete_callsRepository() {
+        when(invoiceBillRepository.findByCashAdvanceId(1L)).thenReturn(Collections.emptyList());
         cashAdvanceService.delete(1L);
         verify(repository).deleteById(1L);
     }

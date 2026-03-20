@@ -2,6 +2,7 @@ package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.CashAdvance;
+import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.service.CashAdvanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,11 @@ public class CashAdvanceController {
         return cashAdvanceService.getAll();
     }
 
+    @GetMapping("/{id}")
+    public CashAdvance getById(@PathVariable Long id) {
+        return cashAdvanceService.getById(id);
+    }
+
     @GetMapping("/status/{status}")
     public List<CashAdvance> getByStatus(@PathVariable String status) {
         return cashAdvanceService.getByStatus(status);
@@ -32,6 +38,16 @@ public class CashAdvanceController {
     @GetMapping("/shift/{shiftId}")
     public List<CashAdvance> getByShift(@PathVariable Long shiftId) {
         return cashAdvanceService.getByShift(shiftId);
+    }
+
+    @GetMapping("/employee/{employeeId}")
+    public List<CashAdvance> getByEmployee(@PathVariable Long employeeId) {
+        return cashAdvanceService.getByEmployee(employeeId);
+    }
+
+    @GetMapping("/outstanding")
+    public List<CashAdvance> getOutstanding() {
+        return cashAdvanceService.getOutstanding();
     }
 
     @PostMapping
@@ -44,6 +60,22 @@ public class CashAdvanceController {
         BigDecimal returnedAmount = new BigDecimal(body.get("returnedAmount").toString());
         String returnRemarks = body.get("returnRemarks") != null ? body.get("returnRemarks").toString() : null;
         return cashAdvanceService.recordReturn(id, returnedAmount, returnRemarks);
+    }
+
+    // Invoice assignment
+    @PostMapping("/{id}/invoices/{invoiceId}")
+    public CashAdvance assignInvoice(@PathVariable Long id, @PathVariable Long invoiceId) {
+        return cashAdvanceService.assignInvoice(id, invoiceId);
+    }
+
+    @DeleteMapping("/{id}/invoices/{invoiceId}")
+    public CashAdvance unassignInvoice(@PathVariable Long id, @PathVariable Long invoiceId) {
+        return cashAdvanceService.unassignInvoice(id, invoiceId);
+    }
+
+    @GetMapping("/{id}/invoices")
+    public List<InvoiceBill> getAssignedInvoices(@PathVariable Long id) {
+        return cashAdvanceService.getAssignedInvoices(id);
     }
 
     @PatchMapping("/{id}/cancel")
