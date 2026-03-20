@@ -7,6 +7,7 @@ import com.stopforfuel.backend.entity.LeaveType;
 import com.stopforfuel.backend.service.LeaveService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -22,16 +23,19 @@ public class LeaveController {
 
     // Leave Types
     @GetMapping("/leave-types")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
     public List<LeaveType> getAllLeaveTypes() {
         return leaveService.getAllLeaveTypes();
     }
 
     @PostMapping("/leave-types")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public LeaveType createLeaveType(@Valid @RequestBody LeaveType leaveType) {
         return leaveService.createLeaveType(leaveType);
     }
 
     @PutMapping("/leave-types/{id}")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public ResponseEntity<LeaveType> updateLeaveType(@PathVariable Long id, @Valid @RequestBody LeaveType leaveType) {
         try {
             return ResponseEntity.ok(leaveService.updateLeaveType(id, leaveType));
@@ -41,6 +45,7 @@ public class LeaveController {
     }
 
     @DeleteMapping("/leave-types/{id}")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public ResponseEntity<Void> deleteLeaveType(@PathVariable Long id) {
         leaveService.deleteLeaveType(id);
         return ResponseEntity.ok().build();
@@ -48,6 +53,7 @@ public class LeaveController {
 
     // Leave Balances
     @GetMapping("/employees/{employeeId}/leave-balances")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
     public List<LeaveBalance> getLeaveBalances(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
@@ -56,6 +62,7 @@ public class LeaveController {
     }
 
     @PostMapping("/employees/{employeeId}/leave-balances/initialize")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public List<LeaveBalance> initializeLeaveBalances(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
@@ -65,21 +72,25 @@ public class LeaveController {
 
     // Leave Requests
     @PostMapping("/employees/{employeeId}/leave-requests")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public LeaveRequest createLeaveRequest(@PathVariable Long employeeId, @Valid @RequestBody LeaveRequest request) {
         return leaveService.createLeaveRequest(employeeId, request);
     }
 
     @GetMapping("/employees/{employeeId}/leave-requests")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
     public List<LeaveRequest> getEmployeeLeaveRequests(@PathVariable Long employeeId) {
         return leaveService.getEmployeeLeaveRequests(employeeId);
     }
 
     @GetMapping("/leave-requests")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
     public List<LeaveRequest> getLeaveRequests(@RequestParam(required = false) String status) {
         return leaveService.getLeaveRequestsByStatus(status);
     }
 
     @PatchMapping("/leave-requests/{id}/approve")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public ResponseEntity<LeaveRequest> approveLeaveRequest(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
@@ -93,6 +104,7 @@ public class LeaveController {
     }
 
     @PatchMapping("/leave-requests/{id}/reject")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
     public ResponseEntity<LeaveRequest> rejectLeaveRequest(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {

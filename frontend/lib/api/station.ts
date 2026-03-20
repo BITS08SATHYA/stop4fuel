@@ -1,3 +1,5 @@
+import { fetchWithAuth } from './fetch-with-auth';
+
 // In the browser, derive the API URL from the current hostname so it works
 // on any deployment (localhost, EC2 public IP, custom domain) without needing
 // NEXT_PUBLIC_API_URL to be baked in at build time.
@@ -268,61 +270,61 @@ const handleResponse = async (res: Response) => {
 
 // Daily Inventory - Nozzles
 export const getNozzleInventories = (): Promise<NozzleInventory[]> =>
-    fetch(`${API_BASE_URL}/inventory/nozzles`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/inventory/nozzles`).then(handleResponse);
 
 export const createNozzleInventory = (inventory: Partial<NozzleInventory>): Promise<NozzleInventory> =>
-    fetch(`${API_BASE_URL}/inventory/nozzles`, {
+    fetchWithAuth(`${API_BASE_URL}/inventory/nozzles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inventory),
     }).then(handleResponse);
 
 export const deleteNozzleInventory = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/inventory/nozzles/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/inventory/nozzles/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Daily Inventory - Tanks
 export const getTankInventories = (): Promise<TankInventory[]> =>
-    fetch(`${API_BASE_URL}/inventory/tanks`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/inventory/tanks`).then(handleResponse);
 
 export const createTankInventory = (inventory: Partial<TankInventory>): Promise<TankInventory> =>
-    fetch(`${API_BASE_URL}/inventory/tanks`, {
+    fetchWithAuth(`${API_BASE_URL}/inventory/tanks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inventory),
     }).then(handleResponse);
 
 export const deleteTankInventory = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/inventory/tanks/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/inventory/tanks/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Daily Inventory - Products
 export const getProductInventories = (): Promise<ProductInventory[]> =>
-    fetch(`${API_BASE_URL}/inventory/products`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/inventory/products`).then(handleResponse);
 
 export const createProductInventory = (inventory: Partial<ProductInventory>): Promise<ProductInventory> =>
-    fetch(`${API_BASE_URL}/inventory/products`, {
+    fetchWithAuth(`${API_BASE_URL}/inventory/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inventory),
     }).then(handleResponse);
 export const deleteProductInventory = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/inventory/products/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/inventory/products/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const updateTankInventory = (id: number, inventory: Partial<TankInventory>): Promise<TankInventory> =>
-    fetch(`${API_BASE_URL}/inventory/tanks/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/inventory/tanks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inventory),
     }).then(handleResponse);
 
 export const updateNozzleInventory = (id: number, inventory: Partial<NozzleInventory>): Promise<NozzleInventory> =>
-    fetch(`${API_BASE_URL}/inventory/nozzles/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/inventory/nozzles/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inventory),
     }).then(handleResponse);
 
 export const updateProductInventory = (id: number, inventory: Partial<ProductInventory>): Promise<ProductInventory> =>
-    fetch(`${API_BASE_URL}/inventory/products/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/inventory/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inventory),
@@ -331,234 +333,234 @@ export const updateProductInventory = (id: number, inventory: Partial<ProductInv
 
 // Products
 export const getActiveProducts = (): Promise<Product[]> =>
-    fetch(`${API_BASE_URL}/products/active`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/products/active`).then(handleResponse);
 
 export const getFuelProducts = (): Promise<Product[]> =>
-    fetch(`${API_BASE_URL}/products/category/Fuel`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/products/category/Fuel`).then(handleResponse);
 
 export const getProducts = (): Promise<Product[]> =>
-    fetch(`${API_BASE_URL}/products`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/products`).then(handleResponse);
 
 export const createProduct = (product: Partial<Product>): Promise<Product> =>
-    fetch(`${API_BASE_URL}/products`, {
+    fetchWithAuth(`${API_BASE_URL}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(product),
     }).then(handleResponse);
 
 export const updateProduct = (id: number, product: Partial<Product>): Promise<Product> =>
-    fetch(`${API_BASE_URL}/products/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(product),
     }).then(handleResponse);
 
 export const deleteProduct = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/products/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/products/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Tanks
 export const getTanks = (): Promise<Tank[]> =>
-    fetch(`${API_BASE_URL}/tanks`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/tanks`).then(handleResponse);
 
 export const createTank = (tank: Partial<Tank>): Promise<Tank> =>
-    fetch(`${API_BASE_URL}/tanks`, {
+    fetchWithAuth(`${API_BASE_URL}/tanks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tank),
     }).then(handleResponse);
 
 export const updateTank = (id: number, tank: Partial<Tank>): Promise<Tank> =>
-    fetch(`${API_BASE_URL}/tanks/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/tanks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tank),
     }).then(handleResponse);
 
 export const deleteTank = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/tanks/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/tanks/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Pumps
 export const getPumps = (): Promise<Pump[]> =>
-    fetch(`${API_BASE_URL}/pumps`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/pumps`).then(handleResponse);
 
 export const createPump = (pump: Partial<Pump>): Promise<Pump> =>
-    fetch(`${API_BASE_URL}/pumps`, {
+    fetchWithAuth(`${API_BASE_URL}/pumps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pump),
     }).then(handleResponse);
 
 export const updatePump = (id: number, pump: Partial<Pump>): Promise<Pump> =>
-    fetch(`${API_BASE_URL}/pumps/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/pumps/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pump),
     }).then(handleResponse);
 
 export const deletePump = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/pumps/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/pumps/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Nozzles
 export const getNozzles = (): Promise<Nozzle[]> =>
-    fetch(`${API_BASE_URL}/nozzles`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/nozzles`).then(handleResponse);
 
 export const createNozzle = (nozzle: Partial<Nozzle>): Promise<Nozzle> =>
-    fetch(`${API_BASE_URL}/nozzles`, {
+    fetchWithAuth(`${API_BASE_URL}/nozzles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nozzle),
     }).then(handleResponse);
 
 export const updateNozzle = (id: number, nozzle: Partial<Nozzle>): Promise<Nozzle> =>
-    fetch(`${API_BASE_URL}/nozzles/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/nozzles/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nozzle),
     }).then(handleResponse);
 
 export const deleteNozzle = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/nozzles/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/nozzles/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Suppliers
 export const getSuppliers = (): Promise<Supplier[]> =>
-    fetch(`${API_BASE_URL}/suppliers`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/suppliers`).then(handleResponse);
 
 export const getActiveSuppliers = (): Promise<Supplier[]> =>
-    fetch(`${API_BASE_URL}/suppliers/active`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/suppliers/active`).then(handleResponse);
 
 export const createSupplier = (supplier: Partial<Supplier>): Promise<Supplier> =>
-    fetch(`${API_BASE_URL}/suppliers`, {
+    fetchWithAuth(`${API_BASE_URL}/suppliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(supplier),
     }).then(handleResponse);
 
 export const updateSupplier = (id: number, supplier: Partial<Supplier>): Promise<Supplier> =>
-    fetch(`${API_BASE_URL}/suppliers/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/suppliers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(supplier),
     }).then(handleResponse);
 
 export const deleteSupplier = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/suppliers/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/suppliers/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const toggleSupplierStatus = (id: number): Promise<Supplier> =>
-    fetch(`${API_BASE_URL}/suppliers/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/suppliers/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
 
 // Oil Types
 export const getOilTypes = (): Promise<OilType[]> =>
-    fetch(`${API_BASE_URL}/oil-types`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/oil-types`).then(handleResponse);
 
 export const getActiveOilTypes = (): Promise<OilType[]> =>
-    fetch(`${API_BASE_URL}/oil-types/active`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/oil-types/active`).then(handleResponse);
 
 export const createOilType = (oilType: Partial<OilType>): Promise<OilType> =>
-    fetch(`${API_BASE_URL}/oil-types`, {
+    fetchWithAuth(`${API_BASE_URL}/oil-types`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(oilType),
     }).then(handleResponse);
 
 export const updateOilType = (id: number, oilType: Partial<OilType>): Promise<OilType> =>
-    fetch(`${API_BASE_URL}/oil-types/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/oil-types/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(oilType),
     }).then(handleResponse);
 
 export const deleteOilType = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/oil-types/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/oil-types/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const toggleOilTypeStatus = (id: number): Promise<OilType> =>
-    fetch(`${API_BASE_URL}/oil-types/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/oil-types/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
 
 // Grade Types
 export const getGradeTypes = (): Promise<GradeType[]> =>
-    fetch(`${API_BASE_URL}/grades`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/grades`).then(handleResponse);
 
 export const getActiveGradeTypes = (): Promise<GradeType[]> =>
-    fetch(`${API_BASE_URL}/grades/active`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/grades/active`).then(handleResponse);
 
 export const createGradeType = (grade: Partial<GradeType>): Promise<GradeType> =>
-    fetch(`${API_BASE_URL}/grades`, {
+    fetchWithAuth(`${API_BASE_URL}/grades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(grade),
     }).then(handleResponse);
 
 export const updateGradeType = (id: number, grade: Partial<GradeType>): Promise<GradeType> =>
-    fetch(`${API_BASE_URL}/grades/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/grades/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(grade),
     }).then(handleResponse);
 
 export const deleteGradeType = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/grades/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/grades/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const toggleGradeStatus = (id: number): Promise<GradeType> =>
-    fetch(`${API_BASE_URL}/grades/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/grades/${id}/toggle-status`, { method: 'PATCH' }).then(handleResponse);
 
 export const getGradesByOilType = (oilTypeId: number): Promise<GradeType[]> =>
-    fetch(`${API_BASE_URL}/grades/oil-type/${oilTypeId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/grades/oil-type/${oilTypeId}`).then(handleResponse);
 
 // Invoices
 export const getInvoices = (): Promise<InvoiceBill[]> =>
-    fetch(`${API_BASE_URL}/invoices`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/invoices`).then(handleResponse);
 
 export const getInvoicesByShift = (shiftId: number): Promise<InvoiceBill[]> =>
-    fetch(`${API_BASE_URL}/invoices/shift/${shiftId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/invoices/shift/${shiftId}`).then(handleResponse);
 
 export const createInvoice = (invoice: Partial<InvoiceBill>): Promise<InvoiceBill> =>
-    fetch(`${API_BASE_URL}/invoices`, {
+    fetchWithAuth(`${API_BASE_URL}/invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoice),
     }).then(handleResponse);
 
 export const updateInvoice = (id: number, invoice: Partial<InvoiceBill>): Promise<InvoiceBill> =>
-    fetch(`${API_BASE_URL}/invoices/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoice),
     }).then(handleResponse);
 
 export const deleteInvoice = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const uploadInvoiceFile = (id: number, type: string, file: File): Promise<InvoiceBill> => {
     const formData = new FormData();
     formData.append('file', file);
-    return fetch(`${API_BASE_URL}/invoices/${id}/upload/${type}`, {
+    return fetchWithAuth(`${API_BASE_URL}/invoices/${id}/upload/${type}`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);
 };
 
 export const getInvoiceFileUrl = (id: number, type: string): Promise<string> =>
-    fetch(`${API_BASE_URL}/invoices/${id}/file-url?type=${type}`).then(handleResponse).then((data: { url: string }) => data.url);
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}/file-url?type=${type}`).then(handleResponse).then((data: { url: string }) => data.url);
 
 // Customers & Vehicles Search
 export const getCustomers = (search?: string): Promise<any> => {
     const url = search ? `${API_BASE_URL}/customers?search=${encodeURIComponent(search)}` : `${API_BASE_URL}/customers`;
-    return fetch(url).then(handleResponse);
+    return fetchWithAuth(url).then(handleResponse);
 };
 
 export const getVehicles = (search?: string): Promise<Vehicle[]> => {
     const url = search ? `${API_BASE_URL}/vehicles?search=${encodeURIComponent(search)}` : `${API_BASE_URL}/vehicles`;
-    return fetch(url).then(handleResponse);
+    return fetchWithAuth(url).then(handleResponse);
 };
 
 export const getVehiclesByCustomer = (customerId: number): Promise<Vehicle[]> =>
-    fetch(`${API_BASE_URL}/vehicles/customer/${customerId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/vehicles/customer/${customerId}`).then(handleResponse);
 
 export const searchVehicles = (query: string): Promise<Vehicle[]> =>
-    fetch(`${API_BASE_URL}/vehicles/search?q=${encodeURIComponent(query)}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/vehicles/search?q=${encodeURIComponent(query)}`).then(handleResponse);
 
 // Payment Modes
 export const getPaymentModes = (): Promise<PaymentMode[]> =>
-    fetch(`${API_BASE_URL}/payment-modes`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/payment-modes`).then(handleResponse);
 
 // Statements
 export const getStatements = (
@@ -567,20 +569,20 @@ export const getStatements = (
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (customerId) params.append('customerId', String(customerId));
     if (status) params.append('status', status);
-    return fetch(`${API_BASE_URL}/statements?${params}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/statements?${params}`).then(handleResponse);
 };
 
 export const getStatementById = (id: number): Promise<Statement> =>
-    fetch(`${API_BASE_URL}/statements/${id}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/statements/${id}`).then(handleResponse);
 
 export const getStatementsByCustomer = (customerId: number): Promise<Statement[]> =>
-    fetch(`${API_BASE_URL}/statements/customer/${customerId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/statements/customer/${customerId}`).then(handleResponse);
 
 export const getOutstandingStatements = (): Promise<Statement[]> =>
-    fetch(`${API_BASE_URL}/statements/outstanding`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/statements/outstanding`).then(handleResponse);
 
 export const getOutstandingByCustomer = (customerId: number): Promise<Statement[]> =>
-    fetch(`${API_BASE_URL}/statements/outstanding/customer/${customerId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/statements/outstanding/customer/${customerId}`).then(handleResponse);
 
 export const generateStatement = (
     customerId: number, fromDate: string, toDate: string,
@@ -596,7 +598,7 @@ export const generateStatement = (
     if (filters?.billIds?.length) {
         filters.billIds.forEach(id => params.append('billIds', String(id)));
     }
-    return fetch(`${API_BASE_URL}/statements/generate?${params}`, {
+    return fetchWithAuth(`${API_BASE_URL}/statements/generate?${params}`, {
         method: 'POST',
     }).then(handleResponse);
 };
@@ -612,48 +614,48 @@ export const previewStatementBills = (
     });
     if (filters?.vehicleId) params.append('vehicleId', String(filters.vehicleId));
     if (filters?.productId) params.append('productId', String(filters.productId));
-    return fetch(`${API_BASE_URL}/statements/preview?${params}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/statements/preview?${params}`).then(handleResponse);
 };
 
 export const getStatementBills = (statementId: number): Promise<InvoiceBill[]> =>
-    fetch(`${API_BASE_URL}/statements/${statementId}/bills`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/statements/${statementId}/bills`).then(handleResponse);
 
 export const removeBillFromStatement = (statementId: number, billId: number): Promise<Statement> =>
-    fetch(`${API_BASE_URL}/statements/${statementId}/bills/${billId}`, {
+    fetchWithAuth(`${API_BASE_URL}/statements/${statementId}/bills/${billId}`, {
         method: 'DELETE',
     }).then(handleResponse);
 
 export const deleteStatement = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/statements/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/statements/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const generateStatementPdf = (id: number): Promise<Statement> =>
-    fetch(`${API_BASE_URL}/statements/${id}/generate-pdf`, { method: 'POST' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/statements/${id}/generate-pdf`, { method: 'POST' }).then(handleResponse);
 
 export const getStatementPdfUrl = (id: number): Promise<string> =>
-    fetch(`${API_BASE_URL}/statements/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
+    fetchWithAuth(`${API_BASE_URL}/statements/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
 
 // Payments
 export const getPayments = (page = 0, size = 10): Promise<PageResponse<Payment>> =>
-    fetch(`${API_BASE_URL}/payments?page=${page}&size=${size}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/payments?page=${page}&size=${size}`).then(handleResponse);
 
 export const getPaymentsByCustomer = (customerId: number, page = 0, size = 10): Promise<PageResponse<Payment>> =>
-    fetch(`${API_BASE_URL}/payments/customer/${customerId}?page=${page}&size=${size}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/payments/customer/${customerId}?page=${page}&size=${size}`).then(handleResponse);
 
 export const getPaymentsByStatement = (statementId: number): Promise<Payment[]> =>
-    fetch(`${API_BASE_URL}/payments/statement/${statementId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/payments/statement/${statementId}`).then(handleResponse);
 
 export const getPaymentsByBill = (invoiceBillId: number): Promise<Payment[]> =>
-    fetch(`${API_BASE_URL}/payments/bill/${invoiceBillId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/payments/bill/${invoiceBillId}`).then(handleResponse);
 
 export const recordStatementPayment = (statementId: number, payment: Partial<Payment>): Promise<Payment> =>
-    fetch(`${API_BASE_URL}/payments/statement/${statementId}`, {
+    fetchWithAuth(`${API_BASE_URL}/payments/statement/${statementId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payment),
     }).then(handleResponse);
 
 export const recordBillPayment = (invoiceBillId: number, payment: Partial<Payment>): Promise<Payment> =>
-    fetch(`${API_BASE_URL}/payments/bill/${invoiceBillId}`, {
+    fetchWithAuth(`${API_BASE_URL}/payments/bill/${invoiceBillId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payment),
@@ -662,24 +664,24 @@ export const recordBillPayment = (invoiceBillId: number, payment: Partial<Paymen
 export const uploadPaymentProof = (paymentId: number, file: File): Promise<Payment> => {
     const formData = new FormData();
     formData.append('file', file);
-    return fetch(`${API_BASE_URL}/payments/${paymentId}/upload-proof`, {
+    return fetchWithAuth(`${API_BASE_URL}/payments/${paymentId}/upload-proof`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);
 };
 
 export const getPaymentProofUrl = (paymentId: number): Promise<{ url: string }> =>
-    fetch(`${API_BASE_URL}/payments/${paymentId}/proof-url`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/payments/${paymentId}/proof-url`).then(handleResponse);
 
 // Ledger
 export const getOpeningBalance = (customerId: number, asOfDate: string): Promise<number> =>
-    fetch(`${API_BASE_URL}/ledger/opening-balance?customerId=${customerId}&asOfDate=${asOfDate}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/ledger/opening-balance?customerId=${customerId}&asOfDate=${asOfDate}`).then(handleResponse);
 
 export const getCustomerLedger = (customerId: number, fromDate: string, toDate: string): Promise<CustomerLedger> =>
-    fetch(`${API_BASE_URL}/ledger/customer/${customerId}?fromDate=${fromDate}&toDate=${toDate}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/ledger/customer/${customerId}?fromDate=${fromDate}&toDate=${toDate}`).then(handleResponse);
 
 export const getOutstandingBills = (customerId: number): Promise<InvoiceBill[]> =>
-    fetch(`${API_BASE_URL}/ledger/outstanding/${customerId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/ledger/outstanding/${customerId}`).then(handleResponse);
 
 // Credit Management
 export interface CreditCustomerSummary {
@@ -722,17 +724,17 @@ export interface CreditCustomerDetail {
 }
 
 export const getCreditOverview = (): Promise<CreditOverview> =>
-    fetch(`${API_BASE_URL}/credit/overview`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/credit/overview`).then(handleResponse);
 
 export const getCreditCustomerDetail = (customerId: number): Promise<CreditCustomerDetail> =>
-    fetch(`${API_BASE_URL}/credit/customer/${customerId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/credit/customer/${customerId}`).then(handleResponse);
 
 // Block / Unblock Customer
 export const blockCustomer = (id: number): Promise<any> =>
-    fetch(`${API_BASE_URL}/customers/${id}/block`, { method: 'PATCH' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/customers/${id}/block`, { method: 'PATCH' }).then(handleResponse);
 
 export const unblockCustomer = (id: number): Promise<any> =>
-    fetch(`${API_BASE_URL}/customers/${id}/unblock`, { method: 'PATCH' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/customers/${id}/unblock`, { method: 'PATCH' }).then(handleResponse);
 
 // Paginated Customer Invoices
 export const getCustomerInvoices = (
@@ -746,7 +748,7 @@ export const getCustomerInvoices = (
     if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
     if (filters?.fromDate) params.append('fromDate', filters.fromDate);
     if (filters?.toDate) params.append('toDate', filters.toDate);
-    return fetch(`${API_BASE_URL}/invoices/customer/${customerId}?${params}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/invoices/customer/${customerId}?${params}`).then(handleResponse);
 };
 
 // Product Sales Summary
@@ -771,7 +773,7 @@ export const getInvoiceHistory = (
     if (filters?.fromDate) params.append('fromDate', filters.fromDate);
     if (filters?.toDate) params.append('toDate', filters.toDate);
     if (filters?.search) params.append('search', filters.search);
-    return fetch(`${API_BASE_URL}/invoices/history?${params}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/invoices/history?${params}`).then(handleResponse);
 };
 
 // Product Sales Summary for history filters
@@ -783,7 +785,7 @@ export const getProductSalesSummary = (
     if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
     if (filters?.fromDate) params.append('fromDate', filters.fromDate);
     if (filters?.toDate) params.append('toDate', filters.toDate);
-    return fetch(`${API_BASE_URL}/invoices/history/product-summary?${params}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/invoices/history/product-summary?${params}`).then(handleResponse);
 };
 
 // Incentives
@@ -797,27 +799,27 @@ export interface Incentive {
 }
 
 export const getAllIncentives = (): Promise<Incentive[]> =>
-    fetch(`${API_BASE_URL}/incentives`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/incentives`).then(handleResponse);
 
 export const getIncentivesByCustomer = (customerId: number): Promise<Incentive[]> =>
-    fetch(`${API_BASE_URL}/incentives/customer/${customerId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/incentives/customer/${customerId}`).then(handleResponse);
 
 export const createIncentive = (incentive: Partial<Incentive>): Promise<Incentive> =>
-    fetch(`${API_BASE_URL}/incentives`, {
+    fetchWithAuth(`${API_BASE_URL}/incentives`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(incentive),
     }).then(handleResponse);
 
 export const updateIncentive = (id: number, incentive: Partial<Incentive>): Promise<Incentive> =>
-    fetch(`${API_BASE_URL}/incentives/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/incentives/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(incentive),
     }).then(handleResponse);
 
 export const deleteIncentive = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/incentives/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/incentives/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Shifts
 export interface Shift {
@@ -830,20 +832,20 @@ export interface Shift {
 }
 
 export const getShifts = (): Promise<Shift[]> =>
-    fetch(`${API_BASE_URL}/shifts`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shifts`).then(handleResponse);
 
 export const getActiveShift = (): Promise<Shift | null> =>
-    fetch(`${API_BASE_URL}/shifts/active`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shifts/active`).then(handleResponse);
 
 export const openShift = (shift: Partial<Shift>): Promise<Shift> =>
-    fetch(`${API_BASE_URL}/shifts/open`, {
+    fetchWithAuth(`${API_BASE_URL}/shifts/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shift),
     }).then(handleResponse);
 
 export const closeShift = (id: number): Promise<Shift> =>
-    fetch(`${API_BASE_URL}/shifts/${id}/close`, {
+    fetchWithAuth(`${API_BASE_URL}/shifts/${id}/close`, {
         method: 'POST',
     }).then(handleResponse);
 
@@ -896,36 +898,36 @@ export interface ShiftTransactionSummary {
 }
 
 export const getShiftTransactions = (shiftId: number): Promise<ShiftTransaction[]> =>
-    fetch(`${API_BASE_URL}/shift-transactions/shift/${shiftId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shift-transactions/shift/${shiftId}`).then(handleResponse);
 
 export const getShiftTransactionSummary = (shiftId: number): Promise<ShiftTransactionSummary> =>
-    fetch(`${API_BASE_URL}/shift-transactions/shift/${shiftId}/summary`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shift-transactions/shift/${shiftId}/summary`).then(handleResponse);
 
 export const createShiftTransaction = (transaction: Partial<ShiftTransaction>): Promise<ShiftTransaction> =>
-    fetch(`${API_BASE_URL}/shift-transactions`, {
+    fetchWithAuth(`${API_BASE_URL}/shift-transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transaction),
     }).then(handleResponse);
 
 export const deleteShiftTransaction = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/shift-transactions/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shift-transactions/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const getUpiCompanies = (): Promise<UpiCompany[]> =>
-    fetch(`${API_BASE_URL}/upi-companies`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/upi-companies`).then(handleResponse);
 
 export const createUpiCompany = (company: Partial<UpiCompany>): Promise<UpiCompany> =>
-    fetch(`${API_BASE_URL}/upi-companies`, {
+    fetchWithAuth(`${API_BASE_URL}/upi-companies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(company),
     }).then(handleResponse);
 
 export const getExpenseTypes = (): Promise<ExpenseType[]> =>
-    fetch(`${API_BASE_URL}/expense-types`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/expense-types`).then(handleResponse);
 
 export const createExpenseType = (type: Partial<ExpenseType>): Promise<ExpenseType> =>
-    fetch(`${API_BASE_URL}/expense-types`, {
+    fetchWithAuth(`${API_BASE_URL}/expense-types`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(type),
@@ -997,7 +999,7 @@ export interface RecentInvoiceItem {
 }
 
 export const getDashboardStats = (): Promise<DashboardStats> =>
-    fetch(`${API_BASE_URL}/dashboard/stats`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/dashboard/stats`).then(handleResponse);
 
 // --- Invoice Analytics Dashboard ---
 export interface InvoiceDailyTrend {
@@ -1053,7 +1055,7 @@ export const getInvoiceAnalytics = (from?: string, to?: string): Promise<Invoice
     if (from) params.append('from', from);
     if (to) params.append('to', to);
     const qs = params.toString();
-    return fetch(`${API_BASE_URL}/dashboard/invoice-analytics${qs ? `?${qs}` : ''}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/dashboard/invoice-analytics${qs ? `?${qs}` : ''}`).then(handleResponse);
 };
 
 // --- Payment Analytics Dashboard ---
@@ -1086,7 +1088,7 @@ export const getPaymentAnalytics = (from?: string, to?: string): Promise<Payment
     if (from) params.append('from', from);
     if (to) params.append('to', to);
     const qs = params.toString();
-    return fetch(`${API_BASE_URL}/dashboard/payment-analytics${qs ? `?${qs}` : ''}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/dashboard/payment-analytics${qs ? `?${qs}` : ''}`).then(handleResponse);
 };
 
 // --- Godown & Cashier Stock Types ---
@@ -1145,54 +1147,54 @@ export interface ReceiveItemDTO {
 
 // --- Godown Stock ---
 export const getGodownStocks = (): Promise<GodownStock[]> =>
-    fetch(`${API_BASE_URL}/godown`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/godown`).then(handleResponse);
 
 export const getGodownStockByProduct = (productId: number): Promise<GodownStock[]> =>
-    fetch(`${API_BASE_URL}/godown?productId=${productId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/godown?productId=${productId}`).then(handleResponse);
 
 export const getGodownLowStock = (): Promise<GodownStock[]> =>
-    fetch(`${API_BASE_URL}/godown/low-stock`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/godown/low-stock`).then(handleResponse);
 
 export const createGodownStock = (stock: Partial<GodownStock>): Promise<GodownStock> =>
-    fetch(`${API_BASE_URL}/godown`, {
+    fetchWithAuth(`${API_BASE_URL}/godown`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(stock),
     }).then(handleResponse);
 
 export const updateGodownStock = (id: number, stock: Partial<GodownStock>): Promise<GodownStock> =>
-    fetch(`${API_BASE_URL}/godown/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/godown/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(stock),
     }).then(handleResponse);
 
 export const deleteGodownStock = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/godown/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/godown/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // --- Cashier Stock ---
 export const getCashierStocks = (): Promise<CashierStock[]> =>
-    fetch(`${API_BASE_URL}/cashier-stock`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/cashier-stock`).then(handleResponse);
 
 export const getCashierStockByProduct = (productId: number): Promise<CashierStock[]> =>
-    fetch(`${API_BASE_URL}/cashier-stock?productId=${productId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/cashier-stock?productId=${productId}`).then(handleResponse);
 
 export const createCashierStock = (stock: Partial<CashierStock>): Promise<CashierStock> =>
-    fetch(`${API_BASE_URL}/cashier-stock`, {
+    fetchWithAuth(`${API_BASE_URL}/cashier-stock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(stock),
     }).then(handleResponse);
 
 export const updateCashierStock = (id: number, stock: Partial<CashierStock>): Promise<CashierStock> =>
-    fetch(`${API_BASE_URL}/cashier-stock/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/cashier-stock/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(stock),
     }).then(handleResponse);
 
 export const deleteCashierStock = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/cashier-stock/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/cashier-stock/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // --- Stock Transfers ---
 export const getStockTransfers = (productId?: number, from?: string, to?: string): Promise<StockTransfer[]> => {
@@ -1201,11 +1203,11 @@ export const getStockTransfers = (productId?: number, from?: string, to?: string
     if (from) params.append('from', from);
     if (to) params.append('to', to);
     const qs = params.toString();
-    return fetch(`${API_BASE_URL}/stock-transfers${qs ? `?${qs}` : ''}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/stock-transfers${qs ? `?${qs}` : ''}`).then(handleResponse);
 };
 
 export const createStockTransfer = (transfer: Partial<StockTransfer>): Promise<StockTransfer> =>
-    fetch(`${API_BASE_URL}/stock-transfers`, {
+    fetchWithAuth(`${API_BASE_URL}/stock-transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transfer),
@@ -1217,35 +1219,35 @@ export const getPurchaseOrders = (status?: string, supplierId?: number): Promise
     if (status) params.append('status', status);
     if (supplierId) params.append('supplierId', String(supplierId));
     const qs = params.toString();
-    return fetch(`${API_BASE_URL}/purchase-orders${qs ? `?${qs}` : ''}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/purchase-orders${qs ? `?${qs}` : ''}`).then(handleResponse);
 };
 
 export const getPurchaseOrderById = (id: number): Promise<PurchaseOrder> =>
-    fetch(`${API_BASE_URL}/purchase-orders/${id}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/purchase-orders/${id}`).then(handleResponse);
 
 export const createPurchaseOrder = (order: Partial<PurchaseOrder>): Promise<PurchaseOrder> =>
-    fetch(`${API_BASE_URL}/purchase-orders`, {
+    fetchWithAuth(`${API_BASE_URL}/purchase-orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(order),
     }).then(handleResponse);
 
 export const updatePurchaseOrder = (id: number, order: Partial<PurchaseOrder>): Promise<PurchaseOrder> =>
-    fetch(`${API_BASE_URL}/purchase-orders/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/purchase-orders/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(order),
     }).then(handleResponse);
 
 export const receivePurchaseOrder = (id: number, items: ReceiveItemDTO[]): Promise<PurchaseOrder> =>
-    fetch(`${API_BASE_URL}/purchase-orders/${id}/receive`, {
+    fetchWithAuth(`${API_BASE_URL}/purchase-orders/${id}/receive`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(items),
     }).then(handleResponse);
 
 export const cancelPurchaseOrder = (id: number): Promise<PurchaseOrder> =>
-    fetch(`${API_BASE_URL}/purchase-orders/${id}/cancel`, { method: 'PATCH' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/purchase-orders/${id}/cancel`, { method: 'PATCH' }).then(handleResponse);
 
 // --- Purchase Invoices ---
 export interface PurchaseInvoiceItem {
@@ -1277,43 +1279,43 @@ export const getPurchaseInvoices = (status?: string, supplierId?: number, type?:
     if (supplierId) params.append('supplierId', String(supplierId));
     if (type) params.append('type', type);
     const qs = params.toString();
-    return fetch(`${API_BASE_URL}/purchase-invoices${qs ? `?${qs}` : ''}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/purchase-invoices${qs ? `?${qs}` : ''}`).then(handleResponse);
 };
 
 export const getPurchaseInvoiceById = (id: number): Promise<PurchaseInvoice> =>
-    fetch(`${API_BASE_URL}/purchase-invoices/${id}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/purchase-invoices/${id}`).then(handleResponse);
 
 export const createPurchaseInvoice = (invoice: Partial<PurchaseInvoice>): Promise<PurchaseInvoice> =>
-    fetch(`${API_BASE_URL}/purchase-invoices`, {
+    fetchWithAuth(`${API_BASE_URL}/purchase-invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoice),
     }).then(handleResponse);
 
 export const updatePurchaseInvoice = (id: number, invoice: Partial<PurchaseInvoice>): Promise<PurchaseInvoice> =>
-    fetch(`${API_BASE_URL}/purchase-invoices/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/purchase-invoices/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoice),
     }).then(handleResponse);
 
 export const deletePurchaseInvoice = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/purchase-invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/purchase-invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const updatePurchaseInvoiceStatus = (id: number, status: string): Promise<PurchaseInvoice> =>
-    fetch(`${API_BASE_URL}/purchase-invoices/${id}/status?status=${status}`, { method: 'PATCH' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/purchase-invoices/${id}/status?status=${status}`, { method: 'PATCH' }).then(handleResponse);
 
 export const uploadPurchaseInvoicePdf = (id: number, file: File): Promise<PurchaseInvoice> => {
     const formData = new FormData();
     formData.append('file', file);
-    return fetch(`${API_BASE_URL}/purchase-invoices/${id}/upload-pdf`, {
+    return fetchWithAuth(`${API_BASE_URL}/purchase-invoices/${id}/upload-pdf`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);
 };
 
 export const getPurchaseInvoicePdfUrl = (id: number): Promise<string> =>
-    fetch(`${API_BASE_URL}/purchase-invoices/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
+    fetchWithAuth(`${API_BASE_URL}/purchase-invoices/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
 
 // ────────────────────────────────────────────────────────────
 // Employee Management Types & APIs
@@ -1354,15 +1356,15 @@ export interface EmployeeType {
 }
 
 export const getEmployees = (): Promise<EmployeeType[]> =>
-    fetch(`${API_BASE_URL}/employees`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/employees`).then(handleResponse);
 
 export const getActiveEmployees = (): Promise<EmployeeType[]> =>
-    fetch(`${API_BASE_URL}/employees/active`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/employees/active`).then(handleResponse);
 
 export const uploadEmployeePhoto = (id: number, file: File): Promise<EmployeeType> => {
     const formData = new FormData();
     formData.append('file', file);
-    return fetch(`${API_BASE_URL}/employees/${id}/upload-photo`, {
+    return fetchWithAuth(`${API_BASE_URL}/employees/${id}/upload-photo`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);
@@ -1371,7 +1373,7 @@ export const uploadEmployeePhoto = (id: number, file: File): Promise<EmployeeTyp
 export const uploadEmployeeAadharDoc = (id: number, file: File): Promise<EmployeeType> => {
     const formData = new FormData();
     formData.append('file', file);
-    return fetch(`${API_BASE_URL}/employees/${id}/upload-aadhar-doc`, {
+    return fetchWithAuth(`${API_BASE_URL}/employees/${id}/upload-aadhar-doc`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);
@@ -1380,14 +1382,14 @@ export const uploadEmployeeAadharDoc = (id: number, file: File): Promise<Employe
 export const uploadEmployeePanDoc = (id: number, file: File): Promise<EmployeeType> => {
     const formData = new FormData();
     formData.append('file', file);
-    return fetch(`${API_BASE_URL}/employees/${id}/upload-pan-doc`, {
+    return fetchWithAuth(`${API_BASE_URL}/employees/${id}/upload-pan-doc`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);
 };
 
 export const getEmployeeFileUrl = (id: number, type: string): Promise<{ url: string }> =>
-    fetch(`${API_BASE_URL}/employees/${id}/file-url?type=${type}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/employees/${id}/file-url?type=${type}`).then(handleResponse);
 
 // ────────────────────────────────────────────────────────────
 // Leave Management Types & APIs
@@ -1426,58 +1428,58 @@ export interface LeaveRequest {
 }
 
 export const getLeaveTypes = (): Promise<LeaveType[]> =>
-    fetch(`${API_BASE_URL}/leave-types`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/leave-types`).then(handleResponse);
 
 export const createLeaveType = (lt: Partial<LeaveType>): Promise<LeaveType> =>
-    fetch(`${API_BASE_URL}/leave-types`, {
+    fetchWithAuth(`${API_BASE_URL}/leave-types`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(lt),
     }).then(handleResponse);
 
 export const updateLeaveType = (id: number, lt: Partial<LeaveType>): Promise<LeaveType> =>
-    fetch(`${API_BASE_URL}/leave-types/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/leave-types/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(lt),
     }).then(handleResponse);
 
 export const deleteLeaveType = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/leave-types/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/leave-types/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const getEmployeeLeaveBalances = (employeeId: number, year?: number): Promise<LeaveBalance[]> => {
     const params = year ? `?year=${year}` : '';
-    return fetch(`${API_BASE_URL}/employees/${employeeId}/leave-balances${params}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/employees/${employeeId}/leave-balances${params}`).then(handleResponse);
 };
 
 export const initializeLeaveBalances = (employeeId: number, year?: number): Promise<LeaveBalance[]> => {
     const params = year ? `?year=${year}` : '';
-    return fetch(`${API_BASE_URL}/employees/${employeeId}/leave-balances/initialize${params}`, {
+    return fetchWithAuth(`${API_BASE_URL}/employees/${employeeId}/leave-balances/initialize${params}`, {
         method: 'POST',
     }).then(handleResponse);
 };
 
 export const getLeaveRequests = (status?: string): Promise<LeaveRequest[]> => {
     const params = status ? `?status=${status}` : '';
-    return fetch(`${API_BASE_URL}/leave-requests${params}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/leave-requests${params}`).then(handleResponse);
 };
 
 export const createLeaveRequest = (employeeId: number, request: Partial<LeaveRequest>): Promise<LeaveRequest> =>
-    fetch(`${API_BASE_URL}/employees/${employeeId}/leave-requests`, {
+    fetchWithAuth(`${API_BASE_URL}/employees/${employeeId}/leave-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
     }).then(handleResponse);
 
 export const approveLeaveRequest = (id: number, body?: { approvedBy?: string; remarks?: string }): Promise<LeaveRequest> =>
-    fetch(`${API_BASE_URL}/leave-requests/${id}/approve`, {
+    fetchWithAuth(`${API_BASE_URL}/leave-requests/${id}/approve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body || {}),
     }).then(handleResponse);
 
 export const rejectLeaveRequest = (id: number, body?: { remarks?: string }): Promise<LeaveRequest> =>
-    fetch(`${API_BASE_URL}/leave-requests/${id}/reject`, {
+    fetchWithAuth(`${API_BASE_URL}/leave-requests/${id}/reject`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body || {}),
@@ -1501,20 +1503,20 @@ export interface Attendance {
 }
 
 export const getDailyAttendance = (date: string): Promise<Attendance[]> =>
-    fetch(`${API_BASE_URL}/attendance/daily?date=${date}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/attendance/daily?date=${date}`).then(handleResponse);
 
 export const getEmployeeAttendance = (employeeId: number, month: number, year: number): Promise<Attendance[]> =>
-    fetch(`${API_BASE_URL}/employees/${employeeId}/attendance?month=${month}&year=${year}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/employees/${employeeId}/attendance?month=${month}&year=${year}`).then(handleResponse);
 
 export const markAttendance = (employeeId: number, attendance: Partial<Attendance>): Promise<Attendance> =>
-    fetch(`${API_BASE_URL}/employees/${employeeId}/attendance`, {
+    fetchWithAuth(`${API_BASE_URL}/employees/${employeeId}/attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(attendance),
     }).then(handleResponse);
 
 export const markBulkAttendance = (attendances: Partial<Attendance>[]): Promise<Attendance[]> =>
-    fetch(`${API_BASE_URL}/attendance/bulk`, {
+    fetchWithAuth(`${API_BASE_URL}/attendance/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(attendances),
@@ -1541,25 +1543,25 @@ export interface SalaryPayment {
 }
 
 export const getMonthlyPayments = (month: number, year: number): Promise<SalaryPayment[]> =>
-    fetch(`${API_BASE_URL}/salary?month=${month}&year=${year}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/salary?month=${month}&year=${year}`).then(handleResponse);
 
 export const getEmployeeSalaryPayments = (employeeId: number): Promise<SalaryPayment[]> =>
-    fetch(`${API_BASE_URL}/salary/employee/${employeeId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/salary/employee/${employeeId}`).then(handleResponse);
 
 export const processMonthlyPayroll = (month: number, year: number): Promise<SalaryPayment[]> =>
-    fetch(`${API_BASE_URL}/salary/process?month=${month}&year=${year}`, {
+    fetchWithAuth(`${API_BASE_URL}/salary/process?month=${month}&year=${year}`, {
         method: 'POST',
     }).then(handleResponse);
 
 export const markSalaryAsPaid = (id: number, paymentMode?: string): Promise<SalaryPayment> =>
-    fetch(`${API_BASE_URL}/salary/${id}/pay`, {
+    fetchWithAuth(`${API_BASE_URL}/salary/${id}/pay`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentMode: paymentMode || 'CASH' }),
     }).then(handleResponse);
 
 export const updateSalaryPayment = (id: number, payment: Partial<SalaryPayment>): Promise<SalaryPayment> =>
-    fetch(`${API_BASE_URL}/salary/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/salary/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payment),
@@ -1586,33 +1588,33 @@ export interface UtilityBill {
 
 export const getUtilityBills = (type?: string): Promise<UtilityBill[]> => {
     const params = type ? `?type=${type}` : '';
-    return fetch(`${API_BASE_URL}/utility-bills${params}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/utility-bills${params}`).then(handleResponse);
 };
 
 export const getPendingUtilityBills = (): Promise<UtilityBill[]> =>
-    fetch(`${API_BASE_URL}/utility-bills/pending`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/utility-bills/pending`).then(handleResponse);
 
 export const createUtilityBill = (bill: Partial<UtilityBill>): Promise<UtilityBill> =>
-    fetch(`${API_BASE_URL}/utility-bills`, {
+    fetchWithAuth(`${API_BASE_URL}/utility-bills`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bill),
     }).then(handleResponse);
 
 export const updateUtilityBill = (id: number, bill: Partial<UtilityBill>): Promise<UtilityBill> =>
-    fetch(`${API_BASE_URL}/utility-bills/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/utility-bills/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bill),
     }).then(handleResponse);
 
 export const deleteUtilityBill = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/utility-bills/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/utility-bills/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const uploadUtilityBillPdf = (file: File): Promise<UtilityBill> => {
     const formData = new FormData();
     formData.append('file', file);
-    return fetch(`${API_BASE_URL}/utility-bills/upload-pdf`, {
+    return fetchWithAuth(`${API_BASE_URL}/utility-bills/upload-pdf`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);
@@ -1621,7 +1623,7 @@ export const uploadUtilityBillPdf = (file: File): Promise<UtilityBill> => {
 export const uploadBulkUtilityBillPdfs = (files: File[]): Promise<UtilityBill[]> => {
     const formData = new FormData();
     files.forEach(f => formData.append('files', f));
-    return fetch(`${API_BASE_URL}/utility-bills/upload-bulk`, {
+    return fetchWithAuth(`${API_BASE_URL}/utility-bills/upload-bulk`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);
@@ -1655,28 +1657,28 @@ export const getStationExpenses = (from?: string, to?: string): Promise<StationE
     if (from) params.append('from', from);
     if (to) params.append('to', to);
     const qs = params.toString();
-    return fetch(`${API_BASE_URL}/station-expenses${qs ? `?${qs}` : ''}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/station-expenses${qs ? `?${qs}` : ''}`).then(handleResponse);
 };
 
 export const createStationExpense = (expense: Partial<StationExpense>): Promise<StationExpense> =>
-    fetch(`${API_BASE_URL}/station-expenses`, {
+    fetchWithAuth(`${API_BASE_URL}/station-expenses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(expense),
     }).then(handleResponse);
 
 export const updateStationExpense = (id: number, expense: Partial<StationExpense>): Promise<StationExpense> =>
-    fetch(`${API_BASE_URL}/station-expenses/${id}`, {
+    fetchWithAuth(`${API_BASE_URL}/station-expenses/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(expense),
     }).then(handleResponse);
 
 export const deleteStationExpense = (id: number): Promise<void> =>
-    fetch(`${API_BASE_URL}/station-expenses/${id}`, { method: 'DELETE' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/station-expenses/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const getExpenseSummary = (from: string, to: string): Promise<ExpenseSummary> =>
-    fetch(`${API_BASE_URL}/station-expenses/summary?from=${from}&to=${to}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/station-expenses/summary?from=${from}&to=${to}`).then(handleResponse);
 
 // --- Shift Closing Report Types ---
 export interface ReportLineItem {
@@ -1757,52 +1759,52 @@ export interface CashInflowRepayment {
 
 // --- Shift Closing Report API ---
 export const generateShiftReport = (shiftId: number): Promise<ShiftClosingReport> =>
-    fetch(`${API_BASE_URL}/shift-reports/${shiftId}/generate`, { method: 'POST' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}/generate`, { method: 'POST' }).then(handleResponse);
 
 export const getShiftReport = (shiftId: number): Promise<ShiftClosingReport> =>
-    fetch(`${API_BASE_URL}/shift-reports/${shiftId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}`).then(handleResponse);
 
 export const getAllShiftReports = (status?: string): Promise<ShiftClosingReport[]> => {
     const qs = status ? `?status=${status}` : '';
-    return fetch(`${API_BASE_URL}/shift-reports${qs}`).then(handleResponse);
+    return fetchWithAuth(`${API_BASE_URL}/shift-reports${qs}`).then(handleResponse);
 };
 
 export const editReportLineItem = (reportId: number, lineItemId: number, amount: number, reason?: string): Promise<ShiftClosingReport> =>
-    fetch(`${API_BASE_URL}/shift-reports/${reportId}/line-items/${lineItemId}`, {
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/line-items/${lineItemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, reason }),
     }).then(handleResponse);
 
 export const transferReportEntry = (reportId: number, lineItemId: number, targetReportId: number, reason?: string): Promise<ShiftClosingReport> =>
-    fetch(`${API_BASE_URL}/shift-reports/${reportId}/transfer`, {
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lineItemId, targetReportId, reason }),
     }).then(handleResponse);
 
 export const finalizeShiftReport = (reportId: number, finalizedBy?: string): Promise<ShiftClosingReport> =>
-    fetch(`${API_BASE_URL}/shift-reports/${reportId}/finalize`, {
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/finalize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ finalizedBy }),
     }).then(handleResponse);
 
 export const recomputeShiftReport = (reportId: number): Promise<ShiftClosingReport> =>
-    fetch(`${API_BASE_URL}/shift-reports/${reportId}/recompute`, { method: 'POST' }).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/recompute`, { method: 'POST' }).then(handleResponse);
 
 export const getReportAuditLog = (reportId: number): Promise<ReportAuditLog[]> =>
-    fetch(`${API_BASE_URL}/shift-reports/${reportId}/audit-log`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/audit-log`).then(handleResponse);
 
 // --- External Cash Inflow API ---
 export const getExternalCashInflows = (): Promise<ExternalCashInflow[]> =>
-    fetch(`${API_BASE_URL}/cash-inflows`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/cash-inflows`).then(handleResponse);
 
 export const getExternalCashInflowsByShift = (shiftId: number): Promise<ExternalCashInflow[]> =>
-    fetch(`${API_BASE_URL}/cash-inflows/shift/${shiftId}`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/cash-inflows/shift/${shiftId}`).then(handleResponse);
 
 export const createExternalCashInflow = (inflow: Partial<ExternalCashInflow>): Promise<ExternalCashInflow> =>
-    fetch(`${API_BASE_URL}/cash-inflows`, {
+    fetchWithAuth(`${API_BASE_URL}/cash-inflows`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inflow),
@@ -1827,13 +1829,13 @@ export interface ShiftReportPrintData {
 }
 
 export const getShiftReportPrintData = (shiftId: number): Promise<ShiftReportPrintData> =>
-    fetch(`${API_BASE_URL}/shift-reports/${shiftId}/print-data`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}/print-data`).then(handleResponse);
 
 export const getShiftReportPdfUrl = (shiftId: number): Promise<string> =>
-    fetch(`${API_BASE_URL}/shift-reports/${shiftId}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
 
 export const recordCashInflowRepayment = (inflowId: number, repayment: Partial<CashInflowRepayment>): Promise<CashInflowRepayment> =>
-    fetch(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {
+    fetchWithAuth(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(repayment),

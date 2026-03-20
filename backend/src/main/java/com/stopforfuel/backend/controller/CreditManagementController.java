@@ -2,12 +2,12 @@ package com.stopforfuel.backend.controller;
 
 import com.stopforfuel.backend.service.CreditManagementService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/credit")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class CreditManagementController {
 
     private final CreditManagementService creditManagementService;
@@ -17,6 +17,7 @@ public class CreditManagementController {
      * Returns all credit customers with aging breakdown and totals.
      */
     @GetMapping("/overview")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public CreditManagementService.CreditOverview getOverview() {
         return creditManagementService.getCreditOverview();
     }
@@ -26,6 +27,7 @@ public class CreditManagementController {
      * Returns unpaid bills, outstanding statements, and recent payments for a customer.
      */
     @GetMapping("/customer/{customerId}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public CreditManagementService.CreditCustomerDetail getCustomerDetail(
             @PathVariable Long customerId) {
         return creditManagementService.getCustomerCreditDetail(customerId);

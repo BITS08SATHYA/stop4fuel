@@ -5,6 +5,7 @@ import com.stopforfuel.backend.service.LedgerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -14,7 +15,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/ledger")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class LedgerController {
 
     private final LedgerService ledgerService;
@@ -24,6 +24,7 @@ public class LedgerController {
      * GET /api/ledger/opening-balance?customerId=1&asOfDate=2025-07-01
      */
     @GetMapping("/opening-balance")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public ResponseEntity<BigDecimal> getOpeningBalance(
             @RequestParam Long customerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOfDate) {
@@ -35,6 +36,7 @@ public class LedgerController {
      * GET /api/ledger/customer/{customerId}?fromDate=2025-06-01&toDate=2025-06-30
      */
     @GetMapping("/customer/{customerId}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public ResponseEntity<LedgerService.CustomerLedger> getCustomerLedger(
             @PathVariable Long customerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -47,6 +49,7 @@ public class LedgerController {
      * GET /api/ledger/outstanding/{customerId}
      */
     @GetMapping("/outstanding/{customerId}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<InvoiceBill> getOutstandingBills(@PathVariable Long customerId) {
         return ledgerService.getOutstandingBills(customerId);
     }
