@@ -1,11 +1,9 @@
 package com.stopforfuel.backend.service;
 
-import com.stopforfuel.backend.entity.CashierStock;
-import com.stopforfuel.backend.entity.GodownStock;
-import com.stopforfuel.backend.entity.Product;
-import com.stopforfuel.backend.entity.StockTransfer;
+import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.repository.CashierStockRepository;
 import com.stopforfuel.backend.repository.GodownStockRepository;
+import com.stopforfuel.backend.repository.ProductInventoryRepository;
 import com.stopforfuel.backend.repository.StockTransferRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +31,12 @@ class StockTransferServiceTest {
 
     @Mock
     private CashierStockRepository cashierStockRepository;
+
+    @Mock
+    private ProductInventoryRepository productInventoryRepository;
+
+    @Mock
+    private ShiftService shiftService;
 
     @InjectMocks
     private StockTransferService stockTransferService;
@@ -83,6 +87,7 @@ class StockTransferServiceTest {
 
     @Test
     void createTransfer_godownToCashier_success() {
+        when(shiftService.getActiveShift()).thenReturn(null);
         when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testGodownStock));
         when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testCashierStock));
         when(repository.save(any(StockTransfer.class))).thenReturn(testTransfer);
@@ -97,11 +102,36 @@ class StockTransferServiceTest {
     }
 
     @Test
+    void createTransfer_godownToCashier_updatesProductInventory() {
+        Shift activeShift = new Shift();
+        activeShift.setId(5L);
+        when(shiftService.getActiveShift()).thenReturn(activeShift);
+
+        ProductInventory pi = new ProductInventory();
+        pi.setOpenStock(20.0);
+        pi.setIncomeStock(0.0);
+        pi.setTotalStock(20.0);
+        pi.setCloseStock(20.0);
+        when(productInventoryRepository.findByShiftIdAndProductId(5L, 1L)).thenReturn(pi);
+
+        when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testGodownStock));
+        when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testCashierStock));
+        when(repository.save(any(StockTransfer.class))).thenReturn(testTransfer);
+
+        stockTransferService.createTransfer(testTransfer);
+
+        assertEquals(10.0, pi.getIncomeStock());
+        assertEquals(30.0, pi.getTotalStock());
+        verify(productInventoryRepository).save(pi);
+    }
+
+    @Test
     void createTransfer_cashierToGodown_success() {
         testTransfer.setFromLocation("CASHIER");
         testTransfer.setToLocation("GODOWN");
         testTransfer.setQuantity(5.0);
 
+        when(shiftService.getActiveShift()).thenReturn(null);
         when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testCashierStock));
         when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testGodownStock));
         when(repository.save(any(StockTransfer.class))).thenReturn(testTransfer);
@@ -119,6 +149,7 @@ class StockTransferServiceTest {
     void createTransfer_godownToCashier_insufficientStock_throwsException() {
         testTransfer.setQuantity(200.0);
 
+        when(shiftService.getActiveShift()).thenReturn(null);
         when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testGodownStock));
 
         RuntimeException ex = assertThrows(RuntimeException.class,
@@ -132,6 +163,7 @@ class StockTransferServiceTest {
         testTransfer.setToLocation("GODOWN");
         testTransfer.setQuantity(50.0);
 
+        when(shiftService.getActiveShift()).thenReturn(null);
         when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testCashierStock));
 
         RuntimeException ex = assertThrows(RuntimeException.class,
@@ -141,6 +173,7 @@ class StockTransferServiceTest {
 
     @Test
     void createTransfer_godownToCashier_autoCreatesCashierStock() {
+        when(shiftService.getActiveShift()).thenReturn(null);
         when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testGodownStock));
         when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.empty());
         when(cashierStockRepository.save(any(CashierStock.class))).thenAnswer(i -> i.getArgument(0));
@@ -160,6 +193,7 @@ class StockTransferServiceTest {
         testTransfer.setToLocation("GODOWN");
         testTransfer.setQuantity(5.0);
 
+        when(shiftService.getActiveShift()).thenReturn(null);
         when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testCashierStock));
         when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.empty());
         when(godownStockRepository.save(any(GodownStock.class))).thenAnswer(i -> i.getArgument(0));
@@ -178,6 +212,7 @@ class StockTransferServiceTest {
         testTransfer.setScid(null);
         testTransfer.setTransferDate(null);
 
+        when(shiftService.getActiveShift()).thenReturn(null);
         when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testGodownStock));
         when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testCashierStock));
         when(repository.save(any(StockTransfer.class))).thenReturn(testTransfer);
@@ -190,10 +225,26 @@ class StockTransferServiceTest {
 
     @Test
     void createTransfer_godownNotFound_throwsException() {
+        when(shiftService.getActiveShift()).thenReturn(null);
         when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.empty());
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> stockTransferService.createTransfer(testTransfer));
         assertTrue(ex.getMessage().contains("No godown stock found"));
+    }
+
+    @Test
+    void createTransfer_linksToActiveShift() {
+        Shift activeShift = new Shift();
+        activeShift.setId(7L);
+        when(shiftService.getActiveShift()).thenReturn(activeShift);
+
+        when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testGodownStock));
+        when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testCashierStock));
+        when(repository.save(any(StockTransfer.class))).thenReturn(testTransfer);
+
+        stockTransferService.createTransfer(testTransfer);
+
+        assertEquals(7L, testTransfer.getShiftId());
     }
 }

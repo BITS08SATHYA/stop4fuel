@@ -12,4 +12,5 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
     List<StockTransfer> findByScidOrderByTransferDateDesc(Long scid);
     List<StockTransfer> findByProductId(Long productId);
     List<StockTransfer> findByScidAndTransferDateBetweenOrderByTransferDateDesc(Long scid, LocalDateTime from, LocalDateTime to);
+    List<StockTransfer> findByShiftId(Long shiftId);
 }
