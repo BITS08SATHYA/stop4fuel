@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -33,7 +34,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/dashboard")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class DashboardController {
 
@@ -48,6 +48,7 @@ public class DashboardController {
     private final CreditManagementService creditManagementService;
 
     @GetMapping("/stats")
+    @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
     public DashboardStats getStats() {
         DashboardStats stats = new DashboardStats();
 
@@ -315,6 +316,7 @@ public class DashboardController {
     // ==============================
 
     @GetMapping("/invoice-analytics")
+    @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
     public InvoiceAnalytics getInvoiceAnalytics(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
@@ -456,6 +458,7 @@ public class DashboardController {
     // ==============================
 
     @GetMapping("/payment-analytics")
+    @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
     public PaymentAnalytics getPaymentAnalytics(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {

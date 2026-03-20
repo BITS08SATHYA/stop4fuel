@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -17,12 +18,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/statements")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class StatementController {
 
     private final StatementService statementService;
 
     @GetMapping
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public Page<Statement> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -32,26 +33,31 @@ public class StatementController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public Statement getById(@PathVariable Long id) {
         return statementService.getStatementById(id);
     }
 
     @GetMapping("/by-no/{statementNo}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public Statement getByStatementNo(@PathVariable String statementNo) {
         return statementService.getStatementByNo(statementNo);
     }
 
     @GetMapping("/customer/{customerId}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<Statement> getByCustomer(@PathVariable Long customerId) {
         return statementService.getStatementsByCustomer(customerId);
     }
 
     @GetMapping("/outstanding")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<Statement> getOutstanding() {
         return statementService.getOutstandingStatements();
     }
 
     @GetMapping("/outstanding/customer/{customerId}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<Statement> getOutstandingByCustomer(@PathVariable Long customerId) {
         return statementService.getOutstandingByCustomer(customerId);
     }
@@ -61,6 +67,7 @@ public class StatementController {
      * GET /api/statements/preview?customerId=1&fromDate=2025-06-01&toDate=2025-06-30&vehicleId=5&productId=2
      */
     @GetMapping("/preview")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<InvoiceBill> previewBills(
             @RequestParam Long customerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -76,6 +83,7 @@ public class StatementController {
      * Optional filters: vehicleId, productId, billIds (comma-separated)
      */
     @PostMapping("/generate")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
     public ResponseEntity<Statement> generate(
             @RequestParam Long customerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -92,6 +100,7 @@ public class StatementController {
      * Get all bills linked to a statement (for detail/print view).
      */
     @GetMapping("/{id}/bills")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<InvoiceBill> getStatementBills(@PathVariable Long id) {
         return statementService.getStatementBills(id);
     }
@@ -100,6 +109,7 @@ public class StatementController {
      * Remove a disputed bill from a statement and recalculate totals.
      */
     @DeleteMapping("/{statementId}/bills/{billId}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
     public ResponseEntity<Statement> removeBillFromStatement(
             @PathVariable Long statementId,
             @PathVariable Long billId) {
@@ -108,18 +118,21 @@ public class StatementController {
     }
 
     @PostMapping("/{id}/generate-pdf")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
     public ResponseEntity<Statement> generatePdf(@PathVariable Long id) {
         Statement updated = statementService.generateAndStorePdf(id);
         return ResponseEntity.ok(updated);
     }
 
     @GetMapping("/{id}/pdf-url")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public ResponseEntity<Map<String, String>> getPdfUrl(@PathVariable Long id) {
         String url = statementService.getStatementPdfUrl(id);
         return ResponseEntity.ok(Map.of("url", url));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
     public void delete(@PathVariable Long id) {
         statementService.deleteStatement(id);
     }

@@ -44,9 +44,11 @@ import {
     Shield,
     UserCheck,
     Tag,
+    LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/lib/auth/auth-context";
 
 const mainNav = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -134,31 +136,35 @@ const systemNav = [
 
 type NavSection = {
     label: string;
+    permission: string;
     items: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
 };
 
 const sections: NavSection[] = [
-    { label: "Main", items: mainNav },
-    { label: "Customer Management", items: customerManagementNav },
-    { label: "Employee Management", items: employeeManagementNav },
-    { label: "Product Management", items: productManagementNav },
-    { label: "Pump Management", items: pumpManagementNav },
-    { label: "Inventory", items: inventoryManagementNav },
-    { label: "Shift Management", items: shiftManagementNav },
-    { label: "Invoice Management", items: invoiceManagementNav },
-    { label: "Payment Management", items: paymentManagementNav },
-    { label: "Finance", items: financeNav },
-    { label: "Analytics", items: analyticsNav },
-    { label: "System", items: systemNav },
+    { label: "Main", permission: "DASHBOARD_VIEW", items: mainNav },
+    { label: "Customer Management", permission: "CUSTOMER_VIEW", items: customerManagementNav },
+    { label: "Employee Management", permission: "EMPLOYEE_VIEW", items: employeeManagementNav },
+    { label: "Product Management", permission: "PRODUCT_VIEW", items: productManagementNav },
+    { label: "Pump Management", permission: "STATION_VIEW", items: pumpManagementNav },
+    { label: "Inventory", permission: "INVENTORY_VIEW", items: inventoryManagementNav },
+    { label: "Shift Management", permission: "SHIFT_VIEW", items: shiftManagementNav },
+    { label: "Invoice Management", permission: "INVOICE_VIEW", items: invoiceManagementNav },
+    { label: "Payment Management", permission: "PAYMENT_VIEW", items: paymentManagementNav },
+    { label: "Finance", permission: "FINANCE_VIEW", items: financeNav },
+    { label: "Analytics", permission: "DASHBOARD_VIEW", items: analyticsNav },
+    { label: "System", permission: "SETTINGS_VIEW", items: systemNav },
 ];
 
 export function AppSidebar() {
     const pathname = usePathname();
+    const { user, hasPermission, logout } = useAuth();
 
     const isActive = (href: string) => {
         if (href === "/") return pathname === "/";
         return pathname === href || pathname.startsWith(href + "/");
     };
+
+    const filteredSections = sections.filter(section => hasPermission(section.permission));
 
     return (
         <aside className="w-64 border-r border-border bg-card text-card-foreground flex flex-col h-screen sticky top-0 transition-colors duration-300">
@@ -170,7 +176,7 @@ export function AppSidebar() {
             </div>
 
             <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
-                {sections.map((section) => (
+                {filteredSections.map((section) => (
                     <div key={section.label}>
                         <div className="px-3 mb-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                             {section.label}
@@ -198,13 +204,24 @@ export function AppSidebar() {
 
             <div className="p-4 border-t border-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">S</div>
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                        {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                    </div>
                     <div>
-                        <p className="text-sm font-medium">Sathya</p>
-                        <p className="text-xs text-muted-foreground">Manager</p>
+                        <p className="text-sm font-medium">{user?.name || "User"}</p>
+                        <p className="text-xs text-muted-foreground">{user?.role || "..."}</p>
                     </div>
                 </div>
-                <ThemeToggle />
+                <div className="flex items-center gap-1">
+                    <ThemeToggle />
+                    <button
+                        onClick={logout}
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        title="Sign out"
+                    >
+                        <LogOut className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
         </aside>
     );
