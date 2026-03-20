@@ -4,17 +4,13 @@ import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.service.PurchaseInvoiceService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/purchase-invoices")
@@ -71,18 +67,11 @@ public class PurchaseInvoiceController {
         }
     }
 
-    @GetMapping("/{id}/pdf")
-    public ResponseEntity<Resource> getPdf(@PathVariable Long id) {
+    @GetMapping("/{id}/pdf-url")
+    public ResponseEntity<Map<String, String>> getPdfUrl(@PathVariable Long id) {
         try {
-            Path pdfPath = service.getPdfPath(id);
-            Resource resource = new UrlResource(pdfPath.toUri());
-            if (!resource.exists()) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + pdfPath.getFileName() + "\"")
-                    .body(resource);
+            String url = service.getPdfPresignedUrl(id);
+            return ResponseEntity.ok(Map.of("url", url));
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }

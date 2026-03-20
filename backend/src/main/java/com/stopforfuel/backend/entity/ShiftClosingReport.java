@@ -34,6 +34,9 @@ public class ShiftClosingReport extends BaseEntity {
     @Column(name = "finalized_at")
     private LocalDateTime finalizedAt;
 
+    @Column(name = "report_pdf_url")
+    private String reportPdfUrl;
+
     @Column(name = "total_revenue", precision = 19, scale = 4)
     private BigDecimal totalRevenue = BigDecimal.ZERO;
 

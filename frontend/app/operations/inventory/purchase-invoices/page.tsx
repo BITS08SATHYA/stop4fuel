@@ -369,15 +369,16 @@ export default function PurchaseInvoicesPage() {
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
                                                     {inv.pdfFilePath ? (
-                                                        <a
-                                                            href={getPurchaseInvoicePdfUrl(inv.id!)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                        <button
+                                                            onClick={async () => {
+                                                                const url = await getPurchaseInvoicePdfUrl(inv.id!);
+                                                                window.open(url, "_blank");
+                                                            }}
                                                             className="inline-flex items-center text-primary hover:text-primary/80"
                                                             title="View PDF"
                                                         >
                                                             <ExternalLink className="w-4 h-4" />
-                                                        </a>
+                                                        </button>
                                                     ) : (
                                                         <span className="text-muted-foreground text-xs">—</span>
                                                     )}
@@ -615,14 +616,15 @@ export default function PurchaseInvoicesPage() {
                         {viewInvoice.remarks && <div className="text-sm text-muted-foreground bg-black/5 dark:bg-white/5 rounded-xl p-3">{viewInvoice.remarks}</div>}
                         {viewInvoice.pdfFilePath && (
                             <div>
-                                <a
-                                    href={getPurchaseInvoicePdfUrl(viewInvoice.id!)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <button
+                                    onClick={async () => {
+                                        const url = await getPurchaseInvoicePdfUrl(viewInvoice.id!);
+                                        window.open(url, "_blank");
+                                    }}
                                     className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                                 >
                                     <ExternalLink className="w-4 h-4" /> View PDF
-                                </a>
+                                </button>
                             </div>
                         )}
                         <table className="w-full text-sm border-collapse">

@@ -7,6 +7,8 @@ import com.stopforfuel.backend.service.ShiftClosingReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.http.ResponseEntity;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -72,5 +74,11 @@ public class ShiftClosingReportController {
     @GetMapping("/{shiftId}/print-data")
     public ShiftReportPrintData getPrintData(@PathVariable Long shiftId) {
         return reportService.getPrintData(shiftId);
+    }
+
+    @GetMapping("/{shiftId}/pdf-url")
+    public ResponseEntity<Map<String, String>> getPdfUrl(@PathVariable Long shiftId) {
+        String url = reportService.getReportPdfUrl(shiftId);
+        return ResponseEntity.ok(Map.of("url", url));
     }
 }

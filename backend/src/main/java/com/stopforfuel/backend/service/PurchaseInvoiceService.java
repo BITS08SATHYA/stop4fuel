@@ -4,14 +4,10 @@ import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.entity.PurchaseInvoiceItem;
 import com.stopforfuel.backend.repository.PurchaseInvoiceRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -20,9 +16,7 @@ import java.util.List;
 public class PurchaseInvoiceService {
 
     private final PurchaseInvoiceRepository repository;
-
-    @Value("${app.upload-dir:uploads}")
-    private String uploadDir;
+    private final S3StorageService s3StorageService;
 
     public List<PurchaseInvoice> getAll() {
         return repository.findByScidOrderByInvoiceDateDesc(1L);
@@ -97,20 +91,31 @@ public class PurchaseInvoiceService {
 
     public PurchaseInvoice uploadPdf(Long id, MultipartFile file) throws IOException {
         PurchaseInvoice invoice = getById(id);
-        Path dir = Paths.get(uploadDir, "purchase-invoices", String.valueOf(id));
-        Files.createDirectories(dir);
-        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "invoice.pdf";
-        Path filePath = dir.resolve(filename);
-        file.transferTo(filePath.toFile());
-        invoice.setPdfFilePath(filePath.toString());
+        LocalDate date = invoice.getInvoiceDate() != null ? invoice.getInvoiceDate() : LocalDate.now();
+        String ext = getExtension(file.getOriginalFilename());
+        String key = String.format("purchase-invoices/%d/%02d/%d/invoice.%s",
+                date.getYear(), date.getMonthValue(), id, ext);
+
+        // Delete old file if exists
+        if (invoice.getPdfFilePath() != null && !invoice.getPdfFilePath().isEmpty()) {
+            try { s3StorageService.delete(invoice.getPdfFilePath()); } catch (Exception ignored) {}
+        }
+
+        s3StorageService.upload(key, file);
+        invoice.setPdfFilePath(key);
         return repository.save(invoice);
     }
 
-    public Path getPdfPath(Long id) {
+    public String getPdfPresignedUrl(Long id) {
         PurchaseInvoice invoice = getById(id);
-        if (invoice.getPdfFilePath() == null) {
+        if (invoice.getPdfFilePath() == null || invoice.getPdfFilePath().isEmpty()) {
             throw new RuntimeException("No PDF uploaded for this invoice");
         }
-        return Paths.get(invoice.getPdfFilePath());
+        return s3StorageService.getPresignedUrl(invoice.getPdfFilePath());
+    }
+
+    private String getExtension(String filename) {
+        if (filename == null || !filename.contains(".")) return "pdf";
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 }

@@ -9,7 +9,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +21,7 @@ import java.util.List;
 public class InvoiceBillService {
 
     private final InvoiceBillRepository repository;
+    private final S3StorageService s3StorageService;
     private final CustomerRepository customerRepository;
     private final VehicleRepository vehicleRepository;
     private final TankInventoryRepository tankInventoryRepository;
@@ -519,5 +522,66 @@ public class InvoiceBillService {
 
     public void deleteInvoice(Long id) {
         repository.deleteById(id);
+    }
+
+    // --- File Uploads to S3 ---
+
+    public InvoiceBill uploadFile(Long id, String type, MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        InvoiceBill invoice = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+
+        // Build S3 key using invoice date
+        LocalDateTime invoiceDate = invoice.getDate() != null ? invoice.getDate() : LocalDateTime.now();
+        String ext = getExtension(file.getOriginalFilename());
+        String key = String.format("invoices/%d/%02d/%02d/%d/%s.%s",
+                invoiceDate.getYear(), invoiceDate.getMonthValue(), invoiceDate.getDayOfMonth(),
+                id, type, ext);
+
+        // Delete old file if exists
+        String oldKey = getFileKey(invoice, type);
+        if (oldKey != null && !oldKey.isEmpty()) {
+            try { s3StorageService.delete(oldKey); } catch (Exception ignored) {}
+        }
+
+        // Upload new file
+        s3StorageService.upload(key, file);
+
+        // Save key to entity
+        switch (type) {
+            case "bill-pic": invoice.setBillPic(key); break;
+            case "pump-bill-pic": invoice.setPumpBillPic(key); break;
+            case "indent-pic": invoice.setIndentPic(key); break;
+            default: throw new IllegalArgumentException("Invalid file type: " + type);
+        }
+
+        return repository.save(invoice);
+    }
+
+    public String getFilePresignedUrl(Long id, String type) {
+        InvoiceBill invoice = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+        String key = getFileKey(invoice, type);
+        if (key == null || key.isEmpty()) {
+            throw new RuntimeException("No file uploaded for type: " + type);
+        }
+        return s3StorageService.getPresignedUrl(key);
+    }
+
+    private String getFileKey(InvoiceBill invoice, String type) {
+        switch (type) {
+            case "bill-pic": return invoice.getBillPic();
+            case "pump-bill-pic": return invoice.getPumpBillPic();
+            case "indent-pic": return invoice.getIndentPic();
+            default: return null;
+        }
+    }
+
+    private String getExtension(String filename) {
+        if (filename == null || !filename.contains(".")) return "bin";
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 }

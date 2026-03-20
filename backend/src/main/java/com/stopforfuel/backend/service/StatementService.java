@@ -1,8 +1,10 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
@@ -26,7 +28,10 @@ public class StatementService {
     private final StatementRepository statementRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final CustomerRepository customerRepository;
+    private final CompanyRepository companyRepository;
     private final BillSequenceService billSequenceService;
+    private final StatementPdfGenerator pdfGenerator;
+    private final S3StorageService s3StorageService;
 
     public Page<Statement> getStatements(Long customerId, String status, Pageable pageable) {
         return statementRepository.findWithFilters(customerId, status, pageable);
@@ -226,6 +231,42 @@ public class StatementService {
      */
     public List<InvoiceBill> getStatementBills(Long statementId) {
         return invoiceBillRepository.findByStatementId(statementId);
+    }
+
+    @Transactional
+    public Statement generateAndStorePdf(Long id) {
+        Statement statement = statementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
+
+        List<InvoiceBill> bills = invoiceBillRepository.findByStatementId(id);
+
+        List<Company> companies = companyRepository.findByScid(
+                statement.getScid() != null ? statement.getScid() : 1L);
+        String companyName = !companies.isEmpty() ? companies.get(0).getName() : "StopForFuel";
+
+        byte[] pdfBytes = pdfGenerator.generate(statement, bills, companyName);
+
+        LocalDate date = statement.getStatementDate() != null ? statement.getStatementDate() : LocalDate.now();
+        String key = String.format("statements/%d/%02d/%d/statement.pdf",
+                date.getYear(), date.getMonthValue(), id);
+
+        // Delete old PDF if exists
+        if (statement.getStatementPdfUrl() != null && !statement.getStatementPdfUrl().isEmpty()) {
+            try { s3StorageService.delete(statement.getStatementPdfUrl()); } catch (Exception ignored) {}
+        }
+
+        s3StorageService.upload(key, pdfBytes, "application/pdf");
+        statement.setStatementPdfUrl(key);
+        return statementRepository.save(statement);
+    }
+
+    public String getStatementPdfUrl(Long id) {
+        Statement statement = statementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
+        if (statement.getStatementPdfUrl() == null || statement.getStatementPdfUrl().isEmpty()) {
+            throw new RuntimeException("No PDF generated for this statement");
+        }
+        return s3StorageService.getPresignedUrl(statement.getStatementPdfUrl());
     }
 
     public void deleteStatement(Long id) {
