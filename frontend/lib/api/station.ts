@@ -980,6 +980,96 @@ export interface RecentInvoiceItem {
 export const getDashboardStats = (): Promise<DashboardStats> =>
     fetch(`${API_BASE_URL}/dashboard/stats`).then(handleResponse);
 
+// --- Invoice Analytics Dashboard ---
+export interface InvoiceDailyTrend {
+    date: string;
+    totalCount: number;
+    totalAmount: number;
+    cashCount: number;
+    cashAmount: number;
+    creditCount: number;
+    creditAmount: number;
+}
+
+export interface NameCountAmount {
+    name: string;
+    count: number;
+    amount: number;
+}
+
+export interface ProductBreakdown {
+    productName: string;
+    quantity: number;
+    amount: number;
+}
+
+export interface HourlyData {
+    hour: number;
+    count: number;
+}
+
+export interface InvoiceAnalytics {
+    fromDate: string;
+    toDate: string;
+    totalInvoices: number;
+    totalRevenue: number;
+    avgInvoiceValue: number;
+    cashCount: number;
+    cashAmount: number;
+    creditCount: number;
+    creditAmount: number;
+    paidCount: number;
+    paidAmount: number;
+    unpaidCount: number;
+    unpaidAmount: number;
+    dailyTrend: InvoiceDailyTrend[];
+    paymentModeDistribution: NameCountAmount[];
+    topCustomers: NameCountAmount[];
+    productBreakdown: ProductBreakdown[];
+    hourlyDistribution: HourlyData[];
+}
+
+export const getInvoiceAnalytics = (from?: string, to?: string): Promise<InvoiceAnalytics> => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const qs = params.toString();
+    return fetch(`${API_BASE_URL}/dashboard/invoice-analytics${qs ? `?${qs}` : ''}`).then(handleResponse);
+};
+
+// --- Payment Analytics Dashboard ---
+export interface PaymentDailyTrend {
+    date: string;
+    count: number;
+    amount: number;
+}
+
+export interface PaymentAnalytics {
+    fromDate: string;
+    toDate: string;
+    totalCollected: number;
+    totalPayments: number;
+    avgPaymentAmount: number;
+    totalOutstanding: number;
+    creditCustomers: number;
+    collectionRate: number;
+    aging0to30: number;
+    aging31to60: number;
+    aging61to90: number;
+    aging90Plus: number;
+    dailyTrend: PaymentDailyTrend[];
+    paymentModeBreakdown: NameCountAmount[];
+    topCustomers: NameCountAmount[];
+}
+
+export const getPaymentAnalytics = (from?: string, to?: string): Promise<PaymentAnalytics> => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const qs = params.toString();
+    return fetch(`${API_BASE_URL}/dashboard/payment-analytics${qs ? `?${qs}` : ''}`).then(handleResponse);
+};
+
 // --- Godown & Cashier Stock Types ---
 export interface GodownStock {
     id: number;
