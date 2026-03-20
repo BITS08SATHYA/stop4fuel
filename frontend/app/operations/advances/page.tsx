@@ -7,6 +7,7 @@ import {
     Banknote,
     Moon,
     Sun,
+    Wallet,
     ArrowDownLeft,
     ArrowUpRight,
     Search,
@@ -15,11 +16,24 @@ import {
     XCircle,
     Hash,
     AlertCircle,
+    Eye,
+    FileText,
+    Link2,
+    Unlink,
+    Receipt,
+    ChevronRight,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 // --- Types ---
+
+interface Employee {
+    id: number;
+    name: string;
+    phone: string;
+    designation: string;
+}
 
 interface CashAdvance {
     id: number;
@@ -35,6 +49,22 @@ interface CashAdvance {
     returnDate: string | null;
     returnRemarks: string | null;
     shiftId: number;
+    utilizedAmount: number;
+    employee: Employee | null;
+    invoiceBills: InvoiceBill[];
+}
+
+interface InvoiceBill {
+    id: number;
+    billNo: string;
+    billType: string;
+    netAmount: number;
+    date: string;
+    customer: { id: number; name: string } | null;
+    vehicle: { id: number; vehicleNumber: string } | null;
+    paymentMode: string;
+    billDesc: string;
+    cashAdvance: { id: number } | null;
 }
 
 // --- Constants ---
@@ -42,6 +72,7 @@ interface CashAdvance {
 const ADVANCE_TYPES = [
     { value: "HOME_ADVANCE", label: "Home Advance", icon: Sun, color: "text-purple-500 bg-purple-500/10" },
     { value: "NIGHT_ADVANCE", label: "Night Advance", icon: Moon, color: "text-indigo-500 bg-indigo-500/10" },
+    { value: "SALARY_ADVANCE", label: "Salary Advance", icon: Wallet, color: "text-emerald-500 bg-emerald-500/10" },
     { value: "REGULAR_ADVANCE", label: "Regular Advance", icon: Banknote, color: "text-blue-500 bg-blue-500/10" },
 ];
 
@@ -49,11 +80,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     GIVEN: { label: "Given", color: "bg-amber-500/10 text-amber-500" },
     RETURNED: { label: "Returned", color: "bg-green-500/10 text-green-500" },
     PARTIALLY_RETURNED: { label: "Partial", color: "bg-orange-500/10 text-orange-500" },
+    SETTLED: { label: "Settled", color: "bg-teal-500/10 text-teal-500" },
     CANCELLED: { label: "Cancelled", color: "bg-gray-500/10 text-gray-500" },
 };
 
 function getAdvanceTypeMeta(type: string) {
-    return ADVANCE_TYPES.find((t) => t.value === type) || ADVANCE_TYPES[2];
+    return ADVANCE_TYPES.find((t) => t.value === type) || ADVANCE_TYPES[3];
 }
 
 function formatDateTime(dt?: string | null) {
@@ -80,6 +112,12 @@ async function fetchAdvances(): Promise<CashAdvance[]> {
     return res.json();
 }
 
+async function fetchAdvanceById(id: number): Promise<CashAdvance> {
+    const res = await fetch(`${API_BASE_URL}/advances/${id}`);
+    if (!res.ok) throw new Error("Failed to fetch advance");
+    return res.json();
+}
+
 async function fetchActiveShift(): Promise<{ id: number } | null> {
     try {
         const res = await fetch(`${API_BASE_URL}/shifts/active`);
@@ -90,6 +128,26 @@ async function fetchActiveShift(): Promise<{ id: number } | null> {
     }
 }
 
+async function fetchEmployees(): Promise<Employee[]> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/employees`);
+        if (!res.ok) return [];
+        return res.json();
+    } catch {
+        return [];
+    }
+}
+
+async function fetchShiftInvoices(shiftId: number): Promise<InvoiceBill[]> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/invoices/shift/${shiftId}`);
+        if (!res.ok) return [];
+        return res.json();
+    } catch {
+        return [];
+    }
+}
+
 async function createAdvance(data: {
     amount: number;
     advanceType: string;
@@ -97,6 +155,7 @@ async function createAdvance(data: {
     recipientPhone: string;
     purpose: string;
     remarks: string;
+    employee?: { id: number } | null;
 }): Promise<CashAdvance> {
     const res = await fetch(`${API_BASE_URL}/advances`, {
         method: "POST",
@@ -139,11 +198,36 @@ async function deleteAdvance(id: number): Promise<void> {
     }
 }
 
+async function assignInvoice(advanceId: number, invoiceId: number): Promise<CashAdvance> {
+    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/invoices/${invoiceId}`, { method: "POST" });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || "Failed to assign invoice");
+    }
+    return res.json();
+}
+
+async function unassignInvoice(advanceId: number, invoiceId: number): Promise<CashAdvance> {
+    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/invoices/${invoiceId}`, { method: "DELETE" });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || "Failed to unassign invoice");
+    }
+    return res.json();
+}
+
+async function fetchAssignedInvoices(advanceId: number): Promise<InvoiceBill[]> {
+    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/invoices`);
+    if (!res.ok) return [];
+    return res.json();
+}
+
 // --- Page Component ---
 
 export default function CashAdvancesPage() {
     const [advances, setAdvances] = useState<CashAdvance[]>([]);
     const [activeShift, setActiveShift] = useState<{ id: number } | null>(null);
+    const [employees, setEmployees] = useState<Employee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     // Filters
@@ -159,6 +243,7 @@ export default function CashAdvancesPage() {
     const [addRecipientPhone, setAddRecipientPhone] = useState("");
     const [addPurpose, setAddPurpose] = useState("");
     const [addRemarks, setAddRemarks] = useState("");
+    const [addEmployeeId, setAddEmployeeId] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Return Modal
@@ -167,12 +252,25 @@ export default function CashAdvancesPage() {
     const [returnAmount, setReturnAmount] = useState("");
     const [returnRemarks, setReturnRemarks] = useState("");
 
+    // Detail / Invoice Assignment Modal
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [detailAdvance, setDetailAdvance] = useState<CashAdvance | null>(null);
+    const [assignedInvoices, setAssignedInvoices] = useState<InvoiceBill[]>([]);
+    const [availableInvoices, setAvailableInvoices] = useState<InvoiceBill[]>([]);
+    const [showAssignPanel, setShowAssignPanel] = useState(false);
+    const [invoiceSearch, setInvoiceSearch] = useState("");
+
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [advs, shift] = await Promise.all([fetchAdvances(), fetchActiveShift()]);
+            const [advs, shift, emps] = await Promise.all([
+                fetchAdvances(),
+                fetchActiveShift(),
+                fetchEmployees(),
+            ]);
             setAdvances(advs);
             setActiveShift(shift);
+            setEmployees(emps);
         } catch (err) {
             console.error("Failed to load data", err);
         } finally {
@@ -192,11 +290,12 @@ export default function CashAdvancesPage() {
 
         const outstanding = advances
             .filter((a) => a.status === "GIVEN" || a.status === "PARTIALLY_RETURNED")
-            .reduce((sum, a) => sum + (a.amount - a.returnedAmount), 0);
+            .reduce((sum, a) => sum + (a.amount - (a.returnedAmount || 0) - (a.utilizedAmount || 0)), 0);
 
-        const returned = advances.reduce((sum, a) => sum + a.returnedAmount, 0);
+        const returned = advances.reduce((sum, a) => sum + (a.returnedAmount || 0), 0);
+        const utilized = advances.reduce((sum, a) => sum + (a.utilizedAmount || 0), 0);
 
-        return { totalGiven, outstanding, returned, count: advances.length };
+        return { totalGiven, outstanding, returned, utilized, count: advances.length };
     }, [advances]);
 
     // --- Filtering ---
@@ -209,7 +308,8 @@ export default function CashAdvancesPage() {
                 !searchQuery ||
                 a.recipientName?.toLowerCase().includes(q) ||
                 a.purpose?.toLowerCase().includes(q) ||
-                a.remarks?.toLowerCase().includes(q);
+                a.remarks?.toLowerCase().includes(q) ||
+                a.employee?.name?.toLowerCase().includes(q);
             return matchStatus && matchType && matchSearch;
         });
     }, [advances, statusFilter, typeFilter, searchQuery]);
@@ -224,12 +324,26 @@ export default function CashAdvancesPage() {
         setAddRecipientPhone("");
         setAddPurpose("");
         setAddRemarks("");
+        setAddEmployeeId(null);
     };
 
     const handleOpenAddModal = () => {
         if (!activeShift) return;
         resetAddForm();
         setIsAddModalOpen(true);
+    };
+
+    const handleEmployeeSelect = (empId: string) => {
+        if (!empId) {
+            setAddEmployeeId(null);
+            return;
+        }
+        const emp = employees.find((e) => e.id === Number(empId));
+        if (emp) {
+            setAddEmployeeId(emp.id);
+            setAddRecipientName(emp.name);
+            setAddRecipientPhone(emp.phone || "");
+        }
     };
 
     const handleCreateAdvance = async (e: React.FormEvent) => {
@@ -243,6 +357,7 @@ export default function CashAdvancesPage() {
                 recipientPhone: addRecipientPhone,
                 purpose: addPurpose,
                 remarks: addRemarks,
+                employee: addEmployeeId ? { id: addEmployeeId } : null,
             });
             setIsAddModalOpen(false);
             await loadData();
@@ -299,7 +414,75 @@ export default function CashAdvancesPage() {
         }
     };
 
-    const returnOutstanding = returnTarget ? returnTarget.amount - returnTarget.returnedAmount : 0;
+    // --- Detail / Invoice Assignment ---
+    const handleOpenDetail = async (adv: CashAdvance) => {
+        setDetailAdvance(adv);
+        setShowAssignPanel(false);
+        setInvoiceSearch("");
+        setIsDetailModalOpen(true);
+        try {
+            const invoices = await fetchAssignedInvoices(adv.id);
+            setAssignedInvoices(invoices);
+        } catch {
+            setAssignedInvoices([]);
+        }
+    };
+
+    const handleOpenAssignPanel = async () => {
+        setShowAssignPanel(true);
+        if (detailAdvance?.shiftId) {
+            try {
+                const all = await fetchShiftInvoices(detailAdvance.shiftId);
+                // Filter out already assigned invoices
+                const assignedIds = new Set(assignedInvoices.map((inv) => inv.id));
+                setAvailableInvoices(all.filter((inv) => !assignedIds.has(inv.id) && !inv.cashAdvance));
+            } catch {
+                setAvailableInvoices([]);
+            }
+        }
+    };
+
+    const handleAssignInvoice = async (invoiceId: number) => {
+        if (!detailAdvance) return;
+        try {
+            const updated = await assignInvoice(detailAdvance.id, invoiceId);
+            setDetailAdvance(updated);
+            const invoices = await fetchAssignedInvoices(detailAdvance.id);
+            setAssignedInvoices(invoices);
+            setAvailableInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+            await loadData();
+        } catch (err: any) {
+            alert(err.message || "Failed to assign invoice");
+        }
+    };
+
+    const handleUnassignInvoice = async (invoiceId: number) => {
+        if (!detailAdvance) return;
+        try {
+            const updated = await unassignInvoice(detailAdvance.id, invoiceId);
+            setDetailAdvance(updated);
+            const invoices = await fetchAssignedInvoices(detailAdvance.id);
+            setAssignedInvoices(invoices);
+            await loadData();
+        } catch (err: any) {
+            alert(err.message || "Failed to unassign invoice");
+        }
+    };
+
+    const filteredAvailableInvoices = useMemo(() => {
+        if (!invoiceSearch) return availableInvoices;
+        const q = invoiceSearch.toLowerCase();
+        return availableInvoices.filter(
+            (inv) =>
+                inv.billNo?.toLowerCase().includes(q) ||
+                inv.customer?.name?.toLowerCase().includes(q) ||
+                inv.vehicle?.vehicleNumber?.toLowerCase().includes(q)
+        );
+    }, [availableInvoices, invoiceSearch]);
+
+    const returnOutstanding = returnTarget
+        ? returnTarget.amount - (returnTarget.returnedAmount || 0) - (returnTarget.utilizedAmount || 0)
+        : 0;
 
     return (
         <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
@@ -311,7 +494,7 @@ export default function CashAdvancesPage() {
                             Cash <span className="text-gradient">Advances</span>
                         </h1>
                         <p className="text-muted-foreground mt-2">
-                            Track cash advances taken from the register and their returns.
+                            Track cash advances, salary advances, and their settlements with invoices.
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -345,7 +528,7 @@ export default function CashAdvancesPage() {
                 ) : (
                     <>
                         {/* Summary Cards */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
                             <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card">
                                 <div className="p-2 rounded-lg text-blue-500 bg-blue-500/10">
                                     <ArrowUpRight className="w-4 h-4" />
@@ -365,11 +548,20 @@ export default function CashAdvancesPage() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card">
+                                <div className="p-2 rounded-lg text-teal-500 bg-teal-500/10">
+                                    <Receipt className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Bill Settled</p>
+                                    <p className="text-sm font-bold text-teal-500">{formatCurrency(summary.utilized)}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card">
                                 <div className="p-2 rounded-lg text-green-500 bg-green-500/10">
                                     <ArrowDownLeft className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Returned</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Cash Returned</p>
                                     <p className="text-sm font-bold text-green-500">{formatCurrency(summary.returned)}</p>
                                 </div>
                             </div>
@@ -390,7 +582,7 @@ export default function CashAdvancesPage() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <input
                                     type="text"
-                                    placeholder="Search recipient, purpose, remarks..."
+                                    placeholder="Search recipient, purpose, employee..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -405,6 +597,7 @@ export default function CashAdvancesPage() {
                                 <option value="GIVEN">Given</option>
                                 <option value="RETURNED">Returned</option>
                                 <option value="PARTIALLY_RETURNED">Partially Returned</option>
+                                <option value="SETTLED">Settled</option>
                                 <option value="CANCELLED">Cancelled</option>
                             </select>
                             <select
@@ -415,6 +608,7 @@ export default function CashAdvancesPage() {
                                 <option value="ALL">All Types</option>
                                 <option value="HOME_ADVANCE">Home Advance</option>
                                 <option value="NIGHT_ADVANCE">Night Advance</option>
+                                <option value="SALARY_ADVANCE">Salary Advance</option>
                                 <option value="REGULAR_ADVANCE">Regular Advance</option>
                             </select>
                         </div>
@@ -425,20 +619,21 @@ export default function CashAdvancesPage() {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-white/5 border-b border-border/50">
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recipient</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Amount</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Returned</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Outstanding</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Status</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Actions</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recipient</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Amount</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Bills</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Returned</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Outstanding</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Status</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/30">
                                         {filtered.length === 0 ? (
                                             <tr>
-                                                <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
+                                                <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
                                                     No advances found
                                                 </td>
                                             </tr>
@@ -446,17 +641,19 @@ export default function CashAdvancesPage() {
                                             pagedAdvances.map((adv) => {
                                                 const meta = getAdvanceTypeMeta(adv.advanceType);
                                                 const Icon = meta.icon;
-                                                const outstanding = adv.amount - adv.returnedAmount;
+                                                const utilized = adv.utilizedAmount || 0;
+                                                const returned = adv.returnedAmount || 0;
+                                                const outstanding = adv.amount - returned - utilized;
                                                 const statusCfg = STATUS_CONFIG[adv.status] || STATUS_CONFIG.GIVEN;
                                                 const canReturn = adv.status === "GIVEN" || adv.status === "PARTIALLY_RETURNED";
                                                 const canCancel = adv.status === "GIVEN";
 
                                                 return (
                                                     <tr key={adv.id} className="hover:bg-white/5 transition-colors group">
-                                                        <td className="px-6 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                                                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                                                             {formatDateTime(adv.advanceDate)}
                                                         </td>
-                                                        <td className="px-6 py-3">
+                                                        <td className="px-4 py-3">
                                                             <div className="flex items-center gap-2">
                                                                 <div className={`p-1.5 rounded-lg ${meta.color}`}>
                                                                     <Icon className="w-3.5 h-3.5" />
@@ -466,36 +663,51 @@ export default function CashAdvancesPage() {
                                                                 </span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-3">
+                                                        <td className="px-4 py-3">
                                                             <div>
                                                                 <p className="text-sm font-medium text-foreground">{adv.recipientName}</p>
-                                                                {adv.recipientPhone && (
+                                                                {adv.employee && (
+                                                                    <p className="text-[10px] text-primary">{adv.employee.designation || "Employee"}</p>
+                                                                )}
+                                                                {adv.recipientPhone && !adv.employee && (
                                                                     <p className="text-[10px] text-muted-foreground">{adv.recipientPhone}</p>
                                                                 )}
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-3 text-right">
+                                                        <td className="px-4 py-3 text-right">
                                                             <span className="text-sm font-bold text-foreground">
                                                                 {formatCurrency(adv.amount)}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-3 text-right">
+                                                        <td className="px-4 py-3 text-right">
+                                                            <span className={`text-sm ${utilized > 0 ? "text-teal-500 font-medium" : "text-muted-foreground"}`}>
+                                                                {utilized > 0 ? formatCurrency(utilized) : "-"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
                                                             <span className="text-sm text-foreground">
-                                                                {adv.returnedAmount > 0 ? formatCurrency(adv.returnedAmount) : "-"}
+                                                                {returned > 0 ? formatCurrency(returned) : "-"}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-3 text-right">
+                                                        <td className="px-4 py-3 text-right">
                                                             <span className={`text-sm font-bold ${outstanding > 0 ? "text-red-500" : "text-foreground"}`}>
-                                                                {adv.status === "CANCELLED" ? "-" : formatCurrency(outstanding)}
+                                                                {adv.status === "CANCELLED" ? "-" : formatCurrency(Math.max(0, outstanding))}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-3 text-center">
+                                                        <td className="px-4 py-3 text-center">
                                                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${statusCfg.color}`}>
                                                                 {statusCfg.label}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-3 text-center">
+                                                        <td className="px-4 py-3 text-center">
                                                             <div className="flex items-center justify-center gap-1">
+                                                                <button
+                                                                    onClick={() => handleOpenDetail(adv)}
+                                                                    title="View details & assign invoices"
+                                                                    className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                                                                >
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                </button>
                                                                 {canReturn && (
                                                                     <button
                                                                         onClick={() => handleOpenReturnModal(adv)}
@@ -545,7 +757,7 @@ export default function CashAdvancesPage() {
                     {/* Advance Type Selector */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">Advance Type</label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {ADVANCE_TYPES.map((t) => {
                                 const Icon = t.icon;
                                 return (
@@ -566,6 +778,25 @@ export default function CashAdvancesPage() {
                             })}
                         </div>
                     </div>
+
+                    {/* Employee Selector (for salary advance) */}
+                    {(addType === "SALARY_ADVANCE" || addType === "HOME_ADVANCE") && employees.length > 0 && (
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">Select Employee</label>
+                            <select
+                                value={addEmployeeId || ""}
+                                onChange={(e) => handleEmployeeSelect(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            >
+                                <option value="">-- Select employee (optional) --</option>
+                                {employees.map((emp) => (
+                                    <option key={emp.id} value={emp.id}>
+                                        {emp.name} {emp.designation ? `(${emp.designation})` : ""}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* Amount */}
                     <div>
@@ -678,18 +909,22 @@ export default function CashAdvancesPage() {
                                     {getAdvanceTypeMeta(returnTarget.advanceType).label}
                                 </span>
                             </div>
-                            <div className="grid grid-cols-3 gap-3 text-sm">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                                 <div>
                                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Amount</p>
                                     <p className="font-bold text-foreground">{formatCurrency(returnTarget.amount)}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Already Returned</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Bills</p>
+                                    <p className="font-bold text-teal-500">{formatCurrency(returnTarget.utilizedAmount || 0)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Returned</p>
                                     <p className="font-bold text-green-500">{formatCurrency(returnTarget.returnedAmount)}</p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Outstanding</p>
-                                    <p className="font-bold text-red-500">{formatCurrency(returnOutstanding)}</p>
+                                    <p className="font-bold text-red-500">{formatCurrency(Math.max(0, returnOutstanding))}</p>
                                 </div>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -706,12 +941,12 @@ export default function CashAdvancesPage() {
                                 type="number"
                                 step="0.01"
                                 min="0.01"
-                                max={returnOutstanding}
+                                max={Math.max(0, returnOutstanding)}
                                 required
                                 value={returnAmount}
                                 onChange={(e) => setReturnAmount(e.target.value)}
                                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                placeholder={`Max: ${formatCurrency(returnOutstanding)}`}
+                                placeholder={`Max: ${formatCurrency(Math.max(0, returnOutstanding))}`}
                             />
                         </div>
 
@@ -744,6 +979,217 @@ export default function CashAdvancesPage() {
                             </button>
                         </div>
                     </form>
+                )}
+            </Modal>
+
+            {/* Detail & Invoice Assignment Modal */}
+            <Modal
+                isOpen={isDetailModalOpen}
+                onClose={() => { setIsDetailModalOpen(false); setDetailAdvance(null); }}
+                title="Advance Details"
+            >
+                {detailAdvance && (
+                    <div className="space-y-5">
+                        {/* Advance Summary */}
+                        <div className="p-4 bg-white/5 rounded-xl border border-border">
+                            <div className="flex items-center gap-2 mb-4">
+                                {(() => {
+                                    const meta = getAdvanceTypeMeta(detailAdvance.advanceType);
+                                    const Icon = meta.icon;
+                                    return (
+                                        <>
+                                            <div className={`p-1.5 rounded-lg ${meta.color}`}>
+                                                <Icon className="w-4 h-4" />
+                                            </div>
+                                            <span className="text-sm font-bold text-foreground">{meta.label}</span>
+                                        </>
+                                    );
+                                })()}
+                                <span className={`ml-auto px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${(STATUS_CONFIG[detailAdvance.status] || STATUS_CONFIG.GIVEN).color}`}>
+                                    {(STATUS_CONFIG[detailAdvance.status] || STATUS_CONFIG.GIVEN).label}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Recipient</p>
+                                    <p className="font-medium text-foreground">{detailAdvance.recipientName}</p>
+                                    {detailAdvance.employee && (
+                                        <p className="text-[10px] text-primary mt-0.5">{detailAdvance.employee.designation || "Employee"}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</p>
+                                    <p className="font-medium text-foreground">{formatDateTime(detailAdvance.advanceDate)}</p>
+                                </div>
+                                {detailAdvance.purpose && (
+                                    <div className="col-span-2">
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Purpose</p>
+                                        <p className="font-medium text-foreground">{detailAdvance.purpose}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Financial Breakdown */}
+                            <div className="mt-4 pt-4 border-t border-border">
+                                <div className="grid grid-cols-4 gap-3 text-sm">
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Amount</p>
+                                        <p className="font-bold text-foreground text-base">{formatCurrency(detailAdvance.amount)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Bills</p>
+                                        <p className="font-bold text-teal-500">{formatCurrency(detailAdvance.utilizedAmount || 0)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Returned</p>
+                                        <p className="font-bold text-green-500">{formatCurrency(detailAdvance.returnedAmount || 0)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Outstanding</p>
+                                        <p className="font-bold text-red-500">
+                                            {formatCurrency(Math.max(0, detailAdvance.amount - (detailAdvance.returnedAmount || 0) - (detailAdvance.utilizedAmount || 0)))}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Assigned Invoices */}
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-primary" />
+                                    Assigned Invoices ({assignedInvoices.length})
+                                </h3>
+                                {detailAdvance.status !== "CANCELLED" && detailAdvance.status !== "RETURNED" && detailAdvance.status !== "SETTLED" && (
+                                    <button
+                                        onClick={handleOpenAssignPanel}
+                                        className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+                                    >
+                                        <Link2 className="w-3.5 h-3.5" />
+                                        Assign Invoice
+                                    </button>
+                                )}
+                            </div>
+
+                            {assignedInvoices.length === 0 ? (
+                                <div className="text-center py-6 text-muted-foreground text-sm border border-dashed border-border rounded-xl">
+                                    No invoices assigned to this advance yet.
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {assignedInvoices.map((inv) => (
+                                        <div
+                                            key={inv.id}
+                                            className="flex items-center justify-between p-3 bg-card border border-border rounded-xl hover:bg-white/5 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-1.5 rounded-lg bg-teal-500/10 text-teal-500">
+                                                    <Receipt className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-foreground">
+                                                        {inv.billNo || `INV-${inv.id}`}
+                                                        <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${inv.billType === "CASH" ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"}`}>
+                                                            {inv.billType}
+                                                        </span>
+                                                    </p>
+                                                    <p className="text-[10px] text-muted-foreground">
+                                                        {inv.customer?.name || "Walk-in"} {inv.vehicle ? `| ${inv.vehicle.vehicleNumber}` : ""} | {formatDateTime(inv.date)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-bold text-foreground">{formatCurrency(inv.netAmount)}</span>
+                                                {detailAdvance.status !== "CANCELLED" && detailAdvance.status !== "RETURNED" && detailAdvance.status !== "SETTLED" && (
+                                                    <button
+                                                        onClick={() => handleUnassignInvoice(inv.id)}
+                                                        title="Unassign invoice"
+                                                        className="p-1 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all"
+                                                    >
+                                                        <Unlink className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Assign Invoice Panel */}
+                        {showAssignPanel && (
+                            <div className="border border-primary/30 rounded-xl p-4 bg-primary/5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-sm font-bold text-foreground">
+                                        Available Invoices (Shift #{detailAdvance.shiftId})
+                                    </h4>
+                                    <button
+                                        onClick={() => setShowAssignPanel(false)}
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+
+                                <div className="relative mb-3">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search by bill no, customer, vehicle..."
+                                        value={invoiceSearch}
+                                        onChange={(e) => setInvoiceSearch(e.target.value)}
+                                        className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    />
+                                </div>
+
+                                <div className="max-h-48 overflow-y-auto space-y-1.5">
+                                    {filteredAvailableInvoices.length === 0 ? (
+                                        <p className="text-center py-4 text-muted-foreground text-xs">
+                                            No unassigned invoices available in this shift.
+                                        </p>
+                                    ) : (
+                                        filteredAvailableInvoices.map((inv) => (
+                                            <div
+                                                key={inv.id}
+                                                className="flex items-center justify-between p-2.5 bg-card border border-border rounded-lg hover:border-primary/30 transition-colors cursor-pointer"
+                                                onClick={() => handleAssignInvoice(inv.id)}
+                                            >
+                                                <div>
+                                                    <p className="text-xs font-medium text-foreground">
+                                                        {inv.billNo || `INV-${inv.id}`}
+                                                        <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold ${inv.billType === "CASH" ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"}`}>
+                                                            {inv.billType}
+                                                        </span>
+                                                    </p>
+                                                    <p className="text-[10px] text-muted-foreground">
+                                                        {inv.customer?.name || "Walk-in"} {inv.vehicle ? `| ${inv.vehicle.vehicleNumber}` : ""}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-foreground">{formatCurrency(inv.netAmount)}</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 text-primary" />
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Return Info */}
+                        {detailAdvance.returnDate && (
+                            <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-xl">
+                                <p className="text-xs text-green-500 font-medium">
+                                    Returned on {formatDateTime(detailAdvance.returnDate)}
+                                </p>
+                                {detailAdvance.returnRemarks && (
+                                    <p className="text-xs text-muted-foreground mt-1">{detailAdvance.returnRemarks}</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 )}
             </Modal>
         </div>

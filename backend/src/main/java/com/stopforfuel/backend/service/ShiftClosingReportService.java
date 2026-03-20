@@ -398,14 +398,17 @@ public class ShiftClosingReportService {
         addTransactionLineItem(lineItems, report, shiftId, "CHEQUE",
                 shiftTransactionRepository.sumChequeByShift(shiftId), "Cheque Advance", ++sortOrder);
 
-        // 11. Cash Advance & Home Advance
+        // 11. Cash Advance, Home Advance & Salary Advance
         List<CashAdvance> cashAdvances = cashAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
         BigDecimal regularAdvanceTotal = BigDecimal.ZERO;
         BigDecimal homeAdvanceTotal = BigDecimal.ZERO;
+        BigDecimal cashSalaryAdvanceTotal = BigDecimal.ZERO;
         for (CashAdvance ca : cashAdvances) {
             if ("CANCELLED".equals(ca.getStatus())) continue;
             if ("HOME_ADVANCE".equals(ca.getAdvanceType())) {
                 homeAdvanceTotal = homeAdvanceTotal.add(ca.getAmount());
+            } else if ("SALARY_ADVANCE".equals(ca.getAdvanceType())) {
+                cashSalaryAdvanceTotal = cashSalaryAdvanceTotal.add(ca.getAmount());
             } else {
                 regularAdvanceTotal = regularAdvanceTotal.add(ca.getAmount());
             }
@@ -429,6 +432,18 @@ public class ShiftClosingReportService {
             item.setCategory("HOME_ADVANCE");
             item.setLabel("Home Advance");
             item.setAmount(homeAdvanceTotal);
+            item.setSortOrder(++sortOrder);
+            lineItems.add(item);
+        }
+
+        // Salary Advance from CashAdvance (in addition to EmployeeAdvance)
+        if (cashSalaryAdvanceTotal.compareTo(BigDecimal.ZERO) > 0) {
+            ReportLineItem item = new ReportLineItem();
+            item.setReport(report);
+            item.setSection("ADVANCE");
+            item.setCategory("SALARY_ADVANCE");
+            item.setLabel("Salary Advance (Cash)");
+            item.setAmount(cashSalaryAdvanceTotal);
             item.setSortOrder(++sortOrder);
             lineItems.add(item);
         }
@@ -886,8 +901,19 @@ public class ShiftClosingReportService {
         for (CashAdvance ca : cashAdvances) {
             if ("CANCELLED".equals(ca.getStatus())) continue;
             ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            entry.setType("HOME_ADVANCE".equals(ca.getAdvanceType()) ? "HOME_ADV" : "CASH_ADV");
-            entry.setDescription(ca.getRecipientName() != null ? ca.getRecipientName() : "-");
+            String type;
+            switch (ca.getAdvanceType()) {
+                case "HOME_ADVANCE": type = "HOME_ADV"; break;
+                case "SALARY_ADVANCE": type = "SAL_ADV"; break;
+                default: type = "CASH_ADV"; break;
+            }
+            entry.setType(type);
+            String desc = ca.getRecipientName() != null ? ca.getRecipientName() : "-";
+            // Show utilized/settled info if invoices are assigned
+            if (ca.getUtilizedAmount() != null && ca.getUtilizedAmount().compareTo(BigDecimal.ZERO) > 0) {
+                desc += " (Bills: " + ca.getUtilizedAmount().setScale(2, RoundingMode.HALF_UP) + ")";
+            }
+            entry.setDescription(desc);
             entry.setAmount(ca.getAmount());
             entry.setReference(ca.getPurpose());
             data.getAdvanceEntries().add(entry);

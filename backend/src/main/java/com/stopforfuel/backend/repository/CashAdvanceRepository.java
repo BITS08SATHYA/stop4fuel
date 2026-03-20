@@ -11,4 +11,6 @@ public interface CashAdvanceRepository extends JpaRepository<CashAdvance, Long> 
     List<CashAdvance> findByShiftIdOrderByAdvanceDateDesc(Long shiftId);
     List<CashAdvance> findAllByOrderByAdvanceDateDesc();
     List<CashAdvance> findByAdvanceTypeOrderByAdvanceDateDesc(String advanceType);
+    List<CashAdvance> findByEmployeeIdOrderByAdvanceDateDesc(Long employeeId);
+    List<CashAdvance> findByStatusInOrderByAdvanceDateDesc(List<String> statuses);
 }
