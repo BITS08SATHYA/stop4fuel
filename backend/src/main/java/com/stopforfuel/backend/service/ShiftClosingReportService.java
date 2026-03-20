@@ -939,9 +939,24 @@ public class ShiftClosingReportService {
             }
             entry.setType(type);
             String desc = ca.getRecipientName() != null ? ca.getRecipientName() : "-";
-            // Show utilized/settled info if invoices are assigned
+            // Show linked invoices and statement info
+            StringBuilder linkInfo = new StringBuilder();
+            if (ca.getInvoiceBills() != null && !ca.getInvoiceBills().isEmpty()) {
+                for (InvoiceBill ib : ca.getInvoiceBills()) {
+                    if (linkInfo.length() > 0) linkInfo.append(", ");
+                    linkInfo.append(ib.getBillNo() != null ? ib.getBillNo() : "#" + ib.getId());
+                    linkInfo.append("(").append(ib.getBillType()).append(")");
+                }
+            }
+            if (ca.getStatement() != null) {
+                if (linkInfo.length() > 0) linkInfo.append(", ");
+                linkInfo.append("Stmt#").append(ca.getStatement().getStatementNo());
+            }
+            if (linkInfo.length() > 0) {
+                desc += " [" + linkInfo + "]";
+            }
             if (ca.getUtilizedAmount() != null && ca.getUtilizedAmount().compareTo(BigDecimal.ZERO) > 0) {
-                desc += " (Bills: " + ca.getUtilizedAmount().setScale(2, RoundingMode.HALF_UP) + ")";
+                desc += " Util:" + ca.getUtilizedAmount().setScale(2, RoundingMode.HALF_UP);
             }
             entry.setDescription(desc);
             entry.setAmount(ca.getAmount());

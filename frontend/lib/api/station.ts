@@ -1307,6 +1307,7 @@ export interface EmployeeType {
     email: string;
     phone: string;
     salary: number;
+    salaryDay?: number; // Day of month salary is due (1-31)
     joinDate: string;
     status: string;
     aadharNumber: string;

@@ -187,36 +187,42 @@ export default function SalaryProcessingPage() {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-white/5 border-b border-border/50">
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-12">#</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Employee</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Base Salary</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Advance Ded.</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Incentive</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Other Ded.</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Net Payable</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Status</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-28">Action</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-10">#</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Employee</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Pay Day</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Base</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Adv Ded.</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Incentive</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Other</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Net</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Status</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Paid On</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/30">
                                         {paginatedData.map((p, idx) => (
                                             <tr key={p.id} className="hover:bg-white/5 transition-colors">
-                                                <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-4 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
+                                                <td className="px-4 py-4">
                                                     <p className="font-medium text-foreground">{p.employee?.name}</p>
                                                     <p className="text-xs text-muted-foreground">{p.employee?.designation}</p>
                                                 </td>
-                                                <td className="px-6 py-4 text-right font-medium">{formatRupees(p.baseSalary || 0)}</td>
-                                                <td className="px-6 py-4 text-right text-red-500">{p.advanceDeduction > 0 ? `-${formatRupees(p.advanceDeduction)}` : "-"}</td>
-                                                <td className="px-6 py-4 text-right text-emerald-500">{p.incentiveAmount > 0 ? `+${formatRupees(p.incentiveAmount)}` : "-"}</td>
-                                                <td className="px-6 py-4 text-right text-red-500">{p.otherDeductions > 0 ? `-${formatRupees(p.otherDeductions)}` : "-"}</td>
-                                                <td className="px-6 py-4 text-right font-bold text-primary">{formatRupees(p.netPayable || 0)}</td>
-                                                <td className="px-6 py-4 text-center">
+                                                <td className="px-4 py-4 text-center">
+                                                    <span className="text-xs font-medium text-foreground">
+                                                        {p.employee?.salaryDay ? `${p.employee.salaryDay}${p.employee.salaryDay === 1 ? "st" : p.employee.salaryDay === 2 ? "nd" : p.employee.salaryDay === 3 ? "rd" : "th"}` : "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-right font-medium">{formatRupees(p.baseSalary || 0)}</td>
+                                                <td className="px-4 py-4 text-right text-red-500">{p.advanceDeduction > 0 ? `-${formatRupees(p.advanceDeduction)}` : "-"}</td>
+                                                <td className="px-4 py-4 text-right text-emerald-500">{p.incentiveAmount > 0 ? `+${formatRupees(p.incentiveAmount)}` : "-"}</td>
+                                                <td className="px-4 py-4 text-right text-red-500">{p.otherDeductions > 0 ? `-${formatRupees(p.otherDeductions)}` : "-"}</td>
+                                                <td className="px-4 py-4 text-right font-bold text-primary">{formatRupees(p.netPayable || 0)}</td>
+                                                <td className="px-4 py-4 text-center">
                                                     <Badge variant={p.status === "PAID" ? "success" : "warning"}>
                                                         {p.status}
                                                     </Badge>
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
+                                                <td className="px-4 py-4 text-center">
                                                     {p.status === "DRAFT" && (
                                                         <button
                                                             onClick={() => handleMarkPaid(p.id)}
