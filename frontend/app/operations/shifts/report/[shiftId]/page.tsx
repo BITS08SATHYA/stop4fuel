@@ -299,6 +299,20 @@ export default function ShiftReportPage() {
                     </tbody></table>
                 </div></GlassCard>
 
+                {/* Stock Position (Godown + Cashier) */}
+                {printData.stockPosition && printData.stockPosition.length > 0 && (
+                <GlassCard><div className="p-4">
+                    <h2 className="text-base font-semibold mb-3 text-purple-500">Stock Position</h2>
+                    <table className="w-full text-xs"><thead><tr className="border-b border-border text-muted-foreground">
+                        <th className="text-left py-1 px-1.5">Product</th><th className="text-right py-1 px-1.5">Godown</th><th className="text-right py-1 px-1.5">Cashier</th><th className="text-right py-1 px-1.5">Total</th><th className="text-center py-1 px-1.5">Status</th>
+                    </tr></thead><tbody>
+                        {printData.stockPosition.map((sp, i) => <tr key={i} className="border-b border-border/30"><td className="py-0.5 px-1.5">{sp.productName}</td>
+                        <td className="py-0.5 px-1.5 text-right">{fmtQty(sp.godownStock)}</td><td className="py-0.5 px-1.5 text-right">{fmtQty(sp.cashierStock)}</td><td className="py-0.5 px-1.5 text-right font-semibold">{fmtQty(sp.totalStock)}</td>
+                        <td className="py-0.5 px-1.5 text-center">{sp.lowStock ? <span className="text-red-500 font-bold text-[10px]">LOW</span> : <span className="text-green-500 text-[10px]">OK</span>}</td></tr>)}
+                    </tbody></table>
+                </div></GlassCard>
+                )}
+
                 {/* Payment Entries */}
                 <GlassCard><div className="p-4">
                     <h2 className="text-base font-semibold mb-3 text-blue-500">Bill / Statement Payments</h2>
@@ -444,6 +458,17 @@ export default function ShiftReportPage() {
                                 <td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtQty(s.openStock)}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtQty(s.receipt)}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtQty(s.totalStock)}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtQty(s.sales)}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtCur(s.rate)}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt] font-bold">{fmtCur(s.amount)}</td></tr>)}
                             </tbody></table>
                         </div>
+                        {(printData?.stockPosition || []).length > 0 && (
+                        <div>
+                            <div className="font-bold text-[8pt] border-b border-black mb-0.5">STOCK POSITION</div>
+                            <table className="w-full border-collapse"><thead><tr className="bg-gray-100">
+                                <th className="border border-gray-400 px-0.5 py-0 text-left text-[7pt]">Product</th><th className="border border-gray-400 px-0.5 py-0 text-right text-[7pt]">Godown</th><th className="border border-gray-400 px-0.5 py-0 text-right text-[7pt]">Cashier</th><th className="border border-gray-400 px-0.5 py-0 text-right text-[7pt]">Total</th><th className="border border-gray-400 px-0.5 py-0 text-center text-[7pt]">Status</th>
+                            </tr></thead><tbody>
+                                {(printData?.stockPosition || []).map((sp, i) => <tr key={i}><td className="border border-gray-300 px-0.5 py-0 text-[7pt]">{sp.productName}</td>
+                                <td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtQty(sp.godownStock)}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtQty(sp.cashierStock)}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt] font-bold">{fmtQty(sp.totalStock)}</td><td className="border border-gray-300 px-0.5 py-0 text-center text-[7pt]">{sp.lowStock ? "LOW" : "OK"}</td></tr>)}
+                            </tbody></table>
+                        </div>
+                        )}
                     </div>
 
                     {/* Right: Advance Entries + Payment Entries */}

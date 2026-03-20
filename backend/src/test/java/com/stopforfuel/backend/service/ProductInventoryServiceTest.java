@@ -1,8 +1,12 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.CashierStock;
+import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.entity.ProductInventory;
 import com.stopforfuel.backend.entity.Shift;
+import com.stopforfuel.backend.repository.CashierStockRepository;
 import com.stopforfuel.backend.repository.ProductInventoryRepository;
+import com.stopforfuel.backend.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +27,12 @@ class ProductInventoryServiceTest {
 
     @Mock
     private ProductInventoryRepository repository;
+
+    @Mock
+    private ProductRepository productRepository;
+
+    @Mock
+    private CashierStockRepository cashierStockRepository;
 
     @Mock
     private ShiftService shiftService;
@@ -123,5 +133,81 @@ class ProductInventoryServiceTest {
     void delete_callsRepository() {
         productInventoryService.delete(1L);
         verify(repository).deleteById(1L);
+    }
+
+    @Test
+    void autoCreateForShift_usesCashierStockForOpenStock() {
+        Shift shift = new Shift();
+        shift.setId(10L);
+        shift.setScid(1L);
+
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Oil");
+        product.setPrice(java.math.BigDecimal.valueOf(250));
+
+        CashierStock cs = new CashierStock();
+        cs.setCurrentStock(15.0);
+
+        when(productRepository.findByActive(true)).thenReturn(List.of(product));
+        when(repository.findByShiftId(10L)).thenReturn(List.of());
+        when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(cs));
+        when(repository.save(any(ProductInventory.class))).thenAnswer(i -> i.getArgument(0));
+
+        productInventoryService.autoCreateForShift(shift);
+
+        verify(repository).save(argThat(pi -> pi.getOpenStock() == 15.0 && pi.getShiftId() == 10L));
+    }
+
+    @Test
+    void autoCreateForShift_fallsToPreviousCloseStock_whenNoCashierStock() {
+        Shift shift = new Shift();
+        shift.setId(10L);
+        shift.setScid(1L);
+
+        Product product = new Product();
+        product.setId(2L);
+        product.setName("Coolant");
+        product.setPrice(java.math.BigDecimal.valueOf(100));
+
+        ProductInventory prev = new ProductInventory();
+        prev.setCloseStock(8.0);
+
+        when(productRepository.findByActive(true)).thenReturn(List.of(product));
+        when(repository.findByShiftId(10L)).thenReturn(List.of());
+        when(cashierStockRepository.findByProductIdAndScid(2L, 1L)).thenReturn(Optional.empty());
+        when(repository.findTopByProductIdOrderByDateDescIdDesc(2L)).thenReturn(prev);
+        when(repository.save(any(ProductInventory.class))).thenAnswer(i -> i.getArgument(0));
+
+        productInventoryService.autoCreateForShift(shift);
+
+        verify(repository).save(argThat(pi -> pi.getOpenStock() == 8.0));
+    }
+
+    @Test
+    void finalizeForShift_syncsCashierStock() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Oil");
+        product.setPrice(java.math.BigDecimal.valueOf(250));
+
+        ProductInventory pi = new ProductInventory();
+        pi.setProduct(product);
+        pi.setCloseStock(12.0);
+        pi.setSales(3.0);
+
+        CashierStock cs = new CashierStock();
+        cs.setCurrentStock(20.0);
+
+        when(repository.findByShiftId(10L)).thenReturn(List.of(pi));
+        when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(cs));
+        when(repository.save(any(ProductInventory.class))).thenAnswer(i -> i.getArgument(0));
+
+        productInventoryService.finalizeForShift(10L);
+
+        assertEquals(12.0, cs.getCurrentStock());
+        verify(cashierStockRepository).save(cs);
+        assertNotNull(pi.getRate());
+        assertNotNull(pi.getAmount());
     }
 }

@@ -37,6 +37,8 @@ public class ShiftClosingReportService {
     private final ProductInventoryRepository productInventoryRepository;
     private final ProductRepository productRepository;
     private final CompanyRepository companyRepository;
+    private final GodownStockRepository godownStockRepository;
+    private final CashierStockRepository cashierStockRepository;
 
     @Transactional
     public ShiftClosingReport generateReport(Long shiftId) {
@@ -874,6 +876,34 @@ public class ShiftClosingReportService {
                     : BigDecimal.ZERO;
             row.setAmount(salesAmt.setScale(2, RoundingMode.HALF_UP));
             data.getStockSummary().add(row);
+        }
+
+        // Stock Position — godown + cashier balances for non-fuel products
+        List<GodownStock> godownStocks = godownStockRepository.findByScid(1L);
+        Map<Long, GodownStock> godownMap = new HashMap<>();
+        for (GodownStock gs : godownStocks) {
+            godownMap.put(gs.getProduct().getId(), gs);
+        }
+        List<CashierStock> cashierStocks = cashierStockRepository.findByScid(1L);
+        Map<Long, CashierStock> cashierMap = new HashMap<>();
+        for (CashierStock cs : cashierStocks) {
+            cashierMap.put(cs.getProduct().getId(), cs);
+        }
+        for (Product product : allProductEntities) {
+            if ("FUEL".equalsIgnoreCase(product.getCategory())) continue;
+            GodownStock gs = godownMap.get(product.getId());
+            CashierStock cs = cashierMap.get(product.getId());
+            double godownQty = (gs != null && gs.getCurrentStock() != null) ? gs.getCurrentStock() : 0.0;
+            double cashierQty = (cs != null && cs.getCurrentStock() != null) ? cs.getCurrentStock() : 0.0;
+            if (godownQty == 0 && cashierQty == 0) continue;
+            ShiftReportPrintData.StockPositionRow posRow = new ShiftReportPrintData.StockPositionRow();
+            posRow.setProductName(product.getName());
+            posRow.setGodownStock(godownQty);
+            posRow.setCashierStock(cashierQty);
+            posRow.setTotalStock(godownQty + cashierQty);
+            posRow.setLowStock(gs != null && gs.getReorderLevel() != null
+                    && gs.getReorderLevel() > 0 && godownQty <= gs.getReorderLevel());
+            data.getStockPosition().add(posRow);
         }
 
         // Advance Entry Details (individual transactions)

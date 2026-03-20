@@ -2,9 +2,12 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.CashierStock;
 import com.stopforfuel.backend.entity.GodownStock;
+import com.stopforfuel.backend.entity.ProductInventory;
+import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.StockTransfer;
 import com.stopforfuel.backend.repository.CashierStockRepository;
 import com.stopforfuel.backend.repository.GodownStockRepository;
+import com.stopforfuel.backend.repository.ProductInventoryRepository;
 import com.stopforfuel.backend.repository.StockTransferRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +23,8 @@ public class StockTransferService {
     private final StockTransferRepository repository;
     private final GodownStockRepository godownStockRepository;
     private final CashierStockRepository cashierStockRepository;
+    private final ProductInventoryRepository productInventoryRepository;
+    private final ShiftService shiftService;
 
     public List<StockTransfer> getAll() {
         return repository.findByScidOrderByTransferDateDesc(1L);
@@ -33,10 +38,20 @@ public class StockTransferService {
         return repository.findByScidAndTransferDateBetweenOrderByTransferDateDesc(1L, from, to);
     }
 
+    public List<StockTransfer> getByShiftId(Long shiftId) {
+        return repository.findByShiftId(shiftId);
+    }
+
     @Transactional
     public StockTransfer createTransfer(StockTransfer transfer) {
         if (transfer.getScid() == null) transfer.setScid(1L);
         if (transfer.getTransferDate() == null) transfer.setTransferDate(LocalDateTime.now());
+
+        // Link transfer to active shift
+        Shift activeShift = shiftService.getActiveShift();
+        if (activeShift != null) {
+            transfer.setShiftId(activeShift.getId());
+        }
 
         Long productId = transfer.getProduct().getId();
         Double qty = transfer.getQuantity();
@@ -62,6 +77,11 @@ public class StockTransferService {
                     });
             cashier.setCurrentStock(cashier.getCurrentStock() + qty);
             cashierStockRepository.save(cashier);
+
+            // Auto-update ProductInventory.incomeStock for the active shift
+            if (activeShift != null) {
+                updateProductInventoryIncome(activeShift.getId(), productId, qty);
+            }
         } else {
             // Cashier -> Godown
             CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, 1L)
@@ -84,8 +104,35 @@ public class StockTransferService {
                     });
             godown.setCurrentStock(godown.getCurrentStock() + qty);
             godownStockRepository.save(godown);
+
+            // Cashier -> Godown means stock is leaving the counter, reduce incomeStock
+            if (activeShift != null) {
+                updateProductInventoryIncome(activeShift.getId(), productId, -qty);
+            }
         }
 
         return repository.save(transfer);
+    }
+
+    /**
+     * Auto-update ProductInventory.incomeStock when a stock transfer happens.
+     * Positive qty = stock received at counter (GODOWN→CASHIER).
+     * Negative qty = stock returned to godown (CASHIER→GODOWN).
+     */
+    private void updateProductInventoryIncome(Long shiftId, Long productId, double qty) {
+        ProductInventory pi = productInventoryRepository.findByShiftIdAndProductId(shiftId, productId);
+        if (pi != null) {
+            double currentIncome = pi.getIncomeStock() != null ? pi.getIncomeStock() : 0.0;
+            pi.setIncomeStock(currentIncome + qty);
+
+            // Recalculate derived fields
+            double open = pi.getOpenStock() != null ? pi.getOpenStock() : 0.0;
+            double total = open + pi.getIncomeStock();
+            pi.setTotalStock(total);
+            if (pi.getCloseStock() != null) {
+                pi.setSales(total - pi.getCloseStock());
+            }
+            productInventoryRepository.save(pi);
+        }
     }
 }
