@@ -5,15 +5,21 @@ import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.GroupRepository;
+import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
 public class MappingService {
+
+    private static final Logger log = LoggerFactory.getLogger(MappingService.class);
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -23,6 +29,9 @@ public class MappingService {
 
     @Autowired
     private GroupRepository groupRepository;
+
+    @Autowired
+    private InvoiceBillRepository invoiceBillRepository;
 
     public List<Customer> getUnassignedCustomers() {
         return customerRepository.findByGroupIsNull();
@@ -58,6 +67,33 @@ public class MappingService {
                 .orElseThrow(() -> new RuntimeException("Customer not found with id: " + customerId));
         List<Vehicle> vehicles = vehicleRepository.findByIdIn(vehicleIds);
         for (Vehicle vehicle : vehicles) {
+            Customer oldCustomer = vehicle.getCustomer();
+            if (oldCustomer != null && !oldCustomer.getId().equals(customerId)) {
+                // Check for unpaid credit bills before reassigning
+                long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
+                        vehicle.getId(), oldCustomer.getId(), "NOT_PAID");
+                if (unpaidCount > 0) {
+                    throw new RuntimeException(
+                            "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +
+                            " unpaid credit bill(s) under " + oldCustomer.getName() +
+                            ". Settle them before reassigning.");
+                }
+
+                // Deduct vehicle's consumed liters from old customer's total
+                BigDecimal vehicleConsumed = vehicle.getConsumedLiters() != null ? vehicle.getConsumedLiters() : BigDecimal.ZERO;
+                if (vehicleConsumed.compareTo(BigDecimal.ZERO) > 0 && oldCustomer.getConsumedLiters() != null) {
+                    oldCustomer.setConsumedLiters(oldCustomer.getConsumedLiters().subtract(vehicleConsumed));
+                    customerRepository.save(oldCustomer);
+                }
+
+                log.info("Vehicle {} reassigned from customer {} (id={}) to {} (id={}). Consumed liters reset from {}.",
+                        vehicle.getVehicleNumber(), oldCustomer.getName(), oldCustomer.getId(),
+                        customer.getName(), customer.getId(), vehicleConsumed);
+            }
+
+            // Reset consumed liters for the new assignment cycle
+            vehicle.setConsumedLiters(BigDecimal.ZERO);
+            vehicle.setStatus("ACTIVE");
             vehicle.setCustomer(customer);
         }
         return vehicleRepository.saveAll(vehicles);
@@ -67,6 +103,29 @@ public class MappingService {
     public List<Vehicle> unassignVehiclesFromCustomer(List<Long> vehicleIds) {
         List<Vehicle> vehicles = vehicleRepository.findByIdIn(vehicleIds);
         for (Vehicle vehicle : vehicles) {
+            Customer oldCustomer = vehicle.getCustomer();
+            if (oldCustomer != null) {
+                // Check for unpaid credit bills
+                long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
+                        vehicle.getId(), oldCustomer.getId(), "NOT_PAID");
+                if (unpaidCount > 0) {
+                    throw new RuntimeException(
+                            "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +
+                            " unpaid credit bill(s). Settle them before unassigning.");
+                }
+
+                // Deduct from customer's consumed liters
+                BigDecimal vehicleConsumed = vehicle.getConsumedLiters() != null ? vehicle.getConsumedLiters() : BigDecimal.ZERO;
+                if (vehicleConsumed.compareTo(BigDecimal.ZERO) > 0 && oldCustomer.getConsumedLiters() != null) {
+                    oldCustomer.setConsumedLiters(oldCustomer.getConsumedLiters().subtract(vehicleConsumed));
+                    customerRepository.save(oldCustomer);
+                }
+
+                log.info("Vehicle {} unassigned from customer {} (id={}). Consumed liters were {}.",
+                        vehicle.getVehicleNumber(), oldCustomer.getName(), oldCustomer.getId(), vehicleConsumed);
+            }
+
+            vehicle.setConsumedLiters(BigDecimal.ZERO);
             vehicle.setCustomer(null);
         }
         return vehicleRepository.saveAll(vehicles);

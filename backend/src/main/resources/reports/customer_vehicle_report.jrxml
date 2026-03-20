@@ -1,0 +1,539 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="customer_vehicle_report"
+              pageWidth="595" pageHeight="842"
+              columnWidth="575" leftMargin="10" rightMargin="10" topMargin="10" bottomMargin="10"
+              uuid="7ca4a64a-f91f-4eb2-9c70-94e46eddd41d">
+
+    <!-- Parameters -->
+    <parameter name="companyName" class="java.lang.String"/>
+    <parameter name="companyAddress" class="java.lang.String"/>
+    <parameter name="companyGstin" class="java.lang.String"/>
+    <parameter name="companyPhone" class="java.lang.String"/>
+    <parameter name="generatedDate" class="java.lang.String"/>
+
+    <parameter name="customerName" class="java.lang.String"/>
+    <parameter name="groupName" class="java.lang.String"/>
+    <parameter name="partyType" class="java.lang.String"/>
+    <parameter name="customerEmail" class="java.lang.String"/>
+    <parameter name="customerPhone" class="java.lang.String"/>
+    <parameter name="customerAddress" class="java.lang.String"/>
+    <parameter name="joinDate" class="java.lang.String"/>
+    <parameter name="creditLimitAmount" class="java.lang.String"/>
+    <parameter name="creditLimitLiters" class="java.lang.String"/>
+    <parameter name="consumedLiters" class="java.lang.String"/>
+    <parameter name="customerStatus" class="java.lang.String"/>
+
+    <parameter name="totalVehicles" class="java.lang.Integer"/>
+    <parameter name="activeCount" class="java.lang.Integer"/>
+    <parameter name="inactiveCount" class="java.lang.Integer"/>
+    <parameter name="blockedCount" class="java.lang.Integer"/>
+    <parameter name="totalCapacity" class="java.lang.String"/>
+    <parameter name="totalMonthlyLimit" class="java.lang.String"/>
+    <parameter name="totalConsumed" class="java.lang.String"/>
+
+    <!-- Vehicle data fields -->
+    <field name="rowNum" class="java.lang.Integer"/>
+    <field name="vehicleNumber" class="java.lang.String"/>
+    <field name="vehicleType" class="java.lang.String"/>
+    <field name="preferredProduct" class="java.lang.String"/>
+    <field name="maxCapacity" class="java.lang.String"/>
+    <field name="monthlyLimit" class="java.lang.String"/>
+    <field name="consumed" class="java.lang.String"/>
+    <field name="status" class="java.lang.String"/>
+
+    <background><band splitType="Stretch"/></background>
+
+    <!-- TITLE: Header with company info + report title -->
+    <title>
+        <band height="68" splitType="Stretch">
+            <!-- Company name -->
+            <textField>
+                <reportElement x="0" y="0" width="350" height="18" uuid="f6d97104-df49-44ba-bbdd-cd2ebec8f810"/>
+                <textElement><font fontName="Arial" size="14" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{companyName}]]></textFieldExpression>
+            </textField>
+            <!-- Company address line -->
+            <textField>
+                <reportElement x="0" y="18" width="350" height="12" forecolor="#333333" uuid="2f22d972-c78f-4efa-b318-4d3c423e7d8c"/>
+                <textElement><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA[$P{companyAddress}]]></textFieldExpression>
+            </textField>
+            <!-- GSTIN + Phone -->
+            <textField>
+                <reportElement x="0" y="30" width="350" height="12" forecolor="#333333" uuid="e86839a7-4a25-4645-abe1-ffd45a31cd13"/>
+                <textElement><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA["GSTIN: " + $P{companyGstin} + "  |  Ph: " + $P{companyPhone}]]></textFieldExpression>
+            </textField>
+            <!-- Report title -->
+            <staticText>
+                <reportElement x="350" y="0" width="225" height="20" uuid="e46dac36-22b9-4009-b4d0-108458d16633"/>
+                <textElement textAlignment="Right"><font fontName="Arial" size="12" isBold="true"/></textElement>
+                <text><![CDATA[CUSTOMER VEHICLE REPORT]]></text>
+            </staticText>
+            <!-- Generation date -->
+            <textField>
+                <reportElement x="350" y="20" width="225" height="14" forecolor="#555555" uuid="c33e0fd6-5798-4041-b5bf-e931a0b2513c"/>
+                <textElement textAlignment="Right"><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA["Generated: " + $P{generatedDate}]]></textFieldExpression>
+            </textField>
+            <!-- Separator line -->
+            <line>
+                <reportElement x="0" y="48" width="575" height="1" uuid="6813f3bf-1cf2-4d04-a377-8aee45d44501"/>
+                <graphicElement><pen lineWidth="2.0"/></graphicElement>
+            </line>
+            <!-- Section bar: CUSTOMER DETAILS -->
+            <staticText>
+                <reportElement mode="Opaque" x="0" y="53" width="575" height="14" backcolor="#222222" forecolor="#FFFFFF" uuid="3d14b3ad-46f8-4aef-9010-04b13b46f08b"/>
+                <textElement verticalAlignment="Middle"><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[  CUSTOMER DETAILS]]></text>
+            </staticText>
+        </band>
+    </title>
+
+    <!-- PAGE HEADER: Customer details grid -->
+    <pageHeader>
+        <band height="80" splitType="Stretch">
+            <!-- Row 1 -->
+            <staticText>
+                <reportElement x="0" y="2" width="100" height="12" forecolor="#555555" uuid="9c4aeb72-f8d2-45cd-8418-1c33e37d1802"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[Customer Name]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="100" y="2" width="185" height="12" uuid="8cd14ae0-fc43-4861-8f57-4878e2f39e4f"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{customerName}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="290" y="2" width="100" height="12" forecolor="#555555" uuid="d6178f48-2b09-4745-80c1-058a86ec1578"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[Email / Phone]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="390" y="2" width="185" height="12" uuid="ee349314-ed46-441f-85f6-45183fde0b50"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{customerEmail} + " / " + $P{customerPhone}]]></textFieldExpression>
+            </textField>
+
+            <!-- Row 2 -->
+            <staticText>
+                <reportElement x="0" y="16" width="100" height="12" forecolor="#555555" uuid="8d9f27cc-d255-43c4-8e45-abd765b09b51"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[Group / Party]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="100" y="16" width="185" height="12" uuid="82421aad-3b69-407b-ada7-f479bc50e7d4"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{groupName} + " / " + $P{partyType}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="290" y="16" width="100" height="12" forecolor="#555555" uuid="3fb4d040-c334-49b8-b3c5-b82994cdf586"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[Address]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="390" y="16" width="185" height="12" uuid="1070811f-d151-406e-b796-264ab2ae558b"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{customerAddress}]]></textFieldExpression>
+            </textField>
+
+            <!-- Row 3 -->
+            <staticText>
+                <reportElement x="0" y="30" width="100" height="12" forecolor="#555555" uuid="83e09767-84fe-4f2f-87c4-8ee55ac23b3d"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[Join Date]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="100" y="30" width="185" height="12" uuid="055963aa-fe06-45a9-a6aa-3fdffea1f96a"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{joinDate}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="290" y="30" width="100" height="12" forecolor="#555555" uuid="1077d0c8-1cef-428f-a045-a94c16b84b67"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[Consumed Litres]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="390" y="30" width="185" height="12" uuid="951e8b1c-acdb-46ab-a3e5-85f7838b7cb3"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{consumedLiters} + " L"]]></textFieldExpression>
+            </textField>
+
+            <!-- Row 4 -->
+            <staticText>
+                <reportElement x="0" y="44" width="100" height="12" forecolor="#555555" uuid="59933610-7f8f-46ea-aac6-bc8ba1f3746e"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[Credit Limit]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="100" y="44" width="185" height="12" uuid="c07994b7-e653-4353-9535-9675fcff2d71"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA["Rs. " + $P{creditLimitAmount} + " / " + $P{creditLimitLiters} + " L"]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="290" y="44" width="100" height="12" forecolor="#555555" uuid="71b7e928-790c-49ec-973d-3e6aec9afaef"/>
+                <textElement><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[Status]]></text>
+            </staticText>
+            <textField>
+                <reportElement mode="Opaque" x="390" y="44" width="60" height="12"
+                               backcolor="#D4EDDA" forecolor="#155724" uuid="10139cf6-dca6-4b9b-8c70-05b32506213f">
+                    <printWhenExpression><![CDATA["ACTIVE".equals($P{customerStatus})]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" size="7" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{customerStatus}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement mode="Opaque" x="390" y="44" width="60" height="12"
+                               backcolor="#F8D7DA" forecolor="#721C24" uuid="ab62fb0c-2bd2-427e-a4fa-5c0785965582">
+                    <printWhenExpression><![CDATA[!"ACTIVE".equals($P{customerStatus})]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" size="7" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{customerStatus}]]></textFieldExpression>
+            </textField>
+
+            <!-- Section bar: ASSIGNED VEHICLES -->
+            <staticText>
+                <reportElement mode="Opaque" x="0" y="64" width="575" height="14" backcolor="#222222" forecolor="#FFFFFF" uuid="386c9f9c-341d-45cd-b9e1-4e064a9ae5b7"/>
+                <textElement verticalAlignment="Middle"><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[  ASSIGNED VEHICLES]]></text>
+            </staticText>
+        </band>
+    </pageHeader>
+
+    <!-- COLUMN HEADER: Vehicle table header -->
+    <columnHeader>
+        <band height="14" splitType="Stretch">
+            <staticText>
+                <reportElement mode="Opaque" x="0" y="0" width="25" height="14" backcolor="#E0E0E0" uuid="ace82580-2360-4cc7-a82b-3fd90bb1ebfc"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[#]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="25" y="0" width="95" height="14" backcolor="#E0E0E0" uuid="0120c8f7-d84d-40c0-ac91-48c0255922b8"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[VEHICLE NUMBER]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="120" y="0" width="75" height="14" backcolor="#E0E0E0" uuid="dddfe0e2-1b86-4666-8876-b396876607aa"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[VEHICLE TYPE]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="195" y="0" width="80" height="14" backcolor="#E0E0E0" uuid="67bc9bfd-3385-4f48-b301-c948ed445e93"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[PREF. PRODUCT]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="275" y="0" width="75" height="14" backcolor="#E0E0E0" uuid="a47aab72-d4e2-4909-9fea-6985c890f873"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[MAX CAP. (L)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="350" y="0" width="75" height="14" backcolor="#E0E0E0" uuid="a79de174-6810-4c02-9677-5cf3edf131a4"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[MONTHLY LMT (L)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="425" y="0" width="75" height="14" backcolor="#E0E0E0" uuid="538dd7bc-7dad-425d-b381-168b1921d3d1"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[CONSUMED (L)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="500" y="0" width="75" height="14" backcolor="#E0E0E0" uuid="6ab86da2-fd90-4838-837f-a8ec63beace4"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[STATUS]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL: Vehicle table rows -->
+    <detail>
+        <band height="14" splitType="Stretch">
+            <!-- Row number -->
+            <textField>
+                <reportElement x="0" y="0" width="25" height="14" uuid="c3fc414b-c90c-4cc2-922d-86fda66b5260"/>
+                <box><pen lineWidth="0.25" lineColor="#DDDDDD"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA[$F{rowNum}]]></textFieldExpression>
+            </textField>
+            <!-- Vehicle number (monospace) -->
+            <textField>
+                <reportElement x="25" y="0" width="95" height="14" uuid="b7d3ff3f-de3f-4704-8c3b-6fe424ffe46d"/>
+                <box><pen lineWidth="0.25" lineColor="#DDDDDD"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="Courier New" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[" " + $F{vehicleNumber}]]></textFieldExpression>
+            </textField>
+            <!-- Vehicle type -->
+            <textField>
+                <reportElement x="120" y="0" width="75" height="14" uuid="35d9ba0f-c153-496e-829c-72c2c538cddf"/>
+                <box><pen lineWidth="0.25" lineColor="#DDDDDD"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA[$F{vehicleType}]]></textFieldExpression>
+            </textField>
+            <!-- Preferred product -->
+            <textField>
+                <reportElement x="195" y="0" width="80" height="14" uuid="b984506f-96da-42e5-b96b-c614ba9b091d"/>
+                <box><pen lineWidth="0.25" lineColor="#DDDDDD"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA[$F{preferredProduct}]]></textFieldExpression>
+            </textField>
+            <!-- Max capacity -->
+            <textField>
+                <reportElement x="275" y="0" width="75" height="14" uuid="d55aeb66-7afe-46c7-bc8c-d03d5f251afc"/>
+                <box><pen lineWidth="0.25" lineColor="#DDDDDD"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA[$F{maxCapacity} + " "]]></textFieldExpression>
+            </textField>
+            <!-- Monthly limit -->
+            <textField>
+                <reportElement x="350" y="0" width="75" height="14" uuid="4595a7ce-861d-4936-b166-3f37ba16ac27"/>
+                <box><pen lineWidth="0.25" lineColor="#DDDDDD"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA[$F{monthlyLimit} + " "]]></textFieldExpression>
+            </textField>
+            <!-- Consumed -->
+            <textField>
+                <reportElement x="425" y="0" width="75" height="14" uuid="f6069c74-22d7-491c-81bc-17aa9a5d0429"/>
+                <box><pen lineWidth="0.25" lineColor="#DDDDDD"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Arial" size="8"/></textElement>
+                <textFieldExpression><![CDATA[$F{consumed} + " "]]></textFieldExpression>
+            </textField>
+            <!-- Status badge: ACTIVE (green) -->
+            <textField>
+                <reportElement mode="Opaque" x="510" y="1" width="55" height="12"
+                               backcolor="#D4EDDA" forecolor="#155724" uuid="ea3382cd-a64c-4c5e-9ef2-753984b01725">
+                    <printWhenExpression><![CDATA["ACTIVE".equals($F{status})]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" size="7" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{status}]]></textFieldExpression>
+            </textField>
+            <!-- Status badge: INACTIVE (red) -->
+            <textField>
+                <reportElement mode="Opaque" x="510" y="1" width="55" height="12"
+                               backcolor="#F8D7DA" forecolor="#721C24" uuid="8ec4bdc3-f743-4d91-84fa-69493515e110">
+                    <printWhenExpression><![CDATA["INACTIVE".equals($F{status})]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" size="7" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{status}]]></textFieldExpression>
+            </textField>
+            <!-- Status badge: BLOCKED (red) -->
+            <textField>
+                <reportElement mode="Opaque" x="510" y="1" width="55" height="12"
+                               backcolor="#F8D7DA" forecolor="#721C24" uuid="ef181aef-c705-42b6-a572-02908b65639d">
+                    <printWhenExpression><![CDATA["BLOCKED".equals($F{status})]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" size="7" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{status}]]></textFieldExpression>
+            </textField>
+            <!-- Status cell border -->
+            <frame>
+                <reportElement x="500" y="0" width="75" height="14" uuid="66f61eda-9396-4836-b581-4888480217bb"/>
+                <box><pen lineWidth="0.25" lineColor="#DDDDDD"/></box>
+            </frame>
+        </band>
+    </detail>
+
+    <!-- COLUMN FOOTER: Totals row -->
+    <columnFooter>
+        <band height="16" splitType="Stretch">
+            <staticText>
+                <reportElement mode="Opaque" x="0" y="0" width="275" height="16" backcolor="#D0D0D0" uuid="2f97686b-7b9c-41d8-80d9-151d53281646"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement verticalAlignment="Middle"><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[  TOTAL]]></text>
+            </staticText>
+            <textField>
+                <reportElement mode="Opaque" x="275" y="0" width="75" height="16" backcolor="#D0D0D0" uuid="db97c9bb-852d-4267-84d4-445d6caac132"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{totalCapacity} + " "]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement mode="Opaque" x="350" y="0" width="75" height="16" backcolor="#D0D0D0" uuid="0f12965d-0519-418b-afb5-2e3d1cca1b4c"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{totalMonthlyLimit} + " "]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement mode="Opaque" x="425" y="0" width="75" height="16" backcolor="#D0D0D0" uuid="fec1c213-6555-4685-8f23-024abc0c3fd3"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle"><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{totalConsumed} + " "]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement mode="Opaque" x="500" y="0" width="75" height="16" backcolor="#D0D0D0" uuid="22b70b40-1056-403c-a67a-845a3cbb40e7"/>
+                <box><pen lineWidth="0.5" lineColor="#999999"/></box>
+                <text><![CDATA[]]></text>
+            </staticText>
+        </band>
+    </columnFooter>
+
+    <!-- SUMMARY: Summary boxes + footer -->
+    <summary>
+        <band height="70" splitType="Stretch">
+            <!-- Summary boxes row -->
+            <staticText>
+                <reportElement mode="Opaque" x="0" y="6" width="575" height="14" backcolor="#222222" forecolor="#FFFFFF" uuid="323f9299-9b3b-493a-87e4-26f1b1481cb5"/>
+                <textElement verticalAlignment="Middle"><font fontName="Arial" size="8" isBold="true"/></textElement>
+                <text><![CDATA[  SUMMARY]]></text>
+            </staticText>
+
+            <!-- Box 1: Total Vehicles -->
+            <frame>
+                <reportElement x="0" y="24" width="80" height="30" uuid="6d75dc93-0012-44f9-be14-e36f3d5407b6"/>
+                <box><pen lineWidth="1.5"/></box>
+                <staticText>
+                    <reportElement x="0" y="1" width="80" height="10" forecolor="#555555" uuid="8b2c68ab-a370-44b6-bbf3-f220fe169e01"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="6" isBold="true"/></textElement>
+                    <text><![CDATA[TOTAL VEHICLES]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="0" y="11" width="80" height="17" uuid="98d34df0-6f55-4fd4-9697-dd157a28d25a"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="13" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$P{totalVehicles}]]></textFieldExpression>
+                </textField>
+            </frame>
+
+            <!-- Box 2: Active -->
+            <frame>
+                <reportElement x="84" y="24" width="80" height="30" uuid="7f03fe9a-a5f5-4efa-850b-536745b2a473"/>
+                <box><pen lineWidth="1.5"/></box>
+                <staticText>
+                    <reportElement x="0" y="1" width="80" height="10" forecolor="#555555" uuid="14e52029-0ec0-4a7a-8f5a-eae26dbfb08c"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="6" isBold="true"/></textElement>
+                    <text><![CDATA[ACTIVE]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="0" y="11" width="80" height="17" forecolor="#155724" uuid="3fb7a5b0-d132-417b-a3ae-cda16184a899"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="13" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$P{activeCount}]]></textFieldExpression>
+                </textField>
+            </frame>
+
+            <!-- Box 3: Inactive -->
+            <frame>
+                <reportElement x="168" y="24" width="80" height="30" uuid="5ca6f9f1-f560-4de2-a2f7-1aec4f0f5adf"/>
+                <box><pen lineWidth="1.5"/></box>
+                <staticText>
+                    <reportElement x="0" y="1" width="80" height="10" forecolor="#555555" uuid="0501c2db-2c2c-4dd6-9588-4990754afc01"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="6" isBold="true"/></textElement>
+                    <text><![CDATA[INACTIVE]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="0" y="11" width="80" height="17" forecolor="#856404" uuid="10e73b13-592a-4316-aab6-3d4e4a0c459e"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="13" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$P{inactiveCount}]]></textFieldExpression>
+                </textField>
+            </frame>
+
+            <!-- Box 4: Blocked -->
+            <frame>
+                <reportElement x="252" y="24" width="80" height="30" uuid="2a13a475-8294-4fe7-97d0-39eaba74ba4e"/>
+                <box><pen lineWidth="1.5"/></box>
+                <staticText>
+                    <reportElement x="0" y="1" width="80" height="10" forecolor="#555555" uuid="aa25299f-58f1-4505-9701-b98dafe46b33"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="6" isBold="true"/></textElement>
+                    <text><![CDATA[BLOCKED]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="0" y="11" width="80" height="17" forecolor="#721C24" uuid="d661a60a-46fb-4e48-9891-41dec4e38c19"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="13" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$P{blockedCount}]]></textFieldExpression>
+                </textField>
+            </frame>
+
+            <!-- Box 5: Total Capacity -->
+            <frame>
+                <reportElement x="336" y="24" width="80" height="30" uuid="64d893a3-9c60-4154-bb35-425533bf3ada"/>
+                <box><pen lineWidth="1.5"/></box>
+                <staticText>
+                    <reportElement x="0" y="1" width="80" height="10" forecolor="#555555" uuid="37938dd2-3452-4ae4-bb5e-6c0da02fae09"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="6" isBold="true"/></textElement>
+                    <text><![CDATA[TOTAL CAPACITY]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="0" y="11" width="80" height="17" uuid="70f86eb9-4b57-430b-9539-418df36073cf"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="10" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$P{totalCapacity} + " L"]]></textFieldExpression>
+                </textField>
+            </frame>
+
+            <!-- Box 6: Monthly Limit -->
+            <frame>
+                <reportElement x="420" y="24" width="75" height="30" uuid="40f79009-a206-484a-90f3-e8af9c103856"/>
+                <box><pen lineWidth="1.5"/></box>
+                <staticText>
+                    <reportElement x="0" y="1" width="75" height="10" forecolor="#555555" uuid="585b1d7a-a769-4ab3-a7db-2ead3825c721"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="6" isBold="true"/></textElement>
+                    <text><![CDATA[MONTHLY LIMIT]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="0" y="11" width="75" height="17" uuid="9f25af9a-50e4-49a9-9646-7349faf47a96"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="10" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$P{totalMonthlyLimit} + " L"]]></textFieldExpression>
+                </textField>
+            </frame>
+
+            <!-- Box 7: Total Consumed -->
+            <frame>
+                <reportElement x="499" y="24" width="76" height="30" uuid="2a8f150c-c394-4349-a4f5-b81e5198f092"/>
+                <box><pen lineWidth="1.5"/></box>
+                <staticText>
+                    <reportElement x="0" y="1" width="76" height="10" forecolor="#555555" uuid="1aa53f65-3250-455d-92d6-506da71e17b7"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="6" isBold="true"/></textElement>
+                    <text><![CDATA[TOTAL CONSUMED]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="0" y="11" width="76" height="17" uuid="12eb2e65-fae5-40a7-86a7-b4f757b92f0d"/>
+                    <textElement textAlignment="Center"><font fontName="Arial" size="10" isBold="true"/></textElement>
+                    <textFieldExpression><![CDATA[$P{totalConsumed} + " L"]]></textFieldExpression>
+                </textField>
+            </frame>
+
+            <!-- Footer line -->
+            <line>
+                <reportElement x="0" y="58" width="575" height="1" uuid="77460271-6b1e-4de0-b2e7-d55cf8418cf1"/>
+                <graphicElement><pen lineWidth="1.5"/></graphicElement>
+            </line>
+            <!-- Footer text -->
+            <textField>
+                <reportElement x="0" y="60" width="190" height="10" forecolor="#555555" uuid="918e433d-a129-4770-8792-a92fa7d37fee"/>
+                <textElement><font fontName="Arial" size="7"/></textElement>
+                <textFieldExpression><![CDATA["Generated: " + $P{generatedDate}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="220" y="60" width="135" height="10" uuid="7dce7a72-e501-42fc-9b38-3b079b31d249"/>
+                <textElement textAlignment="Center"><font fontName="Arial" size="7" isBold="true"/></textElement>
+                <text><![CDATA[Stop4Fuel]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="400" y="60" width="175" height="10" forecolor="#555555" uuid="e12992ea-009a-4d9d-b0d0-e3fdbca14633"/>
+                <textElement textAlignment="Right"><font fontName="Arial" size="7"/></textElement>
+                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER} + " of " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+        </band>
+    </summary>
+
+</jasperReport>

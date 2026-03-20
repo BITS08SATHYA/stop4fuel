@@ -388,10 +388,11 @@ function VehicleCustomerMapping() {
                 setTargetCustomerId("");
                 await fetchData();
             } else {
-                setMessage({ type: "error", text: "Failed to assign vehicles." });
+                const errText = await res.text();
+                setMessage({ type: "error", text: errText || "Failed to assign vehicles." });
             }
         } catch { setMessage({ type: "error", text: "Network error." }); }
-        finally { setLoading(false); setTimeout(() => setMessage(null), 3000); }
+        finally { setLoading(false); setTimeout(() => setMessage(null), 5000); }
     };
 
     const handleUnassign = async () => {
@@ -408,10 +409,11 @@ function VehicleCustomerMapping() {
                 setSelectedIds(new Set());
                 await fetchData();
             } else {
-                setMessage({ type: "error", text: "Failed to unassign vehicles." });
+                const errText = await res.text();
+                setMessage({ type: "error", text: errText || "Failed to unassign vehicles." });
             }
         } catch { setMessage({ type: "error", text: "Network error." }); }
-        finally { setLoading(false); setTimeout(() => setMessage(null), 3000); }
+        finally { setLoading(false); setTimeout(() => setMessage(null), 5000); }
     };
 
     return (
