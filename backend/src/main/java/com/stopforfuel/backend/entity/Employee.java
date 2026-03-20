@@ -39,6 +39,10 @@ public class Employee extends BaseEntity {
 
     @PositiveOrZero(message = "Salary must be zero or positive")
     private Double salary;
+
+    @Column(name = "salary_day")
+    private Integer salaryDay; // Day of month salary is due (1-31)
+
     private LocalDate joinDate;
     private String status = "Active";
 
