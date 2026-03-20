@@ -5,12 +5,17 @@ import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.service.CustomerService;
+import com.stopforfuel.backend.service.JasperReportService;
 import com.stopforfuel.backend.service.VehicleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
@@ -26,7 +31,9 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(CustomerController.class)
+@WebMvcTest(value = CustomerController.class,
+        excludeAutoConfiguration = {SecurityAutoConfiguration.class, OAuth2ResourceServerAutoConfiguration.class},
+        excludeFilters = @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.stopforfuel\\.config\\..*"))
 class CustomerControllerTest {
 
     @Autowired
@@ -40,6 +47,9 @@ class CustomerControllerTest {
 
     @MockBean
     private VehicleService vehicleService;
+
+    @MockBean
+    private JasperReportService jasperReportService;
 
     private Customer testCustomer;
 
