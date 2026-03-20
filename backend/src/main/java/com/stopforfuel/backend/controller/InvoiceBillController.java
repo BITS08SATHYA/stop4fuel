@@ -8,10 +8,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/invoices")
@@ -82,5 +86,24 @@ public class InvoiceBillController {
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.deleteInvoice(id);
+    }
+
+    @PostMapping("/{id}/upload/{type}")
+    public ResponseEntity<InvoiceBill> uploadFile(@PathVariable Long id,
+                                                   @PathVariable String type,
+                                                   @RequestParam("file") MultipartFile file) {
+        try {
+            InvoiceBill updated = service.uploadFile(id, type, file);
+            return ResponseEntity.ok(updated);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/{id}/file-url")
+    public ResponseEntity<Map<String, String>> getFileUrl(@PathVariable Long id,
+                                                           @RequestParam String type) {
+        String url = service.getFilePresignedUrl(id, type);
+        return ResponseEntity.ok(Map.of("url", url));
     }
 }

@@ -39,6 +39,8 @@ public class ShiftClosingReportService {
     private final CompanyRepository companyRepository;
     private final GodownStockRepository godownStockRepository;
     private final CashierStockRepository cashierStockRepository;
+    private final ShiftReportPdfGenerator pdfGenerator;
+    private final S3StorageService s3StorageService;
 
     @Transactional
     public ShiftClosingReport generateReport(Long shiftId) {
@@ -213,6 +215,23 @@ public class ShiftClosingReportService {
             shiftRepository.save(shift);
         }
 
+        // Generate and store PDF
+        try {
+            ShiftReportPrintData printData = getPrintData(shift.getId());
+            byte[] pdfBytes = pdfGenerator.generate(printData, report);
+
+            LocalDateTime shiftStart = shift.getStartTime() != null ? shift.getStartTime() : LocalDateTime.now();
+            String key = String.format("shift-reports/%d/%02d/%02d/%d/report.pdf",
+                    shiftStart.getYear(), shiftStart.getMonthValue(), shiftStart.getDayOfMonth(),
+                    shift.getId());
+
+            s3StorageService.upload(key, pdfBytes, "application/pdf");
+            report.setReportPdfUrl(key);
+        } catch (Exception e) {
+            // Log but don't fail finalization if PDF generation fails
+            System.err.println("Failed to generate shift report PDF: " + e.getMessage());
+        }
+
         // Audit log
         ReportAuditLog log = new ReportAuditLog();
         log.setReport(report);
@@ -253,6 +272,15 @@ public class ShiftClosingReportService {
         auditLogRepository.save(log);
 
         return reportRepository.save(report);
+    }
+
+    public String getReportPdfUrl(Long shiftId) {
+        ShiftClosingReport report = reportRepository.findByShiftId(shiftId)
+                .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
+        if (report.getReportPdfUrl() == null || report.getReportPdfUrl().isEmpty()) {
+            throw new RuntimeException("No PDF generated for this report");
+        }
+        return s3StorageService.getPresignedUrl(report.getReportPdfUrl());
     }
 
     public List<ReportAuditLog> getAuditLog(Long reportId) {
