@@ -147,6 +147,14 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                                 <FieldError error={empErrors.salary} />
                             </div>
                             <div className="space-y-2">
+                                <label className="text-sm font-medium">Salary Day</label>
+                                <select className={inputClass} value={currentEmployee.salaryDay || 1} onChange={(e) => set("salaryDay", Number(e.target.value))}>
+                                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                                        <option key={d} value={d}>{d}{d === 1 ? "st" : d === 2 ? "nd" : d === 3 ? "rd" : "th"} of every month</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
                                 <label className="text-sm font-medium">Join Date *</label>
                                 <input type="date" className={`${inputClass} ${inputErrorClass(empErrors.joinDate)}`} value={currentEmployee.joinDate} onChange={(e) => { set("joinDate", e.target.value); clearEmpError("joinDate"); }} />
                                 <FieldError error={empErrors.joinDate} />

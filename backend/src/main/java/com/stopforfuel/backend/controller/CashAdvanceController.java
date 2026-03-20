@@ -78,6 +78,17 @@ public class CashAdvanceController {
         return cashAdvanceService.getAssignedInvoices(id);
     }
 
+    // Statement assignment
+    @PostMapping("/{id}/statement/{statementId}")
+    public CashAdvance assignStatement(@PathVariable Long id, @PathVariable Long statementId) {
+        return cashAdvanceService.assignStatement(id, statementId);
+    }
+
+    @DeleteMapping("/{id}/statement")
+    public CashAdvance unassignStatement(@PathVariable Long id) {
+        return cashAdvanceService.unassignStatement(id);
+    }
+
     @PatchMapping("/{id}/cancel")
     public CashAdvance cancel(@PathVariable Long id) {
         return cashAdvanceService.cancel(id);
