@@ -71,7 +71,7 @@ class CustomerControllerTest {
 
     @Test
     void getCustomers_returnsPagedResults() throws Exception {
-        when(customerService.getCustomers(isNull(), isNull(), any(PageRequest.class)))
+        when(customerService.getCustomers(isNull(), isNull(), isNull(), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(testCustomer)));
 
         mockMvc.perform(get("/api/customers"))
@@ -82,7 +82,7 @@ class CustomerControllerTest {
 
     @Test
     void getCustomers_withSearchParam() throws Exception {
-        when(customerService.getCustomers(eq("test"), isNull(), any(PageRequest.class)))
+        when(customerService.getCustomers(eq("test"), isNull(), isNull(), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(testCustomer)));
 
         mockMvc.perform(get("/api/customers").param("search", "test"))
@@ -92,7 +92,7 @@ class CustomerControllerTest {
 
     @Test
     void getCustomers_withGroupIdParam() throws Exception {
-        when(customerService.getCustomers(isNull(), eq(1L), any(PageRequest.class)))
+        when(customerService.getCustomers(isNull(), eq(1L), isNull(), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(testCustomer)));
 
         mockMvc.perform(get("/api/customers").param("groupId", "1"))

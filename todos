@@ -63,11 +63,10 @@ Requirements/Questions/Thoughts/Improvements:
 # Status Report
                                                                                
                                                                                                
-  #: 11                                                                                        
-  Task: Filter options on all management tables                                                
-  Status: ~95% Done                                                                            
-  Details: 15/17 pages have filters. Only /customers (main list) is missing a filter bar.
-    /company doesn't need one (it's a form, not a table).                                      
+  #: 11
+  Task: Filter options on all management tables
+  Status: Done
+  Details: All 16/16 table pages have filters (search + dropdowns). /company is a form, not a table.                                      
   ────────────────────────────────────────                                                     
   #: 1                                                                                         
   Task: Income bill/statement management                                                       
@@ -96,15 +95,14 @@ Requirements/Questions/Thoughts/Improvements:
   Task: Shift Management
   Status: Done
   Details: Backend (all 8 txn types) + frontend shift register page. Auto-creates shift txns on
-
-    invoice/payment. Missing: summary for Cheque/Bank/CCMS/NightCash in breakdown, and
-    ShiftSalesReport DTO is unused.
+    invoice/payment. Missing: summary for Cheque/Bank/CCMS/NightCash in breakdown.
   ────────────────────────────────────────
   #: 9
   Task: Dashboards
-  Status: Not Done
-  Details: Main dashboard (/) has all hardcoded dummy data — no real API integration. No
-    operational or financial dashboards.
+  Status: Done (Main)
+  Details: Main dashboard (/) uses real API (DashboardController) — KPI cards, revenue/volume
+    trends, product sales, tank status, credit aging, recent invoices. Invoice/payment analytics
+    endpoints exist but no dedicated frontend pages yet.
   ────────────────────────────────────────
   #: 10
   Task: Properly Reassemble
@@ -163,11 +161,11 @@ Requirements/Questions/Thoughts/Improvements:
   ┌──────────┬────────────────────────────────────────────────┐
   │ Category │                     Count                      │
   ├──────────┼────────────────────────────────────────────────┤
-  │ Done     │ 7 items (1, 3, 10.2, 10.3, 10.4, 10.5, 11~)    │
+  │ Done     │ 9 items (1, 3, 9, 10.2, 10.3, 10.4, 10.5, 11)  │
   ├──────────┼────────────────────────────────────────────────┤
   │ Partial  │ 2 items (12, 10.1)                             │
   ├──────────┼────────────────────────────────────────────────┤
-  │ Not Done │ 7 items (2, 9, 10.6, 10.7, 10.8, 12.1, 10.3.1) │
+  │ Not Done │ 5 items (2, 10.6, 10.7, 10.8, 10.3.1)         │
   └──────────┴────────────────────────────────────────────────┘
 
 
@@ -374,6 +372,8 @@ in the employee management ...record their salary dates monthly ...
   - Backend tests (468 tests across services)                                                                                                                               
   - Database indexes & unique constraints                                                                                                                                   
   - Input validation, rate limiting, password hiding
+  
+  
   - Shift Management (backend + frontend, all 8 txn types)                                                                                                                  
   - Godown/Cashier stock split with transfer tracking                                                                                                                       
   - Filter bars on management tables                                                                                                                                        
@@ -405,7 +405,76 @@ in the employee management ...record their salary dates monthly ...
                                                                               
                                                                               
 JasperReport Generation (snappy-painting-torvalds) 
-Customer Data (Vehicles)  -- proper report generation 
+Customer Data (Vehicles)  -- proper report generation (done)
 
+
+(INCOMPLETE THINGS TO DO NEXT)
+
+Here's the full picture of what's incomplete or half-done across the codebase:                   
+             
+  ---                                                                                              
+  Critical — Missing Pages (will 404)                                                           
+                                                                                                   
+  ┌────────────────────────────────┬─────────────────────────────────────────────────────┐       
+  │             Issue              │                      Location                       │         
+  ├────────────────────────────────┼─────────────────────────────────────────────────────┤
+  │ Analytics: Sales Forecast      │ frontend/app/analytics/sales/ — no page.tsx         │         
+  ├────────────────────────────────┼─────────────────────────────────────────────────────┤         
+  │ Analytics: Purchase Planner    │ frontend/app/analytics/purchases/ — no page.tsx     │         
+  ├────────────────────────────────┼─────────────────────────────────────────────────────┤         
+  │ Analytics: Profitability       │ frontend/app/analytics/profitability/ — no page.tsx │         
+  ├────────────────────────────────┼─────────────────────────────────────────────────────┤         
+  │ Analytics: Credit Intelligence │ frontend/app/analytics/credit/ — no page.tsx        │
+  ├────────────────────────────────┼─────────────────────────────────────────────────────┤         
+  │ Analytics: Employee Insights   │ frontend/app/analytics/employees/ — no page.tsx     │
+  └────────────────────────────────┴─────────────────────────────────────────────────────┘         
+                                                            
+  All 5 analytics pages are in the sidebar but have no page files — users get 404s.                
+  
+  Placeholder Pages (Coming Soon)                                                                  
+                                                            
+  ┌───────────────────────────────────────┬───────────────────────────────────────────────────┐
+  │                 Page                  │                      Status                       │
+  ├───────────────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Marketing Management (/marketing)     │ "Coming Soon" placeholder with mock feature cards │
+  ├───────────────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Customer Profile (/customers/profile) │ "Enhanced Profiles Coming Soon" placeholder       │    
+  └───────────────────────────────────────┴───────────────────────────────────────────────────┘    
+                                                                                                   
+  Backend Issues                                                                                   
+                                                            
+  ┌─────────────────┬──────────────────────────────────────────────────────────────────────────┐
+  │      Issue      │                                 Details                                  │
+  ├─────────────────┼──────────────────────────────────────────────────────────────────────────┤
+  │ TODO: Hardcoded │ (FIXED) SecurityUtils extracts scid from SecurityContext                 │
+  │  scid           │                                                                          │
+  ├─────────────────┼──────────────────────────────────────────────────────────────────────────┤
+  │ 84 test         │ (FIXED) Down to 7 pre-existing failures (NPEs in EmployeeService,       │
+  │ failures        │ MappingService + missing exception handler tests)                        │
+  ├─────────────────┼──────────────────────────────────────────────────────────────────────────┤
+  │ Unused DTO      │ (FIXED) ShiftSalesReport deleted                                         │
+  ├─────────────────┼──────────────────────────────────────────────────────────────────────────┤
+  │ JasperReports   │ Only 1 template (customer vehicle report). Shift reports use iText       │
+  │                 │ instead. No invoice/statement JRXML templates yet                        │
+  └─────────────────┴──────────────────────────────────────────────────────────────────────────┘   
+                                                            
+  Known Incomplete Features (from todos)                                                           
+                                                            
+  ┌─────────────────────────┬─────────────────────────────────────────────────────────┐            
+  │         Feature         │                         Status                          │
+  ├─────────────────────────┼─────────────────────────────────────────────────────────┤            
+  │ Dashboard (#9)          │ Done — real API integration complete                    │
+  ├─────────────────────────┼─────────────────────────────────────────────────────────┤            
+  │ Advance Management (#2) │ No entity, no API, no frontend UI                       │            
+  ├─────────────────────────┼─────────────────────────────────────────────────────────┤            
+  │ Shift Report            │ Missing Cheque/Bank/CCMS/NightCash breakdown in summary │            
+  ├─────────────────────────┼─────────────────────────────────────────────────────────┤            
+  │ Customer list filter    │ Done — search + group + status filters added            │
+  └─────────────────────────┴─────────────────────────────────────────────────────────┘            
+                                                            
+  ---                                                                                              
+  What would you like to tackle first? The 84 test failures are probably the quickest win since
+  they're likely just missing @MockBean declarations after the auth changes. Or would you prefer to
+   work on one of the feature gaps?
                
 
