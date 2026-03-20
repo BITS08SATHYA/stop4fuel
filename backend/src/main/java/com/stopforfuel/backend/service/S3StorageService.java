@@ -51,6 +51,17 @@ public class S3StorageService {
         return s3Presigner.presignGetObject(presignRequest).url().toString();
     }
 
+    public String upload(String key, byte[] content, String contentType) {
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .contentType(contentType)
+                .build();
+
+        s3Client.putObject(request, RequestBody.fromBytes(content));
+        return key;
+    }
+
     public void delete(String key) {
         s3Client.deleteObject(DeleteObjectRequest.builder()
                 .bucket(bucket)

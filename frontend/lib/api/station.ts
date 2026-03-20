@@ -212,6 +212,7 @@ export interface Statement {
     receivedAmount: number;
     balanceAmount: number;
     status: 'PAID' | 'NOT_PAID';
+    statementPdfUrl?: string;
 }
 
 export interface Payment {
@@ -526,6 +527,18 @@ export const updateInvoice = (id: number, invoice: Partial<InvoiceBill>): Promis
 export const deleteInvoice = (id: number): Promise<void> =>
     fetch(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
 
+export const uploadInvoiceFile = (id: number, type: string, file: File): Promise<InvoiceBill> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${API_BASE_URL}/invoices/${id}/upload/${type}`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const getInvoiceFileUrl = (id: number, type: string): Promise<string> =>
+    fetch(`${API_BASE_URL}/invoices/${id}/file-url?type=${type}`).then(handleResponse).then((data: { url: string }) => data.url);
+
 // Customers & Vehicles Search
 export const getCustomers = (search?: string): Promise<any> => {
     const url = search ? `${API_BASE_URL}/customers?search=${encodeURIComponent(search)}` : `${API_BASE_URL}/customers`;
@@ -612,6 +625,12 @@ export const removeBillFromStatement = (statementId: number, billId: number): Pr
 
 export const deleteStatement = (id: number): Promise<void> =>
     fetch(`${API_BASE_URL}/statements/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const generateStatementPdf = (id: number): Promise<Statement> =>
+    fetch(`${API_BASE_URL}/statements/${id}/generate-pdf`, { method: 'POST' }).then(handleResponse);
+
+export const getStatementPdfUrl = (id: number): Promise<string> =>
+    fetch(`${API_BASE_URL}/statements/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
 
 // Payments
 export const getPayments = (page = 0, size = 10): Promise<PageResponse<Payment>> =>
@@ -1293,8 +1312,8 @@ export const uploadPurchaseInvoicePdf = (id: number, file: File): Promise<Purcha
     }).then(handleResponse);
 };
 
-export const getPurchaseInvoicePdfUrl = (id: number): string =>
-    `${API_BASE_URL}/purchase-invoices/${id}/pdf`;
+export const getPurchaseInvoicePdfUrl = (id: number): Promise<string> =>
+    fetch(`${API_BASE_URL}/purchase-invoices/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
 
 // ────────────────────────────────────────────────────────────
 // Employee Management Types & APIs
@@ -1705,6 +1724,7 @@ export interface ShiftClosingReport {
     status: string; // DRAFT, FINALIZED
     finalizedBy?: string;
     finalizedAt?: string;
+    reportPdfUrl?: string;
     totalRevenue: number;
     totalAdvances: number;
     balance: number;
@@ -1808,6 +1828,9 @@ export interface ShiftReportPrintData {
 
 export const getShiftReportPrintData = (shiftId: number): Promise<ShiftReportPrintData> =>
     fetch(`${API_BASE_URL}/shift-reports/${shiftId}/print-data`).then(handleResponse);
+
+export const getShiftReportPdfUrl = (shiftId: number): Promise<string> =>
+    fetch(`${API_BASE_URL}/shift-reports/${shiftId}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
 
 export const recordCashInflowRepayment = (inflowId: number, repayment: Partial<CashInflowRepayment>): Promise<CashInflowRepayment> =>
     fetch(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {

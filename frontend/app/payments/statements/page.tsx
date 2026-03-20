@@ -6,12 +6,13 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import {
-    Plus, Eye, Trash2, Calendar, User, Filter, Search
+    Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2
 } from "lucide-react";
 import {
     getStatements, generateStatement, getStatementBills,
     getCustomers, deleteStatement, removeBillFromStatement,
     getVehiclesByCustomer, getProducts, previewStatementBills,
+    generateStatementPdf, getStatementPdfUrl,
     type Statement, type InvoiceBill, type Customer, type Vehicle,
     type Product, type PageResponse
 } from "@/lib/api/station";
@@ -45,6 +46,7 @@ export default function StatementsPage() {
     const [previewBills, setPreviewBills] = useState<InvoiceBill[]>([]);
     const [showPreview, setShowPreview] = useState(false);
     const [previewing, setPreviewing] = useState(false);
+    const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
     const [selectedBillIds, setSelectedBillIds] = useState<Set<number>>(new Set());
     const [useBillSelection, setUseBillSelection] = useState(false);
 
@@ -375,6 +377,41 @@ export default function StatementsPage() {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
+                                                    {stmt.statementPdfUrl ? (
+                                                        <button
+                                                            onClick={async () => {
+                                                                const url = await getStatementPdfUrl(stmt.id!);
+                                                                window.open(url, "_blank");
+                                                            }}
+                                                            className="p-1.5 rounded-md hover:bg-primary/20 text-primary transition-colors"
+                                                            title="Download PDF"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            disabled={generatingPdfId === stmt.id}
+                                                            onClick={async () => {
+                                                                setGeneratingPdfId(stmt.id!);
+                                                                try {
+                                                                    await generateStatementPdf(stmt.id!);
+                                                                    loadStatements();
+                                                                } catch (e) {
+                                                                    console.error("Failed to generate PDF", e);
+                                                                } finally {
+                                                                    setGeneratingPdfId(null);
+                                                                }
+                                                            }}
+                                                            className="p-1.5 rounded-md hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                                                            title="Generate PDF"
+                                                        >
+                                                            {generatingPdfId === stmt.id ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                            ) : (
+                                                                <FileText className="w-4 h-4" />
+                                                            )}
+                                                        </button>
+                                                    )}
                                                     {stmt.status !== "PAID" && (
                                                         <button
                                                             onClick={() => handleDelete(stmt.id!)}

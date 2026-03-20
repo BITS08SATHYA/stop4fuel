@@ -10,6 +10,8 @@ import {
     getCustomers,
     getIncentivesByCustomer,
     searchVehicles,
+    uploadInvoiceFile,
+    getInvoiceFileUrl,
     Product,
     Nozzle,
     InvoiceBill,
@@ -19,6 +21,7 @@ import {
     Incentive,
     API_BASE_URL
 } from "@/lib/api/station";
+import { FileUploadField } from "@/components/ui/file-upload-field";
 import {
     Receipt,
     Plus,
@@ -76,6 +79,7 @@ export default function InvoicesPage() {
     const [indentNo, setIndentNo] = useState("");
     const [vehicleKM, setVehicleKM] = useState("");
     const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+    const [lastCreatedInvoice, setLastCreatedInvoice] = useState<InvoiceBill | null>(null);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -241,13 +245,9 @@ export default function InvoicesPage() {
             };
 
             const saved = await createInvoice(payload);
-            const billNoMsg = saved.billNo ? ` — Bill No: ${saved.billNo}` : '';
-            resetForm();
-            setActiveTab('history');
+            setLastCreatedInvoice(saved);
+            setCurrentStep(6);
             loadData();
-            if (billNoMsg) {
-                alert(`Invoice created successfully${billNoMsg}`);
-            }
         } catch (err: any) {
             console.error("Failed to save invoice", err);
             setError(err.message || "Error saving invoice");
@@ -948,6 +948,84 @@ export default function InvoicesPage() {
                 {currentStep === 3 && renderStep3()}
                 {currentStep === 4 && renderStep4()}
                 {currentStep === 5 && renderStep5()}
+                {currentStep === 6 && lastCreatedInvoice && (
+                    <div className="space-y-6">
+                        <GlassCard className="p-8">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-foreground">Invoice Created</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Bill No: {lastCreatedInvoice.billNo} — ₹{lastCreatedInvoice.netAmount?.toFixed(2)}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                                Attach Documents (Optional)
+                            </h4>
+                            <div className="space-y-4">
+                                <FileUploadField
+                                    id="bill-pic-upload"
+                                    label="Upload Bill Photo"
+                                    accept="image/*"
+                                    hint="Photo of the physical bill"
+                                    currentUrl={lastCreatedInvoice.billPic || undefined}
+                                    onUpload={async (file) => {
+                                        await uploadInvoiceFile(lastCreatedInvoice.id!, "bill-pic", file);
+                                    }}
+                                    onView={async () => {
+                                        const url = await getInvoiceFileUrl(lastCreatedInvoice.id!, "bill-pic");
+                                        window.open(url, "_blank");
+                                    }}
+                                />
+                                <FileUploadField
+                                    id="pump-bill-pic-upload"
+                                    label="Upload Pump Bill Photo"
+                                    accept="image/*"
+                                    hint="Photo of the pump meter bill"
+                                    currentUrl={lastCreatedInvoice.pumpBillPic || undefined}
+                                    onUpload={async (file) => {
+                                        await uploadInvoiceFile(lastCreatedInvoice.id!, "pump-bill-pic", file);
+                                    }}
+                                    onView={async () => {
+                                        const url = await getInvoiceFileUrl(lastCreatedInvoice.id!, "pump-bill-pic");
+                                        window.open(url, "_blank");
+                                    }}
+                                />
+                                <FileUploadField
+                                    id="indent-pic-upload"
+                                    label="Upload Indent Photo"
+                                    accept="image/*"
+                                    hint="Photo of the indent/authorization"
+                                    currentUrl={lastCreatedInvoice.indentPic || undefined}
+                                    onUpload={async (file) => {
+                                        await uploadInvoiceFile(lastCreatedInvoice.id!, "indent-pic", file);
+                                    }}
+                                    onView={async () => {
+                                        const url = await getInvoiceFileUrl(lastCreatedInvoice.id!, "indent-pic");
+                                        window.open(url, "_blank");
+                                    }}
+                                />
+                            </div>
+                        </GlassCard>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => {
+                                    resetForm();
+                                    setLastCreatedInvoice(null);
+                                    setActiveTab('history');
+                                    loadData();
+                                }}
+                                className="px-10 py-4 btn-gradient text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3"
+                            >
+                                Done <ArrowRight size={20} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

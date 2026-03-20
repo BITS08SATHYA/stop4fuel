@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/statements")
@@ -104,6 +105,18 @@ public class StatementController {
             @PathVariable Long billId) {
         Statement updated = statementService.removeBillFromStatement(statementId, billId);
         return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/{id}/generate-pdf")
+    public ResponseEntity<Statement> generatePdf(@PathVariable Long id) {
+        Statement updated = statementService.generateAndStorePdf(id);
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/{id}/pdf-url")
+    public ResponseEntity<Map<String, String>> getPdfUrl(@PathVariable Long id) {
+        String url = statementService.getStatementPdfUrl(id);
+        return ResponseEntity.ok(Map.of("url", url));
     }
 
     @DeleteMapping("/{id}")

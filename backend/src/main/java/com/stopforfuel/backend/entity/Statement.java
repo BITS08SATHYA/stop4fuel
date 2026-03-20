@@ -62,6 +62,9 @@ public class Statement extends BaseEntity {
     @Column(name = "status", nullable = false)
     private String status = "NOT_PAID"; // PAID, NOT_PAID
 
+    @Column(name = "statement_pdf_url")
+    private String statementPdfUrl;
+
     @OneToMany(mappedBy = "statement")
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<InvoiceBill> invoiceBills = new ArrayList<>();
