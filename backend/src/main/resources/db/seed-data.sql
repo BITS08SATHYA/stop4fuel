@@ -31,6 +31,7 @@ INSERT INTO roles (role_type) VALUES ('EMPLOYEE') ON CONFLICT (role_type) DO NOT
 INSERT INTO roles (role_type) VALUES ('DEALER') ON CONFLICT (role_type) DO NOTHING;;
 INSERT INTO roles (role_type) VALUES ('OWNER') ON CONFLICT (role_type) DO NOTHING;;
 INSERT INTO roles (role_type) VALUES ('ADMIN') ON CONFLICT (role_type) DO NOTHING;;
+INSERT INTO roles (role_type) VALUES ('CASHIER') ON CONFLICT (role_type) DO NOTHING;;
 
 -- Customer Groups (check by name)
 DO $$
@@ -192,21 +193,88 @@ IF (SELECT COUNT(*) FROM leave_types) = 0 THEN
 END IF;
 END $$;;
 
--- Employees
+-- Designations
 DO $$
 BEGIN
+IF (SELECT COUNT(*) FROM designations) = 0 THEN
+    INSERT INTO designations (name, default_role, description) VALUES
+        ('Manager', 'ADMIN', 'Station manager'),
+        ('Cashier', 'CASHIER', 'Station cashier'),
+        ('Pump Attendant', 'EMPLOYEE', 'Fuel pump attendant'),
+        ('Attendant', 'EMPLOYEE', 'General attendant'),
+        ('Supervisor', 'ADMIN', 'Shift supervisor');
+    RAISE NOTICE 'Seeded 5 designations';
+END IF;
+END $$;;
+
+-- Employees (JOINED inheritance: person_entity -> users -> employees)
+DO $$
+DECLARE
+    v_id BIGINT;
+    v_role_id BIGINT;
+    v_desig_id BIGINT;
+BEGIN
 IF (SELECT COUNT(*) FROM employees) = 0 THEN
-    INSERT INTO employees (scid, name, designation, department, employee_code, phone, email, salary, join_date, status,
-                           address, city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number,
-                           created_at, updated_at) VALUES
-        (1, 'Murugan S',  'Attendant', 'Operations',  'EMP001', '9840011111', 'murugan@stopforfuel.com',  18000, '2024-06-15', 'Active',
-         '12 Anna Nagar, Chennai',  'Chennai', 'Tamil Nadu', '600040', 'Indian Bank', 'Anna Nagar',  'Male',   'O+',  '123456789012', NOW(), NOW()),
-        (1, 'Lakshmi R',  'Attendant', 'Operations',  'EMP002', '9840022222', 'lakshmi@stopforfuel.com',  18000, '2024-08-01', 'Active',
-         '34 T Nagar, Chennai',     'Chennai', 'Tamil Nadu', '600017', 'Indian Bank', 'T Nagar',     'Female', 'B+',  '234567890123', NOW(), NOW()),
-        (1, 'Karthik V',  'Cashier',   'Accounts',    'EMP003', '9840033333', 'karthik@stopforfuel.com',  22000, '2024-03-10', 'Active',
-         '56 Adyar, Chennai',       'Chennai', 'Tamil Nadu', '600020', 'Indian Bank', 'Adyar',       'Male',   'A+',  '345678901234', NOW(), NOW()),
-        (1, 'Priya M',    'Manager',   'Management',  'EMP004', '9840044444', 'priya@stopforfuel.com',    35000, '2023-11-01', 'Active',
-         '78 Velachery, Chennai',   'Chennai', 'Tamil Nadu', '600042', 'Indian Bank', 'Velachery',   'Female', 'AB+', '456789012345', NOW(), NOW());
+
+    -- 1. Murugan S - Attendant
+    SELECT id INTO v_role_id FROM roles WHERE role_type = 'EMPLOYEE';
+    SELECT id INTO v_desig_id FROM designations WHERE name = 'Attendant';
+    INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
+    VALUES (1, 'Murugan S', '12 Anna Nagar, Chennai', 'Employee', NOW(), NOW())
+    RETURNING id INTO v_id;
+    INSERT INTO users (id, username, role_id, join_date, status)
+    VALUES (v_id, 'emp001', v_role_id, '2024-06-15', 'Active');
+    INSERT INTO employees (id, designation_id, department, employee_code, salary, salary_day,
+                           city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number)
+    VALUES (v_id, v_desig_id, 'Operations', 'EMP001', 18000, 1,
+            'Chennai', 'Tamil Nadu', '600040', 'Indian Bank', 'Anna Nagar', 'Male', 'O+', '123456789012');
+    INSERT INTO person_emails (person_id, email) VALUES (v_id, 'murugan@stopforfuel.com');
+    INSERT INTO person_phones (person_id, phone_number) VALUES (v_id, '9840011111');
+
+    -- 2. Lakshmi R - Attendant
+    INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
+    VALUES (1, 'Lakshmi R', '34 T Nagar, Chennai', 'Employee', NOW(), NOW())
+    RETURNING id INTO v_id;
+    INSERT INTO users (id, username, role_id, join_date, status)
+    VALUES (v_id, 'emp002', v_role_id, '2024-08-01', 'Active');
+    INSERT INTO employees (id, designation_id, department, employee_code, salary, salary_day,
+                           city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number)
+    VALUES (v_id, v_desig_id, 'Operations', 'EMP002', 18000, 1,
+            'Chennai', 'Tamil Nadu', '600017', 'Indian Bank', 'T Nagar', 'Female', 'B+', '234567890123');
+    INSERT INTO person_emails (person_id, email) VALUES (v_id, 'lakshmi@stopforfuel.com');
+    INSERT INTO person_phones (person_id, phone_number) VALUES (v_id, '9840022222');
+
+    -- 3. Karthik V - Cashier
+    SELECT id INTO v_role_id FROM roles WHERE role_type = 'CASHIER';
+    SELECT id INTO v_desig_id FROM designations WHERE name = 'Cashier';
+    INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
+    VALUES (1, 'Karthik V', '56 Adyar, Chennai', 'Employee', NOW(), NOW())
+    RETURNING id INTO v_id;
+    INSERT INTO users (id, username, role_id, join_date, status)
+    VALUES (v_id, 'emp003', v_role_id, '2024-03-10', 'Active');
+    INSERT INTO employees (id, designation_id, department, employee_code, salary, salary_day,
+                           city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number)
+    VALUES (v_id, v_desig_id, 'Accounts', 'EMP003', 22000, 1,
+            'Chennai', 'Tamil Nadu', '600020', 'Indian Bank', 'Adyar', 'Male', 'A+', '345678901234');
+    INSERT INTO person_emails (person_id, email) VALUES (v_id, 'karthik@stopforfuel.com');
+    INSERT INTO person_phones (person_id, phone_number) VALUES (v_id, '9840033333');
+
+    -- 4. Priya M - Manager
+    SELECT id INTO v_role_id FROM roles WHERE role_type = 'ADMIN';
+    SELECT id INTO v_desig_id FROM designations WHERE name = 'Manager';
+    INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
+    VALUES (1, 'Priya M', '78 Velachery, Chennai', 'Employee', NOW(), NOW())
+    RETURNING id INTO v_id;
+    INSERT INTO users (id, username, role_id, join_date, status)
+    VALUES (v_id, 'emp004', v_role_id, '2023-11-01', 'Active');
+    INSERT INTO employees (id, designation_id, department, employee_code, salary, salary_day,
+                           city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number)
+    VALUES (v_id, v_desig_id, 'Management', 'EMP004', 35000, 1,
+            'Chennai', 'Tamil Nadu', '600042', 'Indian Bank', 'Velachery', 'Female', 'AB+', '456789012345');
+    INSERT INTO person_emails (person_id, email) VALUES (v_id, 'priya@stopforfuel.com');
+    INSERT INTO person_phones (person_id, phone_number) VALUES (v_id, '9840044444');
+
+    RAISE NOTICE 'Seeded 4 employees';
 END IF;
 END $$;;
 
@@ -452,5 +520,92 @@ IF (SELECT COUNT(*) FROM cashier_stock) = 0 THEN
         (1, (SELECT id FROM product WHERE name='Air Freshener'),                 10, 20, NOW(), NOW()),
         (1, (SELECT id FROM product WHERE name='Tissue Box'),                    15, 30, NOW(), NOW());
     RAISE NOTICE 'Seeded 4 cashier stock entries';
+END IF;
+END $$;;
+
+
+-- =====================
+-- PHASE 5: Permissions & Role-Permission Mappings
+-- =====================
+
+-- Permissions
+DO $$
+BEGIN
+IF (SELECT COUNT(*) FROM permissions) = 0 THEN
+    INSERT INTO permissions (code, description, module) VALUES
+        ('DASHBOARD_VIEW', 'View dashboards', 'DASHBOARD'),
+        ('INVOICE_VIEW', 'View invoices', 'INVOICE'),
+        ('INVOICE_CREATE', 'Create invoices', 'INVOICE'),
+        ('INVOICE_MODIFY', 'Modify invoices', 'INVOICE'),
+        ('INVOICE_DELETE', 'Delete invoices', 'INVOICE'),
+        ('CUSTOMER_VIEW', 'View customers', 'CUSTOMER'),
+        ('CUSTOMER_MANAGE', 'Create, edit, delete customers', 'CUSTOMER'),
+        ('VEHICLE_VIEW', 'View vehicles', 'VEHICLE'),
+        ('VEHICLE_MANAGE', 'Manage vehicles', 'VEHICLE'),
+        ('PRODUCT_VIEW', 'View products, oil types, grades', 'PRODUCT'),
+        ('PRODUCT_MANAGE', 'Manage products', 'PRODUCT'),
+        ('STATION_VIEW', 'View tanks, pumps, nozzles', 'STATION'),
+        ('STATION_MANAGE', 'Manage station equipment', 'STATION'),
+        ('INVENTORY_VIEW', 'View inventory readings and stock', 'INVENTORY'),
+        ('INVENTORY_MANAGE', 'Manage inventory', 'INVENTORY'),
+        ('SHIFT_VIEW', 'View shifts and transactions', 'SHIFT'),
+        ('SHIFT_MANAGE', 'Manage shifts, advances, inflows', 'SHIFT'),
+        ('PAYMENT_VIEW', 'View payments, statements, ledger', 'PAYMENT'),
+        ('PAYMENT_MANAGE', 'Manage payments and credit', 'PAYMENT'),
+        ('EMPLOYEE_VIEW', 'View employees', 'EMPLOYEE'),
+        ('EMPLOYEE_MANAGE', 'Manage employees, attendance, leave, salary', 'EMPLOYEE'),
+        ('FINANCE_VIEW', 'View expenses and utility bills', 'FINANCE'),
+        ('FINANCE_MANAGE', 'Manage expenses and utility bills', 'FINANCE'),
+        ('PURCHASE_VIEW', 'View purchase orders and invoices', 'PURCHASE'),
+        ('PURCHASE_MANAGE', 'Manage purchases', 'PURCHASE'),
+        ('REPORT_VIEW', 'View shift reports', 'REPORT'),
+        ('REPORT_GENERATE', 'Generate shift reports', 'REPORT'),
+        ('SETTINGS_VIEW', 'View settings and configurations', 'SETTINGS'),
+        ('SETTINGS_MANAGE', 'Manage settings and configurations', 'SETTINGS'),
+        ('USER_VIEW', 'View user accounts', 'USER_MGMT'),
+        ('USER_MANAGE', 'Manage user accounts', 'USER_MGMT');
+    RAISE NOTICE 'Seeded 31 permissions';
+END IF;
+END $$;;
+
+-- Role-Permission Mappings
+-- ADMIN gets almost everything except SETTINGS_MANAGE and USER_MANAGE
+DO $$
+DECLARE
+    v_role_id BIGINT;
+    v_perm_id BIGINT;
+    v_perm RECORD;
+BEGIN
+IF (SELECT COUNT(*) FROM role_permissions) = 0 THEN
+
+    -- ADMIN role permissions
+    SELECT id INTO v_role_id FROM roles WHERE role_type = 'ADMIN';
+    IF v_role_id IS NOT NULL THEN
+        FOR v_perm IN SELECT id, code FROM permissions WHERE code NOT IN ('SETTINGS_MANAGE', 'USER_MANAGE') LOOP
+            INSERT INTO role_permissions (role_id, permission_id) VALUES (v_role_id, v_perm.id);
+        END LOOP;
+    END IF;
+
+    -- CASHIER role permissions
+    SELECT id INTO v_role_id FROM roles WHERE role_type = 'CASHIER';
+    IF v_role_id IS NOT NULL THEN
+        FOR v_perm IN SELECT id FROM permissions WHERE code IN (
+            'DASHBOARD_VIEW', 'INVOICE_VIEW', 'INVOICE_CREATE',
+            'INVENTORY_VIEW', 'SHIFT_VIEW', 'SHIFT_MANAGE',
+            'REPORT_VIEW', 'PRODUCT_VIEW', 'STATION_VIEW'
+        ) LOOP
+            INSERT INTO role_permissions (role_id, permission_id) VALUES (v_role_id, v_perm.id);
+        END LOOP;
+    END IF;
+
+    -- CUSTOMER role permissions (minimal)
+    SELECT id INTO v_role_id FROM roles WHERE role_type = 'CUSTOMER';
+    IF v_role_id IS NOT NULL THEN
+        FOR v_perm IN SELECT id FROM permissions WHERE code IN ('INVOICE_VIEW') LOOP
+            INSERT INTO role_permissions (role_id, permission_id) VALUES (v_role_id, v_perm.id);
+        END LOOP;
+    END IF;
+
+    RAISE NOTICE 'Seeded role-permission mappings';
 END IF;
 END $$;;

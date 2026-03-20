@@ -5,6 +5,7 @@ import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.service.PurchaseInvoiceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,12 +16,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/purchase-invoices")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class PurchaseInvoiceController {
 
     private final PurchaseInvoiceService service;
 
     @GetMapping
+    @PreAuthorize("hasPermission(null, 'PURCHASE_VIEW')")
     public List<PurchaseInvoice> getAll(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long supplierId,
@@ -32,32 +33,38 @@ public class PurchaseInvoiceController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_VIEW')")
     public PurchaseInvoice getById(@PathVariable Long id) {
         return service.getById(id);
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public PurchaseInvoice create(@Valid @RequestBody PurchaseInvoice invoice) {
         return service.save(invoice);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public PurchaseInvoice update(@PathVariable Long id, @Valid @RequestBody PurchaseInvoice invoice) {
         return service.update(id, invoice);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public PurchaseInvoice updateStatus(@PathVariable Long id, @RequestParam String status) {
         return service.updateStatus(id, status);
     }
 
     @PostMapping("/{id}/upload-pdf")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public ResponseEntity<PurchaseInvoice> uploadPdf(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try {
             PurchaseInvoice updated = service.uploadPdf(id, file);
@@ -68,6 +75,7 @@ public class PurchaseInvoiceController {
     }
 
     @GetMapping("/{id}/pdf-url")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_VIEW')")
     public ResponseEntity<Map<String, String>> getPdfUrl(@PathVariable Long id) {
         try {
             String url = service.getPdfPresignedUrl(id);

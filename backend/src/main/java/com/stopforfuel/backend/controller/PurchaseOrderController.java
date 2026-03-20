@@ -5,6 +5,7 @@ import com.stopforfuel.backend.dto.ReceiveItemDTO;
 import com.stopforfuel.backend.entity.PurchaseOrder;
 import com.stopforfuel.backend.service.PurchaseOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,12 +13,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/purchase-orders")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class PurchaseOrderController {
 
     private final PurchaseOrderService service;
 
     @GetMapping
+    @PreAuthorize("hasPermission(null, 'PURCHASE_VIEW')")
     public List<PurchaseOrder> getAll(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long supplierId) {
@@ -27,26 +28,31 @@ public class PurchaseOrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_VIEW')")
     public PurchaseOrder getById(@PathVariable Long id) {
         return service.getById(id);
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public PurchaseOrder create(@Valid @RequestBody PurchaseOrder order) {
         return service.save(order);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public PurchaseOrder update(@PathVariable Long id, @Valid @RequestBody PurchaseOrder order) {
         return service.update(id, order);
     }
 
     @PostMapping("/{id}/receive")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public PurchaseOrder receiveDelivery(@PathVariable Long id, @RequestBody List<ReceiveItemDTO> items) {
         return service.receiveDelivery(id, items);
     }
 
     @PatchMapping("/{id}/cancel")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
     public PurchaseOrder cancel(@PathVariable Long id) {
         return service.cancel(id);
     }

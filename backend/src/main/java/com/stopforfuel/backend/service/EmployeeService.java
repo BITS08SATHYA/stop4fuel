@@ -1,18 +1,25 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Designation;
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.SalaryHistory;
+import com.stopforfuel.backend.repository.DesignationRepository;
 import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
+import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class EmployeeService {
@@ -29,6 +36,12 @@ public class EmployeeService {
     @Autowired
     private S3StorageService s3StorageService;
 
+    @Autowired
+    private DesignationRepository designationRepository;
+
+    @Autowired
+    private RolesRepository rolesRepository;
+
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAll();
     }
@@ -42,6 +55,36 @@ public class EmployeeService {
     }
 
     public Employee createEmployee(Employee employee) {
+        // Set PersonEntity fields
+        if (employee.getPersonType() == null) {
+            employee.setPersonType("Employee");
+        }
+
+        // Handle email/phone → Set conversion
+        syncEmailAndPhone(employee);
+
+        // Handle designation
+        resolveDesignation(employee);
+
+        // Set User fields if not present
+        if (employee.getUsername() == null || employee.getUsername().isBlank()) {
+            employee.setUsername(generateUsername(employee));
+        }
+        if (employee.getRole() == null) {
+            String defaultRole = employee.getDesignationEntity() != null
+                    ? employee.getDesignationEntity().getDefaultRole() : "EMPLOYEE";
+            if (defaultRole == null) defaultRole = "EMPLOYEE";
+            Roles role = rolesRepository.findByRoleType(defaultRole)
+                    .orElseGet(() -> rolesRepository.findByRoleType("EMPLOYEE").orElseThrow());
+            employee.setRole(role);
+        }
+        if (employee.getJoinDate() == null) {
+            employee.setJoinDate(LocalDate.now());
+        }
+        if (employee.getStatus() == null) {
+            employee.setStatus("Active");
+        }
+
         return employeeRepository.save(employee);
     }
 
@@ -49,16 +92,24 @@ public class EmployeeService {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
+        // PersonEntity fields
         employee.setName(details.getName());
-        employee.setDesignation(details.getDesignation());
-        employee.setEmail(details.getEmail());
-        employee.setPhone(details.getPhone());
+        employee.setAddress(details.getAddress());
+
+        // Handle email/phone
+        if (details.getEmail() != null) {
+            employee.setEmail(details.getEmail());
+        }
+        if (details.getPhone() != null) {
+            employee.setPhone(details.getPhone());
+        }
+
+        // Employee-specific fields
         employee.setAdditionalPhones(details.getAdditionalPhones());
         employee.setSalary(details.getSalary());
         employee.setJoinDate(details.getJoinDate());
         employee.setStatus(details.getStatus());
         employee.setAadharNumber(details.getAadharNumber());
-        employee.setAddress(details.getAddress());
         employee.setCity(details.getCity());
         employee.setState(details.getState());
         employee.setPincode(details.getPincode());
@@ -67,7 +118,6 @@ public class EmployeeService {
         employee.setBankName(details.getBankName());
         employee.setBankIfsc(details.getBankIfsc());
         employee.setBankBranch(details.getBankBranch());
-        // New fields
         employee.setPanNumber(details.getPanNumber());
         employee.setDepartment(details.getDepartment());
         employee.setEmployeeCode(details.getEmployeeCode());
@@ -79,6 +129,13 @@ public class EmployeeService {
         employee.setMaritalStatus(details.getMaritalStatus());
         employee.setAadharDocUrl(details.getAadharDocUrl());
         employee.setPanDocUrl(details.getPanDocUrl());
+        employee.setSalaryDay(details.getSalaryDay());
+
+        // Handle designation
+        if (details.getDesignation() != null) {
+            employee.setDesignation(details.getDesignation());
+            resolveDesignation(employee);
+        }
 
         return employeeRepository.save(employee);
     }
@@ -189,6 +246,40 @@ public class EmployeeService {
             throw new RuntimeException("No file uploaded for type: " + type);
         }
         return s3StorageService.getPresignedUrl(key);
+    }
+
+    // ── Private helpers ────────────────────────────────────────────
+
+    private void syncEmailAndPhone(Employee employee) {
+        if (employee.getEmail() != null && !employee.getEmail().isBlank()) {
+            Set<String> emails = employee.getEmails();
+            if (emails == null) emails = new HashSet<>();
+            emails.add(employee.getEmail());
+            employee.setEmails(emails);
+        }
+        if (employee.getPhone() != null && !employee.getPhone().isBlank()) {
+            Set<String> phones = employee.getPhoneNumbers();
+            if (phones == null) phones = new HashSet<>();
+            phones.add(employee.getPhone());
+            employee.setPhoneNumbers(phones);
+        }
+    }
+
+    private void resolveDesignation(Employee employee) {
+        String desigName = employee.getDesignation();
+        if (desigName != null && !desigName.isBlank()) {
+            designationRepository.findByName(desigName).ifPresent(employee::setDesignationEntity);
+        }
+    }
+
+    private String generateUsername(Employee employee) {
+        String base = employee.getName() != null
+                ? employee.getName().toLowerCase().replaceAll("\\s+", ".") : "employee";
+        String code = employee.getEmployeeCode();
+        if (code != null && !code.isBlank()) {
+            return code.toLowerCase();
+        }
+        return base + "." + System.currentTimeMillis() % 10000;
     }
 
     private void validateFileType(MultipartFile file, String[] allowedTypes, long maxSize) {

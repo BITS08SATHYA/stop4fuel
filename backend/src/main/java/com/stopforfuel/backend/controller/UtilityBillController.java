@@ -5,6 +5,7 @@ import com.stopforfuel.backend.entity.UtilityBill;
 import com.stopforfuel.backend.service.UtilityBillService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,6 +19,7 @@ public class UtilityBillController {
     private UtilityBillService utilityBillService;
 
     @GetMapping
+    @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
     public List<UtilityBill> getAllBills(@RequestParam(required = false) String type) {
         if (type != null && !type.isEmpty()) {
             return utilityBillService.getBillsByType(type);
@@ -26,16 +28,19 @@ public class UtilityBillController {
     }
 
     @GetMapping("/pending")
+    @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
     public List<UtilityBill> getPendingBills() {
         return utilityBillService.getPendingBills();
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
     public UtilityBill createBill(@Valid @RequestBody UtilityBill bill) {
         return utilityBillService.createBill(bill);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
     public ResponseEntity<UtilityBill> updateBill(@PathVariable Long id, @Valid @RequestBody UtilityBill bill) {
         try {
             return ResponseEntity.ok(utilityBillService.updateBill(id, bill));
@@ -45,12 +50,14 @@ public class UtilityBillController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
     public ResponseEntity<Void> deleteBill(@PathVariable Long id) {
         utilityBillService.deleteBill(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/upload-pdf")
+    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
     public ResponseEntity<UtilityBill> uploadPdf(@RequestParam("file") MultipartFile file) {
         try {
             UtilityBill parsed = utilityBillService.parseTnebPdf(file);
@@ -61,6 +68,7 @@ public class UtilityBillController {
     }
 
     @PostMapping("/upload-bulk")
+    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
     public ResponseEntity<List<UtilityBill>> uploadBulkPdfs(@RequestParam("files") List<MultipartFile> files) {
         List<UtilityBill> parsed = utilityBillService.parseBulkPdfs(files);
         return ResponseEntity.ok(parsed);
