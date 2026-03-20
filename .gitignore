@@ -35,7 +35,7 @@ Thumbs.db
 uploads/
 
 # === Deploy ===
-deploy.sh
+deploy/
 
 # === Claude Code ===
 .claude/

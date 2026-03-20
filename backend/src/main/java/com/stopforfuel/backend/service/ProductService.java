@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.GradeType;
 import com.stopforfuel.backend.entity.Product;
+import com.stopforfuel.backend.repository.GradeTypeRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,9 @@ public class ProductService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private GradeTypeRepository gradeTypeRepository;
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();
@@ -31,10 +36,12 @@ public class ProductService {
     }
 
     public Product createProduct(Product product) {
+        validateGradeOilTypeLink(product);
         return productRepository.save(product);
     }
 
     public Product updateProduct(Long id, Product productDetails) {
+        validateGradeOilTypeLink(productDetails);
         Product product = getProductById(id);
         product.setName(productDetails.getName());
         product.setHsnCode(productDetails.getHsnCode());
@@ -47,6 +54,19 @@ public class ProductService {
         product.setOilType(productDetails.getOilType());
         product.setGrade(productDetails.getGrade());
         return productRepository.save(product);
+    }
+
+    private void validateGradeOilTypeLink(Product product) {
+        if (product.getGrade() != null && product.getGrade().getId() != null && product.getOilType() != null) {
+            GradeType grade = gradeTypeRepository.findById(product.getGrade().getId())
+                    .orElseThrow(() -> new RuntimeException("Grade not found with id: " + product.getGrade().getId()));
+            if (grade.getOilType() != null
+                    && !grade.getOilType().getId().equals(product.getOilType().getId())) {
+                throw new RuntimeException(
+                        "Grade '" + grade.getName() + "' belongs to oil type '" +
+                        grade.getOilType().getName() + "', not the selected oil type");
+            }
+        }
     }
 
     public Product toggleStatus(Long id) {
