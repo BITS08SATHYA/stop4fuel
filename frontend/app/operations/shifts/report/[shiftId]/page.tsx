@@ -12,6 +12,7 @@ import {
     getReportAuditLog,
     transferReportEntry,
     getAllShiftReports,
+    getShiftReportPdfUrl,
     ShiftClosingReport,
     ReportLineItem,
     ReportAuditLog,
@@ -30,6 +31,7 @@ import {
     AlertCircle,
     Printer,
     ArrowLeft,
+    Download,
 } from "lucide-react";
 
 function fmtDT(dt?: string) {
@@ -163,6 +165,9 @@ export default function ShiftReportPage() {
                         <button onClick={() => setShowFinalizeConfirm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-green-500/10 text-green-600 hover:bg-green-500/20"><Lock className="w-4 h-4" />Finalize</button>
                     </>)}
                     <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-muted text-muted-foreground hover:bg-muted/80"><Printer className="w-4 h-4" />Print</button>
+                    {report.reportPdfUrl && (
+                        <button onClick={async () => { const url = await getShiftReportPdfUrl(shiftId); window.open(url, "_blank"); }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-primary/10 text-primary hover:bg-primary/20"><Download className="w-4 h-4" />Download PDF</button>
+                    )}
                 </div>
             </div>
 
