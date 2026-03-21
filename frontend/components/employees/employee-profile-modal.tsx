@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
     Plus, User, MapPin, Landmark, History, Banknote, ChevronRight,
-    FileText, ExternalLink, IndianRupee, Loader2,
+    FileText, ExternalLink, IndianRupee, Loader2, Upload,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -22,7 +22,8 @@ interface EmployeeProfileModalProps {
     onClose: () => void;
 }
 
-export function EmployeeProfileModal({ employee, onClose }: EmployeeProfileModalProps) {
+export function EmployeeProfileModal({ employee: initialEmployee, onClose }: EmployeeProfileModalProps) {
+    const [employee, setEmployee] = useState<Employee>(initialEmployee);
     const [profileTab, setProfileTab] = useState<"overview" | "salary" | "advances">("overview");
     const [salaryHistory, setSalaryHistory] = useState<SalaryHistory[]>([]);
     const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
@@ -41,10 +42,19 @@ export function EmployeeProfileModal({ employee, onClose }: EmployeeProfileModal
         advanceDate: [required("Date is required")],
     });
 
+    // Re-fetch employee to get fresh data (including doc URLs)
+    const fetchEmployee = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/${initialEmployee.id}`);
+            if (res.ok) setEmployee(await res.json());
+        } catch (error) { console.error("Failed to fetch employee", error); }
+    };
+
     useEffect(() => {
+        fetchEmployee();
         fetchSalaryHistory();
         fetchAdvances();
-    }, [employee.id]);
+    }, [initialEmployee.id]);
 
     const fetchSalaryHistory = async () => {
         try {
@@ -186,8 +196,8 @@ export function EmployeeProfileModal({ employee, onClose }: EmployeeProfileModal
                         <GlassCard>
                             <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2"><FileText className="w-4 h-4" /> Documents</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <DocumentCard label="Aadhar Document" hasFile={!!employee.aadharDocUrl} employeeId={employee.id} fileType="aadhar-doc" />
-                                <DocumentCard label="PAN Document" hasFile={!!employee.panDocUrl} employeeId={employee.id} fileType="pan-doc" />
+                                <DocumentCard label="Aadhar Document" hasFile={!!employee.aadharDocUrl} employeeId={employee.id} fileType="aadhar-doc" onUploaded={fetchEmployee} />
+                                <DocumentCard label="PAN Document" hasFile={!!employee.panDocUrl} employeeId={employee.id} fileType="pan-doc" onUploaded={fetchEmployee} />
                             </div>
                         </GlassCard>
                     </div>
@@ -335,8 +345,9 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
     );
 }
 
-function DocumentCard({ label, hasFile, employeeId, fileType }: { label: string; hasFile: boolean; employeeId: number; fileType: string }) {
+function DocumentCard({ label, hasFile, employeeId, fileType, onUploaded }: { label: string; hasFile: boolean; employeeId: number; fileType: string; onUploaded?: () => void }) {
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const handleView = async () => {
         setLoading(true);
         try {
@@ -345,17 +356,38 @@ function DocumentCard({ label, hasFile, employeeId, fileType }: { label: string;
         } catch (error) { console.error("Failed to get file URL", error); }
         finally { setLoading(false); }
     };
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const uploadType = fileType === "aadhar-doc" ? "upload-aadhar-doc" : "upload-pan-doc";
+            const res = await fetch(`${API_BASE}/${employeeId}/${uploadType}`, { method: "POST", body: formData });
+            if (res.ok) onUploaded?.();
+            else console.error("Upload failed");
+        } catch (error) { console.error("Failed to upload", error); }
+        finally { setUploading(false); e.target.value = ""; }
+    };
     return (
         <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
             <div className="flex items-center gap-2">
                 <FileText className={`w-5 h-5 ${hasFile ? "text-blue-500" : "text-muted-foreground/30"}`} />
                 <span className="text-sm font-medium">{label}</span>
             </div>
-            {hasFile ? (
-                <button onClick={handleView} disabled={loading} className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary hover:underline disabled:opacity-50">
-                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />} View
-                </button>
-            ) : <span className="text-xs text-muted-foreground">No document</span>}
+            <div className="flex items-center gap-2">
+                {hasFile && (
+                    <button onClick={handleView} disabled={loading} className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary hover:underline disabled:opacity-50">
+                        {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />} View
+                    </button>
+                )}
+                <label className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer">
+                    {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                    {hasFile ? "Replace" : "Upload"}
+                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleUpload} disabled={uploading} />
+                </label>
+            </div>
         </div>
     );
 }

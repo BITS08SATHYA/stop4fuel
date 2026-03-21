@@ -8,6 +8,7 @@ import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -241,7 +242,7 @@ public class StatementService {
         List<InvoiceBill> bills = invoiceBillRepository.findByStatementId(id);
 
         List<Company> companies = companyRepository.findByScid(
-                statement.getScid() != null ? statement.getScid() : 1L);
+                statement.getScid() != null ? statement.getScid() : SecurityUtils.getScid());
         String companyName = !companies.isEmpty() ? companies.get(0).getName() : "StopForFuel";
 
         byte[] pdfBytes = pdfGenerator.generate(statement, bills, companyName);

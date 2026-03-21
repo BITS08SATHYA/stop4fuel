@@ -182,6 +182,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                             <th className="p-4 font-medium text-muted-foreground text-sm">Phone</th>
                             <th className="p-4 font-medium text-muted-foreground text-sm">Party</th>
                             <th className="p-4 font-medium text-muted-foreground text-sm">Group</th>
+                            <th className="p-4 font-medium text-muted-foreground text-sm">Category</th>
                             <th className="p-4 font-medium text-muted-foreground text-sm">Credit Usage</th>
                             <th className="p-4 font-medium text-muted-foreground text-sm">Status</th>
                             <th className="p-4 font-medium text-muted-foreground text-sm text-right">Actions</th>
@@ -227,6 +228,15 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                                     <td className="p-4 text-sm text-foreground">{customer.phoneNumbers?.[0]}</td>
                                     <td className="p-4 text-sm text-foreground">{customer.party?.partyType}</td>
                                     <td className="p-4 text-sm text-foreground">{customer.group?.groupName}</td>
+                                    <td className="p-4 text-sm">
+                                        {customer.customerCategory ? (
+                                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                                                {customer.customerCategory.replace(/_/g, ' ')}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground">-</span>
+                                        )}
+                                    </td>
                                     <td className="p-4">
                                         <div className="w-32">
                                             <div className="flex justify-between text-xs mb-1">

@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
 import com.stopforfuel.backend.repository.ShiftTransactionRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,7 @@ public class ShiftTransactionService {
     @Transactional
     public ShiftTransaction create(ShiftTransaction transaction) {
         if (transaction.getScid() == null) {
-            transaction.setScid(1L);
+            transaction.setScid(SecurityUtils.getScid());
         }
         return repository.save(transaction);
     }

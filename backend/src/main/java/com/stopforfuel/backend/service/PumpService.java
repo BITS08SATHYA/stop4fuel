@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Pump;
 import com.stopforfuel.backend.repository.PumpRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,7 @@ public class PumpService {
 
     public Pump createPump(Pump pump) {
         if (pump.getScid() == null) {
-            pump.setScid(1L);
+            pump.setScid(SecurityUtils.getScid());
         }
         return pumpRepository.save(pump);
     }

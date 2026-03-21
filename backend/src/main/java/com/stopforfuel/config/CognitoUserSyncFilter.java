@@ -61,7 +61,7 @@ public class CognitoUserSyncFilter extends OncePerRequestFilter {
         user.setRole(role);
         user.setJoinDate(LocalDate.now());
         user.setStatus("ACTIVE");
-        user.setScid(1L);
+        user.setScid(SecurityUtils.getScid());
         user.setPersonType("Employee");
 
         if (email != null) {

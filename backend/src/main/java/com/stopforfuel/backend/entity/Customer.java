@@ -35,6 +35,31 @@ public class Customer extends User {
     @Column(name = "consumed_liters")
     private BigDecimal consumedLiters = BigDecimal.ZERO;
 
+    /** Customer GSTIN for credit invoicing */
+    @Column(name = "gst_number", length = 15)
+    private String gstNumber;
+
+    /** Customer category: GOVERNMENT, RETAIL_OUTLET, BUS_OPERATOR, TRANSPORT, INDIVIDUAL, OTHER */
+    @Column(name = "customer_category", length = 30)
+    private String customerCategory;
+
+    /** GPS coordinates for customer location */
+    @Column(name = "latitude", precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 10, scale = 7)
+    private BigDecimal longitude;
+
+    /** Statement preferences */
+    @Column(name = "statement_frequency", length = 20)
+    private String statementFrequency; // MONTHLY, BIWEEKLY, WEEKLY, CUSTOM
+
+    @Column(name = "statement_grouping", length = 20)
+    private String statementGrouping; // CUSTOMER_WISE, VEHICLE_WISE
+
+    @Column(name = "statement_threshold_amount")
+    private BigDecimal statementThresholdAmount;
+
     @OneToMany(mappedBy = "customer")
     @com.fasterxml.jackson.annotation.JsonIgnore
     private java.util.List<Vehicle> vehicles = new java.util.ArrayList<>();
