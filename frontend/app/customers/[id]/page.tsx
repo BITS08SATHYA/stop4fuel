@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Save, Edit, Trash2, Truck, X, ShieldAlert, ShieldCheck, ShieldOff, Tag, Plus, Download } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Save, Edit, Trash2, Truck, X, ShieldAlert, ShieldCheck, ShieldOff, Tag, Plus, Download, Globe } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -249,6 +249,9 @@ export default function CustomerProfilePage() {
                             <Badge variant={statusVariant(customerStatus)}>
                                 {statusLabel(customerStatus)}
                             </Badge>
+                            {customer.customerCategory && (
+                                <Badge variant="outline">{customer.customerCategory.replace(/_/g, ' ')}</Badge>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -443,6 +446,41 @@ export default function CustomerProfilePage() {
                                     <span className="text-sm font-medium text-foreground">{customer.group?.groupName || "Unassigned"}</span>
                                 )}
                             </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Category</span>
+                                {isEditing ? (
+                                    <select
+                                        value={customer.customerCategory || ""}
+                                        onChange={(e) => setCustomer({ ...customer, customerCategory: e.target.value || null })}
+                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                    >
+                                        <option value="">None</option>
+                                        <option value="GOVERNMENT" className="bg-slate-900">Government</option>
+                                        <option value="RETAIL_OUTLET" className="bg-slate-900">Retail Outlet</option>
+                                        <option value="BUS_OPERATOR" className="bg-slate-900">Bus Operator</option>
+                                        <option value="TRANSPORT" className="bg-slate-900">Transport</option>
+                                        <option value="INDIVIDUAL" className="bg-slate-900">Individual</option>
+                                        <option value="OTHER" className="bg-slate-900">Other</option>
+                                    </select>
+                                ) : (
+                                    <span className="text-sm font-medium text-foreground">{customer.customerCategory?.replace(/_/g, ' ') || "Not set"}</span>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">GST Number</span>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={customer.gstNumber || ""}
+                                        onChange={(e) => setCustomer({ ...customer, gstNumber: e.target.value })}
+                                        className="text-sm font-medium text-foreground bg-white/5 border border-white/10 rounded px-2 py-1 text-right w-40"
+                                        placeholder="e.g. 33AABCT1332L1ZZ"
+                                        maxLength={15}
+                                    />
+                                ) : (
+                                    <span className="text-sm font-medium text-foreground">{customer.gstNumber || "-"}</span>
+                                )}
+                            </div>
                         </div>
                     </GlassCard>
                 </div>
@@ -529,6 +567,109 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Customer ID</span>
                                 <span className="text-sm font-mono text-foreground">#{customer.id}</span>
+                            </div>
+                        </div>
+                    </GlassCard>
+                    <GlassCard className="p-6">
+                        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                            <Globe className="w-5 h-5 text-primary" /> Location
+                        </h3>
+                        {isEditing ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground w-20">Latitude</label>
+                                    <input
+                                        type="number"
+                                        step="0.0000001"
+                                        value={customer.latitude || ""}
+                                        onChange={(e) => setCustomer({ ...customer, latitude: e.target.value ? parseFloat(e.target.value) : null })}
+                                        className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-foreground"
+                                        placeholder="e.g. 13.0827"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm text-muted-foreground w-20">Longitude</label>
+                                    <input
+                                        type="number"
+                                        step="0.0000001"
+                                        value={customer.longitude || ""}
+                                        onChange={(e) => setCustomer({ ...customer, longitude: e.target.value ? parseFloat(e.target.value) : null })}
+                                        className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-foreground"
+                                        placeholder="e.g. 80.2707"
+                                    />
+                                </div>
+                            </div>
+                        ) : customer.latitude && customer.longitude ? (
+                            <div className="space-y-3">
+                                <div className="text-sm text-muted-foreground">
+                                    {Number(customer.latitude).toFixed(6)}, {Number(customer.longitude).toFixed(6)}
+                                </div>
+                                <div className="rounded-lg overflow-hidden border border-border">
+                                    <iframe
+                                        width="100%"
+                                        height="200"
+                                        style={{ border: 0 }}
+                                        loading="lazy"
+                                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(customer.longitude) - 0.01},${Number(customer.latitude) - 0.01},${Number(customer.longitude) + 0.01},${Number(customer.latitude) + 0.01}&layer=mapnik&marker=${customer.latitude},${customer.longitude}`}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">No location set</p>
+                        )}
+                    </GlassCard>
+                    <GlassCard className="p-6">
+                        <h3 className="text-lg font-semibold text-foreground mb-4">Statement Preferences</h3>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Frequency</span>
+                                {isEditing ? (
+                                    <select
+                                        value={customer.statementFrequency || ""}
+                                        onChange={(e) => setCustomer({ ...customer, statementFrequency: e.target.value || null })}
+                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                    >
+                                        <option value="">Not set</option>
+                                        <option value="MONTHLY" className="bg-slate-900">Monthly</option>
+                                        <option value="BIWEEKLY" className="bg-slate-900">Biweekly</option>
+                                        <option value="WEEKLY" className="bg-slate-900">Weekly</option>
+                                        <option value="CUSTOM" className="bg-slate-900">Custom</option>
+                                    </select>
+                                ) : (
+                                    <span className="text-sm font-medium text-foreground">{customer.statementFrequency || "Not set"}</span>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Grouping</span>
+                                {isEditing ? (
+                                    <select
+                                        value={customer.statementGrouping || ""}
+                                        onChange={(e) => setCustomer({ ...customer, statementGrouping: e.target.value || null })}
+                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                    >
+                                        <option value="">Not set</option>
+                                        <option value="CUSTOMER_WISE" className="bg-slate-900">Customer Wise</option>
+                                        <option value="VEHICLE_WISE" className="bg-slate-900">Vehicle Wise</option>
+                                    </select>
+                                ) : (
+                                    <span className="text-sm font-medium text-foreground">{customer.statementGrouping?.replace(/_/g, ' ') || "Not set"}</span>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Threshold Amount</span>
+                                {isEditing ? (
+                                    <input
+                                        type="number"
+                                        value={customer.statementThresholdAmount || ""}
+                                        onChange={(e) => setCustomer({ ...customer, statementThresholdAmount: e.target.value ? parseFloat(e.target.value) : null })}
+                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground text-right w-28"
+                                        placeholder="Amount"
+                                    />
+                                ) : (
+                                    <span className="text-sm font-medium text-foreground">
+                                        {customer.statementThresholdAmount ? `₹${Number(customer.statementThresholdAmount).toLocaleString()}` : "Not set"}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </GlassCard>

@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Supplier;
 import com.stopforfuel.backend.repository.SupplierRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +35,7 @@ public class SupplierService {
 
     public Supplier createSupplier(Supplier supplier) {
         if (supplier.getScid() == null) {
-            supplier.setScid(1L);
+            supplier.setScid(SecurityUtils.getScid());
         }
         return repository.save(supplier);
     }

@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.repository.ShiftRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +36,7 @@ public class ShiftService {
         shift.setStartTime(LocalDateTime.now());
         shift.setStatus("OPEN");
         if (shift.getScid() == null) {
-            shift.setScid(1L);
+            shift.setScid(SecurityUtils.getScid());
         }
         Shift saved = repository.save(shift);
 

@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.CashierStock;
 import com.stopforfuel.backend.repository.CashierStockRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,7 @@ public class CashierStockService {
     private final CashierStockRepository repository;
 
     public List<CashierStock> getAll() {
-        return repository.findByScid(1L);
+        return repository.findByScid(SecurityUtils.getScid());
     }
 
     public CashierStock getById(Long id) {
@@ -23,11 +24,11 @@ public class CashierStockService {
     }
 
     public CashierStock getByProduct(Long productId) {
-        return repository.findByProductIdAndScid(productId, 1L).orElse(null);
+        return repository.findByProductIdAndScid(productId, SecurityUtils.getScid()).orElse(null);
     }
 
     public CashierStock save(CashierStock stock) {
-        if (stock.getScid() == null) stock.setScid(1L);
+        if (stock.getScid() == null) stock.setScid(SecurityUtils.getScid());
         return repository.save(stock);
     }
 

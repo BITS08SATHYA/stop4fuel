@@ -50,16 +50,21 @@ npm run lint     # ESLint
 - **Charts**: Recharts for dashboard visualizations
 - **Layout**: `app/layout.tsx` wraps all pages with `AppSidebar` (sidebar navigation) + `ThemeProvider`
 - **Route groups**:
-  - `/` — Dashboard
+  - `/` — Main Dashboard (revenue, fuel volume, credit aging, tank status)
   - `/customers/**` — Customer management (groups, vehicles, mappings, profile)
-  - `/operations/**` — Station operations (tanks, pumps, nozzles, products, suppliers, grades, inventory, invoices)
-  - `/employees`, `/company` — Staff and company management
+  - `/operations/**` — Station operations (tanks, pumps, nozzles, products, suppliers, grades, inventory, invoices, shifts, advances)
+  - `/operations/dashboard` — Operational Dashboard (tank/pump/nozzle status, meter readings)
+  - `/operations/invoices/dashboard` — Invoice Analytics Dashboard
+  - `/payments/**` — Payment tracking, credit overview, ledger, statements
+  - `/payments/dashboard` — Payment Analytics Dashboard
+  - `/employees`, `/company` — Staff and company management (salary, leave, attendance)
+  - `/analytics/**` — ML analytics pages (placeholder — needs ML microservice)
 - **Components**: Shared components in `components/`, UI primitives in `components/ui/`
 - **Utilities**: `lib/utils.ts` (includes `cn()` for className merging via clsx + tailwind-merge)
 
 ## Key Domain Entities
 
-The app models a fuel station with: Company, Customers, Groups, Vehicles, VehicleTypes, Products, Suppliers, GradeTypes, Tanks, Pumps, Nozzles, Shifts, and Inventory tracking (TankInventory, NozzleInventory, ProductInventory), plus InvoiceBills.
+The app models a fuel station with: Company, Customers, Groups, Vehicles, VehicleTypes, Products, Suppliers, GradeTypes, Tanks, Pumps, Nozzles, Shifts, ShiftClosingReport, ShiftTransactions (Cash/Card/UPI/CCMS/Cheque/Bank/Expense/NightCash), Inventory tracking (TankInventory, NozzleInventory, ProductInventory, GodownStock, CashierStock, StockTransfer, PurchaseOrder), InvoiceBills, Statements, Payments, CashAdvance, EmployeeAdvance, SalaryPayment, and Employee (with leave, attendance, documents).
 
 ## Database
 

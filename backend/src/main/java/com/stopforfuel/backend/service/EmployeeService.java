@@ -14,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -44,6 +47,13 @@ public class EmployeeService {
 
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAll();
+    }
+
+    public Page<Employee> getEmployees(String search, String status, Pageable pageable) {
+        return employeeRepository.findBySearchAndStatus(
+                search != null && !search.isEmpty() ? search : null,
+                status != null && !status.isEmpty() ? status : null,
+                pageable);
     }
 
     public Optional<Employee> getEmployeeById(Long id) {

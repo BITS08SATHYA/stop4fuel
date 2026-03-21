@@ -9,6 +9,7 @@ import com.stopforfuel.backend.repository.CashierStockRepository;
 import com.stopforfuel.backend.repository.GodownStockRepository;
 import com.stopforfuel.backend.repository.ProductInventoryRepository;
 import com.stopforfuel.backend.repository.StockTransferRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +28,7 @@ public class StockTransferService {
     private final ShiftService shiftService;
 
     public List<StockTransfer> getAll() {
-        return repository.findByScidOrderByTransferDateDesc(1L);
+        return repository.findByScidOrderByTransferDateDesc(SecurityUtils.getScid());
     }
 
     public List<StockTransfer> getByProduct(Long productId) {
@@ -35,7 +36,7 @@ public class StockTransferService {
     }
 
     public List<StockTransfer> getByDateRange(LocalDateTime from, LocalDateTime to) {
-        return repository.findByScidAndTransferDateBetweenOrderByTransferDateDesc(1L, from, to);
+        return repository.findByScidAndTransferDateBetweenOrderByTransferDateDesc(SecurityUtils.getScid(), from, to);
     }
 
     public List<StockTransfer> getByShiftId(Long shiftId) {
@@ -44,7 +45,7 @@ public class StockTransferService {
 
     @Transactional
     public StockTransfer createTransfer(StockTransfer transfer) {
-        if (transfer.getScid() == null) transfer.setScid(1L);
+        if (transfer.getScid() == null) transfer.setScid(SecurityUtils.getScid());
         if (transfer.getTransferDate() == null) transfer.setTransferDate(LocalDateTime.now());
 
         // Link transfer to active shift
@@ -58,7 +59,7 @@ public class StockTransferService {
 
         if ("GODOWN".equals(transfer.getFromLocation())) {
             // Godown -> Cashier
-            GodownStock godown = godownStockRepository.findByProductIdAndScid(productId, 1L)
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
                     .orElseThrow(() -> new RuntimeException("No godown stock found for product: " + productId));
             if (godown.getCurrentStock() < qty) {
                 throw new RuntimeException("Insufficient godown stock. Available: " + godown.getCurrentStock() + ", Requested: " + qty);
@@ -66,13 +67,13 @@ public class StockTransferService {
             godown.setCurrentStock(godown.getCurrentStock() - qty);
             godownStockRepository.save(godown);
 
-            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, 1L)
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
                     .orElseGet(() -> {
                         CashierStock cs = new CashierStock();
                         cs.setProduct(transfer.getProduct());
                         cs.setCurrentStock(0.0);
                         cs.setMaxCapacity(0.0);
-                        cs.setScid(1L);
+                        cs.setScid(SecurityUtils.getScid());
                         return cs;
                     });
             cashier.setCurrentStock(cashier.getCurrentStock() + qty);
@@ -84,7 +85,7 @@ public class StockTransferService {
             }
         } else {
             // Cashier -> Godown
-            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, 1L)
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
                     .orElseThrow(() -> new RuntimeException("No cashier stock found for product: " + productId));
             if (cashier.getCurrentStock() < qty) {
                 throw new RuntimeException("Insufficient cashier stock. Available: " + cashier.getCurrentStock() + ", Requested: " + qty);
@@ -92,14 +93,14 @@ public class StockTransferService {
             cashier.setCurrentStock(cashier.getCurrentStock() - qty);
             cashierStockRepository.save(cashier);
 
-            GodownStock godown = godownStockRepository.findByProductIdAndScid(productId, 1L)
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
                     .orElseGet(() -> {
                         GodownStock gs = new GodownStock();
                         gs.setProduct(transfer.getProduct());
                         gs.setCurrentStock(0.0);
                         gs.setReorderLevel(0.0);
                         gs.setMaxStock(0.0);
-                        gs.setScid(1L);
+                        gs.setScid(SecurityUtils.getScid());
                         return gs;
                     });
             godown.setCurrentStock(godown.getCurrentStock() + qty);
