@@ -4,6 +4,7 @@ import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.User;
 import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.UserRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -74,7 +75,7 @@ public class AdminUserService {
         user.setRole(role);
         user.setJoinDate(LocalDate.now());
         user.setStatus("ACTIVE");
-        user.setScid(1L);
+        user.setScid(SecurityUtils.getScid());
         user.setPersonType("Employee");
 
         Set<String> emails = new HashSet<>();

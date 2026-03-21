@@ -3,6 +3,7 @@ package com.stopforfuel.backend.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import com.stopforfuel.config.SecurityUtils;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -16,7 +17,7 @@ public abstract class BaseEntity {
     @PrePersist
     protected void onCreate() {
         if (scid == null) {
-            scid = 1L;
+            scid = SecurityUtils.getScid();
         }
     }
 

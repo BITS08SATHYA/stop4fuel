@@ -6,6 +6,7 @@ import com.stopforfuel.backend.entity.PurchaseOrder;
 import com.stopforfuel.backend.entity.PurchaseOrderItem;
 import com.stopforfuel.backend.repository.GodownStockRepository;
 import com.stopforfuel.backend.repository.PurchaseOrderRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +22,7 @@ public class PurchaseOrderService {
     private final GodownStockRepository godownStockRepository;
 
     public List<PurchaseOrder> getAll() {
-        return repository.findByScidOrderByOrderDateDesc(1L);
+        return repository.findByScidOrderByOrderDateDesc(SecurityUtils.getScid());
     }
 
     public PurchaseOrder getById(Long id) {
@@ -30,15 +31,15 @@ public class PurchaseOrderService {
     }
 
     public List<PurchaseOrder> getByStatus(String status) {
-        return repository.findByStatusAndScid(status, 1L);
+        return repository.findByStatusAndScid(status, SecurityUtils.getScid());
     }
 
     public List<PurchaseOrder> getBySupplier(Long supplierId) {
-        return repository.findBySupplierIdAndScid(supplierId, 1L);
+        return repository.findBySupplierIdAndScid(supplierId, SecurityUtils.getScid());
     }
 
     public PurchaseOrder save(PurchaseOrder order) {
-        if (order.getScid() == null) order.setScid(1L);
+        if (order.getScid() == null) order.setScid(SecurityUtils.getScid());
         if (order.getOrderDate() == null) order.setOrderDate(LocalDate.now());
         if (order.getStatus() == null) order.setStatus("DRAFT");
         // Link items back to order
@@ -88,14 +89,14 @@ public class PurchaseOrderService {
             item.setReceivedQty(newReceived);
 
             // Update godown stock
-            GodownStock godown = godownStockRepository.findByProductIdAndScid(item.getProduct().getId(), 1L)
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(item.getProduct().getId(), SecurityUtils.getScid())
                     .orElseGet(() -> {
                         GodownStock gs = new GodownStock();
                         gs.setProduct(item.getProduct());
                         gs.setCurrentStock(0.0);
                         gs.setReorderLevel(0.0);
                         gs.setMaxStock(0.0);
-                        gs.setScid(1L);
+                        gs.setScid(SecurityUtils.getScid());
                         return gs;
                     });
             godown.setCurrentStock(godown.getCurrentStock() + dto.getReceivedQty());

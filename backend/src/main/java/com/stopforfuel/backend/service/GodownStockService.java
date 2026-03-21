@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.GodownStock;
 import com.stopforfuel.backend.repository.GodownStockRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,7 @@ public class GodownStockService {
     private final GodownStockRepository repository;
 
     public List<GodownStock> getAll() {
-        return repository.findByScid(1L);
+        return repository.findByScid(SecurityUtils.getScid());
     }
 
     public GodownStock getById(Long id) {
@@ -23,15 +24,15 @@ public class GodownStockService {
     }
 
     public GodownStock getByProduct(Long productId) {
-        return repository.findByProductIdAndScid(productId, 1L).orElse(null);
+        return repository.findByProductIdAndScid(productId, SecurityUtils.getScid()).orElse(null);
     }
 
     public List<GodownStock> getLowStockItems() {
-        return repository.findLowStockItems(1L);
+        return repository.findLowStockItems(SecurityUtils.getScid());
     }
 
     public GodownStock save(GodownStock stock) {
-        if (stock.getScid() == null) stock.setScid(1L);
+        if (stock.getScid() == null) stock.setScid(SecurityUtils.getScid());
         return repository.save(stock);
     }
 

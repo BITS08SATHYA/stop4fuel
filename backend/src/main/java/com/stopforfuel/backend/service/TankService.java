@@ -4,6 +4,7 @@ import com.stopforfuel.backend.entity.Tank;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.repository.TankRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,7 +44,7 @@ public class TankService {
             tank.setProduct(product);
         }
         if (tank.getScid() == null) {
-            tank.setScid(1L);
+            tank.setScid(SecurityUtils.getScid());
         }
         if (tank.getAvailableStock() == null) {
             tank.setAvailableStock(0.0);

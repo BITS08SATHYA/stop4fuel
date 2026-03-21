@@ -6,6 +6,7 @@ import com.stopforfuel.backend.entity.Pump;
 import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.backend.repository.TankRepository;
 import com.stopforfuel.backend.repository.PumpRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -58,7 +59,7 @@ public class NozzleService {
             nozzle.setPump(pump);
         }
         if (nozzle.getScid() == null) {
-            nozzle.setScid(1L);
+            nozzle.setScid(SecurityUtils.getScid());
         }
         return nozzleRepository.save(nozzle);
     }
