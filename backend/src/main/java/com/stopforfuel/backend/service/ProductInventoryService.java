@@ -7,6 +7,7 @@ import com.stopforfuel.backend.entity.ProductInventory;
 import com.stopforfuel.backend.repository.CashierStockRepository;
 import com.stopforfuel.backend.repository.ProductInventoryRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +47,7 @@ public class ProductInventoryService {
 
     public ProductInventory save(ProductInventory inventory) {
         if (inventory.getScid() == null) {
-            inventory.setScid(1L);
+            inventory.setScid(SecurityUtils.getScid());
         }
         if (inventory.getShiftId() == null) {
             Shift activeShift = shiftService.getActiveShift();
@@ -95,7 +96,7 @@ public class ProductInventoryService {
 
             // Primary source: CashierStock (the real counter balance)
             double openStock;
-            Optional<CashierStock> cashierOpt = cashierStockRepository.findByProductIdAndScid(product.getId(), 1L);
+            Optional<CashierStock> cashierOpt = cashierStockRepository.findByProductIdAndScid(product.getId(), SecurityUtils.getScid());
             if (cashierOpt.isPresent()) {
                 openStock = cashierOpt.get().getCurrentStock() != null ? cashierOpt.get().getCurrentStock() : 0.0;
             } else {
@@ -139,13 +140,13 @@ public class ProductInventoryService {
             // Sync closeStock back to CashierStock
             double closeStock = record.getCloseStock() != null ? record.getCloseStock() : 0.0;
             Long productId = record.getProduct().getId();
-            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, 1L)
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
                     .orElseGet(() -> {
                         CashierStock cs = new CashierStock();
                         cs.setProduct(record.getProduct());
                         cs.setCurrentStock(0.0);
                         cs.setMaxCapacity(0.0);
-                        cs.setScid(1L);
+                        cs.setScid(SecurityUtils.getScid());
                         return cs;
                     });
             cashier.setCurrentStock(closeStock);

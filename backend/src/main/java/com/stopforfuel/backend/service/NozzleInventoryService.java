@@ -3,6 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.repository.NozzleInventoryRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +36,7 @@ public class NozzleInventoryService {
 
     public NozzleInventory save(NozzleInventory inventory) {
         if (inventory.getScid() == null) {
-            inventory.setScid(1L);
+            inventory.setScid(SecurityUtils.getScid());
         }
         if (inventory.getShiftId() == null) {
             Shift activeShift = shiftService.getActiveShift();

@@ -34,6 +34,13 @@ export default function CustomersPage() {
                     group: formData.group,
                     creditLimitAmount: formData.creditLimitAmount,
                     creditLimitLiters: formData.creditLimitLiters,
+                    customerCategory: formData.customerCategory,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude,
+                    gstNumber: formData.gstNumber,
+                    statementFrequency: formData.statementFrequency,
+                    statementGrouping: formData.statementGrouping,
+                    statementThresholdAmount: formData.statementThresholdAmount,
                 }),
             });
             if (res.ok) {

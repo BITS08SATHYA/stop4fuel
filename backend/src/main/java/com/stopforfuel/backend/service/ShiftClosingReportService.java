@@ -4,6 +4,7 @@ import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
 import com.stopforfuel.backend.repository.*;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -730,7 +731,7 @@ public class ShiftClosingReportService {
         ShiftReportPrintData data = new ShiftReportPrintData();
 
         // Header
-        List<Company> companies = companyRepository.findByScid(shift.getScid() != null ? shift.getScid() : 1L);
+        List<Company> companies = companyRepository.findByScid(shift.getScid() != null ? shift.getScid() : SecurityUtils.getScid());
         data.setCompanyName(!companies.isEmpty() ? companies.get(0).getName() : "StopForFuel");
         data.setEmployeeName(shift.getAttendant() != null ? shift.getAttendant().getName() : "-");
         data.setShiftId(shift.getId());
@@ -923,12 +924,12 @@ public class ShiftClosingReportService {
         }
 
         // Stock Position — godown + cashier balances for non-fuel products
-        List<GodownStock> godownStocks = godownStockRepository.findByScid(1L);
+        List<GodownStock> godownStocks = godownStockRepository.findByScid(SecurityUtils.getScid());
         Map<Long, GodownStock> godownMap = new HashMap<>();
         for (GodownStock gs : godownStocks) {
             godownMap.put(gs.getProduct().getId(), gs);
         }
-        List<CashierStock> cashierStocks = cashierStockRepository.findByScid(1L);
+        List<CashierStock> cashierStocks = cashierStockRepository.findByScid(SecurityUtils.getScid());
         Map<Long, CashierStock> cashierMap = new HashMap<>();
         for (CashierStock cs : cashierStocks) {
             cashierMap.put(cs.getProduct().getId(), cs);

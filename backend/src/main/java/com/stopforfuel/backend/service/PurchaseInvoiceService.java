@@ -3,6 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.entity.PurchaseInvoiceItem;
 import com.stopforfuel.backend.repository.PurchaseInvoiceRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,7 +20,7 @@ public class PurchaseInvoiceService {
     private final S3StorageService s3StorageService;
 
     public List<PurchaseInvoice> getAll() {
-        return repository.findByScidOrderByInvoiceDateDesc(1L);
+        return repository.findByScidOrderByInvoiceDateDesc(SecurityUtils.getScid());
     }
 
     public PurchaseInvoice getById(Long id) {
@@ -28,19 +29,19 @@ public class PurchaseInvoiceService {
     }
 
     public List<PurchaseInvoice> getByStatus(String status) {
-        return repository.findByStatusAndScid(status, 1L);
+        return repository.findByStatusAndScid(status, SecurityUtils.getScid());
     }
 
     public List<PurchaseInvoice> getBySupplier(Long supplierId) {
-        return repository.findBySupplierIdAndScid(supplierId, 1L);
+        return repository.findBySupplierIdAndScid(supplierId, SecurityUtils.getScid());
     }
 
     public List<PurchaseInvoice> getByType(String invoiceType) {
-        return repository.findByInvoiceTypeAndScid(invoiceType, 1L);
+        return repository.findByInvoiceTypeAndScid(invoiceType, SecurityUtils.getScid());
     }
 
     public PurchaseInvoice save(PurchaseInvoice invoice) {
-        if (invoice.getScid() == null) invoice.setScid(1L);
+        if (invoice.getScid() == null) invoice.setScid(SecurityUtils.getScid());
         if (invoice.getInvoiceDate() == null) invoice.setInvoiceDate(LocalDate.now());
         if (invoice.getStatus() == null) invoice.setStatus("PENDING");
         if (invoice.getItems() != null) {

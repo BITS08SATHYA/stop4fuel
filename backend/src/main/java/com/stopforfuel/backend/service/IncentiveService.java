@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Incentive;
 import com.stopforfuel.backend.repository.IncentiveRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +31,7 @@ public class IncentiveService {
     @Transactional
     public Incentive create(Incentive incentive) {
         if (incentive.getScid() == null) {
-            incentive.setScid(1L);
+            incentive.setScid(SecurityUtils.getScid());
         }
         return repository.save(incentive);
     }

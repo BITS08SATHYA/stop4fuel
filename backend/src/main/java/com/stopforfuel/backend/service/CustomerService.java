@@ -37,8 +37,10 @@ public class CustomerService {
     private com.stopforfuel.backend.repository.RolesRepository rolesRepository;
 
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, org.springframework.data.domain.Pageable pageable) {
-        String searchParam = (search != null && !search.isEmpty()) ? search : null;
-        return customerRepository.findByFilters(searchParam, groupId, status, pageable);
+        if (search != null && !search.isEmpty()) {
+            return customerRepository.findBySearchAndFilters(search, groupId, status, pageable);
+        }
+        return customerRepository.findByGroupAndStatus(groupId, status, pageable);
     }
 
     public org.springframework.data.domain.Page<Customer> getCustomersByGroupId(Long groupId, org.springframework.data.domain.Pageable pageable) {
@@ -82,6 +84,13 @@ public class CustomerService {
         customer.setGroup(customerDetails.getGroup());
         customer.setParty(customerDetails.getParty());
         customer.setJoinDate(customerDetails.getJoinDate());
+        customer.setGstNumber(customerDetails.getGstNumber());
+        customer.setCustomerCategory(customerDetails.getCustomerCategory());
+        customer.setLatitude(customerDetails.getLatitude());
+        customer.setLongitude(customerDetails.getLongitude());
+        customer.setStatementFrequency(customerDetails.getStatementFrequency());
+        customer.setStatementGrouping(customerDetails.getStatementGrouping());
+        customer.setStatementThresholdAmount(customerDetails.getStatementThresholdAmount());
 
         return customerRepository.save(customer);
     }

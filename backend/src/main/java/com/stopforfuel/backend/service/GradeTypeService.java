@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.GradeType;
 import com.stopforfuel.backend.repository.GradeTypeRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +33,7 @@ public class GradeTypeService {
 
     public GradeType createGrade(GradeType grade) {
         if (grade.getScid() == null) {
-            grade.setScid(1L);
+            grade.setScid(SecurityUtils.getScid());
         }
         return repository.save(grade);
     }

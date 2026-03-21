@@ -4,6 +4,7 @@ import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.entity.transaction.*;
 import com.stopforfuel.backend.repository.*;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -196,7 +197,7 @@ public class InvoiceBillService {
         }
 
         if (invoice.getScid() == null) {
-            invoice.setScid(1L);
+            invoice.setScid(SecurityUtils.getScid());
         }
 
         // --- Generate bill number ---
@@ -401,7 +402,7 @@ public class InvoiceBillService {
             // --- 4. CashierStock deduction (non-fuel products) ---
             if (invoiceProduct.getNozzle() == null || invoiceProduct.getNozzle().getId() == null) {
                 Long scid = invoiceProduct.getInvoiceBill() != null && invoiceProduct.getInvoiceBill().getScid() != null
-                        ? invoiceProduct.getInvoiceBill().getScid() : 1L;
+                        ? invoiceProduct.getInvoiceBill().getScid() : SecurityUtils.getScid();
                 cashierStockRepository.findByProductIdAndScid(productId, scid).ifPresent(cashierStock -> {
                     double current = cashierStock.getCurrentStock() != null ? cashierStock.getCurrentStock() : 0.0;
                     cashierStock.setCurrentStock(Math.max(0, current - qty));

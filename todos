@@ -1,108 +1,100 @@
 yet to start
 
-11. Implement filter options to all the management tables (Working) 
-1. Income bill/statement management (Working)
-2. Advance Management (Working)
-12. Extensively elaborate the income bill/statement management (Working)
-	11.1 Dashboards for that
-3. Shift Management 
-9. Dashboards (properly show the necessary informations)
+11. Implement filter options to all the management tables (Done - 16/16 tables)
+1. Income bill/statement management (Done)
+2. Advance Management (Done - CashAdvance + EmployeeAdvance entities, full API, frontend UI, invoice/statement linkage, shift report integration)
+12. Extensively elaborate the income bill/statement management (Done)
+	11.1 Dashboards for that (Done)
+3. Shift Management (Done - backend all 8 txn types + frontend shift register + shift closing report with payment mode breakdown)
+9. Dashboards (Done - main dashboard, operational dashboard, invoice analytics, payment analytics - all with real API data)
 10. Properly Reassemble
-	10.1 Employee Management
-	10.2 Customer Management (working) 
-	10.3 Invoice (bill/statement) Management (Working)
-		9.3.1 Advance Management (Working)
-	10.4 Product Management (Working)
-	10.5 Inventory Management (Working)
-	10.6 Marketing Management	
-	10.7 Operational Dashboards
-	10.8 Invoice Payment Dashboards 
-	
-non-application tasks	
+	10.1 Employee Management (Done - 50+ fields, leave, attendance, salary, advances, photo S3)
+	10.2 Customer Management (Done)
+	10.3 Invoice (bill/statement) Management (Done)
+		9.3.1 Advance Management (Done)
+	10.4 Product Management (Done)
+	10.5 Inventory Management (Done)
+	10.6 Marketing Management (Not Done - placeholder "Coming Soon" page)
+	10.7 Operational Dashboards (Done)
+	10.8 Invoice Payment Dashboards (Done)
 
-7. Database final work (working)
-15. S3 bucket integrations for storing pics, pdfs (bills and statements) and photocopies of bills (signed by authorative) and indents photocopies (working) 
-6. login/logout page  ( Implement Authenticator application kinda integration into the application for otp purposes (during the validation of credit bills))
+non-application tasks
+
+7. Database final work (working - indexes added, unique constraints added, scid still hardcoded in ~20 services)
+15. S3 bucket integrations for storing pics, pdfs (bills and statements) and photocopies of bills (signed by authorative) and indents photocopies (done)
+6. login/logout page  ( Implement Authenticator application kinda integration into the application for otp purposes (during the validation of credit bills)) (Auth committed but needs dev testing)
 8. Reports (JasperReport Server)
 	7.1 Daily Sales Report
 	7.2 Inventory Report (Summary and detailed) by individual and total
 	7.3 Customer Balance Report (Summary and Detailed) by individual and total
-	7.4 Sales Tax Templates (automatically export to pdf or excel) 
+	7.4 Sales Tax Templates (automatically export to pdf or excel)
 	7.5 Oil Calculation Templates (automatically export to pdf or excel)
 	7.6 SBI bank Customer Balance report (local and statement party balances)
-	
-4. Spring security (AWS Cognito) 
-13. Implement Spring AI in the dashboard (LLM designed for this application alone)
+
+4. Spring security (AWS Cognito) (Committed - needs dev testing)
+13.Implement Spring AI in the dashboard (LLM designed for this application alone)
 5. TLS/SSL Configurations
-16. PayTM Integrations
-17. IOT Integrations (future phase)
 
 
-Requirements/Questions/Thoughts/Improvements:
-1. If i reassign or mapping a vehicle (/api/customers/mappings)  from one customer to another ...will that vehicle invoice bill histories be reflected to the new added customer ledger balance ... (done)
+# Visualization (discussion)
+# All Credits <> All Incomes (should i maintain this per customer) (a visualization tool)
 
-1.a) i see it as a tree Group -> Customer -> Vehicle -> Invoice bills (products) ..so if move a customer from group to another group ..the ledger balance of a group or the customer be modified ..if i move a vehicle from one customer to another customer ..the vehicle unpaid bills will be added to that customer ledger balance ...how it applies to the group? also i need some insight in here ..(done) 
+# Discussion for customers
+# I thing that i need to categorize the customers for anymore categories like (government, retail outlet, bus, etc...) ...in a way to disect them so that it should act a minor for advocating the transparency
+# adding customer gps (their place) coordinates ... and in their view profile page ...(a map view with a pin on their coordinates) and also add a customer field that if the customer wants vehicle wise or customer wise or certain bills of x quantity threshold ...and whether the customer wants the statement for monthly, biweekly, or other options ...
+
+# Another improvement is designaton based dashboards and action menus ...(needs to be implemented)
+
+# pagination is needed in the employee table. in the view profile, their document is not visible
 
 
-2.  another importatnt distinction ..or the problem is that i would like to maintain the gowdown stock and stock with cashier seperately (it would be benefinical for the shift management daily) and if the stock needs to move from godown to cashier stock ..it should be easy one and should be recorded also...  (done) 
+# Status Report (Updated 2026-03-21)
 
-3. also i would like to maintain a purchase invoice a complete CRUD for it ...purchasing fuel and non-fuel (accessories) ...it should let to upload those invoices pdf and view it  ...in the system..(done) 
 
-4. while adding the product, it is not allowing to include Grade oil type and but successfully choose the variant type... similarly in the grade page ..still the oil types and grades are CRUD independetently .... (done) 
-
-5. in the tank management, add an another field AvailableStock that should have the updated value (how much the tank currently holds) ..add a tag like widget (current available stock) on the tank to show its presense (done) ...
-
-6. If i disable the product, an invoice cannot be raised using the product...(done)
-
-7. Have you created a frontend page and backend api for the expense and incentives (towards cash, credit invoices (bills and statements)  ...And I am under the impression that the (Card, UPI, cheque, CCMS, bank Transfer -- an entry will be automatically created when give the payment transaction of the invoice credit bill/statement...and also when i create the a cash invoice) ... a seperate UI home (cash advance) needs to be created for taking cash from the petrol bunk (night(home advance) or regular advance)  .....(done)
-
-8. employee management..currently it has a functional employee addittion. ... i want to include their aadhar card, multiple phone numbers, address , their salary (management and it s histories, any advances that they got) ...and additionally ..(their photo- ---> the usual records the photo url (mostly saved in S3 bucket) ...and of course their bank details ...anymore it needed ...(done)
-
-9. if i had to raise a entry in advance(card, upi) ...it should automatically create a cash invoice ...if i create a direct cash invoice is raised ..no advance entry is needed....lets elaborate this plan...but (if the the invoice is credit)...and later a payment(card,upi,cheque,CCMS,BankTransfer) (for cash not needed ..added in the income entry) is made towards that credit invoice bill/statement, an automatic entry in the advance module based on the payment type should be included ...(one question is if the raised credit invoice date and its payment is on another date) ..and later if i sort the sales by payment type ...which date would it choose? ...if the invoice is cash ...and the customer chose to pay other than cash such as card,upi, cheque, bank transfer,ccms ..an advance entry needs to be created based on the payment type chosen (done) 
-
-# Status Report
-                                                                               
-                                                                                               
   #: 11
   Task: Filter options on all management tables
   Status: Done
-  Details: All 16/16 table pages have filters (search + dropdowns). /company is a form, not a table.                                      
-  ────────────────────────────────────────                                                     
-  #: 1                                                                                         
-  Task: Income bill/statement management                                                       
-  Status: Done                                                                                 
-  Details: Full CRUD for invoices (cash + credit), statements (generate/preview/manage),       
-    payments (statement + bill). All working.                                                  
-  ────────────────────────────────────────                                                     
+  Details: 16/16 pages have filters.
+  ────────────────────────────────────────
+  #: 1
+  Task: Income bill/statement management
+  Status: Done
+  Details: Full CRUD for invoices (cash + credit), statements (generate/preview/manage),
+    payments (statement + bill). All working.
+  ────────────────────────────────────────
   #: 2
   Task: Advance Management
-  Status: Partial
-  Details: CashAdvance backend exists (entity, service, controller). Frontend UI page not yet built.
-    Needs discussion on invoice linkage and shift report integration.
+  Status: Done
+  Details: CashAdvance entity (CASH_ADVANCE, SALARY_ADVANCE types), full REST API at
+    /api/advances (12 endpoints), frontend UI at /operations/advances, invoice/statement
+    linkage, utilized amount tracking, auto shift transactions, shift report integration.
+    EmployeeAdvance entity for salary deduction via payroll.
   ────────────────────────────────────────
   #: 12
   Task: Extensively elaborate income bill/statement
-  Status: Partial
-  Details: Invoices, statements, payments, credit overview, customer ledger all work. Missing:
-    invoice/payment dashboards (item 12.1).
+  Status: Done
+  Details: Invoices, statements, payments, credit overview, customer ledger,
+    invoice analytics dashboard, payment analytics dashboard — all complete.
   ────────────────────────────────────────
   #: 12.1
   Task: Dashboards for invoice/payment
-  Status: Not Done
-  Details: No dedicated analytics dashboard for invoices or payments.
+  Status: Done
+  Details: Invoice analytics at /operations/invoices/dashboard (revenue trend, payment modes,
+    top customers, hourly distribution). Payment analytics at /payments/dashboard (collection
+    trend, aging, top payers, collection rate).
   ────────────────────────────────────────
   #: 3
   Task: Shift Management
   Status: Done
-  Details: Backend (all 8 txn types) + frontend shift register page. Auto-creates shift txns on
-    invoice/payment. Missing: summary for Cheque/Bank/CCMS/NightCash in breakdown.
+  Details: Backend (all 8 txn types) + frontend shift register page. Shift closing report with
+    payment mode breakdown (CASH/CARD/UPI/CCMS/CHEQUE/BANK). Auto-creates shift txns on
+    invoice/payment. PDF generation. Stock summary and position sections.
   ────────────────────────────────────────
   #: 9
   Task: Dashboards
-  Status: Done (Main)
-  Details: Main dashboard (/) uses real API (DashboardController) — KPI cards, revenue/volume
-    trends, product sales, tank status, credit aging, recent invoices. Invoice/payment analytics
-    endpoints exist but no dedicated frontend pages yet.
+  Status: Done
+  Details: Main dashboard (/) with real API data — revenue, fuel volume, credit aging, tank
+    status, recent invoices, active shift banner. Operational dashboard at /operations/dashboard.
   ────────────────────────────────────────
   #: 10
   Task: Properly Reassemble
@@ -112,8 +104,8 @@ Requirements/Questions/Thoughts/Improvements:
   #: 10.1
   Task: Employee Management
   Status: Done
-  Details: 50+ fields including Aadhar, multiple phones, address, salary history, advances,
-    photo (S3), bank details, leave, attendance, designations. JOINED inheritance with User.
+  Details: 50+ fields, Aadhar, multiple phones, address, salary history, advances,
+    photo (S3), bank details, leave management, attendance, documents.
   ────────────────────────────────────────
   #: 10.2
   Task: Customer Management
@@ -127,8 +119,8 @@ Requirements/Questions/Thoughts/Improvements:
   ────────────────────────────────────────
   #: 10.3.1
   Task: Advance Management
-  Status: Partial
-  Details: Same as #2 above — backend exists, frontend UI pending.
+  Status: Done
+  Details: Same as #2 above.
   ────────────────────────────────────────
   #: 10.4
   Task: Product Management
@@ -139,342 +131,132 @@ Requirements/Questions/Thoughts/Improvements:
   Task: Inventory Management
   Status: Done
   Details: Tank dip, nozzle meter, product stock — all table-based with filters,
-    auto-calculations.
+    auto-calculations. Godown/Cashier split with transfer tracking. Purchase orders.
   ────────────────────────────────────────
   #: 10.6
   Task: Marketing Management
   Status: Not Done
-  Details: Sidebar link exists but page is missing (404). No backend either.
+  Details: Placeholder "Coming Soon" page exists. No backend.
   ────────────────────────────────────────
   #: 10.7
   Task: Operational Dashboards
-  Status: Not Done
-  Details: Nothing built.
+  Status: Done
+  Details: /operations/dashboard shows tanks, pumps, nozzles, current shift, meter readings,
+    product stock summary.
   ────────────────────────────────────────
   #: 10.8
   Task: Invoice Payment Dashboards
-  Status: Not Done
-  Details: Nothing built.
+  Status: Done
+  Details: Same as #12.1 above.
 
-  Summary
+  Summary (Updated 2026-03-21)
 
-  ┌──────────┬────────────────────────────────────────────────┐
-  │ Category │                     Count                      │
-  ├──────────┼────────────────────────────────────────────────┤
-  │ Done     │ 10 items (1, 3, 9, 10.1, 10.2, 10.3, 10.4, 10.5, 11) │
-  ├──────────┼─────────────────────────────────────────────────────┤
-  │ Partial  │ 3 items (2, 12, 10.3.1)                             │
-  ├──────────┼─────────────────────────────────────────────────────┤
-  │ Not Done │ 3 items (10.6, 10.7, 10.8)                          │
-  └──────────┴────────────────────────────────────────────────┘
+  ┌──────────┬────────────────────────────────────────────────────────────────────┐
+  │ Category │                             Count                                  │
+  ├──────────┼────────────────────────────────────────────────────────────────────┤
+  │ Done     │ 14 items (1, 2, 3, 9, 10.1, 10.2, 10.3, 10.3.1, 10.4, 10.5,     │
+  │          │  10.7, 10.8, 11, 12, 12.1)                                        │
+  ├──────────┼────────────────────────────────────────────────────────────────────┤
+  │ Partial  │ 1 item (7 — database work, scid hardcoding remains)               │
+  ├──────────┼────────────────────────────────────────────────────────────────────┤
+  │ Not Done │ 1 item (10.6 — Marketing Management)                              │
+  └──────────┴────────────────────────────────────────────────────────────────────┘
+
+  Non-Application Items Status:
+  ┌──────────────────────────────┬───────────────────────────────────────────────┐
+  │           Feature            │                    Status                     │
+  ├──────────────────────────────┼───────────────────────────────────────────────┤
+  │ Auth (AWS Cognito)           │ Committed, needs dev testing                  │
+  ├──────────────────────────────┼───────────────────────────────────────────────┤
+  │ S3 Integration               │ Done                                          │
+  ├──────────────────────────────┼───────────────────────────────────────────────┤
+  │ JasperReports                │ Not started (only 1 template exists)          │
+  ├──────────────────────────────┼───────────────────────────────────────────────┤
+  │ Spring AI                    │ Not started                                   │
+  ├──────────────────────────────┼───────────────────────────────────────────────┤
+  │ TLS/SSL                      │ Not started                                   │
+  ├──────────────────────────────┼───────────────────────────────────────────────┤
+  │ ML Analytics                 │ Not started (plan exists)                     │
+  └──────────────────────────────┴───────────────────────────────────────────────┘
+
+  Critical — Missing Pages (will 404):
+  - Analytics: Sales Forecast, Purchase Planner, Profitability, Credit Intelligence, Employee Insights
+    (All 5 are in sidebar but have no page files — needs ML microservice first)
+
+  Placeholder Pages:
+  - Marketing Management (/marketing) — "Coming Soon"
+  - Customer Profile (/customers/profile) — "Enhanced Profiles Coming Soon"
+
+  Backend Items Still Pending:
+  - scid hardcoded to 1L in ~20 services (SecurityUtils exists but only applied in CustomerController)
+  - Auth needs dev-mode testing
+  - CORS wide open — lock down for production
+  - JasperReport templates needed (only customer vehicle report exists)
 
 
 Plans:
 Look at the eager-tumbling-noodle.md plan for ML, employee management, salary management, eb management
 
 
-do you want how i recorded (the table schema of such advane entries) ...? or you think you can come up with yourself... 
-
-
-Resume this session with:
-claude --resume "shift-closing-report-implementation"
-
-
 i dont see the ui of advance entries ...if i have to do manually ...
 i need to add dip charts ...so that based on the dip value --> its stock value can be calculated or take the stock value from the automation ...
 
-Based on everything I've seen across our conversations — the entity design, domain modeling, architecture decisions, and how you think     
-  about features — here's my honest assessment:                                                                                              
-                                                                                                                                             
-  Score: 72/100 (Solid Mid-Level, Trending Senior)                                                                                           
-                                                                                                                                             
-  What you're doing well (strengths):                                                                                                        
-                                                            
-  Domain Modeling — 8/10                                                                                                                     
+Based on everything I've seen across our conversations — the entity design, domain modeling, architecture decisions, and how you think
+  about features — here's my honest assessment:
+
+  Score: 72/100 (Solid Mid-Level, Trending Senior)
+
+  What you're doing well (strengths):
+
+  Domain Modeling — 8/10
   - Your fuel station domain is well-decomposed: Tanks, Pumps, Nozzles, Products, GradeTypes, OilTypes — each has a clear purpose
-  - The relationships make sense (Tank → Product, Nozzle → Pump, InvoiceBill → Customer/Vehicle)                                             
-  - Multi-tenancy via BaseEntity with scid is a smart pattern for a multi-site SaaS             
-                                                                                                                                             
-  Layered Architecture — 7/10                                                                                                                
-  - Clean Controller → Service → Repository separation, consistently applied                                                                 
-  - REST API conventions are solid (/api/<resource>, proper HTTP methods, status codes)                                                      
-                                                            
-  Full-Stack Ownership — 8/10                                                                                                                
+  - The relationships make sense (Tank → Product, Nozzle → Pump, InvoiceBill → Customer/Vehicle)
+  - Multi-tenancy via BaseEntity with scid is a smart pattern for a multi-site SaaS
+
+  Layered Architecture — 7/10
+  - Clean Controller → Service → Repository separation, consistently applied
+  - REST API conventions are solid (/api/<resource>, proper HTTP methods, status codes)
+
+  Full-Stack Ownership — 8/10
   - You're building both backend and frontend, handling deployment (EC2/ECS/S3), database design, and even planning ML — that's a rare
-  breadth                                                                                                                                    
-                                                            
-  Business Thinking — 8/10                                                                                                                   
-  - Credit/payment system, shift-based operations, inventory tracking, TNEB bill parsing — you understand the real business deeply, not just 
-  the code                                                                                                                                   
-                                                                                                                                             
-  Where you can grow:                                                                                                                        
-                                                            
-  Database Design — 6/10                                                                                                                     
+  breadth
+
+  Business Thinking — 8/10
+  - Credit/payment system, shift-based operations, inventory tracking, TNEB bill parsing — you understand the real business deeply, not just
+  the code
+
+  Where you can grow:
+
+  Database Design — 6/10
   - Using ddl-auto: update with no migrations is risky for production — one bad entity change can corrupt data (closer to production)
-  - No database indexes beyond PKs/FKs (queries on status, scid, date fields will slow down as data grows)  (working)                                  
-  - Missing unique constraints where needed (e.g., employeeCode should probably be unique) (working)               
-                                                                                                                                             
-  Validation & Error Handling — 5/10  (done)                                                                                                         
-  - No @Valid / Bean Validation annotations on entities — validation lives only in frontend                                                  
-  - Backend accepts any JSON without checking required fields, field lengths, or formats                                                     
-  - RuntimeException used everywhere — no custom exception classes or global @ControllerAdvice                                               
-                                                                                                                                             
-  Security — 5/10                                                                                                                          
-  - No authentication/authorization yet (Cognito planned but not implemented)                                                                
-  - Password fields exposed in API responses (you know about this one)      (done)                                                                 
-  - No rate limiting, no input sanitization on the backend side        (done)                                                           
-                                                                                                                                             
-  Testing — 3/10 (done)                                                                                                                            
-  - I haven't seen any unit or integration tests. For a production app managing money (invoices, payments, credit), this is the biggest gap  
-                                                                                                                                             
-  Code Organization — 6/10 (done)                                                                                                                   
-  - employee-list.tsx at 1000+ lines doing table + forms + profile + salary + advances + documents — this should be split into smaller       
-  components                                                                                                                                 
-  - Some duplication in upload handlers (photo/aadhar/pan are nearly identical — could be one generic function)                              
-                                                                                                                                             
-  Roadmap to 85+:                                                                                                                            
-                                                                                                                                             
-  1. Add Flyway/Liquibase — replace ddl-auto: update with proper migrations (when we closer to production deploy)                                                                 
-  2. Add @ControllerAdvice + custom exceptions — proper error responses (done)                                                                 
-  3. Write tests — even just service-layer tests for payment/invoice logic (done)                                                               
-  4. Split large components — ProfileModal, EmployeeForm, DocumentsTab as separate files (done)                                                  
-  5. Add Bean Validation — @NotBlank, @Email, @Size on entities (done)                                                                              
-                                                                                                                                             
-  You're building a real, complex production application solo — that already puts you ahead of many developers. The gaps are mostly in       
-  production hardening, not in design thinking.  
-  
-  
-  
-  // This is important
-   Let me check my memory and recent context for any product inventory discussion.                                                                                                                                      
-                                                                                                                                                                                                                       
-  Recalled 2 memories (ctrl+o to expand)                                                                                                                                                                               
-   
-● I don't have a record of an ongoing product inventory discussion in my memory. My notes mention inventory-related items like:                                                                                        
-                  
-  - Godown vs Cashier stock split — maintaining separate stocks with transfer tracking                                                                                                                                 
-  - Tank AvailableStock field — showing current tank levels
-  - Purchase Invoice CRUD — for fuel and non-fuel purchases from suppliers                                                                                                                                             
-                                                                                                                                                                                                                       
-  But I don't have context from a specific "product inventory discussion" conversation. Could you clarify what you're referring to? Are you thinking of:                                                               
-                                                                                                                                                                                                                       
-  1. The ProductInventory entity/feature already in the codebase?                                                                                                                                                      
-  2. One of the open requirements above?
-  3. A discussion from a recent conversation I may not have saved?                                                                                                                                                     
-                                                                                                                                                                                                                       
-  Let me know and I'll pick it up from there.                                                                                                                                                                          
-                                                                                                                                                                                                                       
-❯ i meant to say Godown vs Cashier stock split — maintaining separate stocks with transfer tracking ...                                                                                                                
-                                                                                                        
-● Got it! Let me first look at what exists in the codebase for product inventory, then we can discuss the design for the godown/cashier stock split.                                                                   
-                                                                                                                                                                                                                       
-● Explore(Explore product inventory codebase)
-  ⎿  Done (52 tool uses · 104.4k tokens · 1m 26s)                                                                                                                                                                      
-  (ctrl+o to expand)                                                                                                                                                        
-                                                                                                                                                                                                                       
-● Great news — the godown vs cashier stock split is actually already fully implemented in the codebase! Here's what exists:    
-                                                                                                                                                                                                                       
-  Current Implementation                                                                                                                                                                                               
-                                                                                                                                                                                                                       
-  Backend Entities                                                                                                                                                                                                     
-                                                                                                                                                                                                                       
-  - GodownStock — warehouse inventory with currentStock, reorderLevel, maxStock, location, lastRestockDate                                                                                                             
-  - CashierStock — counter display inventory with currentStock, maxCapacity
-  - StockTransfer — logs movements between godown ↔ cashier with quantity, fromLocation, toLocation, transferDate, remarks, transferredBy                                                                              
-                                                                                                                                                                                                                       
-  Stock Transfer Flow                                                                                                                                                                                                  
-                                                                                                                                                                                                                       
-  - Godown → Cashier: Replenish counter from warehouse                                                                                                                                                                 
-  - Cashier → Godown: Return excess to warehouse
-  - Both directions auto-adjust stock levels atomically, with validation that source has sufficient stock                                                                                                              
-                                                                                                                                                                                                                       
-  Purchase Order Integration                                                                                                                                                                                           
-                                                                                                                                                                                                                       
-  - PO receiving auto-increments GodownStock (goods arrive at warehouse first)                                                                                                                                         
-  - Status auto-updates (DRAFT → ORDERED → PARTIALLY_RECEIVED → RECEIVED)
-                                                                                                                                                                                                                       
-  Full API Endpoints                                                                                                                                                                                                   
-                                                                                                                                                                                                                       
-  - /api/godown — CRUD + /low-stock alert endpoint                                                                                                                                                                     
-  - /api/cashier-stock — CRUD
-  - /api/stock-transfers — create transfer + list with date range filtering                                                                                                                                            
-  - /api/purchase-orders — full lifecycle including /receive for delivery                                                                                                                                              
-                                                                                                                                                                                                                       
-  Frontend Pages                                                                                                                                                                                                       
-                                                                                                                                                                                                                       
-  - /operations/inventory/godown — warehouse stock management                                                                                                                                                          
-  - /operations/inventory/cashier — cashier stock management
-  - /operations/inventory/transfers — stock transfer page                                                                                                                                                              
-  - /operations/inventory/purchase-orders — PO management with receiving                                                                                                                                               
-                                                                                                                                                                                                                       
-  ---                                                                                                                                                                                                                  
-  So this feature is built end-to-end. Is there something specific you'd like to change, improve, or discuss about how it works? For example:                                                                          
-  - Any issues you've noticed while using it?                                                                                                                                                                          
-  - Additional fields or business rules needed?
-  - Integration with the shift closing report?                                                                                                                                                                         
-  - Something else entirely?                                                                                                                                                                                           
-                                                                                                                                                                                                                       
-✻ Worked for 1m 47s                                                                                                                                                                                                    
-                                                                                                                                                                                                                       
-❯ in the shift closing report...which one will be shown (cashier or godown ) or what  is the use of productinventory ?                                                                                                 
-                                                                                                                                                                                                                       
-● Great question — let me clarify how these three relate:                                                                                                                                                              
-                                                                                                                                                                                                                       
-  The Three Layers                                                                                                                                                                                                     
-   
-  ┌──────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┬───────────────────────────────┐                                                              
-  │      Entity      │                                             Purpose                                              │             Scope             │
-  ├──────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼───────────────────────────────┤                                                              
-  │ GodownStock      │ Master warehouse stock (running total)                                                           │ Always current, not per-shift │
-  ├──────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼───────────────────────────────┤
-  │ CashierStock     │ Counter display stock (running total)                                                            │ Always current, not per-shift │                                                              
-  ├──────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┼───────────────────────────────┤                                                              
-  │ ProductInventory │ Daily/shift-level tracking — openStock, incomeStock, totalStock, closeStock, sales, rate, amount │ Per shift                     │                                                              
-  └──────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┴───────────────────────────────┘                                                              
-                  
-  What goes in the Shift Closing Report?                                                                                                                                                                               
-                  
-  ProductInventory is the one that belongs in the shift report. It tracks:                                                                                                                                             
-  - openStock — what you started the shift with
-  - incomeStock — stock received during the shift (transfers from godown)                                                                                                                                              
-  - totalStock — open + income                                           
-  - closeStock — what's left at shift end                                                                                                                                                                              
-  - sales — total - close (what was sold)
-  - rate & amount — value of sales                                                                                                                                                                                     
-                                                                                                                                                                                                                       
-  This mirrors exactly how TankInventory (dip readings) and NozzleInventory (meter readings) work for fuel — they're all per-shift snapshots.                                                                          
-                                                                                                                                                                                                                       
-  So the relationship is:                                                                                                                                                                                              
-                                                                                                                                                                                                                       
-  GodownStock      = warehouse master stock (like a bank account balance)                                                                                                                                              
-  CashierStock     = counter master stock (like cash in register)                                                                                                                                                      
-  ProductInventory = shift-level movement log (like a daily transaction statement)                                                                                                                                     
-                                                                                                                                                                                                                       
-  GodownStock/CashierStock are the current state. ProductInventory is the per-shift audit trail that feeds into the closing report.                                                                                    
-                                                                                                                                                                                                                       
-  ---                                                                                                                                                                                                                  
-  Now the question is — does the current ProductInventory properly connect to the godown/cashier flow? For example:
-  1. Should incomeStock in ProductInventory auto-link to StockTransfers (godown → cashier) made during that shift?                                                                                                     
-  2. Should closeStock in ProductInventory auto-update CashierStock at shift end?                                 
-  3. Do you want both godown and cashier balances shown on the shift report as summary lines?                                                                                                                          
-                                                                                                                                                                                                                       
-  What's your thinking on how these should tie together?   
-  
-  
-also in the cash advance...make sure an invoice is assigned to the cash advance either cash invoice or credit invoice or statement no,,(should also reflected in the shift closing report) ...
+  - No database indexes beyond PKs/FKs (queries on status, scid, date fields will slow down as data grows)  (working)
+  - Missing unique constraints where needed (e.g., employeeCode should probably be unique) (working)
 
-in the employee management ...record their salary dates monthly ...
+  Validation & Error Handling — 5/10  (done)
+  - No @Valid / Bean Validation annotations on entities — validation lives only in frontend
+  - Backend accepts any JSON without checking required fields, field lengths, or formats
+  - RuntimeException used everywhere — no custom exception classes or global @ControllerAdvice
 
+  Security — 5/10
+  - No authentication/authorization yet (Cognito planned but not implemented)
+  - Password fields exposed in API responses (you know about this one)      (done)
+  - No rate limiting, no input sanitization on the backend side        (done)
 
- Completed (recently)                                                                                                                                                      
-                                                                                                                                                                            
-  - Employee Management (50+ fields, leave, attendance, salary, advances)                                                                                                   
-  - Backend tests (468 tests across services)                                                                                                                               
-  - Database indexes & unique constraints                                                                                                                                   
-  - Input validation, rate limiting, password hiding
-  
-  
-  - Shift Management (backend + frontend, all 8 txn types)                                                                                                                  
-  - Godown/Cashier stock split with transfer tracking                                                                                                                       
-  - Filter bars on management tables                                                                                                                                        
-                                                                                                                                                                            
-  Immediate Next Steps                                                                                                                                                      
-                  
-  1. Dashboard (#9) — Replace hardcoded dummy data with real API integration. This was decided as the next deliverable.                                                     
-                  
-  Needs Discussion Before Starting                                                                                                                                          
-                  
-  2. Advance Management (#2) — Cash advance UI (home advance, salary advance). You mentioned invoices should be assigned to cash advances and reflected in the shift closing
-   report.        
-                                                                                                                                                                            
-  3. Invoice/Payment Dashboards (#12.1, #10.8) — Analytics dashboards for invoices and payments.                                                                            
-   
-  4. ProductInventory ↔ Godown/Cashier linkage — Open questions:                                                                                                            
-  - Should incomeStock auto-link to godown→cashier transfers during a shift?
-  - Should closeStock auto-update CashierStock at shift end?                                                                                                                
-  - Show both godown + cashier balances on shift report?      
-                                                                                                                                                                            
-  Larger Initiatives (from the plan)                                                                                                                                        
-                                                                                                                                                                            
-  - Phase 2: TNEB bill parsing + expense tracking                                                                                                                           
-  - Phase 3: ML analytics microservice (sales forecasting, credit scoring, profitability)                                                                                   
-  - Security: AWS Cognito auth, login/logout page (next one)                                                                                                                       
-  - Reports: JasperReports (daily sales, inventory, customer balance, tax templates)                                                                                        
-  - Marketing Management (#10.6) — Not started                                                                                                                              
-  - S3 integration — For photos, PDFs, signed bill copies (working)                                                                                                              
-                                                                              
-                                                                              
-JasperReport Generation (snappy-painting-torvalds) 
-Customer Data (Vehicles)  -- proper report generation (done)
+  Testing — 3/10 (done)
+  - I haven't seen any unit or integration tests. For a production app managing money (invoices, payments, credit), this is the biggest gap
 
+  Code Organization — 6/10 (done)
+  - employee-list.tsx at 1000+ lines doing table + forms + profile + salary + advances + documents — this should be split into smaller
+  components
+  - Some duplication in upload handlers (photo/aadhar/pan are nearly identical — could be one generic function)
 
-(INCOMPLETE THINGS TO DO NEXT)
+  Roadmap to 85+:
 
-Here's the full picture of what's incomplete or half-done across the codebase:                   
-             
-  ---                                                                                              
-  Critical — Missing Pages (will 404)                                                           
-                                                                                                   
-  ┌────────────────────────────────┬─────────────────────────────────────────────────────┐       
-  │             Issue              │                      Location                       │         
-  ├────────────────────────────────┼─────────────────────────────────────────────────────┤
-  │ Analytics: Sales Forecast      │ frontend/app/analytics/sales/ — no page.tsx         │         
-  ├────────────────────────────────┼─────────────────────────────────────────────────────┤         
-  │ Analytics: Purchase Planner    │ frontend/app/analytics/purchases/ — no page.tsx     │         
-  ├────────────────────────────────┼─────────────────────────────────────────────────────┤         
-  │ Analytics: Profitability       │ frontend/app/analytics/profitability/ — no page.tsx │         
-  ├────────────────────────────────┼─────────────────────────────────────────────────────┤         
-  │ Analytics: Credit Intelligence │ frontend/app/analytics/credit/ — no page.tsx        │
-  ├────────────────────────────────┼─────────────────────────────────────────────────────┤         
-  │ Analytics: Employee Insights   │ frontend/app/analytics/employees/ — no page.tsx     │
-  └────────────────────────────────┴─────────────────────────────────────────────────────┘         
-                                                            
-  All 5 analytics pages are in the sidebar but have no page files — users get 404s.                
-  
-  Placeholder Pages (Coming Soon)                                                                  
-                                                            
-  ┌───────────────────────────────────────┬───────────────────────────────────────────────────┐
-  │                 Page                  │                      Status                       │
-  ├───────────────────────────────────────┼───────────────────────────────────────────────────┤
-  │ Marketing Management (/marketing)     │ "Coming Soon" placeholder with mock feature cards │
-  ├───────────────────────────────────────┼───────────────────────────────────────────────────┤
-  │ Customer Profile (/customers/profile) │ "Enhanced Profiles Coming Soon" placeholder       │    
-  └───────────────────────────────────────┴───────────────────────────────────────────────────┘    
-                                                                                                   
-  Backend Issues                                                                                   
-                                                            
-  ┌─────────────────┬──────────────────────────────────────────────────────────────────────────┐
-  │      Issue      │                                 Details                                  │
-  ├─────────────────┼──────────────────────────────────────────────────────────────────────────┤
-  │ TODO: Hardcoded │ (FIXED) SecurityUtils extracts scid from SecurityContext                 │
-  │  scid           │                                                                          │
-  ├─────────────────┼──────────────────────────────────────────────────────────────────────────┤
-  │ 84 test         │ (FIXED) Down to 7 pre-existing failures (NPEs in EmployeeService,       │
-  │ failures        │ MappingService + missing exception handler tests)                        │
-  ├─────────────────┼──────────────────────────────────────────────────────────────────────────┤
-  │ Unused DTO      │ (FIXED) ShiftSalesReport deleted                                         │
-  ├─────────────────┼──────────────────────────────────────────────────────────────────────────┤
-  │ JasperReports   │ Only 1 template (customer vehicle report). Shift reports use iText       │
-  │                 │ instead. No invoice/statement JRXML templates yet                        │
-  └─────────────────┴──────────────────────────────────────────────────────────────────────────┘   
-                                                            
-  Known Incomplete Features (from todos)                                                           
-                                                            
-  ┌─────────────────────────┬─────────────────────────────────────────────────────────┐            
-  │         Feature         │                         Status                          │
-  ├─────────────────────────┼─────────────────────────────────────────────────────────┤            
-  │ Dashboard (#9)          │ Done — real API integration complete                    │
-  ├─────────────────────────┼─────────────────────────────────────────────────────────┤            
-  │ Advance Management (#2) │ No entity, no API, no frontend UI                       │            
-  ├─────────────────────────┼─────────────────────────────────────────────────────────┤            
-  │ Shift Report            │ Missing Cheque/Bank/CCMS/NightCash breakdown in summary │            
-  ├─────────────────────────┼─────────────────────────────────────────────────────────┤            
-  │ Customer list filter    │ Done — search + group + status filters added            │
-  └─────────────────────────┴─────────────────────────────────────────────────────────┘            
-                                                            
-  ---                                                                                              
-  What would you like to tackle first? The 84 test failures are probably the quickest win since
-  they're likely just missing @MockBean declarations after the auth changes. Or would you prefer to
-   work on one of the feature gaps?
-               
+  1. Add Flyway/Liquibase — replace ddl-auto: update with proper migrations (when we closer to production deploy)
+  2. Add @ControllerAdvice + custom exceptions — proper error responses (done)
+  3. Write tests — even just service-layer tests for payment/invoice logic (done)
+  4. Split large components — ProfileModal, EmployeeForm, DocumentsTab as separate files (done)
+  5. Add Bean Validation — @NotBlank, @Email, @Size on entities (done)
 
+  You're building a real, complex production application solo — that already puts you ahead of many developers. The gaps are mostly in
+  production hardening, not in design thinking.
