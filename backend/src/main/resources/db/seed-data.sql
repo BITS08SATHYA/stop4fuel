@@ -609,3 +609,555 @@ IF (SELECT COUNT(*) FROM role_permissions) = 0 THEN
     RAISE NOTICE 'Seeded role-permission mappings';
 END IF;
 END $$;;
+
+
+-- =====================
+-- PHASE 6: Transactional / Operational Seed Data
+-- Shifts, Nozzle Inventory, Invoices, Payments, Advances, Attendance, Expenses
+-- =====================
+
+-- Bill Sequence (initialize counters for current fiscal year)
+DO $$
+DECLARE
+    v_fy INTEGER;
+BEGIN
+IF (SELECT COUNT(*) FROM bill_sequence) = 0 THEN
+    -- Fiscal year: if month >= April then current year's last 2 digits, else previous year
+    v_fy := CASE WHEN EXTRACT(MONTH FROM CURRENT_DATE) >= 4
+                 THEN EXTRACT(YEAR FROM CURRENT_DATE) % 100
+                 ELSE (EXTRACT(YEAR FROM CURRENT_DATE) - 1) % 100 END;
+    INSERT INTO bill_sequence (type, fy_year, last_number, created_at, updated_at) VALUES
+        ('CASH',   v_fy, 10, NOW(), NOW()),
+        ('CREDIT', v_fy, 8, NOW(), NOW()),
+        ('STMT',   v_fy, 2, NOW(), NOW());
+    RAISE NOTICE 'Seeded bill sequences for FY %', v_fy;
+END IF;
+END $$;;
+
+-- Shifts (6 closed shifts over 3 days + 1 open today)
+DO $$
+DECLARE
+    v_shift1 BIGINT; v_shift2 BIGINT; v_shift3 BIGINT;
+    v_shift4 BIGINT; v_shift5 BIGINT; v_shift6 BIGINT;
+    v_shift7 BIGINT;
+    v_murugan BIGINT; v_lakshmi BIGINT; v_karthik BIGINT;
+BEGIN
+IF (SELECT COUNT(*) FROM shifts) = 0 THEN
+
+    SELECT id INTO v_murugan FROM users WHERE username = 'emp001';
+    SELECT id INTO v_lakshmi FROM users WHERE username = 'emp002';
+    SELECT id INTO v_karthik FROM users WHERE username = 'emp003';
+
+    -- Day 1 (3 days ago): Morning + Evening
+    INSERT INTO shifts (scid, start_time, end_time, attendant_id, status, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE - 3) + TIME '06:00', (CURRENT_DATE - 3) + TIME '14:00', v_murugan, 'CLOSED', NOW(), NOW())
+    RETURNING id INTO v_shift1;
+
+    INSERT INTO shifts (scid, start_time, end_time, attendant_id, status, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE - 3) + TIME '14:00', (CURRENT_DATE - 3) + TIME '22:00', v_lakshmi, 'CLOSED', NOW(), NOW())
+    RETURNING id INTO v_shift2;
+
+    -- Day 2 (2 days ago): Morning + Evening
+    INSERT INTO shifts (scid, start_time, end_time, attendant_id, status, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE - 2) + TIME '06:00', (CURRENT_DATE - 2) + TIME '14:00', v_karthik, 'CLOSED', NOW(), NOW())
+    RETURNING id INTO v_shift3;
+
+    INSERT INTO shifts (scid, start_time, end_time, attendant_id, status, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE - 2) + TIME '14:00', (CURRENT_DATE - 2) + TIME '22:00', v_murugan, 'CLOSED', NOW(), NOW())
+    RETURNING id INTO v_shift4;
+
+    -- Day 3 (yesterday): Morning + Evening
+    INSERT INTO shifts (scid, start_time, end_time, attendant_id, status, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE - 1) + TIME '06:00', (CURRENT_DATE - 1) + TIME '14:00', v_lakshmi, 'CLOSED', NOW(), NOW())
+    RETURNING id INTO v_shift5;
+
+    INSERT INTO shifts (scid, start_time, end_time, attendant_id, status, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE - 1) + TIME '14:00', (CURRENT_DATE - 1) + TIME '22:00', v_karthik, 'CLOSED', NOW(), NOW())
+    RETURNING id INTO v_shift6;
+
+    -- Today: Morning shift (OPEN)
+    INSERT INTO shifts (scid, start_time, attendant_id, status, created_at, updated_at)
+    VALUES (1, CURRENT_DATE + TIME '06:00', v_murugan, 'OPEN', NOW(), NOW())
+    RETURNING id INTO v_shift7;
+
+    RAISE NOTICE 'Seeded 7 shifts (6 closed, 1 open)';
+END IF;
+END $$;;
+
+-- Nozzle Inventory (readings for closed shifts — key nozzles only for brevity)
+-- Each shift has opening = previous closing; sales = close - open
+DO $$
+DECLARE
+    v_s1 BIGINT; v_s2 BIGINT; v_s3 BIGINT; v_s4 BIGINT; v_s5 BIGINT; v_s6 BIGINT;
+    v_n1 BIGINT; v_n2 BIGINT; v_n3 BIGINT; v_n7 BIGINT; v_n9 BIGINT; v_n11 BIGINT;
+BEGIN
+IF (SELECT COUNT(*) FROM nozzle_inventory) = 0 THEN
+
+    -- Get shift IDs (ordered by start_time)
+    SELECT id INTO v_s1 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 0;
+    SELECT id INTO v_s2 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 1;
+    SELECT id INTO v_s3 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 2;
+    SELECT id INTO v_s4 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 3;
+    SELECT id INTO v_s5 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 4;
+    SELECT id INTO v_s6 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 5;
+
+    -- Get nozzle IDs
+    SELECT id INTO v_n1  FROM nozzle WHERE nozzle_name = 'N-1';
+    SELECT id INTO v_n2  FROM nozzle WHERE nozzle_name = 'N-2';
+    SELECT id INTO v_n3  FROM nozzle WHERE nozzle_name = 'N-3';
+    SELECT id INTO v_n7  FROM nozzle WHERE nozzle_name = 'N-7';
+    SELECT id INTO v_n9  FROM nozzle WHERE nozzle_name = 'N-9';
+    SELECT id INTO v_n11 FROM nozzle WHERE nozzle_name = 'N-11';
+
+    -- Shift 1 (Day1 AM): N-1 Petrol, N-7 XP, N-9 Diesel
+    INSERT INTO nozzle_inventory (scid, shift_id, date, nozzle_id, open_meter_reading, close_meter_reading, sales, created_at, updated_at) VALUES
+        (1, v_s1, CURRENT_DATE - 3, v_n1,  50000, 50320, 320, NOW(), NOW()),
+        (1, v_s1, CURRENT_DATE - 3, v_n2,  40000, 40280, 280, NOW(), NOW()),
+        (1, v_s1, CURRENT_DATE - 3, v_n7,  20000, 20150, 150, NOW(), NOW()),
+        (1, v_s1, CURRENT_DATE - 3, v_n9,  80000, 80650, 650, NOW(), NOW()),
+        (1, v_s1, CURRENT_DATE - 3, v_n3,  30000, 30200, 200, NOW(), NOW()),
+        (1, v_s1, CURRENT_DATE - 3, v_n11, 60000, 60400, 400, NOW(), NOW());
+
+    -- Shift 2 (Day1 PM)
+    INSERT INTO nozzle_inventory (scid, shift_id, date, nozzle_id, open_meter_reading, close_meter_reading, sales, created_at, updated_at) VALUES
+        (1, v_s2, CURRENT_DATE - 3, v_n1,  50320, 50590, 270, NOW(), NOW()),
+        (1, v_s2, CURRENT_DATE - 3, v_n2,  40280, 40510, 230, NOW(), NOW()),
+        (1, v_s2, CURRENT_DATE - 3, v_n7,  20150, 20280, 130, NOW(), NOW()),
+        (1, v_s2, CURRENT_DATE - 3, v_n9,  80650, 81200, 550, NOW(), NOW()),
+        (1, v_s2, CURRENT_DATE - 3, v_n3,  30200, 30380, 180, NOW(), NOW()),
+        (1, v_s2, CURRENT_DATE - 3, v_n11, 60400, 60750, 350, NOW(), NOW());
+
+    -- Shift 3 (Day2 AM)
+    INSERT INTO nozzle_inventory (scid, shift_id, date, nozzle_id, open_meter_reading, close_meter_reading, sales, created_at, updated_at) VALUES
+        (1, v_s3, CURRENT_DATE - 2, v_n1,  50590, 50900, 310, NOW(), NOW()),
+        (1, v_s3, CURRENT_DATE - 2, v_n2,  40510, 40800, 290, NOW(), NOW()),
+        (1, v_s3, CURRENT_DATE - 2, v_n7,  20280, 20420, 140, NOW(), NOW()),
+        (1, v_s3, CURRENT_DATE - 2, v_n9,  81200, 81850, 650, NOW(), NOW()),
+        (1, v_s3, CURRENT_DATE - 2, v_n3,  30380, 30600, 220, NOW(), NOW()),
+        (1, v_s3, CURRENT_DATE - 2, v_n11, 60750, 61100, 350, NOW(), NOW());
+
+    -- Shift 4 (Day2 PM)
+    INSERT INTO nozzle_inventory (scid, shift_id, date, nozzle_id, open_meter_reading, close_meter_reading, sales, created_at, updated_at) VALUES
+        (1, v_s4, CURRENT_DATE - 2, v_n1,  50900, 51180, 280, NOW(), NOW()),
+        (1, v_s4, CURRENT_DATE - 2, v_n2,  40800, 41050, 250, NOW(), NOW()),
+        (1, v_s4, CURRENT_DATE - 2, v_n7,  20420, 20560, 140, NOW(), NOW()),
+        (1, v_s4, CURRENT_DATE - 2, v_n9,  81850, 82450, 600, NOW(), NOW()),
+        (1, v_s4, CURRENT_DATE - 2, v_n3,  30600, 30810, 210, NOW(), NOW()),
+        (1, v_s4, CURRENT_DATE - 2, v_n11, 61100, 61480, 380, NOW(), NOW());
+
+    -- Shift 5 (Day3 AM)
+    INSERT INTO nozzle_inventory (scid, shift_id, date, nozzle_id, open_meter_reading, close_meter_reading, sales, created_at, updated_at) VALUES
+        (1, v_s5, CURRENT_DATE - 1, v_n1,  51180, 51520, 340, NOW(), NOW()),
+        (1, v_s5, CURRENT_DATE - 1, v_n2,  41050, 41360, 310, NOW(), NOW()),
+        (1, v_s5, CURRENT_DATE - 1, v_n7,  20560, 20720, 160, NOW(), NOW()),
+        (1, v_s5, CURRENT_DATE - 1, v_n9,  82450, 83150, 700, NOW(), NOW()),
+        (1, v_s5, CURRENT_DATE - 1, v_n3,  30810, 31050, 240, NOW(), NOW()),
+        (1, v_s5, CURRENT_DATE - 1, v_n11, 61480, 61900, 420, NOW(), NOW());
+
+    -- Shift 6 (Day3 PM)
+    INSERT INTO nozzle_inventory (scid, shift_id, date, nozzle_id, open_meter_reading, close_meter_reading, sales, created_at, updated_at) VALUES
+        (1, v_s6, CURRENT_DATE - 1, v_n1,  51520, 51810, 290, NOW(), NOW()),
+        (1, v_s6, CURRENT_DATE - 1, v_n2,  41360, 41620, 260, NOW(), NOW()),
+        (1, v_s6, CURRENT_DATE - 1, v_n7,  20720, 20860, 140, NOW(), NOW()),
+        (1, v_s6, CURRENT_DATE - 1, v_n9,  83150, 83780, 630, NOW(), NOW()),
+        (1, v_s6, CURRENT_DATE - 1, v_n3,  31050, 31270, 220, NOW(), NOW()),
+        (1, v_s6, CURRENT_DATE - 1, v_n11, 61900, 62280, 380, NOW(), NOW());
+
+    RAISE NOTICE 'Seeded nozzle inventory for 6 shifts (6 nozzles each)';
+END IF;
+END $$;;
+
+-- Product Inventory (daily product-level summary for 3 days)
+DO $$
+DECLARE
+    v_petrol BIGINT; v_diesel BIGINT; v_xp BIGINT;
+BEGIN
+IF (SELECT COUNT(*) FROM product_inventory) = 0 THEN
+
+    SELECT id INTO v_petrol FROM product WHERE name = 'Petrol';
+    SELECT id INTO v_diesel FROM product WHERE name = 'Diesel';
+    SELECT id INTO v_xp     FROM product WHERE name = 'Xtra Premium';
+
+    -- Day 1 (3 days ago)
+    INSERT INTO product_inventory (scid, date, product_id, open_stock, income_stock, total_stock, close_stock, sales, rate, amount, created_at, updated_at) VALUES
+        (1, CURRENT_DATE - 3, v_petrol, 8500, 0, 8500, 7400, 1100, 107.50, 118250.00, NOW(), NOW()),
+        (1, CURRENT_DATE - 3, v_diesel, 7000, 0, 7000, 5170, 1830, 93.20, 170556.00, NOW(), NOW()),
+        (1, CURRENT_DATE - 3, v_xp,     4000, 0, 4000, 3720, 280,  112.00, 31360.00, NOW(), NOW());
+
+    -- Day 2 (2 days ago)
+    INSERT INTO product_inventory (scid, date, product_id, open_stock, income_stock, total_stock, close_stock, sales, rate, amount, created_at, updated_at) VALUES
+        (1, CURRENT_DATE - 2, v_petrol, 7400, 0, 7400, 6240, 1160, 107.50, 124700.00, NOW(), NOW()),
+        (1, CURRENT_DATE - 2, v_diesel, 5170, 5000, 10170, 7990, 2180, 93.20, 203176.00, NOW(), NOW()),
+        (1, CURRENT_DATE - 2, v_xp,     3720, 0, 3720, 3440, 280,  112.00, 31360.00, NOW(), NOW());
+
+    -- Day 3 (yesterday)
+    INSERT INTO product_inventory (scid, date, product_id, open_stock, income_stock, total_stock, close_stock, sales, rate, amount, created_at, updated_at) VALUES
+        (1, CURRENT_DATE - 1, v_petrol, 6240, 6000, 12240, 10580, 1660, 107.50, 178450.00, NOW(), NOW()),
+        (1, CURRENT_DATE - 1, v_diesel, 7990, 0, 7990, 5860, 2130, 93.20, 198516.00, NOW(), NOW()),
+        (1, CURRENT_DATE - 1, v_xp,     3440, 0, 3440, 3140, 300,  112.00, 33600.00, NOW(), NOW());
+
+    RAISE NOTICE 'Seeded 9 product inventory records (3 days x 3 products)';
+END IF;
+END $$;;
+
+-- Invoice Bills (10 invoices: 6 cash + 4 credit, spread across shifts)
+DO $$
+DECLARE
+    v_s1 BIGINT; v_s2 BIGINT; v_s3 BIGINT; v_s4 BIGINT; v_s5 BIGINT; v_s6 BIGINT;
+    v_cashier BIGINT;
+    v_petrol BIGINT; v_diesel BIGINT; v_xp BIGINT;
+    v_n1 BIGINT; v_n7 BIGINT; v_n9 BIGINT; v_n11 BIGINT;
+    v_smt BIGINT; v_vel BIGINT; v_tnstc BIGINT; v_infosys BIGINT; v_raj BIGINT; v_sundaram BIGINT;
+    v_truck1 BIGINT; v_truck3 BIGINT; v_bus1 BIGINT; v_car1 BIGINT; v_car3 BIGINT; v_jeep BIGINT;
+    v_fy TEXT;
+    v_inv BIGINT;
+BEGIN
+IF (SELECT COUNT(*) FROM invoice_bill) = 0 THEN
+
+    -- Fiscal year prefix
+    v_fy := CASE WHEN EXTRACT(MONTH FROM CURRENT_DATE) >= 4
+                 THEN LPAD((EXTRACT(YEAR FROM CURRENT_DATE) % 100)::TEXT, 2, '0')
+                 ELSE LPAD(((EXTRACT(YEAR FROM CURRENT_DATE) - 1) % 100)::TEXT, 2, '0') END;
+
+    -- Shift IDs
+    SELECT id INTO v_s1 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 0;
+    SELECT id INTO v_s2 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 1;
+    SELECT id INTO v_s3 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 2;
+    SELECT id INTO v_s4 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 3;
+    SELECT id INTO v_s5 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 4;
+    SELECT id INTO v_s6 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 5;
+
+    -- Cashier (raised_by)
+    SELECT id INTO v_cashier FROM users WHERE username = 'emp003';
+
+    -- Products
+    SELECT id INTO v_petrol FROM product WHERE name = 'Petrol';
+    SELECT id INTO v_diesel FROM product WHERE name = 'Diesel';
+    SELECT id INTO v_xp     FROM product WHERE name = 'Xtra Premium';
+
+    -- Nozzles
+    SELECT id INTO v_n1  FROM nozzle WHERE nozzle_name = 'N-1';
+    SELECT id INTO v_n7  FROM nozzle WHERE nozzle_name = 'N-7';
+    SELECT id INTO v_n9  FROM nozzle WHERE nozzle_name = 'N-9';
+    SELECT id INTO v_n11 FROM nozzle WHERE nozzle_name = 'N-11';
+
+    -- Customer IDs
+    SELECT id INTO v_smt     FROM users WHERE username = 'smt_transport';
+    SELECT id INTO v_vel     FROM users WHERE username = 'vel_logistics';
+    SELECT id INTO v_tnstc   FROM users WHERE username = 'tnstc_fleet';
+    SELECT id INTO v_infosys FROM users WHERE username = 'infosys_chn';
+    SELECT id INTO v_raj     FROM users WHERE username = 'rajkumar_k';
+    SELECT id INTO v_sundaram FROM users WHERE username = 'sundaram_mtrs';
+
+    -- Vehicle IDs
+    SELECT id INTO v_truck1 FROM vehicle WHERE vehicle_number = 'TN 01 AB 1234';
+    SELECT id INTO v_truck3 FROM vehicle WHERE vehicle_number = 'TN 01 EF 9012';
+    SELECT id INTO v_bus1   FROM vehicle WHERE vehicle_number = 'TN 09 N 1234';
+    SELECT id INTO v_car1   FROM vehicle WHERE vehicle_number = 'TN 10 AK 4455';
+    SELECT id INTO v_car3   FROM vehicle WHERE vehicle_number = 'TN 01 CK 8899';
+    SELECT id INTO v_jeep   FROM vehicle WHERE vehicle_number = 'TN 22 DE 1122';
+
+    -- === CASH INVOICES ===
+
+    -- Invoice 1: Walk-in cash petrol (Shift 1)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, payment_mode, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, created_at, updated_at)
+    VALUES (1, v_s1, (CURRENT_DATE - 3) + TIME '07:30', 'C' || v_fy || '/1', 'CASH', 'CASH', 537.50, 0, 537.50, 'PAID', 'PAID', v_cashier, NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s1, v_inv, v_petrol, v_n1, 5.0000, 107.5000, 537.5000, 0, 0, 537.5000, NOW(), NOW());
+
+    -- Invoice 2: Walk-in cash diesel (Shift 1)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, payment_mode, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, created_at, updated_at)
+    VALUES (1, v_s1, (CURRENT_DATE - 3) + TIME '09:15', 'C' || v_fy || '/2', 'CASH', 'UPI', 4660.00, 0, 4660.00, 'PAID', 'PAID', v_cashier, NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s1, v_inv, v_diesel, v_n9, 50.0000, 93.2000, 4660.0000, 0, 0, 4660.0000, NOW(), NOW());
+
+    -- Invoice 3: Raj Kumar cash petrol (Shift 2)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, payment_mode, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, customer_id, vehicle_id, created_at, updated_at)
+    VALUES (1, v_s2, (CURRENT_DATE - 3) + TIME '15:45', 'C' || v_fy || '/3', 'CASH', 'CARD', 3225.00, 0, 3225.00, 'PAID', 'PAID', v_cashier, v_raj, v_car3, NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s2, v_inv, v_petrol, v_n1, 30.0000, 107.5000, 3225.0000, 0, 0, 3225.0000, NOW(), NOW());
+
+    -- Invoice 4: Walk-in XP cash (Shift 3)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, payment_mode, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, created_at, updated_at)
+    VALUES (1, v_s3, (CURRENT_DATE - 2) + TIME '08:00', 'C' || v_fy || '/4', 'CASH', 'CASH', 2240.00, 0, 2240.00, 'PAID', 'PAID', v_cashier, NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s3, v_inv, v_xp, v_n7, 20.0000, 112.0000, 2240.0000, 0, 0, 2240.0000, NOW(), NOW());
+
+    -- Invoice 5: Infosys car petrol cash (Shift 4)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, payment_mode, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, customer_id, vehicle_id, created_at, updated_at)
+    VALUES (1, v_s4, (CURRENT_DATE - 2) + TIME '16:30', 'C' || v_fy || '/5', 'CASH', 'UPI', 2687.50, 18.75, 2668.75, 'PAID', 'PAID', v_cashier, v_infosys, v_car1, NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s4, v_inv, v_petrol, v_n1, 25.0000, 107.5000, 2687.5000, 0.7500, 18.7500, 2668.7500, NOW(), NOW());
+
+    -- Invoice 6: Walk-in diesel cash (Shift 5)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, payment_mode, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, created_at, updated_at)
+    VALUES (1, v_s5, (CURRENT_DATE - 1) + TIME '10:00', 'C' || v_fy || '/6', 'CASH', 'CASH', 9320.00, 0, 9320.00, 'PAID', 'PAID', v_cashier, NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s5, v_inv, v_diesel, v_n9, 100.0000, 93.2000, 9320.0000, 0, 0, 9320.0000, NOW(), NOW());
+
+    -- === CREDIT INVOICES ===
+
+    -- Invoice 7: Sri Murugan Transport - Diesel credit (Shift 1)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, customer_id, vehicle_id, driver_name, driver_phone, indent_no, created_at, updated_at)
+    VALUES (1, v_s1, (CURRENT_DATE - 3) + TIME '10:30', 'A' || v_fy || '/1', 'CREDIT', 18640.00, 300.00, 18340.00, 'PAID', 'NOT_PAID', v_cashier, v_smt, v_truck1, 'Ravi', '9876543210', 'IND-001', NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s1, v_inv, v_diesel, v_n11, 200.0000, 93.2000, 18640.0000, 1.5000, 300.0000, 18340.0000, NOW(), NOW());
+
+    -- Invoice 8: Vel Logistics - Diesel credit (Shift 2)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, customer_id, vehicle_id, driver_name, driver_phone, created_at, updated_at)
+    VALUES (1, v_s2, (CURRENT_DATE - 3) + TIME '17:00', 'A' || v_fy || '/2', 'CREDIT', 13980.00, 187.50, 13792.50, 'PAID', 'NOT_PAID', v_cashier, v_vel, v_truck3, 'Senthil', '9876543211', NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s2, v_inv, v_diesel, v_n9, 150.0000, 93.2000, 13980.0000, 1.2500, 187.5000, 13792.5000, NOW(), NOW());
+
+    -- Invoice 9: TNSTC Bus - Diesel credit (Shift 3)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, customer_id, vehicle_id, driver_name, created_at, updated_at)
+    VALUES (1, v_s3, (CURRENT_DATE - 2) + TIME '07:00', 'A' || v_fy || '/3', 'CREDIT', 27944.00, 600.00, 27344.00, 'PAID', 'NOT_PAID', v_cashier, v_tnstc, v_bus1, 'Kumar', NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s3, v_inv, v_diesel, v_n11, 300.0000, 93.2000, 27944.0000, 2.0000, 600.0000, 27344.0000, NOW(), NOW());
+
+    -- Invoice 10: Sundaram Motors - Diesel credit (Shift 5)
+    INSERT INTO invoice_bill (scid, shift_id, bill_date, bill_no, bill_type, gross_amount, total_discount, net_amount, bill_status, payment_status, raised_by_id, customer_id, vehicle_id, created_at, updated_at)
+    VALUES (1, v_s5, (CURRENT_DATE - 1) + TIME '11:30', 'A' || v_fy || '/4', 'CREDIT', 9320.00, 100.00, 9220.00, 'PAID', 'NOT_PAID', v_cashier, v_sundaram, v_jeep, NOW(), NOW())
+    RETURNING id INTO v_inv;
+    INSERT INTO invoice_product (scid, shift_id, invoice_bill_id, product_id, nozzle_id, quantity, unit_price, gross_amount, discount_rate, discount_amount, amount, created_at, updated_at)
+    VALUES (1, v_s5, v_inv, v_diesel, v_n9, 100.0000, 93.2000, 9320.0000, 1.0000, 100.0000, 9220.0000, NOW(), NOW());
+
+    RAISE NOTICE 'Seeded 10 invoices (6 cash, 4 credit) with products';
+END IF;
+END $$;;
+
+-- Statements (1 statement for Sri Murugan Transport covering their credit bills)
+DO $$
+DECLARE
+    v_smt BIGINT;
+    v_stmt BIGINT;
+    v_fy TEXT;
+BEGIN
+IF (SELECT COUNT(*) FROM statement) = 0 THEN
+
+    v_fy := CASE WHEN EXTRACT(MONTH FROM CURRENT_DATE) >= 4
+                 THEN LPAD((EXTRACT(YEAR FROM CURRENT_DATE) % 100)::TEXT, 2, '0')
+                 ELSE LPAD(((EXTRACT(YEAR FROM CURRENT_DATE) - 1) % 100)::TEXT, 2, '0') END;
+
+    SELECT id INTO v_smt FROM users WHERE username = 'smt_transport';
+
+    INSERT INTO statement (scid, statement_no, customer_id, from_date, to_date, statement_date, number_of_bills, total_amount, rounding_amount, net_amount, received_amount, balance_amount, status, created_at, updated_at)
+    VALUES (1, 'S' || v_fy || '/1', v_smt, CURRENT_DATE - 3, CURRENT_DATE - 1, CURRENT_DATE, 1, 18340.00, 0, 18340.00, 0, 18340.00, 'NOT_PAID', NOW(), NOW())
+    RETURNING id INTO v_stmt;
+
+    -- Link the SMT credit invoice to this statement
+    UPDATE invoice_bill SET statement_id = v_stmt
+    WHERE bill_no = 'A' || v_fy || '/1';
+
+    RAISE NOTICE 'Seeded 1 statement for Sri Murugan Transport';
+END IF;
+END $$;;
+
+-- Payments (3 payments: 1 for statement, 1 for local credit bill, 1 partial)
+DO $$
+DECLARE
+    v_smt BIGINT; v_vel BIGINT; v_tnstc BIGINT;
+    v_stmt_id BIGINT;
+    v_vel_inv BIGINT;
+    v_cash_mode BIGINT; v_neft_mode BIGINT; v_cheque_mode BIGINT;
+    v_fy TEXT;
+BEGIN
+IF (SELECT COUNT(*) FROM payment) = 0 THEN
+
+    v_fy := CASE WHEN EXTRACT(MONTH FROM CURRENT_DATE) >= 4
+                 THEN LPAD((EXTRACT(YEAR FROM CURRENT_DATE) % 100)::TEXT, 2, '0')
+                 ELSE LPAD(((EXTRACT(YEAR FROM CURRENT_DATE) - 1) % 100)::TEXT, 2, '0') END;
+
+    SELECT id INTO v_smt   FROM users WHERE username = 'smt_transport';
+    SELECT id INTO v_vel   FROM users WHERE username = 'vel_logistics';
+    SELECT id INTO v_tnstc FROM users WHERE username = 'tnstc_fleet';
+
+    SELECT id INTO v_cash_mode   FROM payment_mode WHERE mode_name = 'CASH';
+    SELECT id INTO v_neft_mode   FROM payment_mode WHERE mode_name = 'NEFT';
+    SELECT id INTO v_cheque_mode FROM payment_mode WHERE mode_name = 'CHEQUE';
+
+    SELECT id INTO v_stmt_id FROM statement WHERE statement_no = 'S' || v_fy || '/1';
+    SELECT id INTO v_vel_inv FROM invoice_bill WHERE bill_no = 'A' || v_fy || '/2';
+
+    -- Payment 1: SMT pays 10000 against statement (partial)
+    INSERT INTO payment (scid, payment_date, amount, payment_mode_id, reference_no, customer_id, statement_id, remarks, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE)::TIMESTAMP + TIME '10:00', 10000.0000, v_neft_mode, 'UTR20260320001', v_smt, v_stmt_id, 'Partial payment for March statement', NOW(), NOW());
+
+    -- Update statement received/balance
+    UPDATE statement SET received_amount = 10000.00, balance_amount = 8340.00 WHERE id = v_stmt_id;
+
+    -- Payment 2: Vel Logistics pays full against invoice
+    INSERT INTO payment (scid, payment_date, amount, payment_mode_id, reference_no, customer_id, invoice_bill_id, remarks, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE - 1)::TIMESTAMP + TIME '14:00', 13792.5000, v_cheque_mode, 'CHQ-445566', v_vel, v_vel_inv, 'Full payment by cheque', NOW(), NOW());
+
+    -- Mark Vel invoice as paid
+    UPDATE invoice_bill SET payment_status = 'PAID' WHERE id = v_vel_inv;
+
+    -- Payment 3: TNSTC partial payment (cash)
+    INSERT INTO payment (scid, payment_date, amount, payment_mode_id, customer_id, remarks, created_at, updated_at)
+    VALUES (1, (CURRENT_DATE)::TIMESTAMP + TIME '11:30', 15000.0000, v_cash_mode, v_tnstc, 'Partial advance payment', NOW(), NOW());
+
+    RAISE NOTICE 'Seeded 3 payments';
+END IF;
+END $$;;
+
+-- Employee Advances (3 advances)
+DO $$
+DECLARE
+    v_murugan BIGINT; v_lakshmi BIGINT;
+BEGIN
+IF (SELECT COUNT(*) FROM employee_advances) = 0 THEN
+    SELECT e.id INTO v_murugan FROM employees e JOIN users u ON e.id = u.id WHERE u.username = 'emp001';
+    SELECT e.id INTO v_lakshmi FROM employees e JOIN users u ON e.id = u.id WHERE u.username = 'emp002';
+
+    INSERT INTO employee_advances (employee_id, amount, advance_date, advance_type, remarks, status, created_at, updated_at) VALUES
+        (v_murugan, 5000, CURRENT_DATE - 10, 'SALARY_ADVANCE', 'For medical expenses', 'PENDING', NOW(), NOW()),
+        (v_murugan, 2000, CURRENT_DATE - 3, 'NIGHT_ADVANCE',   'Night shift food',     'DEDUCTED', NOW(), NOW()),
+        (v_lakshmi, 3000, CURRENT_DATE - 5, 'SALARY_ADVANCE',  'Personal requirement',  'PENDING', NOW(), NOW());
+    RAISE NOTICE 'Seeded 3 employee advances';
+END IF;
+END $$;;
+
+-- Cash Advances (2 cash advances during shifts)
+DO $$
+DECLARE
+    v_murugan BIGINT;
+    v_s2 BIGINT;
+BEGIN
+IF (SELECT COUNT(*) FROM cash_advances) = 0 THEN
+    SELECT id INTO v_murugan FROM users WHERE username = 'emp001';
+    SELECT id INTO v_s2 FROM shifts ORDER BY start_time ASC LIMIT 1 OFFSET 1;
+
+    INSERT INTO cash_advances (scid, shift_id, advance_date, amount, advance_type, recipient_name, recipient_phone, purpose, remarks, status, returned_amount, employee_id, utilized_amount, created_at, updated_at) VALUES
+        (1, v_s2, (CURRENT_DATE - 3)::TIMESTAMP + TIME '15:00', 2000.0000, 'CASH_ADVANCE', 'Ravi (Driver)', '9876543210', 'Fuel advance for trip', 'SMT driver advance', 'RETURNED', 2000.0000, v_murugan, 0, NOW(), NOW()),
+        (1, v_s2, (CURRENT_DATE - 3)::TIMESTAMP + TIME '18:00', 5000.0000, 'CASH_ADVANCE', 'Senthil', '9876543211', 'Vehicle repair', 'Emergency repair advance', 'GIVEN', 0, v_murugan, 0, NOW(), NOW());
+    RAISE NOTICE 'Seeded 2 cash advances';
+END IF;
+END $$;;
+
+-- Attendance (past 5 days for all 4 employees)
+DO $$
+DECLARE
+    v_emp RECORD;
+    v_day INTEGER;
+    v_status TEXT;
+BEGIN
+IF (SELECT COUNT(*) FROM attendance) = 0 THEN
+    FOR v_emp IN SELECT e.id, u.username FROM employees e JOIN users u ON e.id = u.id LOOP
+        FOR v_day IN 1..5 LOOP
+            -- Mostly present, with some variation
+            IF v_emp.username = 'emp002' AND v_day = 3 THEN
+                v_status := 'ON_LEAVE';
+            ELSIF v_emp.username = 'emp001' AND v_day = 5 THEN
+                v_status := 'HALF_DAY';
+            ELSE
+                v_status := 'PRESENT';
+            END IF;
+
+            INSERT INTO attendance (scid, employee_id, date, check_in_time, check_out_time, total_hours_worked, status, source, created_at, updated_at)
+            VALUES (1, v_emp.id, CURRENT_DATE - v_day,
+                    CASE WHEN v_status = 'ON_LEAVE' THEN NULL ELSE TIME '06:00' END,
+                    CASE WHEN v_status = 'ON_LEAVE' THEN NULL
+                         WHEN v_status = 'HALF_DAY' THEN TIME '12:00'
+                         ELSE TIME '18:00' END,
+                    CASE WHEN v_status = 'ON_LEAVE' THEN 0
+                         WHEN v_status = 'HALF_DAY' THEN 6
+                         ELSE 12 END,
+                    v_status, 'MANUAL', NOW(), NOW());
+        END LOOP;
+    END LOOP;
+    RAISE NOTICE 'Seeded attendance for 4 employees x 5 days';
+END IF;
+END $$;;
+
+-- Leave Balance (current year for all employees)
+DO $$
+DECLARE
+    v_emp RECORD;
+    v_lt RECORD;
+    v_year INTEGER := EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER;
+BEGIN
+IF (SELECT COUNT(*) FROM leave_balances) = 0 THEN
+    FOR v_emp IN SELECT e.id FROM employees e LOOP
+        FOR v_lt IN SELECT id, max_days_per_year FROM leave_types LOOP
+            INSERT INTO leave_balances (scid, employee_id, leave_type_id, year, total_allotted, used, remaining, created_at, updated_at)
+            VALUES (1, v_emp.id, v_lt.id, v_year, v_lt.max_days_per_year,
+                    CASE WHEN v_lt.max_days_per_year = 12 THEN 2 -- casual: used 2
+                         WHEN v_lt.max_days_per_year = 10 THEN 1 -- sick: used 1
+                         ELSE 0 END,
+                    CASE WHEN v_lt.max_days_per_year = 12 THEN 10
+                         WHEN v_lt.max_days_per_year = 10 THEN 9
+                         ELSE 15 END,
+                    NOW(), NOW());
+        END LOOP;
+    END LOOP;
+    RAISE NOTICE 'Seeded leave balances for all employees';
+END IF;
+END $$;;
+
+-- Station Expenses (4 recent expenses)
+DO $$
+BEGIN
+IF (SELECT COUNT(*) FROM station_expenses) = 0 THEN
+    INSERT INTO station_expenses (scid, expense_type_id, amount, expense_date, description, paid_to, payment_mode, recurring_type, created_at, updated_at) VALUES
+        (1, (SELECT id FROM expense_type WHERE type_name = 'Electricity'), 12500, CURRENT_DATE - 5, 'March electricity bill', 'TNEB', 'NEFT', 'MONTHLY', NOW(), NOW()),
+        (1, (SELECT id FROM expense_type WHERE type_name = 'Maintenance'), 3500, CURRENT_DATE - 2, 'Pump-2 motor servicing', 'Sri Balaji Engineers', 'CASH', 'ONE_TIME', NOW(), NOW()),
+        (1, (SELECT id FROM expense_type WHERE type_name = 'Water'), 800, CURRENT_DATE - 4, 'Monthly water bill', 'Chennai Metro Water', 'UPI', 'MONTHLY', NOW(), NOW()),
+        (1, (SELECT id FROM expense_type WHERE type_name = 'Miscellaneous'), 1200, CURRENT_DATE - 1, 'Stationery and printing', 'Lakshmi Stores', 'CASH', 'ONE_TIME', NOW(), NOW());
+    RAISE NOTICE 'Seeded 4 station expenses';
+END IF;
+END $$;;
+
+-- Utility Bills (1 electricity + 1 water)
+DO $$
+BEGIN
+IF (SELECT COUNT(*) FROM utility_bills) = 0 THEN
+    INSERT INTO utility_bills (scid, bill_type, provider, consumer_number, bill_date, due_date, bill_amount, paid_amount, status, units_consumed, bill_period, remarks, created_at, updated_at) VALUES
+        (1, 'ELECTRICITY', 'TNEB', 'TN-042-1234567', CURRENT_DATE - 10, CURRENT_DATE + 5, 12500, 12500, 'PAID', 1850, 'Feb 2026', 'Paid via NEFT', NOW(), NOW()),
+        (1, 'WATER', 'Chennai Metro Water', 'CMW-98765', CURRENT_DATE - 8, CURRENT_DATE + 10, 800, 0, 'PENDING', NULL, 'Feb 2026', NULL, NOW(), NOW());
+    RAISE NOTICE 'Seeded 2 utility bills';
+END IF;
+END $$;;
+
+-- External Cash Inflow (owner brought cash for operations)
+DO $$
+BEGIN
+IF (SELECT COUNT(*) FROM external_cash_inflows) = 0 THEN
+    INSERT INTO external_cash_inflows (scid, amount, inflow_date, source, purpose, remarks, status, repaid_amount, created_at, updated_at) VALUES
+        (1, 50000.0000, (CURRENT_DATE - 5)::TIMESTAMP + TIME '09:00', 'Owner', 'Working capital', 'Monthly cash infusion for operations', 'PARTIALLY_REPAID', 20000.0000, NOW(), NOW());
+    RAISE NOTICE 'Seeded 1 external cash inflow';
+END IF;
+END $$;;
+
+-- Cash Inflow Repayment
+DO $$
+DECLARE
+    v_inflow BIGINT;
+BEGIN
+IF (SELECT COUNT(*) FROM cash_inflow_repayments) = 0 THEN
+    SELECT id INTO v_inflow FROM external_cash_inflows LIMIT 1;
+    INSERT INTO cash_inflow_repayments (scid, cash_inflow_id, amount, repayment_date, remarks, created_at, updated_at) VALUES
+        (1, v_inflow, 20000.0000, (CURRENT_DATE - 2)::TIMESTAMP + TIME '17:00', 'Partial repayment from collections', NOW(), NOW());
+    RAISE NOTICE 'Seeded 1 cash inflow repayment';
+END IF;
+END $$;;
+
+-- Stock Transfers (2 transfers from godown to cashier)
+DO $$
+BEGIN
+IF (SELECT COUNT(*) FROM stock_transfer) = 0 THEN
+    INSERT INTO stock_transfer (scid, product_id, quantity, from_location, to_location, transfer_date, remarks, transferred_by, created_at, updated_at) VALUES
+        (1, (SELECT id FROM product WHERE name = 'Servo 4T 20W-40 (1L)'), 6, 'GODOWN', 'CASHIER', (CURRENT_DATE - 2)::TIMESTAMP + TIME '08:00', 'Restocking counter', 'Murugan S', NOW(), NOW()),
+        (1, (SELECT id FROM product WHERE name = 'Air Freshener'), 10, 'GODOWN', 'CASHIER', (CURRENT_DATE - 1)::TIMESTAMP + TIME '08:30', 'Restocking counter', 'Lakshmi R', NOW(), NOW());
+    RAISE NOTICE 'Seeded 2 stock transfers';
+END IF;
+END $$;;
