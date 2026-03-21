@@ -260,6 +260,27 @@ export default function ShiftReportPage() {
                 </div></GlassCard>
             </div>)}
 
+            {/* Payment Mode Breakdown */}
+            {printData && printData.paymentModeBreakdown && printData.paymentModeBreakdown.length > 0 && (
+            <GlassCard><div className="p-4">
+                <h2 className="text-base font-semibold mb-3 text-emerald-500">Cash Bill Amount by Payment Mode</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {printData.paymentModeBreakdown.map((pm, i) => (
+                        <div key={i} className="rounded-lg bg-muted/50 p-3 text-center">
+                            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{pm.mode}</div>
+                            <div className="text-lg font-bold mt-1">{fmtCur(pm.amount)}</div>
+                            <div className="text-[10px] text-muted-foreground">{pm.billCount} bill{pm.billCount !== 1 ? "s" : ""}</div>
+                        </div>
+                    ))}
+                    <div className="rounded-lg bg-primary/10 p-3 text-center">
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</div>
+                        <div className="text-lg font-bold mt-1 text-primary">{fmtCur(printData.paymentModeBreakdown.reduce((s, p) => s + (p.amount || 0), 0))}</div>
+                        <div className="text-[10px] text-muted-foreground">{printData.paymentModeBreakdown.reduce((s, p) => s + (p.billCount || 0), 0)} bills</div>
+                    </div>
+                </div>
+            </div></GlassCard>
+            )}
+
             {/* Credit Bills + Stock + Advance Details + Payment Details */}
             {printData && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

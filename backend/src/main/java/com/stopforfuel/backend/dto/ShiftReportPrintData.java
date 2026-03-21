@@ -35,6 +35,9 @@ public class ShiftReportPrintData {
     // Stock Position (godown + cashier balances at shift close)
     private List<StockPositionRow> stockPosition = new ArrayList<>();
 
+    // Payment mode breakdown (cash bill amounts by payment mode)
+    private List<PaymentModeBreakdown> paymentModeBreakdown = new ArrayList<>();
+
     // Back Page - Right Column
     private List<AdvanceEntryDetail> advanceEntries = new ArrayList<>();
     private List<PaymentEntryDetail> paymentEntries = new ArrayList<>();
@@ -105,6 +108,13 @@ public class ShiftReportPrintData {
         private Double cashierStock;
         private Double totalStock;
         private boolean lowStock; // true if godown stock <= reorder level
+    }
+
+    @Data
+    public static class PaymentModeBreakdown {
+        private String mode; // CASH, CARD, UPI, CCMS, CHEQUE, BANK
+        private BigDecimal amount = BigDecimal.ZERO;
+        private int billCount;
     }
 
     @Data

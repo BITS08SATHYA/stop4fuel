@@ -824,6 +824,37 @@ public class ShiftClosingReportService {
             data.getCreditBillDetails().add(cbd);
         }
 
+        // Payment Mode Breakdown (cash bill amounts by payment mode)
+        Map<String, BigDecimal> modeAmounts = new LinkedHashMap<>();
+        Map<String, Integer> modeCounts = new LinkedHashMap<>();
+        for (InvoiceBill inv : invoices) {
+            if (!"CASH".equals(inv.getBillType())) continue;
+            String mode = inv.getPaymentMode() != null ? inv.getPaymentMode().toUpperCase() : "CASH";
+            BigDecimal amt = inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO;
+            modeAmounts.merge(mode, amt, BigDecimal::add);
+            modeCounts.merge(mode, 1, Integer::sum);
+        }
+        // Fixed display order
+        for (String mode : List.of("CASH", "CARD", "UPI", "CCMS", "CHEQUE", "BANK")) {
+            if (modeAmounts.containsKey(mode)) {
+                ShiftReportPrintData.PaymentModeBreakdown pmb = new ShiftReportPrintData.PaymentModeBreakdown();
+                pmb.setMode(mode);
+                pmb.setAmount(modeAmounts.get(mode));
+                pmb.setBillCount(modeCounts.getOrDefault(mode, 0));
+                data.getPaymentModeBreakdown().add(pmb);
+            }
+        }
+        // Any remaining modes not in the fixed list
+        for (Map.Entry<String, BigDecimal> e : modeAmounts.entrySet()) {
+            if (!List.of("CASH", "CARD", "UPI", "CCMS", "CHEQUE", "BANK").contains(e.getKey())) {
+                ShiftReportPrintData.PaymentModeBreakdown pmb = new ShiftReportPrintData.PaymentModeBreakdown();
+                pmb.setMode(e.getKey());
+                pmb.setAmount(e.getValue());
+                pmb.setBillCount(modeCounts.getOrDefault(e.getKey(), 0));
+                data.getPaymentModeBreakdown().add(pmb);
+            }
+        }
+
         // Stock Summary — only products with sales > 0
         // Build a map of ProductInventory records for this shift by product ID
         List<ProductInventory> shiftProductInvs = productInventoryRepository.findByShiftId(shiftId);
