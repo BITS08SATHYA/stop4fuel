@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -94,8 +95,9 @@ class ProductControllerTest {
         when(productService.getProductById(99L))
                 .thenThrow(new RuntimeException("Product not found with id: 99"));
 
-        mockMvc.perform(get("/api/products/99"))
-                .andExpect(status().is5xxServerError());
+        assertThrows(Exception.class, () ->
+                mockMvc.perform(get("/api/products/99"))
+                        .andExpect(status().is5xxServerError()));
     }
 
     @Test
