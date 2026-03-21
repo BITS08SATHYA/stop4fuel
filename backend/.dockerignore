@@ -1,5 +1,14 @@
 .gradle
 build
-!build/libs
+!build/libs/*.jar
 *.md
 docker-compose.yml
+docker-compose.prod.yml
+src
+gradle
+gradlew
+gradlew.bat
+build.gradle
+settings.gradle
+bin
+test-results
