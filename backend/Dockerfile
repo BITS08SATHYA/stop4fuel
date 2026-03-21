@@ -1,19 +1,13 @@
-# --- Stage 1: Build ---
-FROM eclipse-temurin:21-jdk AS builder
-WORKDIR /app
-
-COPY gradle/ gradle/
-COPY gradlew build.gradle settings.gradle ./
-RUN chmod +x gradlew && ./gradlew dependencies --no-daemon || true
-
-COPY src/ src/
-RUN ./gradlew bootJar --no-daemon -x test
-
-# --- Stage 2: Run ---
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=builder /app/build/libs/*.jar app.jar
+COPY build/libs/*.jar app.jar
+
+ENV SPRING_PROFILES_ACTIVE=dev \
+    DATABASE_URL=jdbc:postgresql://postgres:5432/stopforfuel \
+    DATABASE_USER=postgres \
+    DATABASE_PASSWORD=password \
+    SERVER_PORT=8080
 
 EXPOSE 8080
 
