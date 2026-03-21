@@ -2,9 +2,12 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.SalaryHistory;
+import com.stopforfuel.backend.repository.DesignationRepository;
 import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
+import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +37,12 @@ class EmployeeServiceTest {
 
     @Mock
     private S3StorageService s3StorageService;
+
+    @Mock
+    private DesignationRepository designationRepository;
+
+    @Mock
+    private RolesRepository rolesRepository;
 
     @InjectMocks
     private EmployeeService employeeService;
@@ -104,6 +113,10 @@ class EmployeeServiceTest {
 
     @Test
     void createEmployee_saves() {
+        Roles empRole = new Roles();
+        empRole.setId(1L);
+        empRole.setRoleType("EMPLOYEE");
+        when(rolesRepository.findByRoleType("EMPLOYEE")).thenReturn(Optional.of(empRole));
         when(employeeRepository.save(any(Employee.class))).thenReturn(testEmployee);
 
         Employee result = employeeService.createEmployee(testEmployee);
@@ -127,6 +140,7 @@ class EmployeeServiceTest {
         details.setStatus("Active");
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
+        when(designationRepository.findByName("Manager")).thenReturn(Optional.empty());
         when(employeeRepository.save(any(Employee.class))).thenAnswer(i -> i.getArgument(0));
 
         Employee result = employeeService.updateEmployee(1L, details);

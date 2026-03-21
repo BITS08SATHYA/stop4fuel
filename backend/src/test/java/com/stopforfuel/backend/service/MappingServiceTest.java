@@ -5,6 +5,7 @@ import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.GroupRepository;
+import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,9 @@ class MappingServiceTest {
 
     @Mock
     private GroupRepository groupRepository;
+
+    @Mock
+    private InvoiceBillRepository invoiceBillRepository;
 
     @InjectMocks
     private MappingService mappingService;
@@ -114,6 +118,7 @@ class MappingServiceTest {
     void unassignVehiclesFromCustomer_removesCustomer() {
         testVehicle.setCustomer(testCustomer);
         when(vehicleRepository.findByIdIn(List.of(1L))).thenReturn(List.of(testVehicle));
+        when(invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(1L, 1L, "NOT_PAID")).thenReturn(0L);
         when(vehicleRepository.saveAll(anyList())).thenAnswer(i -> i.getArgument(0));
 
         List<Vehicle> result = mappingService.unassignVehiclesFromCustomer(List.of(1L));

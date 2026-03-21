@@ -1826,6 +1826,7 @@ export interface ShiftReportPrintData {
     stockPosition: { productName: string; godownStock: number; cashierStock: number; totalStock: number; lowStock: boolean }[];
     advanceEntries: { type: string; description: string; amount: number; reference?: string }[];
     paymentEntries: { type: string; customerName: string; reference: string; paymentMode: string; amount: number }[];
+    paymentModeBreakdown: { mode: string; amount: number; billCount: number }[];
 }
 
 export const getShiftReportPrintData = (shiftId: number): Promise<ShiftReportPrintData> =>

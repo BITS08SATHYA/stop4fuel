@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -100,10 +101,11 @@ class ShiftControllerTest {
         Shift newShift = new Shift();
         String json = objectMapper.writeValueAsString(newShift);
 
-        mockMvc.perform(post("/api/shifts/open")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().is5xxServerError());
+        assertThrows(Exception.class, () ->
+                mockMvc.perform(post("/api/shifts/open")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json))
+                        .andExpect(status().is5xxServerError()));
     }
 
     @Test
@@ -122,7 +124,8 @@ class ShiftControllerTest {
         when(shiftService.closeShift(99L))
                 .thenThrow(new RuntimeException("Shift not found"));
 
-        mockMvc.perform(post("/api/shifts/99/close"))
-                .andExpect(status().is5xxServerError());
+        assertThrows(Exception.class, () ->
+                mockMvc.perform(post("/api/shifts/99/close"))
+                        .andExpect(status().is5xxServerError()));
     }
 }
