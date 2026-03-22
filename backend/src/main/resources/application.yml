@@ -44,6 +44,6 @@ app:
 
 aws:
   s3:
-    bucket: ${AWS_S3_BUCKET:stopforfuel-uploads}
-    region: ${AWS_REGION:ap-south-1}
+    bucket: ${AWS_S3_BUCKET:stopforfuel}
+    region: ${AWS_REGION:us-east-1}
     profile: ${AWS_S3_PROFILE:sathya-nyu}
