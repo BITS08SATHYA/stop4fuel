@@ -5,9 +5,10 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
+import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
-    FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent
+    FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight
 } from "lucide-react";
 import {
     getStatements, generateStatement, getStatementBills,
@@ -64,6 +65,8 @@ export default function StatementsPage() {
     const [filterToDate, setFilterToDate] = useState("");
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
     const [stats, setStats] = useState<StatementStats | null>(null);
+    const [expandedBillId, setExpandedBillId] = useState<number | null>(null);
+    const [pdfError, setPdfError] = useState("");
 
     useEffect(() => {
         loadCustomers();
@@ -350,6 +353,13 @@ export default function StatementsPage() {
                     </select>
                 </div>
 
+                {/* PDF Error Toast */}
+                {pdfError && (
+                    <div className="mb-4 bg-rose-500/20 border border-rose-500/30 text-rose-400 px-4 py-2 rounded-lg text-sm">
+                        {pdfError}
+                    </div>
+                )}
+
                 {/* Table */}
                 <GlassCard>
                     <div className="overflow-x-auto">
@@ -407,8 +417,13 @@ export default function StatementsPage() {
                                                     {stmt.statementPdfUrl ? (
                                                         <button
                                                             onClick={async () => {
-                                                                const url = await getStatementPdfUrl(stmt.id!);
-                                                                window.open(url, "_blank");
+                                                                try {
+                                                                    const url = await getStatementPdfUrl(stmt.id!);
+                                                                    window.open(url, "_blank");
+                                                                } catch (e: any) {
+                                                                    setPdfError(e.message || "Failed to download PDF");
+                                                                    setTimeout(() => setPdfError(""), 4000);
+                                                                }
                                                             }}
                                                             className="p-1.5 rounded-md hover:bg-primary/20 text-primary transition-colors"
                                                             title="Download PDF"
@@ -423,8 +438,9 @@ export default function StatementsPage() {
                                                                 try {
                                                                     await generateStatementPdf(stmt.id!);
                                                                     loadStatements();
-                                                                } catch (e) {
-                                                                    console.error("Failed to generate PDF", e);
+                                                                } catch (e: any) {
+                                                                    setPdfError(e.message || "Failed to generate PDF");
+                                                                    setTimeout(() => setPdfError(""), 4000);
                                                                 } finally {
                                                                     setGeneratingPdfId(null);
                                                                 }
@@ -750,7 +766,7 @@ export default function StatementsPage() {
             {/* Statement Detail Modal */}
             <Modal
                 isOpen={showDetailModal}
-                onClose={() => setShowDetailModal(false)}
+                onClose={() => { setShowDetailModal(false); setExpandedBillId(null); }}
                 title={`Statement #${detailStatement?.statementNo || ""}`}
             >
                 {detailStatement && (
@@ -781,6 +797,84 @@ export default function StatementsPage() {
                             </div>
                         </div>
 
+                        {/* Statement Actions */}
+                        <div className="flex items-center gap-2 border-t border-b border-border/50 py-3">
+                            <Badge variant={detailStatement.status === "PAID" ? "success" : "warning"}>
+                                {detailStatement.status === "PAID" ? "PAID" : "NOT PAID"}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                                Received: <span className="text-emerald-400 font-medium">{Number(detailStatement.receivedAmount).toLocaleString("en-IN", { style: "currency", currency: "INR" })}</span>
+                            </span>
+                            <div className="flex items-center gap-1 ml-4">
+                                {detailStatement.statementPdfUrl ? (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const url = await getStatementPdfUrl(detailStatement.id!);
+                                                window.open(url, "_blank");
+                                            } catch (e: any) {
+                                                setPdfError(e.message || "Failed to download PDF");
+                                                setTimeout(() => setPdfError(""), 4000);
+                                            }
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5"
+                                    >
+                                        <Download className="w-3.5 h-3.5" /> Download PDF
+                                    </button>
+                                ) : (
+                                    <button
+                                        disabled={generatingPdfId === detailStatement.id}
+                                        onClick={async () => {
+                                            setGeneratingPdfId(detailStatement.id!);
+                                            try {
+                                                const updated = await generateStatementPdf(detailStatement.id!);
+                                                setDetailStatement(updated);
+                                                loadStatements();
+                                            } catch (e: any) {
+                                                setPdfError(e.message || "Failed to generate PDF");
+                                                setTimeout(() => setPdfError(""), 4000);
+                                            } finally {
+                                                setGeneratingPdfId(null);
+                                            }
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                    >
+                                        {generatingPdfId === detailStatement.id ? (
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                            <FileText className="w-3.5 h-3.5" />
+                                        )}
+                                        Generate PDF
+                                    </button>
+                                )}
+                                {detailStatement.status !== "PAID" && (
+                                    <button
+                                        onClick={async () => {
+                                            if (!confirm("Delete this statement? Bills will be unlinked.")) return;
+                                            try {
+                                                await deleteStatement(detailStatement.id!);
+                                                setShowDetailModal(false);
+                                                loadStatements();
+                                                loadStats();
+                                            } catch (e) {
+                                                console.error("Failed to delete statement", e);
+                                            }
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors flex items-center gap-1.5"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* PDF Error in modal */}
+                        {pdfError && (
+                            <div className="bg-rose-500/20 border border-rose-500/30 text-rose-400 px-4 py-2 rounded-lg text-sm">
+                                {pdfError}
+                            </div>
+                        )}
+
                         {/* Bills Table */}
                         <div>
                             <h4 className="text-sm font-semibold text-muted-foreground mb-3">
@@ -790,56 +884,106 @@ export default function StatementsPage() {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b border-border text-muted-foreground">
-                                            <th className="text-left py-2 px-3">#</th>
+                                            <th className="w-8 py-2 px-2"></th>
                                             <th className="text-left py-2 px-3">Bill No</th>
                                             <th className="text-left py-2 px-3">Date</th>
                                             <th className="text-left py-2 px-3">Vehicle</th>
-                                            <th className="text-left py-2 px-3">Indent No</th>
                                             <th className="text-right py-2 px-3">Amount</th>
                                             <th className="text-center py-2 px-3">Status</th>
                                             <th className="text-center py-2 px-3">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {detailBills.map((bill, idx) => (
-                                            <tr key={bill.id} className="border-b border-border/50">
-                                                <td className="py-2 px-3 text-muted-foreground">{idx + 1}</td>
-                                                <td className="py-2 px-3 font-mono font-semibold">{bill.billNo || "-"}</td>
-                                                <td className="py-2 px-3">
-                                                    {bill.date ? new Date(bill.date).toLocaleDateString("en-IN") : "-"}
-                                                </td>
-                                                <td className="py-2 px-3">
-                                                    {bill.vehicle?.vehicleNumber || "-"}
-                                                    {bill.vehicle?.customer && detailStatement.customer && bill.vehicle.customer.id !== detailStatement.customer.id && (
-                                                        <span className="block text-[10px] text-amber-500 font-medium">(owned by {bill.vehicle.customer.name})</span>
+                                        {detailBills.map((bill) => {
+                                            const isExpanded = expandedBillId === bill.id;
+                                            return (
+                                                <Fragment key={bill.id}>
+                                                    <tr
+                                                        className="border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
+                                                        onClick={() => setExpandedBillId(isExpanded ? null : bill.id!)}
+                                                    >
+                                                        <td className="py-2 px-2 text-muted-foreground">
+                                                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                        </td>
+                                                        <td className="py-2 px-3 font-mono font-semibold">{bill.billNo || "-"}</td>
+                                                        <td className="py-2 px-3">
+                                                            {bill.date ? new Date(bill.date).toLocaleDateString("en-IN") : "-"}
+                                                        </td>
+                                                        <td className="py-2 px-3">
+                                                            {bill.vehicle?.vehicleNumber || "-"}
+                                                            {bill.vehicle?.customer && detailStatement.customer && bill.vehicle.customer.id !== detailStatement.customer.id && (
+                                                                <span className="block text-[10px] text-amber-500 font-medium">(owned by {bill.vehicle.customer.name})</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-right font-medium">
+                                                            {Number(bill.netAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-center whitespace-nowrap">
+                                                            <Badge variant={bill.paymentStatus === "PAID" ? "success" : "warning"}>
+                                                                {bill.paymentStatus || "NOT PAID"}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                                            {detailStatement.status !== "PAID" && (
+                                                                <button
+                                                                    onClick={() => handleRemoveBill(detailStatement.id!, bill.id!)}
+                                                                    className="p-1 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"
+                                                                    title="Remove from statement"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                    {isExpanded && (
+                                                        <tr className="bg-muted/20">
+                                                            <td colSpan={7} className="px-6 py-3">
+                                                                {bill.products && bill.products.length > 0 ? (
+                                                                    <div>
+                                                                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Product Details</div>
+                                                                        <table className="w-full text-xs">
+                                                                            <thead>
+                                                                                <tr className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                                                                    <th className="text-left py-1 pr-4">Product</th>
+                                                                                    <th className="text-left py-1 pr-4">Nozzle</th>
+                                                                                    <th className="text-right py-1 pr-4">Qty</th>
+                                                                                    <th className="text-right py-1 pr-4">Rate</th>
+                                                                                    <th className="text-right py-1 pr-4">Discount</th>
+                                                                                    <th className="text-right py-1">Amount</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {bill.products.map((ip: any, idx: number) => (
+                                                                                    <tr key={idx} className="border-t border-border/20">
+                                                                                        <td className="py-1.5 pr-4 text-foreground">{ip.product?.name || "-"}</td>
+                                                                                        <td className="py-1.5 pr-4 text-muted-foreground font-mono">{ip.nozzle?.nozzleNumber || "-"}</td>
+                                                                                        <td className="py-1.5 pr-4 text-right">{Number(ip.quantity || 0).toFixed(2)}</td>
+                                                                                        <td className="py-1.5 pr-4 text-right">{Number(ip.rate || 0).toFixed(2)}</td>
+                                                                                        <td className="py-1.5 pr-4 text-right text-amber-400">{Number(ip.discountAmount || 0).toFixed(2)}</td>
+                                                                                        <td className="py-1.5 text-right font-medium">{Number(ip.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                        {bill.indentNo && (
+                                                                            <div className="mt-2 text-xs text-muted-foreground">
+                                                                                Indent No: <span className="text-foreground font-mono">{bill.indentNo}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="text-xs text-muted-foreground">No product details available</div>
+                                                                )}
+                                                            </td>
+                                                        </tr>
                                                     )}
-                                                </td>
-                                                <td className="py-2 px-3">{bill.indentNo || "-"}</td>
-                                                <td className="py-2 px-3 text-right font-medium">
-                                                    {Number(bill.netAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="py-2 px-3 text-center">
-                                                    <Badge variant={bill.paymentStatus === "PAID" ? "success" : "warning"}>
-                                                        {bill.paymentStatus || "NOT PAID"}
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-2 px-3 text-center">
-                                                    {detailStatement.status !== "PAID" && (
-                                                        <button
-                                                            onClick={() => handleRemoveBill(detailStatement.id!, bill.id!)}
-                                                            className="text-rose-400 hover:text-rose-300 text-xs"
-                                                            title="Remove from statement"
-                                                        >
-                                                            Remove
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                </Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                     <tfoot>
                                         <tr className="border-t border-border">
-                                            <td colSpan={5} className="py-2 px-3 text-right font-semibold text-muted-foreground">
+                                            <td colSpan={4} className="py-2 px-3 text-right font-semibold text-muted-foreground">
                                                 Total
                                             </td>
                                             <td className="py-2 px-3 text-right font-bold text-foreground">
@@ -848,7 +992,7 @@ export default function StatementsPage() {
                                             <td colSpan={2}></td>
                                         </tr>
                                         <tr>
-                                            <td colSpan={5} className="py-1 px-3 text-right text-sm text-muted-foreground">
+                                            <td colSpan={4} className="py-1 px-3 text-right text-sm text-muted-foreground">
                                                 Rounding
                                             </td>
                                             <td className="py-1 px-3 text-right text-sm text-muted-foreground">
@@ -857,7 +1001,7 @@ export default function StatementsPage() {
                                             <td colSpan={2}></td>
                                         </tr>
                                         <tr className="border-t border-border">
-                                            <td colSpan={5} className="py-2 px-3 text-right font-bold text-foreground">
+                                            <td colSpan={4} className="py-2 px-3 text-right font-bold text-foreground">
                                                 Net Amount
                                             </td>
                                             <td className="py-2 px-3 text-right font-bold text-primary text-lg">
