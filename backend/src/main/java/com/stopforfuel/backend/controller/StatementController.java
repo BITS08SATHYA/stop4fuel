@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.StatementStats;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
 import com.stopforfuel.backend.service.StatementService;
@@ -22,14 +23,24 @@ public class StatementController {
 
     private final StatementService statementService;
 
+    @GetMapping("/stats")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public StatementStats getStats() {
+        return statementService.getStats();
+    }
+
     @GetMapping
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public Page<Statement> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) Long customerId,
-            @RequestParam(required = false) String status) {
-        return statementService.getStatements(customerId, status, PageRequest.of(page, size));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String search) {
+        return statementService.getStatements(customerId, status, fromDate, toDate, search,
+                PageRequest.of(page, size, org.springframework.data.domain.Sort.by("statementDate").descending()));
     }
 
     @GetMapping("/{id}")

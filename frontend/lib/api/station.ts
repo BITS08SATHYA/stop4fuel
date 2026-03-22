@@ -564,11 +564,15 @@ export const getPaymentModes = (): Promise<PaymentMode[]> =>
 
 // Statements
 export const getStatements = (
-    page = 0, size = 10, customerId?: number, status?: string
+    page = 0, size = 10, customerId?: number, status?: string,
+    fromDate?: string, toDate?: string, search?: string
 ): Promise<PageResponse<Statement>> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (customerId) params.append('customerId', String(customerId));
     if (status) params.append('status', status);
+    if (fromDate) params.append('fromDate', fromDate);
+    if (toDate) params.append('toDate', toDate);
+    if (search) params.append('search', search);
     return fetchWithAuth(`${API_BASE_URL}/statements?${params}`).then(handleResponse);
 };
 
@@ -633,6 +637,24 @@ export const generateStatementPdf = (id: number): Promise<Statement> =>
 
 export const getStatementPdfUrl = (id: number): Promise<string> =>
     fetchWithAuth(`${API_BASE_URL}/statements/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
+
+export interface StatementStats {
+    statementsLastMonth: number;
+    paidLastMonth: number;
+    amountGeneratedLastMonth: number;
+    amountCollectedLastMonth: number;
+    totalStatements: number;
+    totalPaid: number;
+    paidPercentage: number;
+    totalUnpaidAmount: number;
+    totalNetAmount: number;
+    totalReceivedAmount: number;
+    collectionRate: number;
+    avgStatementAmount: number;
+}
+
+export const getStatementStats = (): Promise<StatementStats> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/stats`).then(handleResponse);
 
 // Payments
 export const getPayments = (page = 0, size = 10): Promise<PageResponse<Payment>> =>

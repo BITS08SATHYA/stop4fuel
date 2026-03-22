@@ -6,15 +6,16 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import {
-    Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2
+    Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
+    FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent
 } from "lucide-react";
 import {
     getStatements, generateStatement, getStatementBills,
     getCustomers, deleteStatement, removeBillFromStatement,
     getVehiclesByCustomer, getProducts, previewStatementBills,
-    generateStatementPdf, getStatementPdfUrl,
+    generateStatementPdf, getStatementPdfUrl, getStatementStats,
     type Statement, type InvoiceBill, type Customer, type Vehicle,
-    type Product, type PageResponse
+    type Product, type PageResponse, type StatementStats
 } from "@/lib/api/station";
 
 export default function StatementsPage() {
@@ -24,7 +25,7 @@ export default function StatementsPage() {
 
     // Pagination
     const [page, setPage] = useState(0);
-    const [pageSize] = useState(10);
+    const [pageSize] = useState(8);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
@@ -58,15 +59,21 @@ export default function StatementsPage() {
     // Filter
     const [filterStatus, setFilterStatus] = useState<string>("ALL");
     const [tableSearch, setTableSearch] = useState("");
+    const [searchInput, setSearchInput] = useState("");
+    const [filterFromDate, setFilterFromDate] = useState("");
+    const [filterToDate, setFilterToDate] = useState("");
+    const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [stats, setStats] = useState<StatementStats | null>(null);
 
     useEffect(() => {
         loadCustomers();
         loadProducts();
+        loadStats();
     }, []);
 
     useEffect(() => {
         loadStatements();
-    }, [page, filterStatus]);
+    }, [page, filterStatus, filterFromDate, filterToDate, tableSearch]);
 
     // Load vehicles when customer changes in generate modal
     useEffect(() => {
@@ -102,11 +109,23 @@ export default function StatementsPage() {
         }
     };
 
+    const loadStats = async () => {
+        try {
+            setStats(await getStatementStats());
+        } catch (e) {
+            console.error("Failed to load stats", e);
+        }
+    };
+
     const loadStatements = async () => {
         setLoading(true);
         try {
             const statusParam = filterStatus === "ALL" ? undefined : filterStatus;
-            const result: PageResponse<Statement> = await getStatements(page, pageSize, undefined, statusParam);
+            const result: PageResponse<Statement> = await getStatements(
+                page, pageSize, undefined, statusParam,
+                filterFromDate || undefined, filterToDate || undefined,
+                tableSearch || undefined
+            );
             setStatements(result.content);
             setTotalPages(result.totalPages);
             setTotalElements(result.totalElements);
@@ -186,6 +205,7 @@ export default function StatementsPage() {
             await generateStatement(Number(selectedCustomerId), fromDate, toDate, filters);
             resetGenerateModal();
             loadStatements();
+            loadStats();
         } catch (e: any) {
             setError(e.message || "Failed to generate statement");
         } finally {
@@ -223,6 +243,7 @@ export default function StatementsPage() {
         try {
             await deleteStatement(id);
             loadStatements();
+            loadStats();
         } catch (e) {
             console.error("Failed to delete statement", e);
         }
@@ -259,7 +280,7 @@ export default function StatementsPage() {
     }
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
+        <div className="p-6 h-screen overflow-y-auto bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
@@ -280,18 +301,6 @@ export default function StatementsPage() {
                     </button>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                    <GlassCard>
-                        <div className="text-muted-foreground text-sm">Total Results</div>
-                        <div className="text-2xl font-bold text-foreground mt-1">{totalElements}</div>
-                    </GlassCard>
-                    <GlassCard>
-                        <div className="text-muted-foreground text-sm">Page</div>
-                        <div className="text-2xl font-bold text-foreground mt-1">{page + 1} of {totalPages || 1}</div>
-                    </GlassCard>
-                </div>
-
                 {/* Filters */}
                 <div className="flex flex-wrap gap-3 items-center mb-6">
                     <div className="relative flex-1 min-w-[200px] max-w-md">
@@ -299,9 +308,35 @@ export default function StatementsPage() {
                         <input
                             type="text"
                             placeholder="Search by customer name or statement no..."
-                            value={tableSearch}
-                            onChange={(e) => setTableSearch(e.target.value)}
+                            value={searchInput}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSearchInput(val);
+                                if (searchTimeout) clearTimeout(searchTimeout);
+                                setSearchTimeout(setTimeout(() => {
+                                    setTableSearch(val);
+                                    setPage(0);
+                                }, 400));
+                            }}
                             className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="date"
+                            value={filterFromDate}
+                            onChange={(e) => { setFilterFromDate(e.target.value); setPage(0); }}
+                            className="px-3 py-2 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="From"
+                        />
+                        <span className="text-muted-foreground text-sm">to</span>
+                        <input
+                            type="date"
+                            value={filterToDate}
+                            onChange={(e) => { setFilterToDate(e.target.value); setPage(0); }}
+                            className="px-3 py-2 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="To"
                         />
                     </div>
                     <select
@@ -341,11 +376,7 @@ export default function StatementsPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    statements.filter((s) => {
-                                        if (!tableSearch) return true;
-                                        const q = tableSearch.toLowerCase();
-                                        return s.customer?.name?.toLowerCase().includes(q) || String(s.statementNo).includes(q);
-                                    }).map((stmt) => (
+                                    statements.map((stmt) => (
                                         <tr key={stmt.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                                             <td className="py-3 px-4 font-mono font-semibold">{stmt.statementNo}</td>
                                             <td className="py-3 px-4">{stmt.customer?.name || "-"}</td>
@@ -432,6 +463,93 @@ export default function StatementsPage() {
 
                     <TablePagination page={page} totalPages={totalPages} totalElements={totalElements} pageSize={pageSize} onPageChange={setPage} />
                 </GlassCard>
+
+                {/* Statement Analytics */}
+                {stats && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
+                        <GlassCard>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Last Month</p>
+                                    <h3 className="text-2xl font-bold text-blue-500 mt-2">{stats.statementsLastMonth}</h3>
+                                    <p className="text-xs text-muted-foreground mt-1">Statements generated</p>
+                                </div>
+                                <div className="p-2 bg-blue-500/10 rounded-lg">
+                                    <FileClock className="w-5 h-5 text-blue-500" />
+                                </div>
+                            </div>
+                        </GlassCard>
+
+                        <GlassCard>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Paid Last Month</p>
+                                    <h3 className="text-2xl font-bold text-green-500 mt-2">{stats.paidLastMonth}</h3>
+                                    <p className="text-xs text-muted-foreground mt-1">Payments received</p>
+                                </div>
+                                <div className="p-2 bg-green-500/10 rounded-lg">
+                                    <FileCheck2 className="w-5 h-5 text-green-500" />
+                                </div>
+                            </div>
+                        </GlassCard>
+
+                        <GlassCard>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Total Statements</p>
+                                    <h3 className="text-2xl font-bold text-cyan-500 mt-2">{stats.totalStatements.toLocaleString("en-IN")}</h3>
+                                    <p className="text-xs text-muted-foreground mt-1">All time</p>
+                                </div>
+                                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                    <Receipt className="w-5 h-5 text-cyan-500" />
+                                </div>
+                            </div>
+                        </GlassCard>
+
+                        <GlassCard>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Paid</p>
+                                    <h3 className="text-2xl font-bold text-emerald-500 mt-2">{stats.totalPaid.toLocaleString("en-IN")}</h3>
+                                    <p className="text-xs text-muted-foreground mt-1">{stats.paidPercentage.toFixed(1)}% of total</p>
+                                </div>
+                                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                                </div>
+                            </div>
+                        </GlassCard>
+
+                        <GlassCard>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Unpaid Amount</p>
+                                    <h3 className="text-2xl font-bold text-amber-500 mt-2">
+                                        ₹{Number(stats.totalUnpaidAmount).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-1">Outstanding balance</p>
+                                </div>
+                                <div className="p-2 bg-amber-500/10 rounded-lg">
+                                    <IndianRupee className="w-5 h-5 text-amber-500" />
+                                </div>
+                            </div>
+                        </GlassCard>
+
+                        <GlassCard>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Collection Rate</p>
+                                    <h3 className="text-2xl font-bold text-purple-500 mt-2">{stats.collectionRate.toFixed(1)}%</h3>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Avg ₹{Number(stats.avgStatementAmount).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                                    </p>
+                                </div>
+                                <div className="p-2 bg-purple-500/10 rounded-lg">
+                                    <Percent className="w-5 h-5 text-purple-500" />
+                                </div>
+                            </div>
+                        </GlassCard>
+                    </div>
+                )}
             </div>
 
             {/* Generate Statement Modal */}
@@ -677,6 +795,7 @@ export default function StatementsPage() {
                                     <thead>
                                         <tr className="border-b border-border text-muted-foreground">
                                             <th className="text-left py-2 px-3">#</th>
+                                            <th className="text-left py-2 px-3">Bill No</th>
                                             <th className="text-left py-2 px-3">Date</th>
                                             <th className="text-left py-2 px-3">Vehicle</th>
                                             <th className="text-left py-2 px-3">Indent No</th>
@@ -688,7 +807,8 @@ export default function StatementsPage() {
                                     <tbody>
                                         {detailBills.map((bill, idx) => (
                                             <tr key={bill.id} className="border-b border-border/50">
-                                                <td className="py-2 px-3">{idx + 1}</td>
+                                                <td className="py-2 px-3 text-muted-foreground">{idx + 1}</td>
+                                                <td className="py-2 px-3 font-mono font-semibold">{bill.billNo || "-"}</td>
                                                 <td className="py-2 px-3">
                                                     {bill.date ? new Date(bill.date).toLocaleDateString("en-IN") : "-"}
                                                 </td>
@@ -723,7 +843,7 @@ export default function StatementsPage() {
                                     </tbody>
                                     <tfoot>
                                         <tr className="border-t border-border">
-                                            <td colSpan={4} className="py-2 px-3 text-right font-semibold text-muted-foreground">
+                                            <td colSpan={5} className="py-2 px-3 text-right font-semibold text-muted-foreground">
                                                 Total
                                             </td>
                                             <td className="py-2 px-3 text-right font-bold text-foreground">
@@ -732,7 +852,7 @@ export default function StatementsPage() {
                                             <td colSpan={2}></td>
                                         </tr>
                                         <tr>
-                                            <td colSpan={4} className="py-1 px-3 text-right text-sm text-muted-foreground">
+                                            <td colSpan={5} className="py-1 px-3 text-right text-sm text-muted-foreground">
                                                 Rounding
                                             </td>
                                             <td className="py-1 px-3 text-right text-sm text-muted-foreground">
@@ -741,7 +861,7 @@ export default function StatementsPage() {
                                             <td colSpan={2}></td>
                                         </tr>
                                         <tr className="border-t border-border">
-                                            <td colSpan={4} className="py-2 px-3 text-right font-bold text-foreground">
+                                            <td colSpan={5} className="py-2 px-3 text-right font-bold text-foreground">
                                                 Net Amount
                                             </td>
                                             <td className="py-2 px-3 text-right font-bold text-primary text-lg">
