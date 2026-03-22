@@ -25,7 +25,7 @@ export default function StatementsPage() {
 
     // Pagination
     const [page, setPage] = useState(0);
-    const [pageSize] = useState(8);
+    const [pageSize] = useState(7);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
@@ -280,7 +280,7 @@ export default function StatementsPage() {
     }
 
     return (
-        <div className="p-6 h-screen overflow-y-auto bg-background transition-colors duration-300">
+        <div className="p-6 bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
