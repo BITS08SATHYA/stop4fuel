@@ -36,11 +36,12 @@ public class CustomerService {
     @Autowired
     private com.stopforfuel.backend.repository.RolesRepository rolesRepository;
 
-    public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, org.springframework.data.domain.Pageable pageable) {
+    public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String customerCategory, org.springframework.data.domain.Pageable pageable) {
+        String cat = (customerCategory != null && !customerCategory.isEmpty()) ? customerCategory : null;
         if (search != null && !search.isEmpty()) {
-            return customerRepository.findBySearchAndFilters(search, groupId, status, pageable);
+            return customerRepository.findBySearchAndFilters(search, groupId, status, cat, pageable);
         }
-        return customerRepository.findByGroupAndStatus(groupId, status, pageable);
+        return customerRepository.findByGroupAndStatus(groupId, status, cat, pageable);
     }
 
     public org.springframework.data.domain.Page<Customer> getCustomersByGroupId(Long groupId, org.springframework.data.domain.Pageable pageable) {

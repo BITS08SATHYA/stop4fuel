@@ -11,9 +11,9 @@ import {
 import { FormErrorBanner } from "@/components/ui/field-error";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
-    getActiveProducts, getNozzles,
+    getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
     type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
-    type Product, type Nozzle
+    type Product, type Nozzle, type Vehicle
 } from "@/lib/api/station";
 
 interface EditLine {
@@ -46,6 +46,7 @@ export default function InvoiceHistoryPage() {
     const [filters, setFilters] = useState({
         billType: "",
         paymentStatus: "",
+        customerCategory: "",
         fromDate: firstDayOfMonth.toISOString().slice(0, 16),
         toDate: now.toISOString().slice(0, 16),
         search: "",
@@ -62,6 +63,14 @@ export default function InvoiceHistoryPage() {
     const [editIndentNo, setEditIndentNo] = useState("");
     const [editPaymentMode, setEditPaymentMode] = useState("");
     const [editVehicleKM, setEditVehicleKM] = useState("");
+    const [editBillType, setEditBillType] = useState<"CASH" | "CREDIT">("CASH");
+    const [editCustomer, setEditCustomer] = useState<any>(null);
+    const [editVehicle, setEditVehicle] = useState<any>(null);
+    const [editCustomerSearch, setEditCustomerSearch] = useState("");
+    const [editCustomerSuggestions, setEditCustomerSuggestions] = useState<any[]>([]);
+    const [editCustomerVehicles, setEditCustomerVehicles] = useState<any[]>([]);
+    const [editVehicleSearch, setEditVehicleSearch] = useState("");
+    const [editVehicleResults, setEditVehicleResults] = useState<Vehicle[]>([]);
     const [saving, setSaving] = useState(false);
     const [editError, setEditError] = useState("");
 
@@ -84,6 +93,7 @@ export default function InvoiceHistoryPage() {
         const params: any = {};
         if (f.billType) params.billType = f.billType;
         if (f.paymentStatus) params.paymentStatus = f.paymentStatus;
+        if (f.customerCategory) params.customerCategory = f.customerCategory;
         if (f.fromDate) params.fromDate = f.fromDate + ":00";
         if (f.toDate) params.toDate = f.toDate + ":00";
         if (f.search) params.search = f.search;
@@ -136,6 +146,7 @@ export default function InvoiceHistoryPage() {
         const defaultFilters = {
             billType: "",
             paymentStatus: "",
+            customerCategory: "",
             fromDate: firstDay2.toISOString().slice(0, 16),
             toDate: now2.toISOString().slice(0, 16),
             search: "",
@@ -154,14 +165,30 @@ export default function InvoiceHistoryPage() {
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     // --- Edit ---
-    const openEdit = (inv: InvoiceBill) => {
+    const openEdit = async (inv: InvoiceBill) => {
         setEditInvoice(inv);
         setEditDriverName(inv.driverName || "");
         setEditDriverPhone(inv.driverPhone || "");
         setEditIndentNo(inv.indentNo || "");
         setEditPaymentMode(inv.paymentMode || "");
         setEditVehicleKM(inv.vehicleKM ? String(inv.vehicleKM) : "");
+        setEditBillType((inv.billType as "CASH" | "CREDIT") || "CASH");
+        setEditCustomer(inv.customer || null);
+        setEditVehicle(inv.vehicle || null);
+        setEditCustomerSearch(inv.customer?.name || "");
+        setEditCustomerSuggestions([]);
+        setEditVehicleSearch("");
+        setEditVehicleResults([]);
         setEditError("");
+        // Load customer vehicles if customer exists
+        if (inv.customer?.id) {
+            try {
+                const vehicles = await getVehiclesByCustomer(inv.customer.id);
+                setEditCustomerVehicles(vehicles);
+            } catch { setEditCustomerVehicles([]); }
+        } else {
+            setEditCustomerVehicles([]);
+        }
         setEditLines(
             (inv.products || []).map(ip => ({
                 id: ip.id,
@@ -228,11 +255,14 @@ export default function InvoiceHistoryPage() {
         setEditError("");
         try {
             await updateInvoice(editInvoice.id, {
+                billType: editBillType,
                 driverName: editDriverName || undefined,
                 driverPhone: editDriverPhone || undefined,
                 indentNo: editIndentNo || undefined,
                 paymentMode: editPaymentMode || undefined,
                 vehicleKM: editVehicleKM ? Number(editVehicleKM) : undefined,
+                customer: editCustomer ? { id: editCustomer.id } as any : undefined,
+                vehicle: editVehicle ? { id: editVehicle.id } as any : undefined,
                 products: editLines.map(l => ({
                     product: l.product ? { id: l.product.id } as any : undefined,
                     nozzle: l.nozzle ? { id: l.nozzle.id } as any : undefined,
@@ -318,6 +348,18 @@ export default function InvoiceHistoryPage() {
                             <option value="">All</option>
                             <option value="PAID">Paid</option>
                             <option value="NOT_PAID">Not Paid</option>
+                        </select>
+                    </div>
+                    <div className="min-w-[150px]">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Category</label>
+                        <select
+                            value={filters.customerCategory}
+                            onChange={e => setFilters(f => ({ ...f, customerCategory: e.target.value }))}
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
+                        >
+                            <option value="">All</option>
+                            <option value="GOVERNMENT">Government</option>
+                            <option value="NON_GOVERNMENT">Non-Government</option>
                         </select>
                     </div>
                     <div className="flex-1 min-w-[200px]">
@@ -542,6 +584,116 @@ export default function InvoiceHistoryPage() {
                     {editError && (
                         <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg">{editError}</div>
                     )}
+
+                    {/* Bill Type Toggle */}
+                    <div>
+                        <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-1">Bill Type</label>
+                        <div className="flex gap-2">
+                            <button type="button" onClick={() => setEditBillType("CASH")}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-lg border transition-colors ${editBillType === "CASH" ? "bg-primary text-primary-foreground border-primary" : "bg-muted border-border text-muted-foreground"}`}>
+                                Cash
+                            </button>
+                            <button type="button" onClick={() => setEditBillType("CREDIT")}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-lg border transition-colors ${editBillType === "CREDIT" ? "bg-primary text-primary-foreground border-primary" : "bg-muted border-border text-muted-foreground"}`}>
+                                Credit
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Customer & Vehicle */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="relative">
+                            <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Customer</label>
+                            <input
+                                value={editCustomerSearch}
+                                onChange={async (e) => {
+                                    const q = e.target.value;
+                                    setEditCustomerSearch(q);
+                                    if (q.length >= 2) {
+                                        try {
+                                            const res = await getCustomers(q);
+                                            setEditCustomerSuggestions(Array.isArray(res) ? res : res.content || []);
+                                        } catch { setEditCustomerSuggestions([]); }
+                                    } else {
+                                        setEditCustomerSuggestions([]);
+                                    }
+                                }}
+                                placeholder={editCustomer ? editCustomer.name : "Search customer..."}
+                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground"
+                            />
+                            {editCustomerSuggestions.length > 0 && (
+                                <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                    {editCustomerSuggestions.map((c: any) => (
+                                        <button key={c.id} type="button"
+                                            onClick={async () => {
+                                                setEditCustomer(c);
+                                                setEditCustomerSearch(c.name);
+                                                setEditCustomerSuggestions([]);
+                                                setEditVehicle(null);
+                                                try {
+                                                    const vehicles = await getVehiclesByCustomer(c.id);
+                                                    setEditCustomerVehicles(vehicles);
+                                                } catch { setEditCustomerVehicles([]); }
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors">
+                                            {c.name} {c.phone && <span className="text-muted-foreground ml-1">({c.phone})</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {editCustomer && (
+                                <button type="button" onClick={() => { setEditCustomer(null); setEditCustomerSearch(""); setEditCustomerVehicles([]); setEditVehicle(null); }}
+                                    className="absolute right-2 top-6 p-0.5 text-muted-foreground hover:text-red-500">
+                                    <X className="w-3 h-3" />
+                                </button>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Vehicle</label>
+                            <select
+                                value={editVehicle?.id || ""}
+                                onChange={(e) => {
+                                    const vid = Number(e.target.value);
+                                    const v = editCustomerVehicles.find((v: any) => v.id === vid) || editVehicleResults.find(v => v.id === vid) || null;
+                                    setEditVehicle(v);
+                                }}
+                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground"
+                            >
+                                <option value="">— No vehicle —</option>
+                                {editCustomerVehicles.map((v: any) => (
+                                    <option key={v.id} value={v.id}>{v.vehicleNumber}</option>
+                                ))}
+                            </select>
+                            {/* Vehicle search for non-customer vehicles */}
+                            <input
+                                value={editVehicleSearch}
+                                onChange={async (e) => {
+                                    const q = e.target.value;
+                                    setEditVehicleSearch(q);
+                                    if (q.length >= 3) {
+                                        try {
+                                            const results = await searchVehicles(q);
+                                            const custIds = new Set(editCustomerVehicles.map((v: any) => v.id));
+                                            setEditVehicleResults(results.filter(v => !custIds.has(v.id)));
+                                        } catch { setEditVehicleResults([]); }
+                                    } else { setEditVehicleResults([]); }
+                                }}
+                                placeholder="Search other vehicle..."
+                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground mt-1"
+                            />
+                            {editVehicleResults.length > 0 && (
+                                <div className="mt-1 bg-background border border-border rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                                    {editVehicleResults.map(v => (
+                                        <button key={v.id} type="button"
+                                            onClick={() => { setEditVehicle(v); setEditVehicleSearch(""); setEditVehicleResults([]); }}
+                                            className="w-full px-3 py-1.5 text-left text-sm hover:bg-muted transition-colors">
+                                            {v.vehicleNumber} {(v as any).customer && <span className="text-muted-foreground ml-1">({(v as any).customer.name})</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {/* Product Lines */}
                     <div>

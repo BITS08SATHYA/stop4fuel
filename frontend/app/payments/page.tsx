@@ -62,6 +62,7 @@ export default function PaymentsPage() {
     // Table filters
     const [tableSearch, setTableSearch] = useState("");
     const [modeFilter, setModeFilter] = useState<string>("ALL");
+    const [categoryFilter, setCategoryFilter] = useState<string>("");
 
     useEffect(() => {
         loadInitialData();
@@ -69,7 +70,7 @@ export default function PaymentsPage() {
 
     useEffect(() => {
         loadPayments();
-    }, [page]);
+    }, [page, categoryFilter]);
 
     const loadInitialData = async () => {
         try {
@@ -83,7 +84,7 @@ export default function PaymentsPage() {
     const loadPayments = async () => {
         setLoading(true);
         try {
-            const result: PageResponse<Payment> = await getPayments(page, pageSize);
+            const result: PageResponse<Payment> = await getPayments(page, pageSize, categoryFilter || undefined);
             setPayments(result.content);
             setTotalPages(result.totalPages);
             setTotalElements(result.totalElements);
@@ -286,6 +287,15 @@ export default function PaymentsPage() {
                                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
+                            className="px-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                            <option value="">All Categories</option>
+                            <option value="GOVERNMENT">Government</option>
+                            <option value="NON_GOVERNMENT">Non-Government</option>
+                        </select>
                         <select
                             value={modeFilter}
                             onChange={(e) => setModeFilter(e.target.value)}
