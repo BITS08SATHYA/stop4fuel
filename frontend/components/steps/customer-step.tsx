@@ -287,6 +287,96 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                     )}
                 </div>
             </div>
+
+            <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    GST Number
+                </label>
+                <input
+                    type="text"
+                    value={data.gstNumber || ""}
+                    onChange={(e) => handleChange("gstNumber", e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                    placeholder="e.g. 33AABCT1332L1ZZ"
+                    maxLength={15}
+                />
+            </div>
+
+            {/* GPS Coordinates */}
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Latitude
+                    </label>
+                    <input
+                        type="number"
+                        step="0.0000001"
+                        value={data.latitude || ""}
+                        onChange={(e) => handleChange("latitude", e.target.value ? parseFloat(e.target.value) : null)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        placeholder="e.g. 13.0827"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Longitude
+                    </label>
+                    <input
+                        type="number"
+                        step="0.0000001"
+                        value={data.longitude || ""}
+                        onChange={(e) => handleChange("longitude", e.target.value ? parseFloat(e.target.value) : null)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        placeholder="e.g. 80.2707"
+                    />
+                </div>
+            </div>
+
+            {/* Statement Preferences */}
+            <div className="grid grid-cols-3 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Statement Frequency
+                    </label>
+                    <select
+                        value={data.statementFrequency || ""}
+                        onChange={(e) => handleChange("statementFrequency", e.target.value || null)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                    >
+                        <option value="" className="bg-slate-900">Select Frequency</option>
+                        <option value="MONTHLY" className="bg-slate-900">Monthly</option>
+                        <option value="BIWEEKLY" className="bg-slate-900">Biweekly</option>
+                        <option value="WEEKLY" className="bg-slate-900">Weekly</option>
+                        <option value="CUSTOM" className="bg-slate-900">Custom</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Statement Grouping
+                    </label>
+                    <select
+                        value={data.statementGrouping || ""}
+                        onChange={(e) => handleChange("statementGrouping", e.target.value || null)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                    >
+                        <option value="" className="bg-slate-900">Select Grouping</option>
+                        <option value="CUSTOMER_WISE" className="bg-slate-900">Customer Wise</option>
+                        <option value="VEHICLE_WISE" className="bg-slate-900">Vehicle Wise</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Threshold Amount
+                    </label>
+                    <input
+                        type="number"
+                        value={data.statementThresholdAmount || ""}
+                        onChange={(e) => handleChange("statementThresholdAmount", e.target.value ? parseFloat(e.target.value) : null)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        placeholder="e.g. 50000"
+                    />
+                </div>
+            </div>
         </div>
     );
 }
