@@ -4,6 +4,7 @@ import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,9 +19,11 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
     List<InvoiceBill> findByScid(Long scid);
     List<InvoiceBill> findByShiftId(Long shiftId);
     List<InvoiceBill> findByBillType(String billType);
+    @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     List<InvoiceBill> findByStatementId(Long statementId);
 
     // Find credit bills for a customer in a date range that are not yet linked to a statement
+    @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
@@ -31,6 +34,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("toDate") LocalDateTime toDate);
 
     // Find unlinked credit bills filtered by vehicle
+    @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
@@ -43,6 +47,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("vehicleId") Long vehicleId);
 
     // Find unlinked credit bills containing a specific product
+    @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT DISTINCT ib FROM InvoiceBill ib JOIN ib.products ip " +
            "WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
@@ -56,6 +61,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("productId") Long productId);
 
     // Find unlinked credit bills by vehicle AND product
+    @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT DISTINCT ib FROM InvoiceBill ib JOIN ib.products ip " +
            "WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
@@ -71,6 +77,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("productId") Long productId);
 
     // Find specific unlinked credit bills by IDs (for bill-wise selection)
+    @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.id IN :billIds " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "ORDER BY ib.date ASC")
@@ -216,9 +223,9 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
             @Param("toDate") LocalDateTime toDate);
 
     // Hourly distribution
-    @Query("SELECT FUNCTION('HOUR', ib.date), COUNT(ib) " +
+    @Query("SELECT EXTRACT(HOUR FROM ib.date), COUNT(ib) " +
            "FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
-           "GROUP BY FUNCTION('HOUR', ib.date) ORDER BY FUNCTION('HOUR', ib.date)")
+           "GROUP BY EXTRACT(HOUR FROM ib.date) ORDER BY EXTRACT(HOUR FROM ib.date)")
     List<Object[]> getHourlyDistribution(
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
