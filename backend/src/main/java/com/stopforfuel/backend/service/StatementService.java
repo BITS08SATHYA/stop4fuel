@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.dto.StatementStats;
 import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.InvoiceBill;
@@ -34,8 +35,11 @@ public class StatementService {
     private final StatementPdfGenerator pdfGenerator;
     private final S3StorageService s3StorageService;
 
-    public Page<Statement> getStatements(Long customerId, String status, Pageable pageable) {
-        return statementRepository.findWithFilters(customerId, status, pageable);
+    public Page<Statement> getStatements(Long customerId, String status, LocalDate fromDate, LocalDate toDate, String search, Pageable pageable) {
+        if (search != null && !search.isBlank()) {
+            return statementRepository.findWithFiltersAndSearch(customerId, status, fromDate, toDate, search.trim(), pageable);
+        }
+        return statementRepository.findWithFilters(customerId, status, fromDate, toDate, pageable);
     }
 
     public List<Statement> getAllStatements() {
@@ -282,5 +286,34 @@ public class StatementService {
         }
 
         statementRepository.deleteById(id);
+    }
+
+    public StatementStats getStats() {
+        LocalDate startOfThisMonth = LocalDate.now().withDayOfMonth(1);
+        LocalDate startOfLastMonth = startOfThisMonth.minusMonths(1);
+
+        // Last month metrics
+        long statementsLastMonth = statementRepository.countByStatementDateRange(startOfLastMonth, startOfThisMonth);
+        long paidLastMonth = statementRepository.countPaidByStatementDateRange(startOfLastMonth, startOfThisMonth);
+        BigDecimal amountGeneratedLastMonth = statementRepository.sumNetAmountByDateRange(startOfLastMonth, startOfThisMonth);
+        BigDecimal amountCollectedLastMonth = statementRepository.sumReceivedAmountByDateRange(startOfLastMonth, startOfThisMonth);
+
+        // All-time metrics
+        long totalStatements = statementRepository.count();
+        long totalPaid = statementRepository.countPaid();
+        double paidPercentage = totalStatements > 0 ? (totalPaid * 100.0) / totalStatements : 0;
+        BigDecimal totalUnpaidAmount = statementRepository.sumUnpaidBalance();
+        BigDecimal totalNetAmount = statementRepository.sumNetAmount();
+        BigDecimal totalReceivedAmount = statementRepository.sumReceivedAmount();
+        double collectionRate = totalNetAmount.compareTo(BigDecimal.ZERO) > 0
+                ? totalReceivedAmount.multiply(BigDecimal.valueOf(100)).divide(totalNetAmount, 2, RoundingMode.HALF_UP).doubleValue()
+                : 0;
+        BigDecimal avgStatementAmount = statementRepository.avgNetAmount();
+
+        return new StatementStats(
+                statementsLastMonth, paidLastMonth, amountGeneratedLastMonth, amountCollectedLastMonth,
+                totalStatements, totalPaid, paidPercentage, totalUnpaidAmount,
+                totalNetAmount, totalReceivedAmount, collectionRate, avgStatementAmount
+        );
     }
 }

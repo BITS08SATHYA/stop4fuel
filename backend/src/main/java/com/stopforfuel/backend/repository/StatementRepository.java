@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -64,4 +65,40 @@ public interface StatementRepository extends JpaRepository<Statement, Long> {
     Optional<Statement> findByStatementNo(String statementNo);
 
     List<Statement> findByCustomerIdAndStatementDateBetween(Long customerId, LocalDate from, LocalDate to);
+
+    // Stats aggregation queries
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.status = 'PAID'")
+    long countPaid();
+
+    @Query("SELECT COALESCE(SUM(s.balanceAmount), 0) FROM Statement s WHERE s.status = 'NOT_PAID'")
+    BigDecimal sumUnpaidBalance();
+
+    @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM Statement s")
+    BigDecimal sumNetAmount();
+
+    @Query("SELECT COALESCE(SUM(s.receivedAmount), 0) FROM Statement s")
+    BigDecimal sumReceivedAmount();
+
+    @Query("SELECT COALESCE(AVG(s.netAmount), 0) FROM Statement s")
+    BigDecimal avgNetAmount();
+
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end")
+    long countByStatementDateRange(
+            @org.springframework.data.repository.query.Param("start") LocalDate start,
+            @org.springframework.data.repository.query.Param("end") LocalDate end);
+
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.status = 'PAID'")
+    long countPaidByStatementDateRange(
+            @org.springframework.data.repository.query.Param("start") LocalDate start,
+            @org.springframework.data.repository.query.Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end")
+    BigDecimal sumNetAmountByDateRange(
+            @org.springframework.data.repository.query.Param("start") LocalDate start,
+            @org.springframework.data.repository.query.Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(s.receivedAmount), 0) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end")
+    BigDecimal sumReceivedAmountByDateRange(
+            @org.springframework.data.repository.query.Param("start") LocalDate start,
+            @org.springframework.data.repository.query.Param("end") LocalDate end);
 }
