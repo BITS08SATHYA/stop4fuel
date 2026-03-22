@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Statement;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -32,12 +33,32 @@ public interface StatementRepository extends JpaRepository<Statement, Long> {
 
     Page<Statement> findByCustomerIdAndStatus(Long customerId, String status, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"customer"})
     @Query("SELECT s FROM Statement s WHERE " +
            "(:status IS NULL OR s.status = :status) AND " +
-           "(:customerId IS NULL OR s.customer.id = :customerId)")
+           "(:customerId IS NULL OR s.customer.id = :customerId) AND " +
+           "(CAST(:fromDate AS date) IS NULL OR s.fromDate >= :fromDate) AND " +
+           "(CAST(:toDate AS date) IS NULL OR s.toDate <= :toDate)")
     Page<Statement> findWithFilters(
             @org.springframework.data.repository.query.Param("customerId") Long customerId,
             @org.springframework.data.repository.query.Param("status") String status,
+            @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,
+            @org.springframework.data.repository.query.Param("toDate") LocalDate toDate,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {"customer"})
+    @Query("SELECT s FROM Statement s WHERE " +
+           "(:status IS NULL OR s.status = :status) AND " +
+           "(:customerId IS NULL OR s.customer.id = :customerId) AND " +
+           "(CAST(:fromDate AS date) IS NULL OR s.fromDate >= :fromDate) AND " +
+           "(CAST(:toDate AS date) IS NULL OR s.toDate <= :toDate) AND " +
+           "(LOWER(s.customer.name) LIKE LOWER(CONCAT('%', :search, '%')) OR s.statementNo LIKE CONCAT('%', :search, '%'))")
+    Page<Statement> findWithFiltersAndSearch(
+            @org.springframework.data.repository.query.Param("customerId") Long customerId,
+            @org.springframework.data.repository.query.Param("status") String status,
+            @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,
+            @org.springframework.data.repository.query.Param("toDate") LocalDate toDate,
+            @org.springframework.data.repository.query.Param("search") String search,
             Pageable pageable);
 
     Optional<Statement> findByStatementNo(String statementNo);
