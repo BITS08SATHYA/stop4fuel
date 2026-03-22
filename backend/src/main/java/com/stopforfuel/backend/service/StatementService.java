@@ -247,9 +247,9 @@ public class StatementService {
 
         List<Company> companies = companyRepository.findByScid(
                 statement.getScid() != null ? statement.getScid() : SecurityUtils.getScid());
-        String companyName = !companies.isEmpty() ? companies.get(0).getName() : "StopForFuel";
+        Company company = !companies.isEmpty() ? companies.get(0) : null;
 
-        byte[] pdfBytes = pdfGenerator.generate(statement, bills, companyName);
+        byte[] pdfBytes = pdfGenerator.generate(statement, bills, company);
 
         LocalDate date = statement.getStatementDate() != null ? statement.getStatementDate() : LocalDate.now();
         String key = String.format("statements/%d/%02d/%d/statement.pdf",

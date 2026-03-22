@@ -4,6 +4,7 @@ import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.InvoiceProduct;
 import com.stopforfuel.backend.entity.Statement;
@@ -12,107 +13,70 @@ import org.springframework.stereotype.Component;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 @Component
 public class StatementPdfGenerator {
 
-    private static final Font TITLE_FONT = new Font(Font.HELVETICA, 16, Font.BOLD);
-    private static final Font HEADER_FONT = new Font(Font.HELVETICA, 10, Font.BOLD);
-    private static final Font NORMAL_FONT = new Font(Font.HELVETICA, 9, Font.NORMAL);
-    private static final Font SMALL_FONT = new Font(Font.HELVETICA, 8, Font.NORMAL);
-    private static final Font BOLD_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
+    private static final Color PRIMARY = new Color(33, 37, 41);
+    private static final Color HEADER_BG = new Color(52, 58, 64);
+    private static final Color HEADER_FG = Color.WHITE;
+    private static final Color ALT_ROW = new Color(248, 249, 250);
+    private static final Color BORDER_COLOR = new Color(222, 226, 230);
+    private static final Color ACCENT = new Color(13, 110, 253);
+
+    private static final Font COMPANY_FONT = new Font(Font.HELVETICA, 14, Font.BOLD, PRIMARY);
+    private static final Font COMPANY_DETAIL_FONT = new Font(Font.HELVETICA, 8, Font.NORMAL, new Color(108, 117, 125));
+    private static final Font TITLE_FONT = new Font(Font.HELVETICA, 12, Font.BOLD, ACCENT);
+    private static final Font LABEL_FONT = new Font(Font.HELVETICA, 8, Font.BOLD, new Color(108, 117, 125));
+    private static final Font VALUE_FONT = new Font(Font.HELVETICA, 9, Font.NORMAL, PRIMARY);
+    private static final Font VALUE_BOLD_FONT = new Font(Font.HELVETICA, 9, Font.BOLD, PRIMARY);
+    private static final Font TH_FONT = new Font(Font.HELVETICA, 8, Font.BOLD, HEADER_FG);
+    private static final Font TD_FONT = new Font(Font.HELVETICA, 8, Font.NORMAL, PRIMARY);
+    private static final Font TD_BOLD_FONT = new Font(Font.HELVETICA, 8, Font.BOLD, PRIMARY);
+    private static final Font TOTAL_LABEL_FONT = new Font(Font.HELVETICA, 9, Font.NORMAL, new Color(108, 117, 125));
+    private static final Font TOTAL_VALUE_FONT = new Font(Font.HELVETICA, 9, Font.BOLD, PRIMARY);
+    private static final Font NET_LABEL_FONT = new Font(Font.HELVETICA, 10, Font.BOLD, PRIMARY);
+    private static final Font NET_VALUE_FONT = new Font(Font.HELVETICA, 11, Font.BOLD, ACCENT);
+    private static final Font FOOTER_FONT = new Font(Font.HELVETICA, 7, Font.ITALIC, new Color(108, 117, 125));
+
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
-    private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm");
+    private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+    private static final NumberFormat INR = NumberFormat.getNumberInstance(new Locale("en", "IN"));
 
-    public byte[] generate(Statement statement, List<InvoiceBill> bills, String companyName) {
+    static {
+        INR.setMinimumFractionDigits(2);
+        INR.setMaximumFractionDigits(2);
+    }
+
+    public byte[] generate(Statement statement, List<InvoiceBill> bills, Company company) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4, 40, 40, 30, 30);
 
-        Document document = new Document(PageSize.A4, 36, 36, 36, 36);
         try {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            // Company Header
-            Paragraph header = new Paragraph(companyName, TITLE_FONT);
-            header.setAlignment(Element.ALIGN_CENTER);
-            document.add(header);
+            // === Company Header ===
+            addCompanyHeader(document, company);
 
-            Paragraph subtitle = new Paragraph("Credit Statement", HEADER_FONT);
-            subtitle.setAlignment(Element.ALIGN_CENTER);
-            subtitle.setSpacingAfter(10);
-            document.add(subtitle);
+            // === Divider line ===
+            addDivider(document);
 
-            // Statement Info
-            PdfPTable infoTable = new PdfPTable(2);
-            infoTable.setWidthPercentage(100);
-            infoTable.setSpacingAfter(10);
+            // === Statement Title + Info in two columns ===
+            addStatementInfo(document, statement);
 
-            addInfoRow(infoTable, "Statement No:", statement.getStatementNo());
-            addInfoRow(infoTable, "Customer:",
-                    statement.getCustomer() != null ? statement.getCustomer().getName() : "-");
-            addInfoRow(infoTable, "Period:",
-                    statement.getFromDate().format(DATE_FMT) + " to " + statement.getToDate().format(DATE_FMT));
-            addInfoRow(infoTable, "Statement Date:", statement.getStatementDate().format(DATE_FMT));
+            // === Bills Table ===
+            addBillsTable(document, bills);
 
-            document.add(infoTable);
+            // === Totals ===
+            addTotals(document, statement);
 
-            // Bills Table
-            PdfPTable billTable = new PdfPTable(new float[]{1f, 2f, 2f, 2.5f, 3f, 2f});
-            billTable.setWidthPercentage(100);
-            billTable.setSpacingBefore(5);
-
-            // Table header
-            addTableHeader(billTable, "#");
-            addTableHeader(billTable, "Bill No");
-            addTableHeader(billTable, "Date");
-            addTableHeader(billTable, "Vehicle");
-            addTableHeader(billTable, "Products");
-            addTableHeader(billTable, "Amount");
-
-            int index = 1;
-            for (InvoiceBill bill : bills) {
-                addTableCell(billTable, String.valueOf(index++));
-                addTableCell(billTable, bill.getBillNo() != null ? bill.getBillNo() : "-");
-                addTableCell(billTable, bill.getDate() != null ? bill.getDate().format(DATETIME_FMT) : "-");
-                addTableCell(billTable, bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-");
-
-                // Compact products
-                StringBuilder prods = new StringBuilder();
-                if (bill.getProducts() != null) {
-                    for (InvoiceProduct ip : bill.getProducts()) {
-                        if (prods.length() > 0) prods.append(", ");
-                        String name = ip.getProduct() != null ? ip.getProduct().getName() : "?";
-                        BigDecimal qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
-                        prods.append(name).append(": ").append(qty);
-                    }
-                }
-                addTableCell(billTable, prods.toString());
-                addTableCellRight(billTable,
-                        bill.getNetAmount() != null ? bill.getNetAmount().toPlainString() : "0");
-            }
-
-            document.add(billTable);
-
-            // Totals
-            PdfPTable totalsTable = new PdfPTable(2);
-            totalsTable.setWidthPercentage(50);
-            totalsTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            totalsTable.setSpacingBefore(10);
-
-            addTotalRow(totalsTable, "Total Amount:",
-                    statement.getTotalAmount() != null ? statement.getTotalAmount().toPlainString() : "0");
-            addTotalRow(totalsTable, "Rounding:",
-                    statement.getRoundingAmount() != null ? statement.getRoundingAmount().toPlainString() : "0");
-            addTotalRow(totalsTable, "Net Amount:",
-                    statement.getNetAmount() != null ? statement.getNetAmount().toPlainString() : "0");
-            addTotalRow(totalsTable, "Received:",
-                    statement.getReceivedAmount() != null ? statement.getReceivedAmount().toPlainString() : "0");
-            addTotalRow(totalsTable, "Balance:",
-                    statement.getBalanceAmount() != null ? statement.getBalanceAmount().toPlainString() : "0");
-
-            document.add(totalsTable);
+            // === Footer ===
+            addFooter(document);
 
             document.close();
         } catch (DocumentException e) {
@@ -122,50 +86,230 @@ public class StatementPdfGenerator {
         return baos.toByteArray();
     }
 
-    private void addInfoRow(PdfPTable table, String label, String value) {
-        PdfPCell labelCell = new PdfPCell(new Phrase(label, BOLD_FONT));
+    // Backward compatible overload
+    public byte[] generate(Statement statement, List<InvoiceBill> bills, String companyName) {
+        Company fallback = new Company();
+        fallback.setName(companyName);
+        return generate(statement, bills, fallback);
+    }
+
+    private void addCompanyHeader(Document doc, Company company) throws DocumentException {
+        String name = company != null && company.getName() != null ? company.getName() : "StopForFuel";
+        Paragraph companyPara = new Paragraph(name, COMPANY_FONT);
+        companyPara.setAlignment(Element.ALIGN_CENTER);
+        doc.add(companyPara);
+
+        if (company != null) {
+            StringBuilder details = new StringBuilder();
+            if (company.getAddress() != null && !company.getAddress().isEmpty()) {
+                details.append(company.getAddress());
+            }
+            if (company.getGstNo() != null && !company.getGstNo().isEmpty()) {
+                if (details.length() > 0) details.append("  |  ");
+                details.append("GST: ").append(company.getGstNo());
+            }
+            if (details.length() > 0) {
+                Paragraph detailPara = new Paragraph(details.toString(), COMPANY_DETAIL_FONT);
+                detailPara.setAlignment(Element.ALIGN_CENTER);
+                doc.add(detailPara);
+            }
+        }
+    }
+
+    private void addDivider(Document doc) throws DocumentException {
+        PdfPTable divider = new PdfPTable(1);
+        divider.setWidthPercentage(100);
+        divider.setSpacingBefore(8);
+        divider.setSpacingAfter(8);
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(Rectangle.BOTTOM);
+        cell.setBorderColor(ACCENT);
+        cell.setBorderWidth(1.5f);
+        cell.setFixedHeight(1);
+        divider.addCell(cell);
+        doc.add(divider);
+    }
+
+    private void addStatementInfo(Document doc, Statement statement) throws DocumentException {
+        // Title
+        Paragraph title = new Paragraph("CREDIT STATEMENT", TITLE_FONT);
+        title.setAlignment(Element.ALIGN_CENTER);
+        title.setSpacingAfter(12);
+        doc.add(title);
+
+        // Two-column info layout
+        PdfPTable infoTable = new PdfPTable(4);
+        infoTable.setWidthPercentage(100);
+        infoTable.setWidths(new float[]{1.2f, 2f, 1.2f, 2f});
+        infoTable.setSpacingAfter(15);
+
+        // Row 1: Statement No | Statement Date
+        addLabelValueCell(infoTable, "Statement No", statement.getStatementNo());
+        addLabelValueCell(infoTable, "Date", statement.getStatementDate() != null ? statement.getStatementDate().format(DATE_FMT) : "-");
+
+        // Row 2: Customer | Period
+        String customerName = statement.getCustomer() != null ? statement.getCustomer().getName() : "-";
+        String period = statement.getFromDate().format(DATE_FMT) + "  to  " + statement.getToDate().format(DATE_FMT);
+        addLabelValueCell(infoTable, "Customer", customerName);
+        addLabelValueCell(infoTable, "Period", period);
+
+        // Row 3: Customer Address (if available) | Number of Bills
+        String address = "";
+        if (statement.getCustomer() != null && statement.getCustomer().getAddress() != null) {
+            address = statement.getCustomer().getAddress();
+        }
+        addLabelValueCell(infoTable, "Address", address.isEmpty() ? "-" : address);
+        addLabelValueCell(infoTable, "No. of Bills", String.valueOf(bills(statement)));
+
+        doc.add(infoTable);
+    }
+
+    private int bills(Statement s) {
+        return s.getNumberOfBills() != null ? s.getNumberOfBills() : 0;
+    }
+
+    private void addLabelValueCell(PdfPTable table, String label, String value) {
+        PdfPCell labelCell = new PdfPCell(new Phrase(label, LABEL_FONT));
         labelCell.setBorder(Rectangle.NO_BORDER);
-        labelCell.setPadding(3);
+        labelCell.setPaddingBottom(6);
+        labelCell.setPaddingTop(2);
         table.addCell(labelCell);
 
-        PdfPCell valueCell = new PdfPCell(new Phrase(value, NORMAL_FONT));
+        PdfPCell valueCell = new PdfPCell(new Phrase(value, VALUE_FONT));
         valueCell.setBorder(Rectangle.NO_BORDER);
-        valueCell.setPadding(3);
+        valueCell.setPaddingBottom(6);
+        valueCell.setPaddingTop(2);
         table.addCell(valueCell);
     }
 
-    private void addTableHeader(PdfPTable table, String text) {
-        PdfPCell cell = new PdfPCell(new Phrase(text, HEADER_FONT));
-        cell.setBackgroundColor(new Color(230, 230, 230));
+    private void addBillsTable(Document doc, List<InvoiceBill> bills) throws DocumentException {
+        float[] widths = {0.6f, 1.4f, 1.2f, 1.5f, 2.2f, 1.4f};
+        PdfPTable table = new PdfPTable(widths);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(5);
+        table.setHeaderRows(1);
+
+        // Header
+        String[] headers = {"#", "Bill No", "Date", "Vehicle", "Products", "Amount (₹)"};
+        for (String h : headers) {
+            PdfPCell cell = new PdfPCell(new Phrase(h, TH_FONT));
+            cell.setBackgroundColor(HEADER_BG);
+            cell.setPadding(6);
+            cell.setBorderColor(HEADER_BG);
+            cell.setHorizontalAlignment(h.equals("Amount (₹)") || h.equals("#") ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT);
+            if (h.equals("#")) cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            table.addCell(cell);
+        }
+
+        int index = 1;
+        for (InvoiceBill bill : bills) {
+            Color rowBg = (index % 2 == 0) ? ALT_ROW : Color.WHITE;
+
+            addBillCell(table, String.valueOf(index), rowBg, Element.ALIGN_CENTER, false);
+            addBillCell(table, bill.getBillNo() != null ? bill.getBillNo() : "-", rowBg, Element.ALIGN_LEFT, true);
+            addBillCell(table, bill.getDate() != null ? bill.getDate().format(DATETIME_FMT) : "-", rowBg, Element.ALIGN_LEFT, false);
+            addBillCell(table, bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-", rowBg, Element.ALIGN_LEFT, false);
+
+            // Products with qty
+            StringBuilder prods = new StringBuilder();
+            if (bill.getProducts() != null) {
+                for (InvoiceProduct ip : bill.getProducts()) {
+                    if (prods.length() > 0) prods.append("\n");
+                    String name = ip.getProduct() != null ? ip.getProduct().getName() : "?";
+                    BigDecimal qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal price = ip.getUnitPrice() != null ? ip.getUnitPrice() : BigDecimal.ZERO;
+                    prods.append(name).append("  ×  ").append(qty).append("  @  ₹").append(INR.format(price));
+                }
+            }
+            addBillCell(table, prods.toString(), rowBg, Element.ALIGN_LEFT, false);
+
+            // Amount right-aligned bold
+            String amount = bill.getNetAmount() != null ? INR.format(bill.getNetAmount()) : "0.00";
+            addBillCell(table, amount, rowBg, Element.ALIGN_RIGHT, true);
+
+            index++;
+        }
+
+        doc.add(table);
+    }
+
+    private void addBillCell(PdfPTable table, String text, Color bg, int align, boolean bold) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, bold ? TD_BOLD_FONT : TD_FONT));
+        cell.setBackgroundColor(bg);
         cell.setPadding(5);
-        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setPaddingTop(4);
+        cell.setPaddingBottom(4);
+        cell.setHorizontalAlignment(align);
+        cell.setBorderColor(BORDER_COLOR);
+        cell.setBorderWidth(0.5f);
         table.addCell(cell);
     }
 
-    private void addTableCell(PdfPTable table, String text) {
-        PdfPCell cell = new PdfPCell(new Phrase(text, SMALL_FONT));
-        cell.setPadding(4);
-        table.addCell(cell);
+    private void addTotals(Document doc, Statement statement) throws DocumentException {
+        PdfPTable totals = new PdfPTable(2);
+        totals.setWidthPercentage(45);
+        totals.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totals.setSpacingBefore(12);
+        totals.setWidths(new float[]{1.5f, 1.5f});
+
+        // Total Amount
+        addTotalRow(totals, "Total Amount", formatAmount(statement.getTotalAmount()), TOTAL_LABEL_FONT, TOTAL_VALUE_FONT, false);
+
+        // Rounding
+        addTotalRow(totals, "Rounding", formatAmount(statement.getRoundingAmount()), TOTAL_LABEL_FONT, TOTAL_VALUE_FONT, false);
+
+        // Separator
+        PdfPCell sepLeft = new PdfPCell();
+        sepLeft.setBorder(Rectangle.BOTTOM);
+        sepLeft.setBorderColor(BORDER_COLOR);
+        sepLeft.setFixedHeight(2);
+        totals.addCell(sepLeft);
+        PdfPCell sepRight = new PdfPCell();
+        sepRight.setBorder(Rectangle.BOTTOM);
+        sepRight.setBorderColor(BORDER_COLOR);
+        sepRight.setFixedHeight(2);
+        totals.addCell(sepRight);
+
+        // Net Amount (prominent)
+        addTotalRow(totals, "Net Amount", "₹ " + formatAmount(statement.getNetAmount()), NET_LABEL_FONT, NET_VALUE_FONT, true);
+
+        // Received
+        addTotalRow(totals, "Received", formatAmount(statement.getReceivedAmount()), TOTAL_LABEL_FONT, TOTAL_VALUE_FONT, false);
+
+        // Balance
+        Font balanceFont = new Font(Font.HELVETICA, 10, Font.BOLD, statement.getBalanceAmount() != null && statement.getBalanceAmount().compareTo(BigDecimal.ZERO) > 0 ? new Color(220, 53, 69) : new Color(25, 135, 84));
+        addTotalRow(totals, "Balance Due", "₹ " + formatAmount(statement.getBalanceAmount()), NET_LABEL_FONT, balanceFont, true);
+
+        doc.add(totals);
     }
 
-    private void addTableCellRight(PdfPTable table, String text) {
-        PdfPCell cell = new PdfPCell(new Phrase(text, SMALL_FONT));
-        cell.setPadding(4);
-        cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        table.addCell(cell);
-    }
-
-    private void addTotalRow(PdfPTable table, String label, String value) {
-        PdfPCell labelCell = new PdfPCell(new Phrase(label, BOLD_FONT));
-        labelCell.setPadding(3);
+    private void addTotalRow(PdfPTable table, String label, String value, Font labelFont, Font valueFont, boolean topPad) {
+        PdfPCell labelCell = new PdfPCell(new Phrase(label, labelFont));
         labelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         labelCell.setBorder(Rectangle.NO_BORDER);
+        labelCell.setPaddingRight(10);
+        labelCell.setPaddingTop(topPad ? 6 : 3);
+        labelCell.setPaddingBottom(3);
         table.addCell(labelCell);
 
-        PdfPCell valueCell = new PdfPCell(new Phrase(value, BOLD_FONT));
-        valueCell.setPadding(3);
+        PdfPCell valueCell = new PdfPCell(new Phrase(value, valueFont));
         valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         valueCell.setBorder(Rectangle.NO_BORDER);
+        valueCell.setPaddingTop(topPad ? 6 : 3);
+        valueCell.setPaddingBottom(3);
         table.addCell(valueCell);
+    }
+
+    private void addFooter(Document doc) throws DocumentException {
+        Paragraph footer = new Paragraph();
+        footer.setSpacingBefore(25);
+        footer.add(new Chunk("This is a computer-generated statement and does not require a signature.", FOOTER_FONT));
+        footer.setAlignment(Element.ALIGN_CENTER);
+        doc.add(footer);
+    }
+
+    private String formatAmount(BigDecimal amount) {
+        if (amount == null) return "0.00";
+        return INR.format(amount);
     }
 }
