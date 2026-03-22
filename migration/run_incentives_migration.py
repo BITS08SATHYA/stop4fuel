@@ -10,13 +10,18 @@ from config import MYSQL_CONFIG, PG_CONFIG
 from phases.phase08_incentives import migrate
 
 
-def main():
-    print("=" * 60)
-    print("Phase 8: Incentives Migration")
-    print("=" * 60)
-
-    pg_conn = psycopg2.connect(**PG_CONFIG)
+def _pre_check(pg_conn):
+    """Pre-flight checks."""
     pg = pg_conn.cursor()
+
+    # Check invoices exist
+    pg.execute("SELECT COUNT(*) FROM invoice_product")
+    prod_count = pg.fetchone()[0]
+    if prod_count == 0:
+        print("  ERROR: No invoice_product rows — run Phase 5 first!")
+        pg.close()
+        return False
+    print(f"  Prerequisites: {prod_count} invoice products in PG")
 
     # Check current state
     pg.execute("SELECT COUNT(*) FROM invoice_product WHERE discount_amount IS NOT NULL AND discount_amount > 0")
@@ -36,28 +41,82 @@ def main():
             print("  Cleared")
 
     pg.close()
+    return True
+
+
+def _reconcile(pg_conn, mysql_conn):
+    """Post-migration reconciliation."""
+    pg = pg_conn.cursor()
+    my = mysql_conn.cursor()
+    print("\n" + "=" * 60)
+    print("Reconciliation")
+    print("=" * 60)
+
+    # Source counts
+    my.execute("SELECT COUNT(*) FROM incentive_table WHERE incentive_amt > 0")
+    src_incentives = my.fetchone()[0]
+
+    pg.execute("SELECT COUNT(*) FROM invoice_product WHERE discount_amount IS NOT NULL AND discount_amount > 0")
+    tgt_discounts = pg.fetchone()[0]
+    print(f"  Incentive rows: MySQL={src_incentives}, PG discounts applied={tgt_discounts}")
+
+    # Amount totals
+    my.execute("SELECT SUM(incentive_amt) FROM incentive_table WHERE incentive_amt > 0")
+    src_total = my.fetchone()[0] or 0
+    pg.execute("SELECT SUM(discount_amount) FROM invoice_product WHERE discount_amount > 0")
+    tgt_total = pg.fetchone()[0] or 0
+    print(f"  Total discount: MySQL={src_total:,.2f}, PG={tgt_total:,.2f}")
+
+    # Rules
+    pg.execute("SELECT COUNT(*) FROM incentive")
+    rule_count = pg.fetchone()[0]
+    print(f"  Incentive rules in PG: {rule_count}")
+
+    # Verify fuel product IDs are valid
+    pg.execute("""
+        SELECT COUNT(*) FROM incentive i
+        WHERE NOT EXISTS (SELECT 1 FROM product p WHERE p.id = i.product_id)
+    """)
+    orphan_rules = pg.fetchone()[0]
+    if orphan_rules > 0:
+        print(f"  WARNING: {orphan_rules} incentive rules with invalid product_id!")
+
+    print("=" * 60)
+    pg.close()
+    my.close()
+
+
+def main():
+    print("=" * 60)
+    print("Phase 8: Incentives Migration")
+    print("=" * 60)
+
+    pg_conn = psycopg2.connect(**PG_CONFIG)
+    pg_conn.autocommit = False
+
+    if not _pre_check(pg_conn):
+        pg_conn.close()
+        return
 
     mysql_conn = mysql.connector.connect(**MYSQL_CONFIG)
     print("\nConnected to both databases. Starting migration...\n")
 
     lookups = {}
-    lookups = migrate(mysql_conn, pg_conn, lookups)
+    try:
+        lookups = migrate(mysql_conn, pg_conn, lookups)
+        pg_conn.commit()
+        print("\n  Migration committed successfully!")
+    except Exception as e:
+        pg_conn.rollback()
+        print(f"\n  ERROR: Migration failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+    finally:
+        _reconcile(pg_conn, mysql_conn)
+        pg_conn.close()
+        mysql_conn.close()
 
-    # Final verification
-    print("\n" + "=" * 60)
-    print("Verification")
-    print("=" * 60)
-    pg2 = pg_conn.cursor()
-    pg2.execute("SELECT COUNT(*) FROM invoice_product WHERE discount_amount IS NOT NULL AND discount_amount > 0")
-    print(f"  Invoice products with discounts: {pg2.fetchone()[0]}")
-    pg2.execute("SELECT COUNT(*) FROM incentive")
-    print(f"  Incentive rules: {pg2.fetchone()[0]}")
-    pg2.execute("SELECT SUM(discount_amount) FROM invoice_product WHERE discount_amount > 0")
-    print(f"  Total discount amount: {pg2.fetchone()[0]}")
-
-    pg2.close()
-    pg_conn.close()
-    mysql_conn.close()
     print("\nDone!")
 
 

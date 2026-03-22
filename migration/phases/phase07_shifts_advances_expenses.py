@@ -24,6 +24,7 @@ import datetime
 from decimal import Decimal
 from utils.date_utils import sanitize_date, sanitize_timestamp, now
 from utils.lookups import LookupCache
+from utils.migration_logger import MigrationLogger
 
 BATCH_SIZE = 1000
 
@@ -91,15 +92,31 @@ def _build_employee_lookup(pg_cursor):
     return employees
 
 
+def _lookup_expense_type_misc(pg_cursor, log):
+    """Find or create 'Miscellaneous' expense type — replaces hardcoded id=5."""
+    pg_cursor.execute("SELECT id FROM expense_type WHERE LOWER(type_name) LIKE '%miscellaneous%' LIMIT 1")
+    row = pg_cursor.fetchone()
+    if row:
+        return row[0]
+    # Create it if missing
+    pg_cursor.execute(
+        "INSERT INTO expense_type (type_name, created_at, updated_at) VALUES ('Miscellaneous', NOW(), NOW()) RETURNING id"
+    )
+    result = pg_cursor.fetchone()
+    log.warn("Created 'Miscellaneous' expense type (was missing)")
+    return result[0]
+
+
 def migrate(mysql_conn, pg_conn, lookups):
+    log = MigrationLogger('phase07_shifts_advances')
     pg = pg_conn.cursor()
     my = mysql_conn.cursor(dictionary=True)
     ts = now()
 
     # ─── Load lookups ─────────────────────────────────────────
-    print("\n  [7.0] Loading lookups...")
+    log.info("[7.0] Loading lookups...")
     employees = _build_employee_lookup(pg)
-    print(f"    Employees: {len(employees)} entries (with aliases)")
+    log.info(f"  Employees: {len(employees)} entries (with aliases)")
 
     # Expense type lookup
     expense_types = LookupCache('ExpenseType')
@@ -107,10 +124,13 @@ def migrate(mysql_conn, pg_conn, lookups):
     for row in pg.fetchall():
         if row[1]:
             expense_types.add(row[1], row[0])
-    print(f"    Expense types: {len(expense_types)} entries")
+    log.info(f"  Expense types: {len(expense_types)} entries")
+
+    # Fallback expense type (dynamic, not hardcoded)
+    misc_expense_type_id = _lookup_expense_type_misc(pg, log)
 
     # ─── Step 1: Migrate Shifts ───────────────────────────────
-    print("\n  [7.1] Migrating shifts...")
+    log.info("\n[7.1] Migrating shifts...")
 
     # Get close times from sft_time (subset with open+close timestamps)
     my.execute("SELECT * FROM sft_time ORDER BY shiftDate")
@@ -131,11 +151,12 @@ def migrate(mysql_conn, pg_conn, lookups):
         cashier_name = _clean(s.get('SC_Cashier'))
         attendant_id = None
         if cashier_name:
-            attendant_id = employees.get(cashier_name, fuzzy=True)
+            attendant_id = employees.get(cashier_name, fuzzy=True, threshold=0.85)
 
         start_time = sanitize_timestamp(s.get('Shift_TimeStamp'))
         if start_time is None:
             start_time = datetime.datetime.combine(shift_date, datetime.time(6, 0))
+            log.warn(f"Shift {shift_date}: NULL start_time, defaulting to 06:00")
 
         # Get end_time from sft_time if available
         end_time = None
@@ -155,10 +176,11 @@ def migrate(mysql_conn, pg_conn, lookups):
                 shift_count += 1
         except Exception as e:
             pg.connection.rollback()
-            print(f"    [WARN] Shift insert failed for {shift_date}: {e}")
+            log.error_record(f"shift date={shift_date}", e)
 
     pg_conn.commit()
-    print(f"    Inserted: {shift_count} shifts ({len(sft_time_rows)} with end_time)")
+    log.increment('shifts', shift_count)
+    log.info(f"  Inserted: {shift_count} shifts ({len(sft_time_rows)} with end_time)")
 
     # Helper to find shift_id by date
     def _find_shift_id(dt):
@@ -173,7 +195,7 @@ def migrate(mysql_conn, pg_conn, lookups):
         return date_to_shift_id.get(d)
 
     # ─── Step 2: Card Advances → CARD transactions ────────────
-    print("\n  [7.2] Migrating card advances (→ CARD transactions)...")
+    log.info("\n[7.2] Migrating card advances (→ CARD transactions)...")
     my.execute("SELECT * FROM card_advances ORDER BY Crd_Adv_Date")
     card_rows = my.fetchall()
     card_count = 0
@@ -207,15 +229,17 @@ def migrate(mysql_conn, pg_conn, lookups):
             card_count += 1
         except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"card_txn date={txn_date}", e)
 
         if card_count % BATCH_SIZE == 0:
             pg_conn.commit()
 
     pg_conn.commit()
-    print(f"    Inserted: {card_count} card transactions")
+    log.increment('card_txn', card_count)
+    log.info(f"  Inserted: {card_count} card transactions")
 
     # ─── Step 3: CCMS Advances → CCMS transactions ───────────
-    print("\n  [7.3] Migrating CCMS advances (→ CCMS transactions)...")
+    log.info("\n[7.3] Migrating CCMS advances (→ CCMS transactions)...")
     my.execute("SELECT * FROM ccms_advance ORDER BY ccms_Date")
     ccms_rows = my.fetchall()
     ccms_count = 0
@@ -243,15 +267,17 @@ def migrate(mysql_conn, pg_conn, lookups):
             ccms_count += 1
         except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"ccms_txn date={txn_date}", e)
 
         if ccms_count % BATCH_SIZE == 0:
             pg_conn.commit()
 
     pg_conn.commit()
-    print(f"    Inserted: {ccms_count} CCMS transactions")
+    log.increment('ccms_txn', ccms_count)
+    log.info(f"  Inserted: {ccms_count} CCMS transactions")
 
     # ─── Step 4: Cheque Advances → CHEQUE transactions ────────
-    print("\n  [7.4] Migrating cheque advances (→ CHEQUE transactions)...")
+    log.info("\n[7.4] Migrating cheque advances (→ CHEQUE transactions)...")
     my.execute("SELECT * FROM cheque_advance ORDER BY cheque_Date_today")
     cheque_rows = my.fetchall()
     cheque_count = 0
@@ -284,15 +310,17 @@ def migrate(mysql_conn, pg_conn, lookups):
             cheque_count += 1
         except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"cheque_txn date={txn_date}", e)
 
         if cheque_count % BATCH_SIZE == 0:
             pg_conn.commit()
 
     pg_conn.commit()
-    print(f"    Inserted: {cheque_count} cheque transactions")
+    log.increment('cheque_txn', cheque_count)
+    log.info(f"  Inserted: {cheque_count} cheque transactions")
 
     # ─── Step 5: Bank Transfer Advances → BANK transactions ───
-    print("\n  [7.5] Migrating bank transfer advances (→ BANK transactions)...")
+    log.info("\n[7.5] Migrating bank transfer advances (→ BANK transactions)...")
     my.execute("SELECT * FROM bank_transfer_advance ORDER BY Date_today")
     bank_rows = my.fetchall()
     bank_count = 0
@@ -319,15 +347,17 @@ def migrate(mysql_conn, pg_conn, lookups):
             bank_count += 1
         except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"bank_txn date={txn_date}", e)
 
         if bank_count % BATCH_SIZE == 0:
             pg_conn.commit()
 
     pg_conn.commit()
-    print(f"    Inserted: {bank_count} bank transactions")
+    log.increment('bank_txn', bank_count)
+    log.info(f"  Inserted: {bank_count} bank transactions")
 
     # ─── Step 6: Cash Advances → cash_advances ────────────────
-    print("\n  [7.6] Migrating cash advances...")
+    log.info("\n[7.6] Migrating cash advances...")
     my.execute("SELECT * FROM cash_advances ORDER BY CashAdv_Date")
     cash_adv_rows = my.fetchall()
     cash_adv_count = 0
@@ -344,7 +374,7 @@ def migrate(mysql_conn, pg_conn, lookups):
         emp_name = _clean(row.get('CashAdv_Employee'))
         employee_id = None
         if emp_name:
-            employee_id = employees.get(emp_name, fuzzy=True)
+            employee_id = employees.get(emp_name, fuzzy=True, threshold=0.85)
 
         shift_id = _find_shift_id(adv_date)
         recipient = _clean(row.get('CashAdv_Received_By'))
@@ -361,15 +391,17 @@ def migrate(mysql_conn, pg_conn, lookups):
             cash_adv_count += 1
         except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"cash_advance date={adv_date} emp={emp_name}", e)
 
         if cash_adv_count % BATCH_SIZE == 0:
             pg_conn.commit()
 
     pg_conn.commit()
-    print(f"    Inserted: {cash_adv_count} cash advances")
+    log.increment('cash_advances', cash_adv_count)
+    log.info(f"  Inserted: {cash_adv_count} cash advances")
 
     # ─── Step 7: Home Advances → employee_advances ────────────
-    print("\n  [7.7] Migrating home advances (→ employee_advances)...")
+    log.info("\n[7.7] Migrating home advances (→ employee_advances)...")
     my.execute("SELECT * FROM home_advances ORDER BY HA_Date")
     home_rows = my.fetchall()
     home_count = 0
@@ -387,10 +419,11 @@ def migrate(mysql_conn, pg_conn, lookups):
         emp_name = _clean(row.get('HA_Employee'))
         employee_id = None
         if emp_name:
-            employee_id = employees.get(emp_name, fuzzy=True)
+            employee_id = employees.get(emp_name, fuzzy=True, threshold=0.85)
 
         if not employee_id:
             home_skipped += 1
+            log.skip_record(f"home_advance date={adv_date} emp={emp_name}", "no employee match")
             continue
 
         try:
@@ -403,17 +436,19 @@ def migrate(mysql_conn, pg_conn, lookups):
             home_count += 1
         except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"home_advance date={adv_date} emp={emp_name}", e)
 
         if home_count % BATCH_SIZE == 0:
             pg_conn.commit()
 
     pg_conn.commit()
-    print(f"    Inserted: {home_count} home advances ({home_skipped} skipped - no employee match)")
+    log.increment('home_advances', home_count)
+    log.increment('home_advances_skipped', home_skipped)
+    log.info(f"  Inserted: {home_count} home advances ({home_skipped} skipped - no employee match)")
 
     # ─── Step 8: Expenses → EXPENSE transactions ──────────────
-    print("\n  [7.8] Migrating expenses (→ EXPENSE transactions)...")
+    log.info("\n[7.8] Migrating expenses (→ EXPENSE transactions)...")
 
-    # Build expense type name → id map (case-insensitive fuzzy)
     my.execute("SELECT * FROM expense ORDER BY Exp_Date")
     expense_rows = my.fetchall()
     expense_count = 0
@@ -450,7 +485,8 @@ def migrate(mysql_conn, pg_conn, lookups):
                         new_expense_types += 1
                 except Exception:
                     pg.connection.rollback()
-                    expense_type_id = 5  # Miscellaneous fallback
+                    expense_type_id = misc_expense_type_id  # Dynamic fallback
+                    log.warn(f"Expense type creation failed for '{exp_type_raw}', using Miscellaneous")
 
         try:
             pg.execute("""
@@ -463,21 +499,19 @@ def migrate(mysql_conn, pg_conn, lookups):
             expense_count += 1
         except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"expense date={txn_date} type={exp_type_raw}", e)
 
         if expense_count % BATCH_SIZE == 0:
             pg_conn.commit()
 
     pg_conn.commit()
-    print(f"    Inserted: {expense_count} expense transactions ({new_expense_types} new expense types created)")
+    log.increment('expenses', expense_count)
+    log.info(f"  Inserted: {expense_count} expense transactions ({new_expense_types} new expense types created)")
 
     # ─── Summary ──────────────────────────────────────────────
     total_txn = card_count + ccms_count + cheque_count + bank_count + expense_count
-    print(f"\n  [7.9] Summary:")
-    print(f"    Shifts: {shift_count}")
-    print(f"    Shift transactions: {total_txn}")
-    print(f"      CARD: {card_count}, CCMS: {ccms_count}, CHEQUE: {cheque_count}, BANK: {bank_count}, EXPENSE: {expense_count}")
-    print(f"    Cash advances: {cash_adv_count}")
-    print(f"    Employee advances (home): {home_count}")
+    log.increment('total_shift_txn', total_txn)
     employees.report_unmatched()
 
+    log.summary()
     return lookups

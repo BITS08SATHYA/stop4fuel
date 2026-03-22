@@ -11,15 +11,28 @@ Strategy:
 from decimal import Decimal
 from utils.date_utils import now
 from utils.lookups import LookupCache
+from utils.migration_logger import MigrationLogger
 
 BATCH_SIZE = 1000
 
-# MySQL incentive product name → PG product_id
-INCENTIVE_PRODUCT_MAP = {
-    'PETROL': 1,
-    'DIESEL': 2,
-    'XTRA_PREMIUM': 3,
-}
+
+def _build_fuel_product_map(pg_cursor, log):
+    """Dynamically build fuel product name → ID map from PG (replaces hardcoded 1,2,3)."""
+    fuel_map = {}
+    pg_cursor.execute("SELECT id, name FROM product WHERE category = 'FUEL'")
+    for row in pg_cursor.fetchall():
+        product_id, name = row[0], row[1]
+        fuel_map[name.upper()] = product_id
+        fuel_map[name.upper().replace(' ', '_')] = product_id
+    # Add common MySQL aliases
+    if 'PETROL' not in fuel_map and 'PETROL' not in fuel_map:
+        log.warn("No 'Petrol' product found in PG — fuel incentives may fail")
+    if 'XTRA PREMIUM' in fuel_map:
+        fuel_map['XTRA_PREMIUM'] = fuel_map['XTRA PREMIUM']
+    elif 'XTRA_PREMIUM' in fuel_map:
+        fuel_map['XTRA PREMIUM'] = fuel_map['XTRA_PREMIUM']
+    log.info(f"  Fuel products (dynamic): {fuel_map}")
+    return fuel_map
 
 
 def _to_decimal(val):
@@ -41,33 +54,40 @@ def _clean(val):
 
 
 def migrate(mysql_conn, pg_conn, lookups):
+    log = MigrationLogger('phase08_incentives')
     pg = pg_conn.cursor()
     my = mysql_conn.cursor(dictionary=True)
     ts = now()
 
     # ─── Load lookups ─────────────────────────────────────────
-    print("\n  [8.0] Loading lookups...")
+    log.info("[8.0] Loading lookups...")
 
-    # Bill_no → PG invoice_bill_id (both credit and cash bills can have incentives)
+    # Fuel product map — dynamic, not hardcoded
+    fuel_product_map = _build_fuel_product_map(pg, log)
+
+    # Bill_no → PG invoice_bill_id
     bill_map = {}
     pg.execute("SELECT id, bill_no FROM invoice_bill")
     for row in pg.fetchall():
         if row[1]:
             bill_map[row[1]] = row[0]
-    print(f"    Invoice bills: {len(bill_map)} entries")
+    log.info(f"  Invoice bills: {len(bill_map)} entries")
 
     # Non-fuel product name mapping
     product_name_map = {}
     pg.execute("SELECT id, name FROM product")
     for row in pg.fetchall():
         product_name_map[row[1].upper().replace(' ', '_')] = row[0]
-    # Add explicit mappings for MySQL names
-    product_name_map['2T_LOOSE_OIL'] = product_name_map.get('2T_LOOSE_OIL')
-    product_name_map['2T_40ML_POUCH'] = product_name_map.get('2T_40ML_POUCH')
-    product_name_map['DISTEL_WATER'] = product_name_map.get('DISTILLED_WATER')
-    product_name_map['BLUE_CLOTH'] = product_name_map.get('BLUE_CLOTH')
-    product_name_map['YELLOW_CLOTH'] = product_name_map.get('YELLOW_CLOTH')
-    product_name_map['ACID'] = product_name_map.get('BATTERY_ACID')
+
+    # Add explicit mappings for MySQL names that differ from PG names
+    # (only add cross-references, not self-assignments)
+    distilled_id = product_name_map.get('DISTILLED_WATER')
+    if distilled_id:
+        product_name_map['DISTEL_WATER'] = distilled_id
+
+    acid_id = product_name_map.get('BATTERY_ACID')
+    if acid_id:
+        product_name_map['ACID'] = acid_id
 
     # Customer name lookup
     customers = LookupCache('Customer')
@@ -75,10 +95,10 @@ def migrate(mysql_conn, pg_conn, lookups):
     for row in pg.fetchall():
         if row[1]:
             customers.add(row[1], row[0])
-    print(f"    Customers: {len(customers)} entries")
+    log.info(f"  Customers: {len(customers)} entries")
 
     # ─── Step 1: Update invoice_product with discounts ─────────
-    print("\n  [8.1] Updating invoice_product with discounts...")
+    log.info("\n[8.1] Updating invoice_product with discounts...")
 
     my.execute("""
         SELECT * FROM incentive_table
@@ -87,7 +107,7 @@ def migrate(mysql_conn, pg_conn, lookups):
         ORDER BY incentive_billdate
     """)
     incentive_rows = my.fetchall()
-    print(f"    Incentive rows to process: {len(incentive_rows)}")
+    log.info(f"  Incentive rows to process: {len(incentive_rows)}")
 
     updated = 0
     skipped_no_bill = 0
@@ -106,6 +126,7 @@ def migrate(mysql_conn, pg_conn, lookups):
             invoice_bill_id = bill_map.get(bill_no.upper()) or bill_map.get(bill_no.lower())
             if not invoice_bill_id:
                 skipped_no_bill += 1
+                log.skip_record(f"incentive bill={bill_no}", "bill not found in PG")
                 continue
 
         product_name = _clean(row.get('incentive_productname'))
@@ -113,12 +134,15 @@ def migrate(mysql_conn, pg_conn, lookups):
             skipped_no_product += 1
             continue
 
-        # Resolve product_id
-        product_id = INCENTIVE_PRODUCT_MAP.get(product_name)
+        # Resolve product_id: try fuel map first, then general product map
+        product_id = fuel_product_map.get(product_name)
+        if not product_id:
+            product_id = fuel_product_map.get(product_name.upper())
         if not product_id:
             product_id = product_name_map.get(product_name.upper().replace(' ', '_'))
         if not product_id:
             skipped_no_product += 1
+            log.skip_record(f"incentive bill={bill_no} product={product_name}", "product not found")
             continue
 
         disc_rate = _to_decimal(row.get('incentive_disc_rate'))
@@ -127,21 +151,23 @@ def migrate(mysql_conn, pg_conn, lookups):
         if disc_amt <= 0:
             continue
 
-        # Update matching invoice_product row (use ctid subquery since PG doesn't support LIMIT in UPDATE)
+        # Update matching invoice_product row using id subquery (not ctid)
         try:
             pg.execute("""
                 UPDATE invoice_product
                 SET discount_rate = %s, discount_amount = %s,
                     amount = gross_amount - %s
-                WHERE ctid = (
-                    SELECT ctid FROM invoice_product
+                WHERE id = (
+                    SELECT id FROM invoice_product
                     WHERE invoice_bill_id = %s AND product_id = %s
                     AND (discount_rate IS NULL OR discount_rate = 0)
+                    ORDER BY id
                     LIMIT 1
                 )
             """, (disc_rate, disc_amt, disc_amt, invoice_bill_id, product_id))
         except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"incentive bill={bill_no} product={product_name}", e)
             skipped_no_match += 1
             continue
 
@@ -154,11 +180,12 @@ def migrate(mysql_conn, pg_conn, lookups):
             pg_conn.commit()
 
     pg_conn.commit()
-    print(f"    Updated: {updated} invoice_product rows")
-    print(f"    Skipped: {skipped_no_bill} no bill, {skipped_no_product} no product, {skipped_no_match} no match")
+    log.increment('products_updated', updated)
+    log.info(f"  Updated: {updated} invoice_product rows")
+    log.info(f"  Skipped: {skipped_no_bill} no bill, {skipped_no_product} no product, {skipped_no_match} no match")
 
     # Also update invoice_bill.total_discount from sum of product discounts
-    print("\n  [8.2] Updating invoice_bill discount totals...")
+    log.info("\n[8.2] Updating invoice_bill discount totals...")
     pg.execute("""
         UPDATE invoice_bill ib SET total_discount = sub.total_disc
         FROM (
@@ -171,10 +198,11 @@ def migrate(mysql_conn, pg_conn, lookups):
     """)
     bills_updated = pg.rowcount
     pg_conn.commit()
-    print(f"    Updated discount_amount on {bills_updated} bills")
+    log.increment('bills_discount_updated', bills_updated)
+    log.info(f"  Updated discount_amount on {bills_updated} bills")
 
     # ─── Step 2: Derive incentive rules ────────────────────────
-    print("\n  [8.3] Deriving incentive rules...")
+    log.info("\n[8.3] Deriving incentive rules...")
 
     # Get the most recent/common discount rate per (customer, product)
     my.execute("""
@@ -207,7 +235,9 @@ def migrate(mysql_conn, pg_conn, lookups):
             rule_skipped += 1
             continue
 
-        product_id = INCENTIVE_PRODUCT_MAP.get(prod_name)
+        product_id = fuel_product_map.get(prod_name)
+        if not product_id:
+            product_id = fuel_product_map.get(prod_name.upper())
         if not product_id:
             product_id = product_name_map.get(prod_name.upper().replace(' ', '_'))
         if not product_id:
@@ -222,17 +252,16 @@ def migrate(mysql_conn, pg_conn, lookups):
             """, (customer_id, product_id, Decimal(str(disc_rate)), ts, ts))
             if pg.rowcount > 0:
                 rule_count += 1
-        except Exception:
+        except Exception as e:
             pg.connection.rollback()
+            log.error_record(f"incentive_rule cust={cust_name} prod={prod_name}", e)
 
     pg_conn.commit()
-    print(f"    Incentive rules created: {rule_count} ({rule_skipped} skipped)")
+    log.increment('incentive_rules', rule_count)
+    log.info(f"  Incentive rules created: {rule_count} ({rule_skipped} skipped)")
 
     # ─── Summary ──────────────────────────────────────────────
-    print(f"\n  [8.4] Summary:")
-    print(f"    Invoice products updated with discounts: {updated}")
-    print(f"    Invoice bills with discount totals: {bills_updated}")
-    print(f"    Incentive rules: {rule_count}")
     customers.report_unmatched()
+    log.summary()
 
     return lookups
