@@ -39,7 +39,7 @@ public class Customer extends User {
     @Column(name = "gst_number", length = 15)
     private String gstNumber;
 
-    /** Customer category: GOVERNMENT, RETAIL_OUTLET, BUS_OPERATOR, TRANSPORT, INDIVIDUAL, OTHER */
+    /** Customer category: GOVERNMENT, NON_GOVERNMENT */
     @Column(name = "customer_category", length = 30)
     private String customerCategory;
 

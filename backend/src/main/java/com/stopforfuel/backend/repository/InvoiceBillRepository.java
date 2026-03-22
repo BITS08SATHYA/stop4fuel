@@ -174,6 +174,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
          + "LEFT JOIN FETCH ib.products ip LEFT JOIN FETCH ip.product LEFT JOIN FETCH ip.nozzle WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
+         + "AND (:customerCategory IS NULL OR c.customerCategory = :customerCategory) "
          + "AND ib.date >= :fromDate "
          + "AND ib.date <= :toDate "
          + "AND (:search = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
@@ -183,6 +184,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
          countQuery = "SELECT COUNT(ib) FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
+         + "AND (:customerCategory IS NULL OR c.customerCategory = :customerCategory) "
          + "AND ib.date >= :fromDate "
          + "AND ib.date <= :toDate "
          + "AND (:search = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
@@ -191,6 +193,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
     Page<InvoiceBill> findAllFiltered(
             @Param("billType") String billType,
             @Param("paymentStatus") String paymentStatus,
+            @Param("customerCategory") String customerCategory,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             @Param("search") String search,
@@ -244,12 +247,14 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
          + "LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
+         + "AND (:customerCategory IS NULL OR c.customerCategory = :customerCategory) "
          + "AND ib.date >= :fromDate "
          + "AND ib.date <= :toDate "
          + "GROUP BY ip.product.id, p.name")
     List<ProductSalesSummary> getProductSalesSummary(
             @Param("billType") String billType,
             @Param("paymentStatus") String paymentStatus,
+            @Param("customerCategory") String customerCategory,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 

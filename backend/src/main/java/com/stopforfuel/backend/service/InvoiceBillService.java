@@ -444,23 +444,25 @@ public class InvoiceBillService {
         }
     }
 
-    public Page<InvoiceBill> getInvoiceHistory(String billType, String paymentStatus,
+    public Page<InvoiceBill> getInvoiceHistory(String billType, String paymentStatus, String customerCategory,
             LocalDateTime fromDate, LocalDateTime toDate, String search, Pageable pageable) {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
         String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
+        String cc = (customerCategory != null && !customerCategory.isEmpty()) ? customerCategory : null;
         String s = (search != null && !search.isEmpty()) ? search : "";
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
-        return repository.findAllFiltered(bt, ps, fd, td, s, pageable);
+        return repository.findAllFiltered(bt, ps, cc, fd, td, s, pageable);
     }
 
-    public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus,
+    public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus, String customerCategory,
             LocalDateTime fromDate, LocalDateTime toDate) {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
         String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
+        String cc = (customerCategory != null && !customerCategory.isEmpty()) ? customerCategory : null;
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
-        return repository.getProductSalesSummary(bt, ps, fd, td);
+        return repository.getProductSalesSummary(bt, ps, cc, fd, td);
     }
 
     @Transactional
@@ -475,6 +477,17 @@ public class InvoiceBillService {
         existing.setPaymentMode(updated.getPaymentMode());
         existing.setVehicleKM(updated.getVehicleKM());
         existing.setBillDesc(updated.getBillDesc());
+
+        // Update billType, customer, vehicle if provided
+        if (updated.getBillType() != null) {
+            existing.setBillType(updated.getBillType());
+        }
+        if (updated.getCustomer() != null) {
+            existing.setCustomer(updated.getCustomer());
+        }
+        if (updated.getVehicle() != null) {
+            existing.setVehicle(updated.getVehicle());
+        }
 
         // Update products — clear old and add new
         existing.getProducts().clear();
