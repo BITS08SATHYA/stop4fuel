@@ -358,7 +358,6 @@ export default function StatementsPage() {
                                 <tr className="border-b border-border text-muted-foreground">
                                     <th className="text-left py-3 px-4">Statement No</th>
                                     <th className="text-left py-3 px-4">Customer</th>
-                                    <th className="text-left py-3 px-4">Period</th>
                                     <th className="text-left py-3 px-4">Date</th>
                                     <th className="text-right py-3 px-4">Bills</th>
                                     <th className="text-right py-3 px-4">Net Amount</th>
@@ -371,7 +370,7 @@ export default function StatementsPage() {
                             <tbody>
                                 {statements.length === 0 ? (
                                     <tr>
-                                        <td colSpan={10} className="text-center py-8 text-muted-foreground">
+                                        <td colSpan={9} className="text-center py-8 text-muted-foreground">
                                             No statements found
                                         </td>
                                     </tr>
@@ -380,9 +379,6 @@ export default function StatementsPage() {
                                         <tr key={stmt.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                                             <td className="py-3 px-4 font-mono font-semibold">{stmt.statementNo}</td>
                                             <td className="py-3 px-4">{stmt.customer?.name || "-"}</td>
-                                            <td className="py-3 px-4 text-muted-foreground">
-                                                {stmt.fromDate} to {stmt.toDate}
-                                            </td>
                                             <td className="py-3 px-4 text-muted-foreground">{stmt.statementDate}</td>
                                             <td className="py-3 px-4 text-right">{stmt.numberOfBills}</td>
                                             <td className="py-3 px-4 text-right font-medium">
@@ -394,7 +390,7 @@ export default function StatementsPage() {
                                             <td className="py-3 px-4 text-right font-medium text-amber-400">
                                                 {Number(stmt.balanceAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                                             </td>
-                                            <td className="py-3 px-4 text-center">
+                                            <td className="py-3 px-4 text-center whitespace-nowrap">
                                                 <Badge variant={stmt.status === "PAID" ? "success" : "warning"}>
                                                     {stmt.status === "PAID" ? "PAID" : "NOT PAID"}
                                                 </Badge>
