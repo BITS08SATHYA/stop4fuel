@@ -56,7 +56,7 @@ public class AdminUserService {
                                     AttributeType.builder().name("email_verified").value("true").build(),
                                     AttributeType.builder().name("name").value(name).build(),
                                     AttributeType.builder().name("custom:role").value(roleType).build(),
-                                    AttributeType.builder().name("custom:scid").value("1").build()
+                                    AttributeType.builder().name("custom:scid").value(String.valueOf(SecurityUtils.getScid())).build()
                             )
                             .desiredDeliveryMediumsWithStrings("EMAIL")
                             .build()
