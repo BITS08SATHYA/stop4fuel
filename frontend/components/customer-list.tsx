@@ -16,6 +16,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
     const [groups, setGroups] = useState<any[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<string>("");
     const [statusFilter, setStatusFilter] = useState<string>("");
+    const [categoryFilter, setCategoryFilter] = useState<string>("");
 
     useEffect(() => {
         fetchGroups();
@@ -23,7 +24,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
 
     useEffect(() => {
         fetchCustomers();
-    }, [page, searchQuery, selectedGroupId, statusFilter, refreshTrigger]);
+    }, [page, searchQuery, selectedGroupId, statusFilter, categoryFilter, refreshTrigger]);
 
     const fetchGroups = async () => {
         try {
@@ -46,6 +47,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
             if (searchQuery) queryParams.set("search", searchQuery);
             if (selectedGroupId) queryParams.set("groupId", selectedGroupId);
             if (statusFilter) queryParams.set("status", statusFilter);
+            if (categoryFilter) queryParams.set("customerCategory", categoryFilter);
             const res = await fetch(`${API_BASE_URL}/customers?${queryParams}`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
@@ -158,6 +160,15 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                         {groups.map((group) => (
                             <option key={group.id} value={group.id}>{group.groupName}</option>
                         ))}
+                    </select>
+                    <select
+                        value={categoryFilter}
+                        onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
+                        className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    >
+                        <option value="">All Categories</option>
+                        <option value="GOVERNMENT">Government</option>
+                        <option value="NON_GOVERNMENT">Non-Government</option>
                     </select>
                     <select
                         value={statusFilter}

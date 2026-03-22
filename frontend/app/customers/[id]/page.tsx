@@ -456,11 +456,7 @@ export default function CustomerProfilePage() {
                                     >
                                         <option value="">None</option>
                                         <option value="GOVERNMENT" className="bg-slate-900">Government</option>
-                                        <option value="RETAIL_OUTLET" className="bg-slate-900">Retail Outlet</option>
-                                        <option value="BUS_OPERATOR" className="bg-slate-900">Bus Operator</option>
-                                        <option value="TRANSPORT" className="bg-slate-900">Transport</option>
-                                        <option value="INDIVIDUAL" className="bg-slate-900">Individual</option>
-                                        <option value="OTHER" className="bg-slate-900">Other</option>
+                                        <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
                                     </select>
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.customerCategory?.replace(/_/g, ' ') || "Not set"}</span>

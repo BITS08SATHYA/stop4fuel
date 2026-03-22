@@ -59,6 +59,7 @@ export default function StatementsPage() {
 
     // Filter
     const [filterStatus, setFilterStatus] = useState<string>("ALL");
+    const [filterCategory, setFilterCategory] = useState<string>("");
     const [tableSearch, setTableSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
     const [filterFromDate, setFilterFromDate] = useState("");
@@ -76,7 +77,7 @@ export default function StatementsPage() {
 
     useEffect(() => {
         loadStatements();
-    }, [page, filterStatus, filterFromDate, filterToDate, tableSearch]);
+    }, [page, filterStatus, filterCategory, filterFromDate, filterToDate, tableSearch]);
 
     // Load vehicles when customer changes in generate modal
     useEffect(() => {
@@ -127,7 +128,7 @@ export default function StatementsPage() {
             const result: PageResponse<Statement> = await getStatements(
                 page, pageSize, undefined, statusParam,
                 filterFromDate || undefined, filterToDate || undefined,
-                tableSearch || undefined
+                tableSearch || undefined, filterCategory || undefined
             );
             setStatements(result.content);
             setTotalPages(result.totalPages);
@@ -342,6 +343,15 @@ export default function StatementsPage() {
                             placeholder="To"
                         />
                     </div>
+                    <select
+                        value={filterCategory}
+                        onChange={(e) => { setFilterCategory(e.target.value); setPage(0); }}
+                        className="px-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                        <option value="">All Categories</option>
+                        <option value="GOVERNMENT">Government</option>
+                        <option value="NON_GOVERNMENT">Non-Government</option>
+                    </select>
                     <select
                         value={filterStatus}
                         onChange={(e) => handleFilterChange(e.target.value)}

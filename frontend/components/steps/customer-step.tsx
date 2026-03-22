@@ -133,7 +133,7 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
             {/* Emails */}
             <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Emails
+                    Emails <span className="text-red-500">*</span>
                 </label>
                 {(data.emails || []).map((emailVal: string, index: number) => (
                     <div key={index} className="flex gap-2 mb-2">
@@ -154,7 +154,7 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
             {/* Phones */}
             <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Phone Numbers
+                    Phone Numbers <span className="text-red-500">*</span>
                 </label>
                 {(data.phoneNumbers || []).map((phoneVal: string, index: number) => (
                     <div key={index} className="flex gap-2 mb-2">
@@ -172,56 +172,76 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                 <button onClick={addPhone} className="text-cyan-500 text-sm">+ Add Phone</button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Party Type
+                        Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        value={data.customerCategory || ""}
+                        onChange={(e) => { handleChange("customerCategory", e.target.value); }}
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.customerCategory)}`}
+                    >
+                        <option value="" className="bg-slate-900">Select Category</option>
+                        <option value="GOVERNMENT" className="bg-slate-900">Government</option>
+                        <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
+                    </select>
+                    <FieldError error={errors.customerCategory} />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Party Type <span className="text-red-500">*</span>
                     </label>
                     <select
                         value={data.party?.id || ""}
                         onChange={(e) => {
                             const selectedParty = parties.find(p => p.id === Number(e.target.value));
                             updateData({ ...data, party: selectedParty });
+                            clearError?.("party");
                         }}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.party)}`}
                     >
                         <option value="" className="bg-slate-900">Select Party</option>
                         {parties.map(party => (
                             <option key={party.id} value={party.id} className="bg-slate-900">{party.partyType}</option>
                         ))}
                     </select>
+                    <FieldError error={errors.party} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Group
+                        Group <span className="text-red-500">*</span>
                     </label>
                     <select
                         value={data.group?.id || ""}
                         onChange={(e) => {
                             const selectedGroup = groups.find(g => g.id === Number(e.target.value));
                             updateData({ ...data, group: selectedGroup });
+                            clearError?.("group");
                         }}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.group)}`}
                     >
                         <option value="" className="bg-slate-900">Select Group</option>
                         {groups.map(group => (
                             <option key={group.id} value={group.id} className="bg-slate-900">{group.groupName}</option>
                         ))}
                     </select>
+                    <FieldError error={errors.group} />
                 </div>
             </div>
 
             <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Address
+                    Address <span className="text-red-500">*</span>
                 </label>
                 <textarea
                     value={data.address || ""}
-                    onChange={(e) => updateData({ ...data, address: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                    onChange={(e) => { updateData({ ...data, address: e.target.value }); clearError?.("address"); }}
+                    className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.address)}`}
                     placeholder="Enter full address"
                     rows={2}
                 />
+                <FieldError error={errors.address} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -240,29 +260,29 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Max Ceiling Value
+                        Max Ceiling Value <span className="text-red-500">*</span>
                     </label>
                     {ceilingType === "amount" ? (
                         <>
                             <input
                                 type="number"
                                 value={data.creditLimitAmount || ""}
-                                onChange={(e) => { updateData({ ...data, creditLimitAmount: e.target.value, creditLimitLiters: null }); clearError?.("creditLimitAmount"); }}
-                                className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.creditLimitAmount)}`}
+                                onChange={(e) => { updateData({ ...data, creditLimitAmount: e.target.value, creditLimitLiters: null }); clearError?.("creditLimitValue"); }}
+                                className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.creditLimitValue)}`}
                                 placeholder="10000"
                             />
-                            <FieldError error={errors.creditLimitAmount} />
+                            <FieldError error={errors.creditLimitValue} />
                         </>
                     ) : (
                         <>
                             <input
                                 type="number"
                                 value={data.creditLimitLiters || ""}
-                                onChange={(e) => { updateData({ ...data, creditLimitLiters: e.target.value, creditLimitAmount: null }); clearError?.("creditLimitLiters"); }}
-                                className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.creditLimitLiters)}`}
+                                onChange={(e) => { updateData({ ...data, creditLimitLiters: e.target.value, creditLimitAmount: null }); clearError?.("creditLimitValue"); }}
+                                className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.creditLimitValue)}`}
                                 placeholder="500"
                             />
-                            <FieldError error={errors.creditLimitLiters} />
+                            <FieldError error={errors.creditLimitValue} />
                         </>
                     )}
                 </div>

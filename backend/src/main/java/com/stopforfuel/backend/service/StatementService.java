@@ -35,11 +35,12 @@ public class StatementService {
     private final StatementPdfGenerator pdfGenerator;
     private final S3StorageService s3StorageService;
 
-    public Page<Statement> getStatements(Long customerId, String status, LocalDate fromDate, LocalDate toDate, String search, Pageable pageable) {
+    public Page<Statement> getStatements(Long customerId, String status, String customerCategory, LocalDate fromDate, LocalDate toDate, String search, Pageable pageable) {
+        String cc = (customerCategory != null && !customerCategory.isEmpty()) ? customerCategory : null;
         if (search != null && !search.isBlank()) {
-            return statementRepository.findWithFiltersAndSearch(customerId, status, fromDate, toDate, search.trim(), pageable);
+            return statementRepository.findWithFiltersAndSearch(customerId, status, cc, fromDate, toDate, search.trim(), pageable);
         }
-        return statementRepository.findWithFilters(customerId, status, fromDate, toDate, pageable);
+        return statementRepository.findWithFilters(customerId, status, cc, fromDate, toDate, pageable);
     }
 
     public List<Statement> getAllStatements() {

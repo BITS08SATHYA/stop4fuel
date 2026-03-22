@@ -37,8 +37,9 @@ public class CustomerController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long groupId,
-            @RequestParam(required = false) String status) {
-        return customerService.getCustomers(search, groupId, status, org.springframework.data.domain.PageRequest.of(page, size));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String customerCategory) {
+        return customerService.getCustomers(search, groupId, status, customerCategory, org.springframework.data.domain.PageRequest.of(page, size));
     }
 
     @GetMapping("/{id}")

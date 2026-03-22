@@ -26,8 +26,9 @@ public class PaymentController {
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public Page<Payment> getAll(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return paymentService.getPayments(PageRequest.of(page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String customerCategory) {
+        return paymentService.getPayments(customerCategory, PageRequest.of(page, size));
     }
 
     @GetMapping("/{id}")

@@ -33,6 +33,7 @@ export default function CreditOverviewPage() {
 
     // List filter
     const [listFilter, setListFilter] = useState<ListFilter>("all");
+    const [categoryFilter, setCategoryFilter] = useState<string>("");
 
     // Profile overlay
     const [profileOpen, setProfileOpen] = useState(false);
@@ -57,12 +58,12 @@ export default function CreditOverviewPage() {
 
     useEffect(() => {
         loadOverview();
-    }, []);
+    }, [categoryFilter]);
 
     const loadOverview = async () => {
         setLoading(true);
         try {
-            setOverview(await getCreditOverview());
+            setOverview(await getCreditOverview(categoryFilter || undefined));
         } catch (e) {
             console.error("Failed to load credit overview", e);
         } finally {
@@ -206,6 +207,15 @@ export default function CreditOverviewPage() {
                                     className="w-full pl-8 pr-3 py-1.5 bg-card border border-border rounded-lg text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
                                 />
                             </div>
+                            <select
+                                value={categoryFilter}
+                                onChange={(e) => setCategoryFilter(e.target.value)}
+                                className="px-2 py-1.5 bg-card border border-border rounded-lg text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+                            >
+                                <option value="">All</option>
+                                <option value="GOVERNMENT">Govt</option>
+                                <option value="NON_GOVERNMENT">Non-Govt</option>
+                            </select>
                             {(listFilter !== "all" || search) && (
                                 <button
                                     onClick={() => { setListFilter("all"); setSearch(""); }}
