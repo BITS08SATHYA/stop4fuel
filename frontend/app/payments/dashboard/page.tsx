@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import {
     getPaymentAnalytics,
+    getCreditOverview,
     PaymentAnalytics,
+    CreditOverview,
 } from "@/lib/api/station";
 import {
     IndianRupee,
@@ -62,6 +64,7 @@ const TOOLTIP_STYLE = {
 
 export default function PaymentDashboardPage() {
     const [data, setData] = useState<PaymentAnalytics | null>(null);
+    const [creditData, setCreditData] = useState<CreditOverview | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d">("30d");
@@ -81,6 +84,7 @@ export default function PaymentDashboardPage() {
 
     useEffect(() => {
         fetchData(dateRange);
+        getCreditOverview().then(setCreditData).catch(() => {});
     }, [dateRange]);
 
     if (isLoading) {
@@ -217,6 +221,60 @@ export default function PaymentDashboardPage() {
                         </div>
                     </GlassCard>
                 </div>
+
+                {/* Govt vs Non-Govt Outstanding */}
+                {creditData && (creditData.govtOutstanding > 0 || creditData.nonGovtOutstanding > 0) && (
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <GlassCard>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Government Outstanding</p>
+                                    <h3 className="text-2xl font-bold text-amber-500 mt-2">&#8377;{formatCompact(creditData.govtOutstanding)}</h3>
+                                </div>
+                                <div className="p-2 bg-amber-500/10 rounded-lg">
+                                    <Banknote className="w-5 h-5 text-amber-500" />
+                                </div>
+                            </div>
+                            {(creditData.govtOutstanding + creditData.nonGovtOutstanding) > 0 && (
+                                <div className="mt-3">
+                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-amber-500 rounded-full"
+                                            style={{ width: `${(creditData.govtOutstanding / (creditData.govtOutstanding + creditData.nonGovtOutstanding)) * 100}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                        {((creditData.govtOutstanding / (creditData.govtOutstanding + creditData.nonGovtOutstanding)) * 100).toFixed(1)}% of total outstanding
+                                    </p>
+                                </div>
+                            )}
+                        </GlassCard>
+                        <GlassCard>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Non-Government Outstanding</p>
+                                    <h3 className="text-2xl font-bold text-indigo-500 mt-2">&#8377;{formatCompact(creditData.nonGovtOutstanding)}</h3>
+                                </div>
+                                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                                    <Banknote className="w-5 h-5 text-indigo-500" />
+                                </div>
+                            </div>
+                            {(creditData.govtOutstanding + creditData.nonGovtOutstanding) > 0 && (
+                                <div className="mt-3">
+                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-indigo-500 rounded-full"
+                                            style={{ width: `${(creditData.nonGovtOutstanding / (creditData.govtOutstanding + creditData.nonGovtOutstanding)) * 100}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                        {((creditData.nonGovtOutstanding / (creditData.govtOutstanding + creditData.nonGovtOutstanding)) * 100).toFixed(1)}% of total outstanding
+                                    </p>
+                                </div>
+                            )}
+                        </GlassCard>
+                    </div>
+                )}
 
                 {/* Collection Trend */}
                 <GlassCard>

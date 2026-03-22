@@ -33,9 +33,14 @@ public class CreditManagementService {
      * Get credit overview: ALL customers with their credit balance and aging breakdown.
      * Balance = total credit billed - total payments received (ledger balance).
      */
-    public CreditOverview getCreditOverview() {
+    public CreditOverview getCreditOverview(String customerCategory) {
         // Load all customers
         List<Customer> allCustomers = customerRepository.findAll();
+        if (customerCategory != null && !customerCategory.isEmpty()) {
+            allCustomers = allCustomers.stream()
+                    .filter(c -> customerCategory.equals(c.getCustomerCategory()))
+                    .toList();
+        }
 
         // Load all credit bills (both paid and unpaid) for balance calculation
         List<InvoiceBill> allCreditBills = invoiceBillRepository.findByBillType("CREDIT");
@@ -118,6 +123,7 @@ public class CreditManagementService {
             summary.setCustomerName(customer.getName());
             summary.setPhoneNumbers(customer.getPhoneNumbers());
             summary.setGroupName(customer.getGroup() != null ? customer.getGroup().getGroupName() : null);
+            summary.setCustomerCategory(customer.getCustomerCategory());
             summary.setCreditLimitAmount(customer.getCreditLimitAmount());
             summary.setStatus(customer.getStatus());
             summary.setLedgerBalance(ledgerBalance);
@@ -164,6 +170,18 @@ public class CreditManagementService {
                 .count());
         overview.setTotalCustomers(customerSummaries.size());
         overview.setCustomers(customerSummaries);
+
+        // Govt vs Non-Govt outstanding breakdown
+        BigDecimal govtOutstanding = customerSummaries.stream()
+                .filter(c -> "GOVERNMENT".equals(c.getCustomerCategory()))
+                .map(CreditCustomerSummary::getTotalOutstanding)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal nonGovtOutstanding = customerSummaries.stream()
+                .filter(c -> !"GOVERNMENT".equals(c.getCustomerCategory()))
+                .map(CreditCustomerSummary::getTotalOutstanding)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        overview.setGovtOutstanding(govtOutstanding);
+        overview.setNonGovtOutstanding(nonGovtOutstanding);
 
         return overview;
     }
@@ -223,6 +241,8 @@ public class CreditManagementService {
         private BigDecimal totalAging90Plus;
         private int totalCreditCustomers; // customers with outstanding > 0
         private int totalCustomers;       // all customers
+        private BigDecimal govtOutstanding;
+        private BigDecimal nonGovtOutstanding;
         private List<CreditCustomerSummary> customers;
     }
 
@@ -232,6 +252,7 @@ public class CreditManagementService {
         private String customerName;
         private Set<String> phoneNumbers;
         private String groupName;
+        private String customerCategory;
         private String status;           // ACTIVE, INACTIVE, BLOCKED
         private BigDecimal creditLimitAmount;
         private BigDecimal ledgerBalance; // total billed - total paid
