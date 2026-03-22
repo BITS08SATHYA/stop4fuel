@@ -6,9 +6,9 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://172.19.0.2:5432/stopforfuel}
+    url: ${DATABASE_URL:jdbc:postgresql://172.17.0.2:5432/stopforfuel}
     username: ${DATABASE_USER:postgres}
-    password: ${DATABASE_PASSWORD:password}
+    password: ${DATABASE_PASSWORD:myPassword}
   jpa:
     hibernate:
       ddl-auto: update
@@ -18,7 +18,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   sql:
     init:
-      mode: always
+      mode: never
       data-locations: classpath:db/seed-data.sql
       separator: ;;
 
@@ -46,4 +46,4 @@ aws:
   s3:
     bucket: ${AWS_S3_BUCKET:stopforfuel-uploads}
     region: ${AWS_REGION:ap-south-1}
-    profile: ${AWS_S3_PROFILE:}
+    profile: ${AWS_S3_PROFILE:sathya-nyu}
