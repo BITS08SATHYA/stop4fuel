@@ -96,6 +96,18 @@ public class CustomerController {
         return CustomerDetailDTO.from(customerService.unblockCustomer(id));
     }
 
+    @GetMapping("/{id}/credit-info")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
+    public java.util.Map<String, Object> getCreditInfo(@PathVariable Long id) {
+        return customerService.getCreditInfo(id);
+    }
+
+    @PatchMapping("/{id}/credit-limits")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    public CustomerDetailDTO updateCreditLimits(@PathVariable Long id, @RequestBody java.util.Map<String, Object> limits) {
+        return CustomerDetailDTO.from(customerService.updateCreditLimits(id, limits));
+    }
+
     @GetMapping("/{id}/vehicles")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
     public List<Vehicle> getVehiclesByCustomerId(@PathVariable Long id) {

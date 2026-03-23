@@ -174,6 +174,75 @@ public class CustomerService {
     }
 
     /**
+     * Pre-invoice validation: checks if a new credit invoice would exceed the customer's limits.
+     * Returns null if OK, or an error message string if limit would be breached.
+     */
+    public String validateCreditLimitBeforeInvoice(Long customerId, BigDecimal invoiceAmount, BigDecimal invoiceLiters) {
+        Customer customer = customerRepository.findById(customerId).orElse(null);
+        if (customer == null) return null;
+
+        // 1. Amount-based check: would new invoice push ledger balance beyond creditLimitAmount?
+        if (customer.getCreditLimitAmount() != null && customer.getCreditLimitAmount().compareTo(BigDecimal.ZERO) > 0
+                && invoiceAmount != null) {
+            BigDecimal totalBilled = invoiceBillRepository.sumAllCreditBillsByCustomer(customerId);
+            BigDecimal totalPaid = paymentRepository.sumAllPaymentsByCustomer(customerId);
+            BigDecimal currentBalance = totalBilled.subtract(totalPaid);
+            BigDecimal projectedBalance = currentBalance.add(invoiceAmount);
+            if (projectedBalance.compareTo(customer.getCreditLimitAmount()) > 0) {
+                BigDecimal remaining = customer.getCreditLimitAmount().subtract(currentBalance);
+                return "Customer '" + customer.getName() + "' credit limit would be exceeded. "
+                        + "Limit: ₹" + customer.getCreditLimitAmount().toPlainString()
+                        + ", Current balance: ₹" + currentBalance.toPlainString()
+                        + ", This invoice: ₹" + invoiceAmount.toPlainString()
+                        + ", Remaining: ₹" + (remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining.toPlainString() : "0");
+            }
+        }
+
+        // 2. Liter-based check: would new invoice push consumed liters beyond creditLimitLiters?
+        if (customer.getCreditLimitLiters() != null && customer.getCreditLimitLiters().compareTo(BigDecimal.ZERO) > 0
+                && invoiceLiters != null && invoiceLiters.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal currentConsumed = customer.getConsumedLiters() != null ? customer.getConsumedLiters() : BigDecimal.ZERO;
+            BigDecimal projectedConsumed = currentConsumed.add(invoiceLiters);
+            if (projectedConsumed.compareTo(customer.getCreditLimitLiters()) > 0) {
+                BigDecimal remaining = customer.getCreditLimitLiters().subtract(currentConsumed);
+                return "Customer '" + customer.getName() + "' liter limit would be exceeded. "
+                        + "Limit: " + customer.getCreditLimitLiters().toPlainString() + " L"
+                        + ", Consumed: " + currentConsumed.toPlainString() + " L"
+                        + ", This invoice: " + invoiceLiters.toPlainString() + " L"
+                        + ", Remaining: " + (remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining.toPlainString() : "0") + " L";
+            }
+        }
+
+        return null; // OK
+    }
+
+    /**
+     * Pre-invoice validation: checks if a new invoice would exceed the vehicle's monthly liter limit.
+     * Returns null if OK, or an error message string if limit would be breached.
+     */
+    public String validateVehicleLimitBeforeInvoice(Long vehicleId, BigDecimal invoiceLiters) {
+        if (invoiceLiters == null || invoiceLiters.compareTo(BigDecimal.ZERO) <= 0) return null;
+
+        Vehicle vehicle = vehicleRepository.findById(vehicleId).orElse(null);
+        if (vehicle == null) return null;
+
+        if (vehicle.getMaxLitersPerMonth() != null && vehicle.getMaxLitersPerMonth().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal currentConsumed = vehicle.getConsumedLiters() != null ? vehicle.getConsumedLiters() : BigDecimal.ZERO;
+            BigDecimal projectedConsumed = currentConsumed.add(invoiceLiters);
+            if (projectedConsumed.compareTo(vehicle.getMaxLitersPerMonth()) > 0) {
+                BigDecimal remaining = vehicle.getMaxLitersPerMonth().subtract(currentConsumed);
+                return "Vehicle '" + vehicle.getVehicleNumber() + "' monthly liter limit would be exceeded. "
+                        + "Limit: " + vehicle.getMaxLitersPerMonth().toPlainString() + " L"
+                        + ", Consumed: " + currentConsumed.toPlainString() + " L"
+                        + ", This invoice: " + invoiceLiters.toPlainString() + " L"
+                        + ", Remaining: " + (remaining.compareTo(BigDecimal.ZERO) > 0 ? remaining.toPlainString() : "0") + " L";
+            }
+        }
+
+        return null; // OK
+    }
+
+    /**
      * Checks all auto-block triggers after invoice creation:
      * 1. Amount exceeded: ledger balance > creditLimitAmount
      * 2. Liters exceeded: consumedLiters >= creditLimitLiters
@@ -212,6 +281,46 @@ public class CustomerService {
             customer.setStatus("BLOCKED");
             customerRepository.save(customer);
         }
+    }
+
+    /**
+     * Updates customer credit limits (creditLimitAmount and/or creditLimitLiters).
+     * Used by the "Set as Limit" workflow from statements.
+     */
+    @Transactional
+    public Customer updateCreditLimits(Long id, Map<String, Object> limits) {
+        Customer customer = getCustomerById(id);
+        if (limits.containsKey("creditLimitAmount")) {
+            Object val = limits.get("creditLimitAmount");
+            customer.setCreditLimitAmount(val != null ? new BigDecimal(val.toString()) : null);
+        }
+        if (limits.containsKey("creditLimitLiters")) {
+            Object val = limits.get("creditLimitLiters");
+            customer.setCreditLimitLiters(val != null ? new BigDecimal(val.toString()) : null);
+        }
+        return customerRepository.save(customer);
+    }
+
+    /**
+     * Returns credit limit info for a customer including current ledger balance.
+     * Used by the invoice page for real-time credit limit validation.
+     */
+    public Map<String, Object> getCreditInfo(Long customerId) {
+        Customer customer = getCustomerById(customerId);
+        Map<String, Object> info = new HashMap<>();
+        info.put("creditLimitAmount", customer.getCreditLimitAmount());
+        info.put("creditLimitLiters", customer.getCreditLimitLiters());
+        info.put("consumedLiters", customer.getConsumedLiters());
+
+        // Calculate ledger balance
+        BigDecimal totalBilled = invoiceBillRepository.sumAllCreditBillsByCustomer(customerId);
+        BigDecimal totalPaid = paymentRepository.sumAllPaymentsByCustomer(customerId);
+        BigDecimal ledgerBalance = totalBilled.subtract(totalPaid);
+        info.put("ledgerBalance", ledgerBalance);
+        info.put("totalBilled", totalBilled);
+        info.put("totalPaid", totalPaid);
+
+        return info;
     }
 
     public Map<String, Object> getStats() {

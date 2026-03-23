@@ -57,4 +57,10 @@ public class VehicleController {
     public Vehicle toggleStatus(@PathVariable Long id) {
         return vehicleService.toggleStatus(id);
     }
+
+    @PatchMapping("/{id}/liter-limit")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    public Vehicle updateLiterLimit(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
+        return vehicleService.updateLiterLimit(id, body.get("maxLitersPerMonth"));
+    }
 }
