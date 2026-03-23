@@ -664,25 +664,10 @@ export default function CustomerProfilePage() {
                                         <option value="">Not set</option>
                                         <option value="CUSTOMER_WISE" className="bg-slate-900">Customer Wise</option>
                                         <option value="VEHICLE_WISE" className="bg-slate-900">Vehicle Wise</option>
+                                        <option value="BILL_WISE" className="bg-slate-900">Bill Wise</option>
                                     </select>
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.statementGrouping?.replace(/_/g, ' ') || "Not set"}</span>
-                                )}
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Threshold Amount</span>
-                                {isEditing ? (
-                                    <input
-                                        type="number"
-                                        value={customer.statementThresholdAmount || ""}
-                                        onChange={(e) => setCustomer({ ...customer, statementThresholdAmount: e.target.value ? parseFloat(e.target.value) : null })}
-                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground text-right w-28"
-                                        placeholder="Amount"
-                                    />
-                                ) : (
-                                    <span className="text-sm font-medium text-foreground">
-                                        {customer.statementThresholdAmount ? `₹${Number(customer.statementThresholdAmount).toLocaleString()}` : "Not set"}
-                                    </span>
                                 )}
                             </div>
                         </div>

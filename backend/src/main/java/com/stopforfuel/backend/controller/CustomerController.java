@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.CustomerDetailDTO;
+import com.stopforfuel.backend.dto.CustomerListDTO;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.service.CustomerService;
@@ -32,35 +34,36 @@ public class CustomerController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
-    public org.springframework.data.domain.Page<Customer> getCustomers(
+    public org.springframework.data.domain.Page<CustomerListDTO> getCustomers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long groupId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String categoryType) {
-        return customerService.getCustomers(search, groupId, status, categoryType, org.springframework.data.domain.PageRequest.of(page, size));
+        return customerService.getCustomers(search, groupId, status, categoryType, org.springframework.data.domain.PageRequest.of(page, size))
+                .map(CustomerListDTO::from);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
-    public Customer getCustomerById(@PathVariable Long id) {
-        return customerService.getCustomerById(id);
+    public CustomerDetailDTO getCustomerById(@PathVariable Long id) {
+        return CustomerDetailDTO.from(customerService.getCustomerById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public Customer createCustomer(@Valid @RequestBody Customer customer) {
+    public CustomerDetailDTO createCustomer(@Valid @RequestBody Customer customer) {
         if (customer.getScid() == null) {
             customer.setScid(SecurityUtils.getScid());
         }
-        return customerService.createCustomer(customer);
+        return CustomerDetailDTO.from(customerService.createCustomer(customer));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public Customer updateCustomer(@PathVariable Long id, @Valid @RequestBody Customer customer) {
-        return customerService.updateCustomer(id, customer);
+    public CustomerDetailDTO updateCustomer(@PathVariable Long id, @Valid @RequestBody Customer customer) {
+        return CustomerDetailDTO.from(customerService.updateCustomer(id, customer));
     }
 
     @DeleteMapping("/{id}")
@@ -77,20 +80,20 @@ public class CustomerController {
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public Customer toggleStatus(@PathVariable Long id) {
-        return customerService.toggleStatus(id);
+    public CustomerDetailDTO toggleStatus(@PathVariable Long id) {
+        return CustomerDetailDTO.from(customerService.toggleStatus(id));
     }
 
     @PatchMapping("/{id}/block")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public Customer blockCustomer(@PathVariable Long id) {
-        return customerService.blockCustomer(id);
+    public CustomerDetailDTO blockCustomer(@PathVariable Long id) {
+        return CustomerDetailDTO.from(customerService.blockCustomer(id));
     }
 
     @PatchMapping("/{id}/unblock")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public Customer unblockCustomer(@PathVariable Long id) {
-        return customerService.unblockCustomer(id);
+    public CustomerDetailDTO unblockCustomer(@PathVariable Long id) {
+        return CustomerDetailDTO.from(customerService.unblockCustomer(id));
     }
 
     @GetMapping("/{id}/vehicles")
