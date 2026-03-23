@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.EmployeeDetailDTO;
+import com.stopforfuel.backend.dto.EmployeeListDTO;
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.EmployeeAdvance;
 import com.stopforfuel.backend.entity.SalaryHistory;
@@ -26,48 +28,48 @@ public class EmployeeController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public Page<Employee> getEmployees(
+    public Page<EmployeeListDTO> getEmployees(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return employeeService.getEmployees(search, status, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")));
+        return employeeService.getEmployees(search, status, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))
+                .map(EmployeeListDTO::from);
     }
 
     @GetMapping("/all")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<Employee> getAllEmployees() {
-        return employeeService.getAllEmployees();
+    public List<EmployeeListDTO> getAllEmployees() {
+        return employeeService.getAllEmployees().stream()
+                .map(EmployeeListDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<Employee> getActiveEmployees() {
-        return employeeService.getActiveEmployees();
+    public List<EmployeeListDTO> getActiveEmployees() {
+        return employeeService.getActiveEmployees().stream()
+                .map(EmployeeListDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public ResponseEntity<Employee> getEmployeeById(@PathVariable Long id) {
+    public ResponseEntity<EmployeeDetailDTO> getEmployeeById(@PathVariable Long id) {
         return employeeService.getEmployeeById(id)
+                .map(EmployeeDetailDTO::from)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public Employee createEmployee(@Valid @RequestBody Employee employee) {
-        return employeeService.createEmployee(employee);
+    public EmployeeDetailDTO createEmployee(@Valid @RequestBody Employee employee) {
+        return EmployeeDetailDTO.from(employeeService.createEmployee(employee));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @Valid @RequestBody Employee employee) {
-        try {
-            return ResponseEntity.ok(employeeService.updateEmployee(id, employee));
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<EmployeeDetailDTO> updateEmployee(@PathVariable Long id, @Valid @RequestBody Employee employee) {
+        return ResponseEntity.ok(EmployeeDetailDTO.from(employeeService.updateEmployee(id, employee)));
     }
 
     @DeleteMapping("/{id}")

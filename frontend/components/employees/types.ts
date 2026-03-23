@@ -51,7 +51,7 @@ export interface EmployeeAdvance {
 
 export const emptyEmployee: Omit<Employee, "id"> = {
     name: "", designation: "", email: "", phone: "", salary: 0, salaryDay: 1, joinDate: "",
-    status: "Active", aadharNumber: "", additionalPhones: "", address: "",
+    status: "ACTIVE", aadharNumber: "", additionalPhones: "", address: "",
     city: "", state: "", pincode: "", photoUrl: "", bankAccountNumber: "",
     bankName: "", bankIfsc: "", bankBranch: "", panNumber: "", department: "",
     employeeCode: "", emergencyContact: "", emergencyPhone: "", bloodGroup: "",
@@ -61,7 +61,7 @@ export const emptyEmployee: Omit<Employee, "id"> = {
 export const inputClass =
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
 
-export const formatRupees = (val: number) => `₹${val.toLocaleString("en-IN")}`;
+export const formatRupees = (val: number) => `₹${(val ?? 0).toLocaleString("en-IN")}`;
 
 export const advanceTypeBadge: Record<string, string> = {
     SALARY_ADVANCE: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
