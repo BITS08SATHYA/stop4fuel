@@ -66,7 +66,22 @@ export function EmployeeList() {
     };
 
     const openAdd = () => { setFormEmployee({ ...emptyEmployee }); setFormIsEditing(false); };
-    const openEdit = (emp: Employee) => { setFormEmployee(emp); setFormIsEditing(true); };
+    const openEdit = async (emp: Employee) => {
+        try {
+            const res = await fetch(`${API_BASE}/${emp.id}`);
+            if (res.ok) {
+                const full = await res.json();
+                // Ensure no null values for form inputs
+                const merged = { ...emptyEmployee, ...Object.fromEntries(
+                    Object.entries(full).map(([k, v]) => [k, v ?? (emptyEmployee as any)[k] ?? ""])
+                )};
+                setFormEmployee(merged);
+                setFormIsEditing(true);
+            }
+        } catch (error) {
+            console.error("Failed to fetch employee details", error);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -102,8 +117,8 @@ export function EmployeeList() {
                     className="px-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                     <option value="">All Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
                 </select>
             </div>
 
@@ -143,7 +158,7 @@ export function EmployeeList() {
                                 </td>
                                 <td className="p-4">{formatRupees(emp.salary)}</td>
                                 <td className="p-4">
-                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${emp.status === "Active" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" : "bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300"}`}>
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${emp.status?.toUpperCase() === "ACTIVE" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" : "bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300"}`}>
                                         {emp.status}
                                     </span>
                                 </td>
