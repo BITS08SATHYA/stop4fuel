@@ -40,4 +40,10 @@ public class CompanyController {
         company.setId(id);
         return companyService.saveCompany(company);
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    public void deleteCompany(@PathVariable Long id) {
+        companyService.deleteCompany(id);
+    }
 }

@@ -1,0 +1,279 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Building2, Save, ArrowLeft, Pencil, Loader2 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api/station";
+import { CompanyDocuments } from "./company-documents";
+
+interface Company {
+    id?: number;
+    name: string;
+    openDate: string;
+    sapCode: string;
+    gstNo: string;
+    site: string;
+    type: string;
+    address: string;
+}
+
+const emptyCompany: Company = {
+    name: "",
+    openDate: "",
+    sapCode: "",
+    gstNo: "",
+    site: "",
+    type: "",
+    address: "",
+};
+
+interface CompanyDetailPageProps {
+    companyId?: number;
+    initialEditMode?: boolean;
+}
+
+export function CompanyDetailPage({ companyId, initialEditMode = false }: CompanyDetailPageProps) {
+    const router = useRouter();
+    const isNew = !companyId;
+    const [editing, setEditing] = useState(isNew || initialEditMode);
+    const [loading, setLoading] = useState(!isNew);
+    const [saving, setSaving] = useState(false);
+    const [company, setCompany] = useState<Company>(emptyCompany);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (companyId) {
+            fetchCompany(companyId);
+        }
+    }, [companyId]);
+
+    const fetchCompany = async (id: number) => {
+        try {
+            setLoading(true);
+            const res = await fetch(`${API_BASE_URL}/companies/${id}`);
+            if (!res.ok) throw new Error("Failed to fetch company");
+            const data = await res.json();
+            setCompany(data);
+        } catch (err) {
+            console.error(err);
+            setError("Failed to load company details");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        setError(null);
+
+        try {
+            const url = company.id
+                ? `${API_BASE_URL}/companies/${company.id}`
+                : `${API_BASE_URL}/companies`;
+            const method = company.id ? "PUT" : "POST";
+
+            const res = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(company),
+            });
+
+            if (!res.ok) throw new Error("Failed to save company");
+            const saved = await res.json();
+            setCompany(saved);
+            setEditing(false);
+
+            if (isNew) {
+                router.replace(`/company/${saved.id}`);
+            }
+        } catch (err) {
+            console.error(err);
+            setError("Failed to save company details. Please try again.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { id, value } = e.target;
+        setCompany((prev) => ({ ...prev, [id]: value }));
+    };
+
+    const inputClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-6 bg-background min-h-screen">
+            <div className="max-w-5xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => router.push("/company")}
+                            className="p-2 rounded-lg hover:bg-muted transition-colors"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">
+                                {isNew ? "New Company" : company.name || "Company Details"}
+                            </h1>
+                            <p className="text-muted-foreground text-sm">
+                                {isNew ? "Create a new company profile" : "Company profile and documents"}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {!isNew && !editing && (
+                            <button
+                                onClick={() => setEditing(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
+                            >
+                                <Pencil className="w-4 h-4" />
+                                Edit
+                            </button>
+                        )}
+                        <div className="p-2 bg-primary/10 rounded-full text-primary">
+                            <Building2 className="w-5 h-5" />
+                        </div>
+                    </div>
+                </div>
+
+                {error && (
+                    <div className="p-4 text-sm text-red-500 bg-red-50 dark:bg-red-950/20 rounded-md border border-red-200 dark:border-red-800">
+                        {error}
+                    </div>
+                )}
+
+                {/* Company Details Card */}
+                <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
+                    <div className="px-6 py-4 border-b border-border bg-muted/30">
+                        <h2 className="text-base font-semibold">Company Information</h2>
+                    </div>
+                    <div className="p-6">
+                        <form onSubmit={handleSubmit}>
+                            <div className="grid gap-5 md:grid-cols-2">
+                                <div className="space-y-1.5">
+                                    <label htmlFor="name" className="text-sm font-medium">Company Name</label>
+                                    {editing ? (
+                                        <input id="name" value={company.name} onChange={handleChange} className={inputClass} placeholder="Enter company name" required />
+                                    ) : (
+                                        <p className="text-sm py-2">{company.name || "—"}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="type" className="text-sm font-medium">Type</label>
+                                    {editing ? (
+                                        <select id="type" value={company.type} onChange={handleChange} className={inputClass}>
+                                            <option value="">Select type</option>
+                                            <option value="COCO">COCO (Company Owned Company Operated)</option>
+                                            <option value="CODO">CODO (Company Owned Dealer Operated)</option>
+                                            <option value="DODO">DODO (Dealer Owned Dealer Operated)</option>
+                                        </select>
+                                    ) : (
+                                        <p className="text-sm py-2">{company.type || "—"}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="openDate" className="text-sm font-medium">Open Date</label>
+                                    {editing ? (
+                                        <input id="openDate" type="date" value={company.openDate} onChange={handleChange} className={inputClass} />
+                                    ) : (
+                                        <p className="text-sm py-2">
+                                            {company.openDate ? new Date(company.openDate).toLocaleDateString("en-IN") : "—"}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="sapCode" className="text-sm font-medium">SAP Code</label>
+                                    {editing ? (
+                                        <input id="sapCode" value={company.sapCode} onChange={handleChange} className={inputClass} placeholder="Enter SAP code" />
+                                    ) : (
+                                        <p className="text-sm py-2">{company.sapCode || "—"}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="gstNo" className="text-sm font-medium">GST No</label>
+                                    {editing ? (
+                                        <input id="gstNo" value={company.gstNo} onChange={handleChange} className={inputClass} placeholder="Enter GST number" />
+                                    ) : (
+                                        <p className="text-sm py-2">{company.gstNo || "—"}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="site" className="text-sm font-medium">Site</label>
+                                    {editing ? (
+                                        <input id="site" value={company.site} onChange={handleChange} className={inputClass} placeholder="Enter site location" />
+                                    ) : (
+                                        <p className="text-sm py-2">{company.site || "—"}</p>
+                                    )}
+                                </div>
+
+                                <div className="col-span-2 space-y-1.5">
+                                    <label htmlFor="address" className="text-sm font-medium">Address</label>
+                                    {editing ? (
+                                        <textarea
+                                            id="address"
+                                            value={company.address}
+                                            onChange={handleChange}
+                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            placeholder="Enter full address"
+                                            rows={3}
+                                        />
+                                    ) : (
+                                        <p className="text-sm py-2">{company.address || "—"}</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {editing && (
+                                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+                                    {!isNew && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEditing(false);
+                                                if (companyId) fetchCompany(companyId);
+                                            }}
+                                            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                    >
+                                        {saving ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Save className="w-4 h-4" />
+                                        )}
+                                        {saving ? "Saving..." : isNew ? "Create Company" : "Save Changes"}
+                                    </button>
+                                </div>
+                            )}
+                        </form>
+                    </div>
+                </div>
+
+                {/* Documents Section - only show for existing companies */}
+                {company.id && <CompanyDocuments companyId={company.id} />}
+            </div>
+        </div>
+    );
+}
