@@ -19,7 +19,7 @@ public class CashierStockService {
     }
 
     public CashierStock getById(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("CashierStock not found with id: " + id));
     }
 
@@ -41,6 +41,7 @@ public class CashierStockService {
     }
 
     public void delete(Long id) {
-        repository.deleteById(id);
+        CashierStock stock = getById(id); // validates scid ownership
+        repository.delete(stock);
     }
 }

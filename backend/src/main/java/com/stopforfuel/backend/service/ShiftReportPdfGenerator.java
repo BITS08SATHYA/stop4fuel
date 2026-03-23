@@ -8,6 +8,7 @@ import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.dto.ShiftReportPrintData.*;
 import com.stopforfuel.backend.entity.ReportLineItem;
 import com.stopforfuel.backend.entity.ShiftClosingReport;
+import com.stopforfuel.backend.exception.ReportGenerationException;
 import org.springframework.stereotype.Component;
 
 import java.awt.Color;
@@ -221,7 +222,7 @@ public class ShiftReportPdfGenerator {
 
             document.close();
         } catch (DocumentException e) {
-            throw new RuntimeException("Failed to generate shift report PDF", e);
+            throw new ReportGenerationException("Failed to generate shift report PDF", e);
         }
 
         return baos.toByteArray();

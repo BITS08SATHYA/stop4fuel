@@ -15,15 +15,15 @@ public class PumpService {
     private PumpRepository pumpRepository;
 
     public List<Pump> getAllPumps() {
-        return pumpRepository.findAll();
+        return pumpRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<Pump> getActivePumps() {
-        return pumpRepository.findByActive(true);
+        return pumpRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
     public Pump getPumpById(Long id) {
-        return pumpRepository.findById(id)
+        return pumpRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Pump not found with id: " + id));
     }
 
@@ -47,6 +47,7 @@ public class PumpService {
     }
 
     public void deletePump(Long id) {
-        pumpRepository.deleteById(id);
+        Pump pump = getPumpById(id);
+        pumpRepository.delete(pump);
     }
 }

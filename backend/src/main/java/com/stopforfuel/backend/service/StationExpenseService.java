@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.StationExpense;
 import com.stopforfuel.backend.repository.StationExpenseRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +18,7 @@ public class StationExpenseService {
     private StationExpenseRepository stationExpenseRepository;
 
     public List<StationExpense> getAllExpenses() {
-        return stationExpenseRepository.findAllByOrderByExpenseDateDesc();
+        return stationExpenseRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<StationExpense> getExpensesBetween(LocalDate from, LocalDate to) {
@@ -29,7 +30,7 @@ public class StationExpenseService {
     }
 
     public StationExpense updateExpense(Long id, StationExpense details) {
-        StationExpense expense = stationExpenseRepository.findById(id)
+        StationExpense expense = stationExpenseRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Expense not found"));
 
         expense.setExpenseType(details.getExpenseType());

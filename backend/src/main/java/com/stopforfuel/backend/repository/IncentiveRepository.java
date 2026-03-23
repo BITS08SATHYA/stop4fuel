@@ -1,7 +1,6 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Incentive;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -9,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface IncentiveRepository extends JpaRepository<Incentive, Long> {
+public interface IncentiveRepository extends ScidRepository<Incentive> {
 
     @Query("SELECT i FROM Incentive i JOIN FETCH i.customer JOIN FETCH i.product ORDER BY i.customer.name, i.product.name")
     List<Incentive> findAllWithCustomerAndProduct();

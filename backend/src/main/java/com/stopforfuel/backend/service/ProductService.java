@@ -2,8 +2,11 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.GradeType;
 import com.stopforfuel.backend.entity.Product;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.GradeTypeRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,20 +22,20 @@ public class ProductService {
     private GradeTypeRepository gradeTypeRepository;
 
     public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        return productRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<Product> getActiveProducts() {
-        return productRepository.findByActive(true);
+        return productRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
     public List<Product> getProductsByCategory(String category) {
-        return productRepository.findByCategoryIgnoreCaseAndActive(category, true);
+        return productRepository.findByCategoryIgnoreCaseAndActiveAndScid(category, true, SecurityUtils.getScid());
     }
 
     public Product getProductById(Long id) {
-        return productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        return productRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
 
     public Product createProduct(Product product) {
@@ -59,10 +62,10 @@ public class ProductService {
     private void validateGradeOilTypeLink(Product product) {
         if (product.getGrade() != null && product.getGrade().getId() != null && product.getOilType() != null) {
             GradeType grade = gradeTypeRepository.findById(product.getGrade().getId())
-                    .orElseThrow(() -> new RuntimeException("Grade not found with id: " + product.getGrade().getId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Grade not found with id: " + product.getGrade().getId()));
             if (grade.getOilType() != null
                     && !grade.getOilType().getId().equals(product.getOilType().getId())) {
-                throw new RuntimeException(
+                throw new BusinessException(
                         "Grade '" + grade.getName() + "' belongs to oil type '" +
                         grade.getOilType().getName() + "', not the selected oil type");
             }
@@ -76,6 +79,7 @@ public class ProductService {
     }
 
     public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+        Product product = getProductById(id);
+        productRepository.delete(product);
     }
 }
