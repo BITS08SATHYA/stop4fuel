@@ -31,8 +31,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     // Paginated versions
     Page<Payment> findAllBy(Pageable pageable);
 
-    @Query("SELECT p FROM Payment p JOIN p.customer c WHERE (:customerCategory IS NULL OR c.customerCategory = :customerCategory)")
-    Page<Payment> findWithCategoryFilter(@Param("customerCategory") String customerCategory, Pageable pageable);
+    @Query("SELECT p FROM Payment p JOIN p.customer c LEFT JOIN c.customerCategory cc WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType)")
+    Page<Payment> findWithCategoryFilter(@Param("categoryType") String categoryType, Pageable pageable);
 
     Page<Payment> findByCustomerId(Long customerId, Pageable pageable);
 

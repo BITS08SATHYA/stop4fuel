@@ -171,20 +171,22 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
 
     // Paginated filtered history query (all invoices, not customer-specific)
     @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN FETCH ib.customer c LEFT JOIN FETCH ib.vehicle v "
-         + "LEFT JOIN FETCH ib.products ip LEFT JOIN FETCH ip.product LEFT JOIN FETCH ip.nozzle WHERE "
+         + "LEFT JOIN FETCH ib.products ip LEFT JOIN FETCH ip.product LEFT JOIN FETCH ip.nozzle "
+         + "LEFT JOIN c.customerCategory cc WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
-         + "AND (:customerCategory IS NULL OR c.customerCategory = :customerCategory) "
+         + "AND (:categoryType IS NULL OR cc.categoryType = :categoryType) "
          + "AND ib.date >= :fromDate "
          + "AND ib.date <= :toDate "
          + "AND (:search = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%'))) "
          + "ORDER BY ib.date DESC",
-         countQuery = "SELECT COUNT(ib) FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
+         countQuery = "SELECT COUNT(ib) FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v "
+         + "LEFT JOIN c.customerCategory cc WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
-         + "AND (:customerCategory IS NULL OR c.customerCategory = :customerCategory) "
+         + "AND (:categoryType IS NULL OR cc.categoryType = :categoryType) "
          + "AND ib.date >= :fromDate "
          + "AND ib.date <= :toDate "
          + "AND (:search = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
@@ -193,7 +195,7 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
     Page<InvoiceBill> findAllFiltered(
             @Param("billType") String billType,
             @Param("paymentStatus") String paymentStatus,
-            @Param("customerCategory") String customerCategory,
+            @Param("categoryType") String categoryType,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             @Param("search") String search,
@@ -244,17 +246,17 @@ public interface InvoiceBillRepository extends JpaRepository<InvoiceBill, Long> 
     // Product sales summary aggregation
     @Query("SELECT new com.stopforfuel.backend.dto.ProductSalesSummary(ip.product.id, p.name, SUM(ip.quantity), SUM(ip.amount), SUM(ip.grossAmount), COALESCE(SUM(ip.discountAmount),0)) "
          + "FROM InvoiceProduct ip JOIN ip.product p JOIN ip.invoiceBill ib "
-         + "LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v WHERE "
+         + "LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v LEFT JOIN c.customerCategory cc WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
-         + "AND (:customerCategory IS NULL OR c.customerCategory = :customerCategory) "
+         + "AND (:categoryType IS NULL OR cc.categoryType = :categoryType) "
          + "AND ib.date >= :fromDate "
          + "AND ib.date <= :toDate "
          + "GROUP BY ip.product.id, p.name")
     List<ProductSalesSummary> getProductSalesSummary(
             @Param("billType") String billType,
             @Param("paymentStatus") String paymentStatus,
-            @Param("customerCategory") String customerCategory,
+            @Param("categoryType") String categoryType,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
