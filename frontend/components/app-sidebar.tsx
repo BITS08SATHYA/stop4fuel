@@ -44,6 +44,7 @@ import {
     Shield,
     UserCheck,
     Tag,
+    Layers,
     LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,7 @@ const mainNav = [
 const customerManagementNav = [
     { name: "Customers", href: "/customers", icon: Users },
     { name: "Groups", href: "/customers/groups", icon: Users },
+    { name: "Categories", href: "/customers/categories", icon: Layers },
     { name: "Vehicles", href: "/customers/vehicles", icon: Truck },
     { name: "Mappings", href: "/customers/mappings", icon: Map },
     { name: "Incentives", href: "/customers/incentives", icon: Tag },

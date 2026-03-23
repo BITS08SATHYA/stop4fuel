@@ -2,6 +2,7 @@ package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,7 +20,14 @@ public class SalaryHistory extends SimpleBaseEntity {
     private Employee employee;
 
     private Double oldSalary;
+
+    @NotNull(message = "New salary is required")
+    @PositiveOrZero(message = "New salary must be zero or positive")
     private Double newSalary;
+
+    @NotNull(message = "Effective date is required")
     private LocalDate effectiveDate;
+
+    @Size(max = 500, message = "Reason must not exceed 500 characters")
     private String reason;
 }

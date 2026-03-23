@@ -19,8 +19,8 @@ public class CreditManagementController {
     @GetMapping("/overview")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public CreditManagementService.CreditOverview getOverview(
-            @RequestParam(required = false) String customerCategory) {
-        return creditManagementService.getCreditOverview(customerCategory);
+            @RequestParam(required = false) String categoryType) {
+        return creditManagementService.getCreditOverview(categoryType);
     }
 
     /**

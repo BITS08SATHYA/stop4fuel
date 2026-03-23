@@ -12,18 +12,23 @@ interface CustomerStepProps {
 export function CustomerStep({ data, updateData, errors = {}, clearError }: CustomerStepProps) {
     const [parties, setParties] = React.useState<any[]>([]);
     const [groups, setGroups] = React.useState<any[]>([]);
+    const [categories, setCategories] = React.useState<any[]>([]);
     const [ceilingType, setCeilingType] = React.useState<"amount" | "liters">("amount");
 
     React.useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const partiesRes = await fetch(`${API_BASE_URL}/parties`);
+                const [partiesRes, groupsRes, catRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/parties`),
+                    fetch(`${API_BASE_URL}/groups`),
+                    fetch(`${API_BASE_URL}/customer-categories`),
+                ]);
                 const partiesData = await partiesRes.json();
                 setParties(Array.isArray(partiesData) ? partiesData : partiesData.content || []);
-
-                const groupsRes = await fetch(`${API_BASE_URL}/groups`);
                 const groupsData = await groupsRes.json();
                 setGroups(Array.isArray(groupsData) ? groupsData : groupsData.content || []);
+                const catData = await catRes.json();
+                setCategories(Array.isArray(catData) ? catData : []);
             } catch (error) {
                 console.error("Failed to fetch options", error);
             }
@@ -178,13 +183,28 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                         Category <span className="text-red-500">*</span>
                     </label>
                     <select
-                        value={data.customerCategory || ""}
-                        onChange={(e) => { handleChange("customerCategory", e.target.value); }}
+                        value={data.customerCategory?.id || ""}
+                        onChange={(e) => {
+                            const selected = categories.find(c => c.id === Number(e.target.value));
+                            handleChange("customerCategory", selected || null);
+                        }}
                         className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.customerCategory)}`}
                     >
                         <option value="" className="bg-slate-900">Select Category</option>
-                        <option value="GOVERNMENT" className="bg-slate-900">Government</option>
-                        <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
+                        {categories.filter(c => c.categoryType === 'GOVERNMENT').length > 0 && (
+                            <optgroup label="Government">
+                                {categories.filter(c => c.categoryType === 'GOVERNMENT').map(c => (
+                                    <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
+                                ))}
+                            </optgroup>
+                        )}
+                        {categories.filter(c => c.categoryType === 'NON_GOVERNMENT').length > 0 && (
+                            <optgroup label="Non-Government">
+                                {categories.filter(c => c.categoryType === 'NON_GOVERNMENT').map(c => (
+                                    <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
+                                ))}
+                            </optgroup>
+                        )}
                     </select>
                     <FieldError error={errors.customerCategory} />
                 </div>

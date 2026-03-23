@@ -1,262 +1,70 @@
-yet to start
+# StopForFuel — Todos (Updated 2026-03-22)
 
-11. Implement filter options to all the management tables (Done - 16/16 tables)
-1. Income bill/statement management (Done)
-2. Advance Management (Done - CashAdvance + EmployeeAdvance entities, full API, frontend UI, invoice/statement linkage, shift report integration)
-12. Extensively elaborate the income bill/statement management (Done)
-	11.1 Dashboards for that (Done)
-3. Shift Management (Done - backend all 8 txn types + frontend shift register + shift closing report with payment mode breakdown)
-9. Dashboards (Done - main dashboard, operational dashboard, invoice analytics, payment analytics - all with real API data)
-10. Properly Reassemble
-	10.1 Employee Management (Done - 50+ fields, leave, attendance, salary, advances, photo S3)
-	10.2 Customer Management (Done)
-	10.3 Invoice (bill/statement) Management (Done)
-		9.3.1 Advance Management (Done)
-	10.4 Product Management (Done)
-	10.5 Inventory Management (Done)
-	10.6 Marketing Management (Not Done - placeholder "Coming Soon" page)
-	10.7 Operational Dashboards (Done)
-	10.8 Invoice Payment Dashboards (Done)
+## Application Features
 
-non-application tasks
+### Done
+- [x] Filter options on all 16 management tables
+- [x] Income bill/statement management (full CRUD, cash+credit invoices, statements, payments)
+- [x] Advance Management (CashAdvance + EmployeeAdvance, 12 API endpoints, frontend UI, shift integration)
+- [x] Shift Management (8 txn types, shift register, closing report with payment mode breakdown, PDF)
+- [x] Dashboards (main, operational, invoice analytics, payment analytics — all with real API data)
+- [x] Employee Management (50+ fields, leave, attendance, salary, advances, photo S3, documents)
+- [x] Customer Management (CRUD, groups, vehicles, mappings, credit blocking, profile overlay, GPS/GST fields, Gov/Non-Gov categorization)
+- [x] Invoice Management (creation, history, statement generation, payment recording)
+- [x] Product Management (table CRUD with filters)
+- [x] Inventory Management (tank dip, nozzle meter, product stock, godown/cashier split, transfers, purchase orders)
+- [x] Operational Dashboards (/operations/dashboard — tanks, pumps, nozzles, current shift, meter readings)
+- [x] Invoice/Payment Dashboards (invoice analytics + payment analytics)
 
-7. Database final work (working - indexes added, unique constraints added, scid still hardcoded in ~20 services)
-15. S3 bucket integrations for storing pics, pdfs (bills and statements) and photocopies of bills (signed by authorative) and indents photocopies (done)
-6. login/logout page  ( Implement Authenticator application kinda integration into the application for otp purposes (during the validation of credit bills)) (Auth committed but needs dev testing)
-8. Reports (JasperReport Server)
-	7.1 Daily Sales Report
-	7.2 Inventory Report (Summary and detailed) by individual and total
-	7.3 Customer Balance Report (Summary and Detailed) by individual and total
-	7.4 Sales Tax Templates (automatically export to pdf or excel)
-	7.5 Oil Calculation Templates (automatically export to pdf or excel)
-	7.6 SBI bank Customer Balance report (local and statement party balances)
+### Not Done
+- [ ] Marketing Management — placeholder "Coming Soon" page, no backend
+- [ ] Dip trend visualization charts (dip recording works, but no historical charts)
 
-4. Spring security (AWS Cognito) (Committed - needs dev testing)
-13.Implement Spring AI in the dashboard (LLM designed for this application alone)
-5. TLS/SSL Configurations
+### Placeholder Pages
+- Marketing (/marketing) — "Coming Soon"
+- Customer Profile (/customers/profile) — "Enhanced Profiles Coming Soon"
+
+### Analytics Pages (will 404 — need ML microservice)
+- Sales Forecast, Purchase Planner, Profitability, Credit Intelligence, Employee Insights
+- Directory structure exists at /analytics/* but no page.tsx files
 
 
-# Visualization (discussion)
-# All Credits <> All Incomes (should i maintain this per customer) (a visualization tool)
+## Non-Application / Infrastructure Tasks
 
-# Discussion for customers
-# I thing that i need to categorize the customers for anymore categories like (government, retail outlet, bus, etc...) ...in a way to disect them so that it should act a minor for advocating the transparency
-# adding customer gps (their place) coordinates ... and in their view profile page ...(a map view with a pin on their coordinates) and also add a customer field that if the customer wants vehicle wise or customer wise or certain bills of x quantity threshold ...and whether the customer wants the statement for monthly, biweekly, or other options ...
-
-# Another improvement is designaton based dashboards and action menus ...(needs to be implemented)
-
-# pagination is needed in the employee table. in the view profile, their document is not visible
-
-
-# Status Report (Updated 2026-03-21)
+| Feature                | Status                                              |
+|------------------------|-----------------------------------------------------|
+| S3 Integration         | Done                                                |
+| Auth (AWS Cognito)     | Committed, disabled in dev (AUTH_ENABLED=false)     |
+| JasperReports          | Partial — service + 2 templates (customer vehicle, shift report) |
+| CI/CD Pipeline         | Not started — deploy is manual via deploy.sh        |
+| Spring AI / ML         | Not started — analytics pages are placeholders      |
+| TLS/SSL                | Not started — plain HTTP, no reverse proxy          |
 
 
-  #: 11
-  Task: Filter options on all management tables
-  Status: Done
-  Details: 16/16 pages have filters.
-  ────────────────────────────────────────
-  #: 1
-  Task: Income bill/statement management
-  Status: Done
-  Details: Full CRUD for invoices (cash + credit), statements (generate/preview/manage),
-    payments (statement + bill). All working.
-  ────────────────────────────────────────
-  #: 2
-  Task: Advance Management
-  Status: Done
-  Details: CashAdvance entity (CASH_ADVANCE, SALARY_ADVANCE types), full REST API at
-    /api/advances (12 endpoints), frontend UI at /operations/advances, invoice/statement
-    linkage, utilized amount tracking, auto shift transactions, shift report integration.
-    EmployeeAdvance entity for salary deduction via payroll.
-  ────────────────────────────────────────
-  #: 12
-  Task: Extensively elaborate income bill/statement
-  Status: Done
-  Details: Invoices, statements, payments, credit overview, customer ledger,
-    invoice analytics dashboard, payment analytics dashboard — all complete.
-  ────────────────────────────────────────
-  #: 12.1
-  Task: Dashboards for invoice/payment
-  Status: Done
-  Details: Invoice analytics at /operations/invoices/dashboard (revenue trend, payment modes,
-    top customers, hourly distribution). Payment analytics at /payments/dashboard (collection
-    trend, aging, top payers, collection rate).
-  ────────────────────────────────────────
-  #: 3
-  Task: Shift Management
-  Status: Done
-  Details: Backend (all 8 txn types) + frontend shift register page. Shift closing report with
-    payment mode breakdown (CASH/CARD/UPI/CCMS/CHEQUE/BANK). Auto-creates shift txns on
-    invoice/payment. PDF generation. Stock summary and position sections.
-  ────────────────────────────────────────
-  #: 9
-  Task: Dashboards
-  Status: Done
-  Details: Main dashboard (/) with real API data — revenue, fuel volume, credit aging, tank
-    status, recent invoices, active shift banner. Operational dashboard at /operations/dashboard.
-  ────────────────────────────────────────
-  #: 10
-  Task: Properly Reassemble
-  Status: See sub-items
-  Details:
-  ────────────────────────────────────────
-  #: 10.1
-  Task: Employee Management
-  Status: Done
-  Details: 50+ fields, Aadhar, multiple phones, address, salary history, advances,
-    photo (S3), bank details, leave management, attendance, documents.
-  ────────────────────────────────────────
-  #: 10.2
-  Task: Customer Management
-  Status: Done
-  Details: Full CRUD, groups, vehicles, mappings, credit blocking, profile overlay.
-  ────────────────────────────────────────
-  #: 10.3
-  Task: Invoice Management
-  Status: Done
-  Details: Full invoice creation, history, statement generation, payment recording.
-  ────────────────────────────────────────
-  #: 10.3.1
-  Task: Advance Management
-  Status: Done
-  Details: Same as #2 above.
-  ────────────────────────────────────────
-  #: 10.4
-  Task: Product Management
-  Status: Done
-  Details: Table-based CRUD with filters (name, HSN, category, status).
-  ────────────────────────────────────────
-  #: 10.5
-  Task: Inventory Management
-  Status: Done
-  Details: Tank dip, nozzle meter, product stock — all table-based with filters,
-    auto-calculations. Godown/Cashier split with transfer tracking. Purchase orders.
-  ────────────────────────────────────────
-  #: 10.6
-  Task: Marketing Management
-  Status: Not Done
-  Details: Placeholder "Coming Soon" page exists. No backend.
-  ────────────────────────────────────────
-  #: 10.7
-  Task: Operational Dashboards
-  Status: Done
-  Details: /operations/dashboard shows tanks, pumps, nozzles, current shift, meter readings,
-    product stock summary.
-  ────────────────────────────────────────
-  #: 10.8
-  Task: Invoice Payment Dashboards
-  Status: Done
-  Details: Same as #12.1 above.
+## Production Hardening — Completed Items
 
-  Summary (Updated 2026-03-21)
+These were previously listed as gaps but are now DONE:
 
-  ┌──────────┬────────────────────────────────────────────────────────────────────┐
-  │ Category │                             Count                                  │
-  ├──────────┼────────────────────────────────────────────────────────────────────┤
-  │ Done     │ 14 items (1, 2, 3, 9, 10.1, 10.2, 10.3, 10.3.1, 10.4, 10.5,     │
-  │          │  10.7, 10.8, 11, 12, 12.1)                                        │
-  ├──────────┼────────────────────────────────────────────────────────────────────┤
-  │ Partial  │ 1 item (7 — database work, scid hardcoding remains)               │
-  ├──────────┼────────────────────────────────────────────────────────────────────┤
-  │ Not Done │ 1 item (10.6 — Marketing Management)                              │
-  └──────────┴────────────────────────────────────────────────────────────────────┘
-
-  Non-Application Items Status:
-  ┌──────────────────────────────┬───────────────────────────────────────────────┐
-  │           Feature            │                    Status                     │
-  ├──────────────────────────────┼───────────────────────────────────────────────┤
-  │ Auth (AWS Cognito)           │ Committed, needs dev testing                  │
-  ├──────────────────────────────┼───────────────────────────────────────────────┤
-  │ S3 Integration               │ Done                                          │
-  ├──────────────────────────────┼───────────────────────────────────────────────┤
-  │ JasperReports                │ Not started (only 1 template exists)          │
-  ├──────────────────────────────┼───────────────────────────────────────────────┤
-  │ Spring AI                    │ Not started                                   │
-  ├──────────────────────────────┼───────────────────────────────────────────────┤
-  │ TLS/SSL                      │ Not started                                   │
-  ├──────────────────────────────┼───────────────────────────────────────────────┤
-  │ ML Analytics                 │ Not started (plan exists)                     │
-  └──────────────────────────────┴───────────────────────────────────────────────┘
-
-  Critical — Missing Pages (will 404):
-  - Analytics: Sales Forecast, Purchase Planner, Profitability, Credit Intelligence, Employee Insights
-    (All 5 are in sidebar but have no page files — needs ML microservice first)
-
-  Placeholder Pages:
-  - Marketing Management (/marketing) — "Coming Soon"
-  - Customer Profile (/customers/profile) — "Enhanced Profiles Coming Soon"
-
-  Backend Items Still Pending:
-  - scid hardcoded to 1L in ~20 services (SecurityUtils exists but only applied in CustomerController)
-  - Auth needs dev-mode testing
-  - CORS wide open — lock down for production
-  - JasperReport templates needed (only customer vehicle report exists)
+- [x] @ControllerAdvice + 3 custom exceptions (ResourceNotFound, Business, DuplicateResource)
+- [x] Bean Validation (@NotBlank, @Email, @Size, @PositiveOrZero) across 52 entity files
+- [x] Tests — 54 backend test files + 37 frontend e2e Playwright specs
+- [x] Password field hidden (@JsonProperty WRITE_ONLY)
+- [x] Rate limiting (Bucket4j — 100 reads/min, 20 writes/min per IP)
+- [x] CORS properly configured (reads from app.cors.allowed-origins, not wide open)
+- [x] Database indexes (31 files with @Index — InvoiceBill has 8 indexes)
+- [x] Unique constraints (User.username, Employee.aadhar, Statement.statement_no, etc.)
+- [x] scid resolved — SecurityUtils.getScid() used everywhere, no more hardcoding
+- [x] Employee component split (employee-list.tsx now 208 lines, separate modal/form components)
 
 
-Plans:
+## Discussion / Future Ideas
+
+- Monthly inflow/outflow visualization (opening stock, revenue, expenses, credit, closing stock)
+- Designation-based dashboards and action menus
+- Pagination for employee table
+- Customer statement frequency preferences (monthly, biweekly, etc.) — fields added, UI pending
+- Customer GPS map view in profile page — field added, map view not built
+
+
+## Plans
 Look at the eager-tumbling-noodle.md plan for ML, employee management, salary management, eb management
-
-
-i dont see the ui of advance entries ...if i have to do manually ...
-i need to add dip charts ...so that based on the dip value --> its stock value can be calculated or take the stock value from the automation ...
-
-Based on everything I've seen across our conversations — the entity design, domain modeling, architecture decisions, and how you think
-  about features — here's my honest assessment:
-
-  Score: 72/100 (Solid Mid-Level, Trending Senior)
-
-  What you're doing well (strengths):
-
-  Domain Modeling — 8/10
-  - Your fuel station domain is well-decomposed: Tanks, Pumps, Nozzles, Products, GradeTypes, OilTypes — each has a clear purpose
-  - The relationships make sense (Tank → Product, Nozzle → Pump, InvoiceBill → Customer/Vehicle)
-  - Multi-tenancy via BaseEntity with scid is a smart pattern for a multi-site SaaS
-
-  Layered Architecture — 7/10
-  - Clean Controller → Service → Repository separation, consistently applied
-  - REST API conventions are solid (/api/<resource>, proper HTTP methods, status codes)
-
-  Full-Stack Ownership — 8/10
-  - You're building both backend and frontend, handling deployment (EC2/ECS/S3), database design, and even planning ML — that's a rare
-  breadth
-
-  Business Thinking — 8/10
-  - Credit/payment system, shift-based operations, inventory tracking, TNEB bill parsing — you understand the real business deeply, not just
-  the code
-
-  Where you can grow:
-
-  Database Design — 6/10
-  - Using ddl-auto: update with no migrations is risky for production — one bad entity change can corrupt data (closer to production)
-  - No database indexes beyond PKs/FKs (queries on status, scid, date fields will slow down as data grows)  (working)
-  - Missing unique constraints where needed (e.g., employeeCode should probably be unique) (working)
-
-  Validation & Error Handling — 5/10  (done)
-  - No @Valid / Bean Validation annotations on entities — validation lives only in frontend
-  - Backend accepts any JSON without checking required fields, field lengths, or formats
-  - RuntimeException used everywhere — no custom exception classes or global @ControllerAdvice
-
-  Security — 5/10
-  - No authentication/authorization yet (Cognito planned but not implemented)
-  - Password fields exposed in API responses (you know about this one)      (done)
-  - No rate limiting, no input sanitization on the backend side        (done)
-
-  Testing — 3/10 (done)
-  - I haven't seen any unit or integration tests. For a production app managing money (invoices, payments, credit), this is the biggest gap
-
-  Code Organization — 6/10 (done)
-  - employee-list.tsx at 1000+ lines doing table + forms + profile + salary + advances + documents — this should be split into smaller
-  components
-  - Some duplication in upload handlers (photo/aadhar/pan are nearly identical — could be one generic function)
-
-  Roadmap to 85+:
-
-  1. Add Flyway/Liquibase — replace ddl-auto: update with proper migrations (when we closer to production deploy)
-  2. Add @ControllerAdvice + custom exceptions — proper error responses (done)
-  3. Write tests — even just service-layer tests for payment/invoice logic (done)
-  4. Split large components — ProfileModal, EmployeeForm, DocumentsTab as separate files (done)
-  5. Add Bean Validation — @NotBlank, @Email, @Size on entities (done)
-
-  You're building a real, complex production application solo — that already puts you ahead of many developers. The gaps are mostly in
-  production hardening, not in design thinking.

@@ -14,7 +14,7 @@ import { Modal } from "@/components/ui/modal";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
-import { useFormValidation, required, min } from "@/lib/validation";
+import { useFormValidation, required, min, max, custom } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import {
     getLeaveTypes,
@@ -70,11 +70,20 @@ export default function LeaveManagementPage() {
         employeeId: [required("Employee is required")],
         leaveTypeId: [required("Leave type is required")],
         fromDate: [required("From date is required")],
-        toDate: [required("To date is required")],
+        toDate: [
+            required("To date is required"),
+            custom(
+                (value: any) => {
+                    if (!value || !fromDate) return true;
+                    return new Date(String(value)) >= new Date(fromDate);
+                },
+                "To date must be on or after the from date"
+            ),
+        ],
     });
     const { errors: typeErrors, validate: validateType, clearError: clearTypeError, clearAllErrors: clearAllTypeErrors } = useFormValidation({
         typeName: [required("Type name is required")],
-        maxDaysPerYear: [required("Max days is required"), min(1, "Must be at least 1")],
+        maxDaysPerYear: [required("Max days is required"), min(1, "Must be at least 1"), max(365, "Cannot exceed 365 days")],
     });
     const [apiError, setApiError] = useState("");
 

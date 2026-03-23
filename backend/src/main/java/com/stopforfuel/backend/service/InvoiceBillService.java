@@ -444,25 +444,25 @@ public class InvoiceBillService {
         }
     }
 
-    public Page<InvoiceBill> getInvoiceHistory(String billType, String paymentStatus, String customerCategory,
+    public Page<InvoiceBill> getInvoiceHistory(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate, String search, Pageable pageable) {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
         String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
-        String cc = (customerCategory != null && !customerCategory.isEmpty()) ? customerCategory : null;
+        String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         String s = (search != null && !search.isEmpty()) ? search : "";
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
-        return repository.findAllFiltered(bt, ps, cc, fd, td, s, pageable);
+        return repository.findAllFiltered(bt, ps, ct, fd, td, s, pageable);
     }
 
-    public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus, String customerCategory,
+    public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate) {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
         String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
-        String cc = (customerCategory != null && !customerCategory.isEmpty()) ? customerCategory : null;
+        String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
-        return repository.getProductSalesSummary(bt, ps, cc, fd, td);
+        return repository.getProductSalesSummary(bt, ps, ct, fd, td);
     }
 
     @Transactional

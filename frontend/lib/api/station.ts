@@ -565,7 +565,7 @@ export const getPaymentModes = (): Promise<PaymentMode[]> =>
 // Statements
 export const getStatements = (
     page = 0, size = 10, customerId?: number, status?: string,
-    fromDate?: string, toDate?: string, search?: string, customerCategory?: string
+    fromDate?: string, toDate?: string, search?: string, categoryType?: string
 ): Promise<PageResponse<Statement>> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (customerId) params.append('customerId', String(customerId));
@@ -573,7 +573,7 @@ export const getStatements = (
     if (fromDate) params.append('fromDate', fromDate);
     if (toDate) params.append('toDate', toDate);
     if (search) params.append('search', search);
-    if (customerCategory) params.append('customerCategory', customerCategory);
+    if (categoryType) params.append('categoryType', categoryType);
     return fetchWithAuth(`${API_BASE_URL}/statements?${params}`).then(handleResponse);
 };
 
@@ -658,9 +658,9 @@ export const getStatementStats = (): Promise<StatementStats> =>
     fetchWithAuth(`${API_BASE_URL}/statements/stats`).then(handleResponse);
 
 // Payments
-export const getPayments = (page = 0, size = 10, customerCategory?: string): Promise<PageResponse<Payment>> => {
+export const getPayments = (page = 0, size = 10, categoryType?: string): Promise<PageResponse<Payment>> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
-    if (customerCategory) params.append('customerCategory', customerCategory);
+    if (categoryType) params.append('categoryType', categoryType);
     return fetchWithAuth(`${API_BASE_URL}/payments?${params}`).then(handleResponse);
 };
 
@@ -709,13 +709,42 @@ export const getCustomerLedger = (customerId: number, fromDate: string, toDate: 
 export const getOutstandingBills = (customerId: number): Promise<InvoiceBill[]> =>
     fetchWithAuth(`${API_BASE_URL}/ledger/outstanding/${customerId}`).then(handleResponse);
 
+// Customer Categories
+export interface CustomerCategoryType {
+    id: number;
+    categoryName: string;
+    categoryType: string;
+    description?: string;
+}
+
+export const getCustomerCategories = (): Promise<CustomerCategoryType[]> =>
+    fetchWithAuth(`${API_BASE_URL}/customer-categories`).then(handleResponse);
+
+export const createCustomerCategory = (category: Partial<CustomerCategoryType>): Promise<CustomerCategoryType> =>
+    fetchWithAuth(`${API_BASE_URL}/customer-categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(category),
+    }).then(handleResponse);
+
+export const updateCustomerCategory = (id: number, category: Partial<CustomerCategoryType>): Promise<CustomerCategoryType> =>
+    fetchWithAuth(`${API_BASE_URL}/customer-categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(category),
+    }).then(handleResponse);
+
+export const deleteCustomerCategory = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/customer-categories/${id}`, { method: 'DELETE' }).then(handleResponse);
+
 // Credit Management
 export interface CreditCustomerSummary {
     customerId: number;
     customerName: string;
     phoneNumbers: string[] | null;
     groupName: string | null;
-    customerCategory: string | null;
+    categoryType: string | null;
+    categoryName: string | null;
     status: string | null;
     creditLimitAmount: number | null;
     ledgerBalance: number;
@@ -752,9 +781,9 @@ export interface CreditCustomerDetail {
     payments: Payment[];
 }
 
-export const getCreditOverview = (customerCategory?: string): Promise<CreditOverview> => {
+export const getCreditOverview = (categoryType?: string): Promise<CreditOverview> => {
     const params = new URLSearchParams();
-    if (customerCategory) params.append('customerCategory', customerCategory);
+    if (categoryType) params.append('categoryType', categoryType);
     const qs = params.toString();
     return fetchWithAuth(`${API_BASE_URL}/credit/overview${qs ? `?${qs}` : ''}`).then(handleResponse);
 };
@@ -798,7 +827,7 @@ export interface ProductSalesSummary {
 export const getInvoiceHistory = (
     page = 0,
     size = 20,
-    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string; search?: string; customerCategory?: string }
+    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string; search?: string; categoryType?: string }
 ): Promise<PageResponse<InvoiceBill>> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (filters?.billType) params.append('billType', filters.billType);
@@ -806,20 +835,20 @@ export const getInvoiceHistory = (
     if (filters?.fromDate) params.append('fromDate', filters.fromDate);
     if (filters?.toDate) params.append('toDate', filters.toDate);
     if (filters?.search) params.append('search', filters.search);
-    if (filters?.customerCategory) params.append('customerCategory', filters.customerCategory);
+    if (filters?.categoryType) params.append('categoryType', filters.categoryType);
     return fetchWithAuth(`${API_BASE_URL}/invoices/history?${params}`).then(handleResponse);
 };
 
 // Product Sales Summary for history filters
 export const getProductSalesSummary = (
-    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string; customerCategory?: string }
+    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string; categoryType?: string }
 ): Promise<ProductSalesSummary[]> => {
     const params = new URLSearchParams();
     if (filters?.billType) params.append('billType', filters.billType);
     if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
     if (filters?.fromDate) params.append('fromDate', filters.fromDate);
     if (filters?.toDate) params.append('toDate', filters.toDate);
-    if (filters?.customerCategory) params.append('customerCategory', filters.customerCategory);
+    if (filters?.categoryType) params.append('categoryType', filters.categoryType);
     return fetchWithAuth(`${API_BASE_URL}/invoices/history/product-summary?${params}`).then(handleResponse);
 };
 
