@@ -199,6 +199,45 @@ export default function InvoicesPage() {
         return selectedProducts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
     };
 
+    // --- Vehicle fuel validation ---
+    const isFuelProduct = (p: any) => p?.category?.toUpperCase() === "FUEL";
+
+    const getFuelValidationErrors = () => {
+        const errors: string[] = [];
+        if (!selectedVehicle || selectedProducts.length === 0) return errors;
+
+        const vehicleFuelFamily = selectedVehicle.preferredProduct?.fuelFamily;
+
+        // Check fuel type compatibility
+        if (vehicleFuelFamily) {
+            for (const line of selectedProducts) {
+                if (isFuelProduct(line.product) && line.product?.fuelFamily
+                    && line.product.fuelFamily !== vehicleFuelFamily) {
+                    errors.push(
+                        `${line.product.name} (${line.product.fuelFamily}) is not compatible with this vehicle's fuel type (${vehicleFuelFamily}).`
+                    );
+                }
+            }
+        }
+
+        // Check total fuel quantity against max capacity
+        if (selectedVehicle.maxCapacity && selectedVehicle.maxCapacity > 0) {
+            const totalFuelQty = selectedProducts
+                .filter((l: any) => isFuelProduct(l.product))
+                .reduce((sum: number, l: any) => sum + (parseFloat(l.quantity) || 0), 0);
+
+            if (totalFuelQty > selectedVehicle.maxCapacity) {
+                errors.push(
+                    `Total fuel quantity (${totalFuelQty} L) exceeds vehicle max tank capacity of ${selectedVehicle.maxCapacity} L.`
+                );
+            }
+        }
+
+        return errors;
+    };
+
+    const fuelValidationErrors = getFuelValidationErrors();
+
     const resetForm = () => {
         setSelectedVehicle(undefined);
         setSelectedCustomer(undefined);
@@ -687,6 +726,31 @@ export default function InvoicesPage() {
                     ))}
                 </div>
 
+                {/* Fuel validation warnings */}
+                {fuelValidationErrors.length > 0 && (
+                    <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl space-y-2">
+                        {fuelValidationErrors.map((err, i) => (
+                            <div key={i} className="flex items-start gap-3">
+                                <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                                <p className="text-sm text-red-600 dark:text-red-400 font-medium">{err}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Vehicle capacity info */}
+                {selectedVehicle?.maxCapacity && selectedVehicle.maxCapacity > 0 && selectedProducts.some((l: any) => isFuelProduct(l.product)) && (
+                    <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center gap-3">
+                        <Info size={16} className="text-blue-500 shrink-0" />
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                            Vehicle tank capacity: <span className="font-black">{selectedVehicle.maxCapacity} L</span>
+                            {" | "}Fuel in this bill: <span className="font-black">
+                                {selectedProducts.filter((l: any) => isFuelProduct(l.product)).reduce((s: number, l: any) => s + (parseFloat(l.quantity) || 0), 0).toFixed(2)} L
+                            </span>
+                        </p>
+                    </div>
+                )}
+
                 {selectedProducts.length > 0 && (
                     <div className="mt-8 pt-6 border-t border-border flex justify-between items-end">
                         <div>
@@ -702,7 +766,7 @@ export default function InvoicesPage() {
                     <ArrowLeft size={20} /> Back
                 </button>
                 <button
-                    disabled={selectedProducts.length === 0 || calculateTotal() === 0}
+                    disabled={selectedProducts.length === 0 || calculateTotal() === 0 || fuelValidationErrors.length > 0}
                     onClick={() => setCurrentStep(4)}
                     className="px-10 py-4 btn-gradient disabled:opacity-50 disabled:grayscale text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3 group"
                 >

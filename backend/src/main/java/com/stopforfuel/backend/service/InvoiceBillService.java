@@ -76,6 +76,50 @@ public class InvoiceBillService {
             invoice.setVehicle(vehicle);
         }
 
+        // --- Validate fuel type compatibility and max capacity ---
+        Vehicle validatedVehicle = invoice.getVehicle();
+        if (validatedVehicle != null && validatedVehicle.getId() != null && invoice.getProducts() != null) {
+            Vehicle veh = vehicleRepository.findById(validatedVehicle.getId()).orElse(null);
+            if (veh != null) {
+                // Determine vehicle's fuel family from its preferred product
+                String vehicleFuelFamily = null;
+                if (veh.getPreferredProduct() != null) {
+                    Product prefProd = productRepository.findById(veh.getPreferredProduct().getId()).orElse(null);
+                    if (prefProd != null) {
+                        vehicleFuelFamily = prefProd.getFuelFamily();
+                    }
+                }
+
+                BigDecimal totalFuelQty = BigDecimal.ZERO;
+                for (InvoiceProduct ip : invoice.getProducts()) {
+                    if (ip.getProduct() != null && ip.getProduct().getId() != null) {
+                        Product prod = productRepository.findById(ip.getProduct().getId()).orElse(null);
+                        if (prod != null && "FUEL".equalsIgnoreCase(prod.getCategory())) {
+                            BigDecimal qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
+                            totalFuelQty = totalFuelQty.add(qty);
+
+                            // Validate fuel family compatibility
+                            if (vehicleFuelFamily != null && prod.getFuelFamily() != null
+                                    && !vehicleFuelFamily.equalsIgnoreCase(prod.getFuelFamily())) {
+                                throw new BusinessException(
+                                        "Cannot create invoice: Product '" + prod.getName()
+                                        + "' (" + prod.getFuelFamily() + " family) is not compatible with vehicle '"
+                                        + veh.getVehicleNumber() + "' which uses " + vehicleFuelFamily + " fuel.");
+                            }
+                        }
+                    }
+                }
+
+                // Validate total fuel quantity against vehicle max tank capacity
+                if (veh.getMaxCapacity() != null && veh.getMaxCapacity().compareTo(BigDecimal.ZERO) > 0
+                        && totalFuelQty.compareTo(veh.getMaxCapacity()) > 0) {
+                    throw new BusinessException(
+                            "Cannot create invoice: Total fuel quantity (" + totalFuelQty + " L) exceeds vehicle '"
+                            + veh.getVehicleNumber() + "' max tank capacity of " + veh.getMaxCapacity() + " L.");
+                }
+            }
+        }
+
         // --- Validate all products are active and have sufficient inventory ---
         if (invoice.getProducts() != null) {
             for (InvoiceProduct ip : invoice.getProducts()) {
