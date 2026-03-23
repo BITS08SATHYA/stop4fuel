@@ -64,6 +64,7 @@ export interface Product {
     supplier?: Supplier;
     oilType?: OilType;
     gradeType?: GradeType;
+    fuelFamily?: string;
 }
 
 export interface Tank {
@@ -127,8 +128,13 @@ export interface ProductInventory {
 
 export interface Vehicle {
     id: number;
-    vehicleNumber: string; // Corrected from registrationNumber based on entity
-    model?: string;
+    vehicleNumber: string;
+    vehicleType?: { id: number; name: string };
+    preferredProduct?: Product;
+    maxCapacity?: number;
+    maxLitersPerMonth?: number;
+    consumedLiters?: number;
+    status?: string;
     active: boolean;
     customer?: Customer;
 }
