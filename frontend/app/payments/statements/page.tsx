@@ -15,6 +15,7 @@ import {
     getCustomers, deleteStatement, removeBillFromStatement,
     getVehiclesByCustomer, getProducts, previewStatementBills,
     generateStatementPdf, getStatementPdfUrl, getStatementStats,
+    updateCustomerCreditLimits, updateVehicleLiterLimit,
     type Statement, type InvoiceBill, type Customer, type Vehicle,
     type Product, type PageResponse, type StatementStats
 } from "@/lib/api/station";
@@ -68,6 +69,9 @@ export default function StatementsPage() {
     const [stats, setStats] = useState<StatementStats | null>(null);
     const [expandedBillId, setExpandedBillId] = useState<number | null>(null);
     const [pdfError, setPdfError] = useState("");
+
+    // Set as Limit
+    const [setLimitSuccess, setSetLimitSuccess] = useState("");
 
     useEffect(() => {
         loadCustomers();
@@ -1033,6 +1037,129 @@ export default function StatementsPage() {
                                 </table>
                             </div>
                         </div>
+
+                        {/* Vehicle-wise Summary & Set as Limit */}
+                        {detailBills.length > 0 && (() => {
+                            // Build vehicle-wise summary from bills
+                            const vehicleMap = new Map<string, { id: number | null; number: string; totalAmount: number; totalLiters: number }>();
+                            for (const bill of detailBills) {
+                                const vNum = bill.vehicle?.vehicleNumber || "No Vehicle";
+                                const vId = bill.vehicle?.id || null;
+                                const existing = vehicleMap.get(vNum) || { id: vId, number: vNum, totalAmount: 0, totalLiters: 0 };
+                                existing.totalAmount += Number(bill.netAmount || 0);
+                                const billLiters = bill.products?.reduce((sum: number, p: any) => sum + Number(p.quantity || 0), 0) || 0;
+                                existing.totalLiters += billLiters;
+                                vehicleMap.set(vNum, existing);
+                            }
+                            const vehicleSummaries = Array.from(vehicleMap.values()).sort((a, b) => b.totalAmount - a.totalAmount);
+                            const statementTotal = vehicleSummaries.reduce((s, v) => s + v.totalAmount, 0);
+                            const statementLiters = vehicleSummaries.reduce((s, v) => s + v.totalLiters, 0);
+
+                            return (
+                                <div className="border-t border-border/50 pt-4">
+                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center justify-between">
+                                        <span>Vehicle-wise Summary</span>
+                                        <span className="text-xs font-normal">Use statement data to set credit limits</span>
+                                    </h4>
+
+                                    {setLimitSuccess && (
+                                        <div className="mb-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-400 font-medium">
+                                            {setLimitSuccess}
+                                        </div>
+                                    )}
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="border-b border-border text-muted-foreground">
+                                                    <th className="text-left py-2 px-3">Vehicle</th>
+                                                    <th className="text-right py-2 px-3">Amount</th>
+                                                    <th className="text-right py-2 px-3">Liters</th>
+                                                    <th className="text-center py-2 px-3">Set Vehicle Limit</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {vehicleSummaries.map((vs) => (
+                                                    <tr key={vs.number} className="border-b border-border/30">
+                                                        <td className="py-2 px-3 font-medium text-foreground">{vs.number}</td>
+                                                        <td className="py-2 px-3 text-right">{vs.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                                                        <td className="py-2 px-3 text-right">{vs.totalLiters.toFixed(2)} L</td>
+                                                        <td className="py-2 px-3 text-center">
+                                                            {vs.id ? (
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        try {
+                                                                            await updateVehicleLiterLimit(vs.id!, Math.round(vs.totalLiters));
+                                                                            setSetLimitSuccess(`Set ${vs.number} limit to ${Math.round(vs.totalLiters)} L/month`);
+                                                                            setTimeout(() => setSetLimitSuccess(""), 4000);
+                                                                        } catch (e: any) {
+                                                                            setSetLimitSuccess(`Failed: ${e.message || "Error"}`);
+                                                                            setTimeout(() => setSetLimitSuccess(""), 4000);
+                                                                        }
+                                                                    }}
+                                                                    className="px-2 py-1 rounded text-[10px] font-medium bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+                                                                    title={`Set ${vs.number} monthly limit to ${Math.round(vs.totalLiters)} L`}
+                                                                >
+                                                                    Set {Math.round(vs.totalLiters)} L
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-muted-foreground">—</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="border-t border-border">
+                                                    <td className="py-2 px-3 font-bold text-foreground">Total</td>
+                                                    <td className="py-2 px-3 text-right font-bold">{statementTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-2 px-3 text-right font-bold">{statementLiters.toFixed(2)} L</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+
+                                    {/* Set Customer Limit buttons */}
+                                    {detailStatement.customer && (
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await updateCustomerCreditLimits(detailStatement.customer!.id!, { creditLimitAmount: Math.round(statementTotal) });
+                                                        setSetLimitSuccess(`Set ${detailStatement.customer!.name} credit limit to ₹${Math.round(statementTotal).toLocaleString("en-IN")}`);
+                                                        setTimeout(() => setSetLimitSuccess(""), 4000);
+                                                    } catch (e: any) {
+                                                        setSetLimitSuccess(`Failed: ${e.message || "Error"}`);
+                                                        setTimeout(() => setSetLimitSuccess(""), 4000);
+                                                    }
+                                                }}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
+                                                title={`Set customer credit limit to ₹${Math.round(statementTotal).toLocaleString("en-IN")}`}
+                                            >
+                                                Set Customer Limit: ₹{Math.round(statementTotal).toLocaleString("en-IN")}
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await updateCustomerCreditLimits(detailStatement.customer!.id!, { creditLimitLiters: Math.round(statementLiters) });
+                                                        setSetLimitSuccess(`Set ${detailStatement.customer!.name} liter limit to ${Math.round(statementLiters)} L`);
+                                                        setTimeout(() => setSetLimitSuccess(""), 4000);
+                                                    } catch (e: any) {
+                                                        setSetLimitSuccess(`Failed: ${e.message || "Error"}`);
+                                                        setTimeout(() => setSetLimitSuccess(""), 4000);
+                                                    }
+                                                }}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+                                                title={`Set customer liter limit to ${Math.round(statementLiters)} L`}
+                                            >
+                                                Set Customer Limit: {Math.round(statementLiters)} L
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
             </Modal>
