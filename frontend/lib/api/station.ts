@@ -798,6 +798,32 @@ export const getCreditOverview = (categoryType?: string): Promise<CreditOverview
 export const getCreditCustomerDetail = (customerId: number): Promise<CreditCustomerDetail> =>
     fetchWithAuth(`${API_BASE_URL}/credit/customer/${customerId}`).then(handleResponse);
 
+// Update Customer Credit Limits (for "Set as Limit" workflow)
+export const updateCustomerCreditLimits = (id: number, limits: { creditLimitAmount?: number | null; creditLimitLiters?: number | null }): Promise<any> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/${id}/credit-limits`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(limits)
+    }).then(handleResponse);
+
+// Update Vehicle Liter Limit (for "Set as Limit" workflow)
+export const updateVehicleLiterLimit = (id: number, maxLitersPerMonth: number | null): Promise<Vehicle> =>
+    fetchWithAuth(`${API_BASE_URL}/vehicles/${id}/liter-limit`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxLitersPerMonth })
+    }).then(handleResponse);
+
+// Customer Credit Info (for invoice-time validation)
+export const getCustomerCreditInfo = (id: number): Promise<{
+    creditLimitAmount: number | null;
+    creditLimitLiters: number | null;
+    consumedLiters: number | null;
+    ledgerBalance: number;
+    totalBilled: number;
+    totalPaid: number;
+}> => fetchWithAuth(`${API_BASE_URL}/customers/${id}/credit-info`).then(handleResponse);
+
 // Block / Unblock Customer
 export const blockCustomer = (id: number): Promise<any> =>
     fetchWithAuth(`${API_BASE_URL}/customers/${id}/block`, { method: 'PATCH' }).then(handleResponse);

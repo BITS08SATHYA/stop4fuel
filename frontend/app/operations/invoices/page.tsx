@@ -19,7 +19,8 @@ import {
     Vehicle,
     Customer,
     Incentive,
-    API_BASE_URL
+    API_BASE_URL,
+    getCustomerCreditInfo
 } from "@/lib/api/station";
 import { FileUploadField } from "@/components/ui/file-upload-field";
 import {
@@ -113,21 +114,26 @@ export default function InvoicesPage() {
         } catch (err) { console.error(err); }
     };
 
-    // Select customer and load their vehicles + incentives
+    // Select customer and load their vehicles + incentives + credit info
     const selectCustomer = async (c: any) => {
         setSelectedCustomer(c);
         setCustomerSearch(c.name);
         setCustomerSuggestions([]);
         setSelectedVehicle(undefined);
         try {
-            const [vehiclesRes, incentivesData] = await Promise.all([
+            const [vehiclesRes, incentivesData, creditInfo] = await Promise.all([
                 fetch(`${API_BASE_URL}/customers/${c.id}/vehicles`),
-                getIncentivesByCustomer(c.id).catch(() => [])
+                getIncentivesByCustomer(c.id).catch(() => []),
+                getCustomerCreditInfo(c.id).catch(() => null)
             ]);
             if (vehiclesRes.ok) {
                 setCustomerVehicles(await vehiclesRes.json());
             }
             setIncentives(incentivesData.filter((i: Incentive) => i.active));
+            // Merge credit info (ledger balance) into selected customer
+            if (creditInfo) {
+                setSelectedCustomer((prev: any) => ({ ...prev, ...creditInfo }));
+            }
         } catch (err) { console.error(err); }
     };
 
@@ -204,32 +210,76 @@ export default function InvoicesPage() {
 
     const getFuelValidationErrors = () => {
         const errors: string[] = [];
-        if (!selectedVehicle || selectedProducts.length === 0) return errors;
+        if (selectedProducts.length === 0) return errors;
 
-        const vehicleFuelFamily = selectedVehicle.preferredProduct?.fuelFamily;
+        const totalFuelQty = selectedProducts
+            .filter((l: any) => isFuelProduct(l.product))
+            .reduce((sum: number, l: any) => sum + (parseFloat(l.quantity) || 0), 0);
 
-        // Check fuel type compatibility
-        if (vehicleFuelFamily) {
-            for (const line of selectedProducts) {
-                if (isFuelProduct(line.product) && line.product?.fuelFamily
-                    && line.product.fuelFamily !== vehicleFuelFamily) {
+        const totalInvoiceAmount = selectedProducts
+            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+        if (selectedVehicle) {
+            const vehicleFuelFamily = selectedVehicle.preferredProduct?.fuelFamily;
+
+            // Check fuel type compatibility
+            if (vehicleFuelFamily) {
+                for (const line of selectedProducts) {
+                    if (isFuelProduct(line.product) && line.product?.fuelFamily
+                        && line.product.fuelFamily !== vehicleFuelFamily) {
+                        errors.push(
+                            `${line.product.name} (${line.product.fuelFamily}) is not compatible with this vehicle's fuel type (${vehicleFuelFamily}).`
+                        );
+                    }
+                }
+            }
+
+            // Check total fuel quantity against max capacity
+            if (selectedVehicle.maxCapacity && selectedVehicle.maxCapacity > 0) {
+                if (totalFuelQty > selectedVehicle.maxCapacity) {
                     errors.push(
-                        `${line.product.name} (${line.product.fuelFamily}) is not compatible with this vehicle's fuel type (${vehicleFuelFamily}).`
+                        `Total fuel quantity (${totalFuelQty} L) exceeds vehicle max tank capacity of ${selectedVehicle.maxCapacity} L.`
+                    );
+                }
+            }
+
+            // Check vehicle monthly liter limit (CREDIT invoices)
+            if (billType === "CREDIT" && selectedVehicle.maxLitersPerMonth && selectedVehicle.maxLitersPerMonth > 0) {
+                const consumed = selectedVehicle.consumedLiters || 0;
+                const projected = consumed + totalFuelQty;
+                if (projected > selectedVehicle.maxLitersPerMonth) {
+                    const remaining = Math.max(0, selectedVehicle.maxLitersPerMonth - consumed);
+                    errors.push(
+                        `Vehicle monthly liter limit would be exceeded. Limit: ${selectedVehicle.maxLitersPerMonth} L, Consumed: ${consumed} L, This invoice: ${totalFuelQty.toFixed(2)} L, Remaining: ${remaining.toFixed(2)} L.`
                     );
                 }
             }
         }
 
-        // Check total fuel quantity against max capacity
-        if (selectedVehicle.maxCapacity && selectedVehicle.maxCapacity > 0) {
-            const totalFuelQty = selectedProducts
-                .filter((l: any) => isFuelProduct(l.product))
-                .reduce((sum: number, l: any) => sum + (parseFloat(l.quantity) || 0), 0);
+        // Check customer credit limits (CREDIT invoices only)
+        if (billType === "CREDIT" && selectedCustomer) {
+            // Amount-based limit
+            if (selectedCustomer.creditLimitAmount && Number(selectedCustomer.creditLimitAmount) > 0) {
+                const ledgerBalance = (selectedCustomer.ledgerBalance ?? 0);
+                const projectedBalance = ledgerBalance + totalInvoiceAmount;
+                if (projectedBalance > Number(selectedCustomer.creditLimitAmount)) {
+                    const remaining = Math.max(0, Number(selectedCustomer.creditLimitAmount) - ledgerBalance);
+                    errors.push(
+                        `Customer credit limit (₹) would be exceeded. Limit: ₹${Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")}, Balance: ₹${ledgerBalance.toLocaleString("en-IN")}, This invoice: ₹${totalInvoiceAmount.toLocaleString("en-IN")}, Remaining: ₹${remaining.toLocaleString("en-IN")}.`
+                    );
+                }
+            }
 
-            if (totalFuelQty > selectedVehicle.maxCapacity) {
-                errors.push(
-                    `Total fuel quantity (${totalFuelQty} L) exceeds vehicle max tank capacity of ${selectedVehicle.maxCapacity} L.`
-                );
+            // Liter-based limit
+            if (selectedCustomer.creditLimitLiters && Number(selectedCustomer.creditLimitLiters) > 0 && totalFuelQty > 0) {
+                const consumed = selectedCustomer.consumedLiters || 0;
+                const projected = consumed + totalFuelQty;
+                if (projected > Number(selectedCustomer.creditLimitLiters)) {
+                    const remaining = Math.max(0, Number(selectedCustomer.creditLimitLiters) - consumed);
+                    errors.push(
+                        `Customer liter limit would be exceeded. Limit: ${Number(selectedCustomer.creditLimitLiters)} L, Consumed: ${consumed} L, This invoice: ${totalFuelQty.toFixed(2)} L, Remaining: ${remaining.toFixed(2)} L.`
+                    );
+                }
             }
         }
 
@@ -434,10 +484,15 @@ export default function InvoicesPage() {
                             </p>
                             <p className="text-foreground font-black text-2xl">{selectedCustomer.name}</p>
                             <p className="text-sm text-muted-foreground">{selectedCustomer.phoneNumbers}</p>
-                            {selectedCustomer.creditLimitLiters && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Credit: {selectedCustomer.consumedLiters || 0} / {selectedCustomer.creditLimitLiters} L used
-                                </p>
+                            {(selectedCustomer.creditLimitAmount > 0 || selectedCustomer.creditLimitLiters > 0) && (
+                                <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                    {selectedCustomer.creditLimitAmount > 0 && (
+                                        <p>Credit: ₹{Number(selectedCustomer.ledgerBalance || 0).toLocaleString("en-IN")} / ₹{Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")} used</p>
+                                    )}
+                                    {selectedCustomer.creditLimitLiters > 0 && (
+                                        <p>Liters: {selectedCustomer.consumedLiters || 0} / {Number(selectedCustomer.creditLimitLiters)} L used</p>
+                                    )}
+                                </div>
                             )}
                         </div>
                         <button

@@ -105,6 +105,23 @@ public class VehicleService {
     }
 
     /**
+     * Updates only the maxLitersPerMonth for a vehicle.
+     * Used by the "Set as Limit" workflow from statements.
+     */
+    @Transactional
+    public Vehicle updateLiterLimit(Long id, Object maxLitersPerMonth) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+        if (maxLitersPerMonth != null) {
+            vehicle.setMaxLitersPerMonth(new BigDecimal(maxLitersPerMonth.toString()));
+        } else {
+            vehicle.setMaxLitersPerMonth(null);
+        }
+        validateVehicleLiterLimit(vehicle, id);
+        return vehicleRepository.save(vehicle);
+    }
+
+    /**
      * Validates that the sum of all vehicle liter limits for a customer
      * does not exceed the customer's creditLimitLiters.
      */
