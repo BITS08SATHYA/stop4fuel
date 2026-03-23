@@ -2,6 +2,7 @@ package com.stopforfuel.config;
 
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.DuplicateResourceException;
+import com.stopforfuel.backend.exception.ReportGenerationException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -69,10 +70,20 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, message);
     }
 
+    @ExceptionHandler(ReportGenerationException.class)
+    public ResponseEntity<Map<String, Object>> handleReportGeneration(ReportGenerationException ex) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+    }
+
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<Map<String, Object>> handleMissingParam(MissingServletRequestParameterException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST,
                 "Required parameter '" + ex.getParameterName() + "' is missing");
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(RuntimeException.class)

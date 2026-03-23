@@ -37,5 +37,12 @@ uploads/
 # === Deploy ===
 deploy/
 
+# === Test Results ===
+**/test-results/
+**/playwright-report/
+
+# === Python ===
+**/__pycache__/
+
 # === Claude Code ===
 .claude/

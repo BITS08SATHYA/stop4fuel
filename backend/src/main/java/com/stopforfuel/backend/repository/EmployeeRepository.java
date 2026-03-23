@@ -19,6 +19,6 @@ public interface EmployeeRepository extends ScidRepository<Employee> {
     @Query("SELECT e FROM Employee e WHERE " +
            "(:search IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
            "OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
-           "AND (:status IS NULL OR e.status = :status)")
+           "AND (:status IS NULL OR CAST(e.status AS string) = CAST(:status AS string))")
     Page<Employee> findBySearchAndStatus(@Param("search") String search, @Param("status") String status, Pageable pageable);
 }

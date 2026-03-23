@@ -76,11 +76,18 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
         try {
             const url = isEditing ? `${API_BASE}/${currentEmployee.id}` : API_BASE;
             const method = isEditing ? "PUT" : "POST";
-            await fetch(url, {
+            // Strip DTO-only fields that the backend cannot deserialize
+            const { role, designationEntity, emails, phoneNumbers, maskedAadhar, maskedPan, maskedBankAccount, personType, createdAt, updatedAt, scid, username, ...payload } = currentEmployee;
+            const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(currentEmployee),
+                body: JSON.stringify(payload),
             });
+            if (!res.ok) {
+                const err = await res.json().catch(() => null);
+                setApiError(err?.error || `Failed to save employee (${res.status})`);
+                return;
+            }
             onSaved();
         } catch (error) {
             setApiError("Failed to save employee");
@@ -195,8 +202,8 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Status</label>
                                 <select className={inputClass} value={currentEmployee.status} onChange={(e) => set("status", e.target.value)}>
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="INACTIVE">Inactive</option>
                                 </select>
                             </div>
                         </div>

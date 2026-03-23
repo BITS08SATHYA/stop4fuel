@@ -94,7 +94,6 @@ public class CustomerService {
         customer.setLongitude(customerDetails.getLongitude());
         customer.setStatementFrequency(customerDetails.getStatementFrequency());
         customer.setStatementGrouping(customerDetails.getStatementGrouping());
-        customer.setStatementThresholdAmount(customerDetails.getStatementThresholdAmount());
 
         return customerRepository.save(customer);
     }

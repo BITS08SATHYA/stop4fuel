@@ -26,20 +26,20 @@ public class VehicleService {
 
     public List<Vehicle> getAllVehicles(String search) {
         if (search != null && !search.isEmpty()) {
-            return vehicleRepository.findByVehicleNumberContainingIgnoreCase(search);
+            return vehicleRepository.findByVehicleNumberContainingIgnoreCaseWithCustomer(search);
         }
-        return vehicleRepository.findAll();
+        return vehicleRepository.findAllWithCustomer();
     }
 
     public List<Vehicle> searchVehicles(String query) {
         if (query == null || query.trim().isEmpty()) {
             return List.of();
         }
-        return vehicleRepository.findByVehicleNumberContainingIgnoreCase(query.trim());
+        return vehicleRepository.findByVehicleNumberContainingIgnoreCaseWithCustomer(query.trim());
     }
 
     public List<Vehicle> getVehiclesByCustomerId(Long customerId) {
-        return vehicleRepository.findByCustomerId(customerId);
+        return vehicleRepository.findByCustomerIdWithCustomer(customerId);
     }
 
     @Transactional

@@ -140,6 +140,7 @@ export interface Customer {
     address?: string;
     phoneNumbers?: string;
     active: boolean;
+    statementGrouping?: string;
 }
 
 export interface User {

@@ -57,10 +57,7 @@ public class Customer extends User {
     private String statementFrequency; // MONTHLY, BIWEEKLY, WEEKLY, CUSTOM
 
     @Column(name = "statement_grouping", length = 20)
-    private String statementGrouping; // CUSTOMER_WISE, VEHICLE_WISE
-
-    @Column(name = "statement_threshold_amount")
-    private BigDecimal statementThresholdAmount;
+    private String statementGrouping; // CUSTOMER_WISE, VEHICLE_WISE, BILL_WISE
 
     @OneToMany(mappedBy = "customer")
     @com.fasterxml.jackson.annotation.JsonIgnore

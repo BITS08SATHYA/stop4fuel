@@ -157,9 +157,15 @@ export default function StatementsPage() {
             );
             setPreviewBills(bills);
             setShowPreview(true);
-            // Select all bills by default
-            setSelectedBillIds(new Set(bills.map(b => b.id!)));
-            setUseBillSelection(false);
+            // For BILL_WISE customers, start with no bills selected so user picks individually
+            const selectedCustomer = customers.find(c => c.id === Number(selectedCustomerId));
+            if (selectedCustomer?.statementGrouping === "BILL_WISE") {
+                setSelectedBillIds(new Set());
+                setUseBillSelection(true);
+            } else {
+                setSelectedBillIds(new Set(bills.map(b => b.id!)));
+                setUseBillSelection(false);
+            }
         } catch (e: any) {
             setError(e.message || "Failed to preview bills");
         } finally {
@@ -190,6 +196,10 @@ export default function StatementsPage() {
     const handleGenerate = async () => {
         if (!selectedCustomerId || !fromDate || !toDate) {
             setError("Please fill all required fields");
+            return;
+        }
+        if (useBillSelection && selectedBillIds.size === 0) {
+            setError("Please select at least one bill");
             return;
         }
         setGenerating(true);
