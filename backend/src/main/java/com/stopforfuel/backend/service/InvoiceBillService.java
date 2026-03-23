@@ -76,6 +76,37 @@ public class InvoiceBillService {
             invoice.setVehicle(vehicle);
         }
 
+        // --- Pre-invoice credit limit validation (CREDIT invoices only) ---
+        if ("CREDIT".equals(invoice.getBillType()) && invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+            // Calculate total liters and amount for this invoice
+            BigDecimal preLiters = BigDecimal.ZERO;
+            BigDecimal preAmount = BigDecimal.ZERO;
+            if (invoice.getProducts() != null) {
+                for (InvoiceProduct ip : invoice.getProducts()) {
+                    BigDecimal qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal price = ip.getUnitPrice() != null ? ip.getUnitPrice() : BigDecimal.ZERO;
+                    preLiters = preLiters.add(qty);
+                    preAmount = preAmount.add(qty.multiply(price));
+                }
+            }
+
+            // Check customer credit limit (amount and liters)
+            String customerLimitError = customerService.validateCreditLimitBeforeInvoice(
+                    invoice.getCustomer().getId(), preAmount, preLiters);
+            if (customerLimitError != null) {
+                throw new BusinessException("Cannot create invoice: " + customerLimitError);
+            }
+
+            // Check vehicle monthly liter limit
+            if (invoice.getVehicle() != null && invoice.getVehicle().getId() != null) {
+                String vehicleLimitError = customerService.validateVehicleLimitBeforeInvoice(
+                        invoice.getVehicle().getId(), preLiters);
+                if (vehicleLimitError != null) {
+                    throw new BusinessException("Cannot create invoice: " + vehicleLimitError);
+                }
+            }
+        }
+
         // --- Validate fuel type compatibility and max capacity ---
         Vehicle validatedVehicle = invoice.getVehicle();
         if (validatedVehicle != null && validatedVehicle.getId() != null && invoice.getProducts() != null) {
