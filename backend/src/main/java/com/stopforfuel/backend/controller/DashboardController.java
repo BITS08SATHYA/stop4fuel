@@ -106,7 +106,7 @@ public class DashboardController {
 
         // --- Credit stats + aging ---
         try {
-            CreditManagementService.CreditOverview creditOverview = creditManagementService.getCreditOverview();
+            CreditManagementService.CreditOverview creditOverview = creditManagementService.getCreditOverview(null);
             stats.setTotalOutstanding(creditOverview.getTotalOutstanding());
             stats.setTotalCreditCustomers(creditOverview.getTotalCreditCustomers());
             stats.setCreditAging0to30(creditOverview.getTotalAging0to30());
@@ -424,7 +424,7 @@ public class DashboardController {
         analytics.setTopCustomers(topCustomers);
 
         // Product breakdown
-        var productSummaries = invoiceBillRepository.getProductSalesSummary(null, null, fromDt, toDt);
+        var productSummaries = invoiceBillRepository.getProductSalesSummary(null, null, null, fromDt, toDt);
         List<ProductBreakdown> products = new ArrayList<>();
         for (var ps : productSummaries) {
             ProductBreakdown pb = new ProductBreakdown();
@@ -483,7 +483,7 @@ public class DashboardController {
 
         // Credit outstanding
         try {
-            CreditManagementService.CreditOverview creditOverview = creditManagementService.getCreditOverview();
+            CreditManagementService.CreditOverview creditOverview = creditManagementService.getCreditOverview(null);
             analytics.setTotalOutstanding(creditOverview.getTotalOutstanding());
             analytics.setCreditCustomers(creditOverview.getTotalCreditCustomers());
             analytics.setAging0to30(creditOverview.getTotalAging0to30());
