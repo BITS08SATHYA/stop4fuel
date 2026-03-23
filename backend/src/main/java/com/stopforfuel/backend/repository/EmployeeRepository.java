@@ -16,8 +16,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Employee> findByStatus(String status);
 
     @Query("SELECT e FROM Employee e WHERE " +
-           "(:search IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "(:search IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+           "OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
            "AND (:status IS NULL OR e.status = :status)")
     Page<Employee> findBySearchAndStatus(@Param("search") String search, @Param("status") String status, Pageable pageable);
 }

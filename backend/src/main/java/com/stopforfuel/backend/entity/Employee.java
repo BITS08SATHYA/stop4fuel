@@ -12,11 +12,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "employees", indexes = {
-    @Index(name = "idx_employees_scid", columnList = "scid"),
-    @Index(name = "idx_employees_status", columnList = "status"),
     @Index(name = "idx_employees_employee_code", columnList = "employee_code")
 }, uniqueConstraints = {
-    @UniqueConstraint(name = "uk_employees_employee_code_scid", columnNames = {"employee_code", "scid"}),
     @UniqueConstraint(name = "uk_employees_aadhar", columnNames = {"aadhar_number"})
 })
 @PrimaryKeyJoinColumn(name = "id")
@@ -66,6 +63,9 @@ public class Employee extends User {
     private String aadharDocUrl;
     private String panDocUrl;
 
+    @Column(name = "termination_date")
+    private LocalDate terminationDate;
+
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"employee", "hibernateLazyInitializer", "handler"})
     private List<SalaryHistory> salaryHistories;
@@ -81,7 +81,6 @@ public class Employee extends User {
         return getEmails() != null && !getEmails().isEmpty() ? getEmails().iterator().next() : null;
     }
 
-    @JsonProperty("email")
     public void setEmail(String email) {
         if (email != null && !email.isBlank()) {
             if (getEmails() == null) {
@@ -98,7 +97,6 @@ public class Employee extends User {
         return getPhoneNumbers() != null && !getPhoneNumbers().isEmpty() ? getPhoneNumbers().iterator().next() : null;
     }
 
-    @JsonProperty("phone")
     public void setPhone(String phone) {
         if (phone != null && !phone.isBlank()) {
             if (getPhoneNumbers() == null) {
@@ -118,7 +116,6 @@ public class Employee extends User {
         return designation;
     }
 
-    @JsonProperty("designation")
     public void setDesignation(String designation) {
         this.designation = designation;
     }
