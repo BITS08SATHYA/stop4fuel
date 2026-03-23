@@ -256,8 +256,8 @@ export default function TankInventoryPage() {
                                                 <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
                                             </td>
                                             <td className="px-6 py-4 font-bold">
-                                                <div className="text-sm text-foreground">{inv.tank.name}</div>
-                                                <div className="text-[10px] text-muted-foreground">{inv.tank.product.name}</div>
+                                                <div className="text-sm text-foreground">{inv.tank?.name}</div>
+                                                <div className="text-[10px] text-muted-foreground">{inv.tank?.product?.name}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="text-sm font-mono">{inv.openStock?.toLocaleString()}</div>

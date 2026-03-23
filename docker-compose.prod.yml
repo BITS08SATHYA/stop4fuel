@@ -1,11 +1,11 @@
 services:
   postgres:
-    image: postgres:16
+    image: 971422715802.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-db:latest
     container_name: stopforfuel-postgres
     environment:
       POSTGRES_DB: stopforfuel
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
     ports:
       - "5432:5432"
     volumes:
@@ -15,35 +15,43 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+    networks:
+      - stopforfuel-net
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: 971422715802.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-backend:latest
     container_name: stopforfuel-backend
     ports:
       - "8080:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: dev
       DATABASE_URL: jdbc:postgresql://postgres:5432/stopforfuel
       DATABASE_USER: postgres
-      DATABASE_PASSWORD: password
+      DATABASE_PASSWORD: ${DB_PASSWORD:-password}
+      AUTH_ENABLED: "false"
+      CORS_ALLOWED_ORIGINS: "*"
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - stopforfuel-net
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://100.52.228.13:8080/api
+    image: 971422715802.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-frontend:latest
     container_name: stopforfuel-frontend
     ports:
       - "3000:3000"
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - stopforfuel-net
 
 volumes:
   stopforfuel_pgdata:
+
+networks:
+  stopforfuel-net:
+    driver: bridge

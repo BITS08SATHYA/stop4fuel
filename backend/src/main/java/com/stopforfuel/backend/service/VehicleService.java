@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.exception.DuplicateResourceException;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class VehicleService {
@@ -40,6 +42,12 @@ public class VehicleService {
 
     @Transactional
     public Vehicle createVehicle(Vehicle vehicle) {
+        // Check for duplicate vehicle number
+        Optional<Vehicle> existing = vehicleRepository.findByVehicleNumber(vehicle.getVehicleNumber());
+        if (existing.isPresent()) {
+            throw new DuplicateResourceException("Vehicle with number '" + vehicle.getVehicleNumber() + "' already exists");
+        }
+
         if (vehicle.getStatus() == null) {
             vehicle.setStatus("ACTIVE");
         }
@@ -54,6 +62,12 @@ public class VehicleService {
     public Vehicle updateVehicle(Long id, Vehicle vehicleDetails) {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + id));
+
+        // Check for duplicate vehicle number (exclude current vehicle)
+        Optional<Vehicle> existing = vehicleRepository.findByVehicleNumber(vehicleDetails.getVehicleNumber());
+        if (existing.isPresent() && !existing.get().getId().equals(id)) {
+            throw new DuplicateResourceException("Vehicle with number '" + vehicleDetails.getVehicleNumber() + "' already exists");
+        }
 
         vehicle.setVehicleNumber(vehicleDetails.getVehicleNumber());
         vehicle.setMaxCapacity(vehicleDetails.getMaxCapacity());

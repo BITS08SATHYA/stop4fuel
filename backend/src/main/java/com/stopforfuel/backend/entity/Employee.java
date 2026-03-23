@@ -28,37 +28,57 @@ public class Employee extends User {
     @Transient
     private String designation; // Kept for backward compatibility in API
 
+    @Size(max = 500)
     private String additionalPhones;
 
     @PositiveOrZero(message = "Salary must be zero or positive")
+    @Max(value = 9999999, message = "Salary cannot exceed 99,99,999")
     private Double salary;
 
     @Column(name = "salary_day")
+    @Min(value = 1, message = "Salary day must be between 1 and 31")
+    @Max(value = 31, message = "Salary day must be between 1 and 31")
     private Integer salaryDay;
 
     @Column(name = "aadhar_number")
+    @Pattern(regexp = "^[2-9]\\d{11}$", message = "Aadhar must be 12 digits starting with 2-9")
     private String aadharNumber;
 
+    @Size(max = 100)
     private String city;
+    @Size(max = 100)
     private String state;
+    @Pattern(regexp = "^[1-9]\\d{5}$", message = "Pincode must be 6 digits, not starting with 0")
     private String pincode;
     private String photoUrl;
 
+    @Pattern(regexp = "^\\d{9,18}$", message = "Account number must be 9-18 digits")
     private String bankAccountNumber;
+    @Size(max = 100)
     private String bankName;
+    @Pattern(regexp = "^[A-Z]{4}0[A-Z0-9]{6}$", message = "IFSC must be 4 letters + 0 + 6 alphanumeric")
     private String bankIfsc;
+    @Size(max = 100)
     private String bankBranch;
 
+    @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]$", message = "PAN must be in format AAAAA0000A")
     private String panNumber;
+    @Size(max = 100)
     private String department;
 
     @Column(name = "employee_code")
+    @Size(max = 20, message = "Employee code must not exceed 20 characters")
     private String employeeCode;
+    @Size(max = 255)
     private String emergencyContact;
+    @Pattern(regexp = "^(\\+91)?[6-9]\\d{9}$", message = "Emergency phone must be a valid Indian mobile number")
     private String emergencyPhone;
+    @Pattern(regexp = "^(A|B|AB|O)[+-]$", message = "Invalid blood group")
     private String bloodGroup;
     private LocalDate dateOfBirth;
+    @Pattern(regexp = "^(Male|Female|Other)$", message = "Gender must be Male, Female, or Other")
     private String gender;
+    @Pattern(regexp = "^(Single|Married|Divorced|Widowed)$", message = "Invalid marital status")
     private String maritalStatus;
     private String aadharDocUrl;
     private String panDocUrl;

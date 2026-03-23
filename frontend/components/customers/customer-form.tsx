@@ -23,18 +23,32 @@ export function CustomerForm({ onSave, onCancel }: CustomerFormProps) {
         name: [required("Customer name is required")],
         username: [required("Username is required"), minLength(3, "Username must be at least 3 characters")],
         password: [required("Password is required"), minLength(6, "Password must be at least 6 characters")],
-        emails: [custom((value: string[]) => {
-            if (!value) return true;
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return value.every((e: string) => !e.trim() || emailRegex.test(e));
-        }, "Invalid email address")],
-        phoneNumbers: [custom((value: string[]) => {
-            if (!value) return true;
-            const phoneRegex = /^[+]?[\d\s\-()]{7,20}$/;
-            return value.every((p: string) => !p.trim() || phoneRegex.test(p.trim()));
-        }, "Invalid phone number")],
-        creditLimitAmount: [min(0, "Credit limit must be at least 0")],
-        creditLimitLiters: [min(0, "Credit limit must be at least 0")],
+        emails: [
+            custom((value: string[]) => {
+                if (!value || value.length === 0) return false;
+                return value.some((e: string) => e.trim().length > 0);
+            }, "At least one email is required"),
+            custom((value: string[]) => {
+                if (!value) return true;
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return value.filter((e: string) => e.trim()).every((e: string) => emailRegex.test(e));
+            }, "Invalid email address"),
+        ],
+        phoneNumbers: [
+            custom((value: string[]) => {
+                if (!value || value.length === 0) return false;
+                return value.some((p: string) => p.trim().length > 0);
+            }, "At least one phone number is required"),
+            custom((value: string[]) => {
+                if (!value) return true;
+                const phoneRegex = /^[+]?[\d\s\-()]{7,20}$/;
+                return value.filter((p: string) => p.trim()).every((p: string) => phoneRegex.test(p.trim()));
+            }, "Invalid phone number"),
+        ],
+        party: [custom((value: any) => !!value?.id, "Party type is required")],
+        group: [custom((value: any) => !!value?.id, "Group is required")],
+        address: [required("Address is required")],
+        creditLimitValue: [required("Credit limit value is required"), min(0, "Credit limit must be at least 0")],
     }), []);
 
     const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
@@ -47,8 +61,10 @@ export function CustomerForm({ onSave, onCancel }: CustomerFormProps) {
             password: formData.password || "",
             emails: formData.emails || [],
             phoneNumbers: formData.phoneNumbers || [],
-            creditLimitAmount: formData.creditLimitAmount,
-            creditLimitLiters: formData.creditLimitLiters,
+            party: formData.party || {},
+            group: formData.group || {},
+            address: formData.address || "",
+            creditLimitValue: formData.creditLimitAmount ?? formData.creditLimitLiters,
         })) return;
 
         setLoading(true);

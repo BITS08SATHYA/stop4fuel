@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, User, MapPin, Landmark, FileText, Camera } from "lucide-react";
-import { useFormValidation, required, email, phone, min } from "@/lib/validation";
+import { useFormValidation, required, email, min, max, indianMobile, aadhar, pan, ifsc, indianPincode, bankAccount, maxLength, pastDate, pastOrPresentDate, minAge } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import {
     uploadEmployeePhoto,
@@ -26,20 +26,52 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
     const [apiError, setApiError] = useState("");
     const [formTab, setFormTab] = useState<"personal" | "additional" | "address" | "bank" | "documents">("personal");
 
-    const { errors: empErrors, validate: validateEmp, clearError: clearEmpError } = useFormValidation({
+    const { errors: empErrors, validate: validateEmp, validateField: validateEmpField, clearError: clearEmpError } = useFormValidation({
+        // Personal Info
         name: [required("Employee name is required")],
         designation: [required("Designation is required")],
         email: [required("Email is required"), email()],
-        phone: [required("Phone is required"), phone()],
-        salary: [required("Salary is required"), min(0)],
-        joinDate: [required("Join date is required")],
+        phone: [required("Phone is required"), indianMobile()],
+        salary: [required("Salary is required"), min(0, "Salary must be positive"), max(9999999, "Salary cannot exceed 99,99,999")],
+        joinDate: [required("Join date is required"), pastOrPresentDate("Join date cannot be in the future")],
+        aadharNumber: [aadhar()],
+        // Additional Details
+        employeeCode: [maxLength(20, "Employee code must not exceed 20 characters")],
+        panNumber: [pan()],
+        dateOfBirth: [pastDate("Date of birth must be in the past"), minAge(15, "Employee must be at least 15 years old")],
+        emergencyPhone: [indianMobile("Emergency phone must be a valid Indian mobile number")],
+        // Address
+        pincode: [indianPincode()],
+        // Bank Details
+        bankAccountNumber: [bankAccount()],
+        bankIfsc: [ifsc()],
     });
 
     const set = (field: string, value: any) => setCurrentEmployee({ ...currentEmployee, [field]: value });
 
+    // Map fields to tabs for auto-switching on validation failure
+    const tabFields: Record<string, string[]> = {
+        personal: ["name", "designation", "email", "phone", "salary", "joinDate", "aadharNumber"],
+        additional: ["employeeCode", "panNumber", "dateOfBirth", "emergencyPhone"],
+        address: ["pincode"],
+        bank: ["bankAccountNumber", "bankIfsc"],
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validateEmp(currentEmployee)) return;
+        if (!validateEmp(currentEmployee)) {
+            // Auto-switch to the first tab that has errors
+            const tabPriority: (typeof formTab)[] = ["personal", "additional", "address", "bank"];
+            for (const tab of tabPriority) {
+                const fields = tabFields[tab] || [];
+                const hasError = fields.some(f => validateEmpField(f as any, currentEmployee[f]));
+                if (hasError) {
+                    setFormTab(tab);
+                    break;
+                }
+            }
+            return;
+        }
         setIsLoading(true);
         try {
             const url = isEditing ? `${API_BASE}/${currentEmployee.id}` : API_BASE;
@@ -139,7 +171,8 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Aadhar Number</label>
-                                <input className={inputClass} value={currentEmployee.aadharNumber} onChange={(e) => set("aadharNumber", e.target.value)} />
+                                <input className={`${inputClass} ${inputErrorClass(empErrors.aadharNumber)}`} value={currentEmployee.aadharNumber} onChange={(e) => { set("aadharNumber", e.target.value); clearEmpError("aadharNumber"); }} />
+                                <FieldError error={empErrors.aadharNumber} />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Salary *</label>
@@ -171,10 +204,22 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
 
                     {formTab === "additional" && (
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><label className="text-sm font-medium">Employee Code</label><input className={inputClass} value={currentEmployee.employeeCode} onChange={(e) => set("employeeCode", e.target.value)} /></div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Employee Code</label>
+                                <input className={`${inputClass} ${inputErrorClass(empErrors.employeeCode)}`} value={currentEmployee.employeeCode} onChange={(e) => { set("employeeCode", e.target.value); clearEmpError("employeeCode"); }} />
+                                <FieldError error={empErrors.employeeCode} />
+                            </div>
                             <div className="space-y-2"><label className="text-sm font-medium">Department</label><input className={inputClass} value={currentEmployee.department} onChange={(e) => set("department", e.target.value)} /></div>
-                            <div className="space-y-2"><label className="text-sm font-medium">PAN Number</label><input className={inputClass} value={currentEmployee.panNumber} onChange={(e) => set("panNumber", e.target.value)} /></div>
-                            <div className="space-y-2"><label className="text-sm font-medium">Date of Birth</label><input type="date" className={inputClass} value={currentEmployee.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} /></div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">PAN Number</label>
+                                <input className={`${inputClass} ${inputErrorClass(empErrors.panNumber)}`} value={currentEmployee.panNumber} onChange={(e) => { set("panNumber", e.target.value.toUpperCase()); clearEmpError("panNumber"); }} placeholder="AAAAA0000A" />
+                                <FieldError error={empErrors.panNumber} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Date of Birth</label>
+                                <input type="date" className={`${inputClass} ${inputErrorClass(empErrors.dateOfBirth)}`} value={currentEmployee.dateOfBirth} onChange={(e) => { set("dateOfBirth", e.target.value); clearEmpError("dateOfBirth"); }} />
+                                <FieldError error={empErrors.dateOfBirth} />
+                            </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Gender</label>
                                 <select className={inputClass} value={currentEmployee.gender} onChange={(e) => set("gender", e.target.value)}>
@@ -195,7 +240,11 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                                 </select>
                             </div>
                             <div className="space-y-2"><label className="text-sm font-medium">Emergency Contact</label><input className={inputClass} value={currentEmployee.emergencyContact} onChange={(e) => set("emergencyContact", e.target.value)} /></div>
-                            <div className="space-y-2"><label className="text-sm font-medium">Emergency Phone</label><input className={inputClass} value={currentEmployee.emergencyPhone} onChange={(e) => set("emergencyPhone", e.target.value)} /></div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Emergency Phone</label>
+                                <input className={`${inputClass} ${inputErrorClass(empErrors.emergencyPhone)}`} value={currentEmployee.emergencyPhone} onChange={(e) => { set("emergencyPhone", e.target.value); clearEmpError("emergencyPhone"); }} />
+                                <FieldError error={empErrors.emergencyPhone} />
+                            </div>
                         </div>
                     )}
 
@@ -207,15 +256,27 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                             </div>
                             <div className="space-y-2"><label className="text-sm font-medium">City</label><input className={inputClass} value={currentEmployee.city} onChange={(e) => set("city", e.target.value)} /></div>
                             <div className="space-y-2"><label className="text-sm font-medium">State</label><input className={inputClass} value={currentEmployee.state} onChange={(e) => set("state", e.target.value)} /></div>
-                            <div className="space-y-2"><label className="text-sm font-medium">Pincode</label><input className={inputClass} value={currentEmployee.pincode} onChange={(e) => set("pincode", e.target.value)} /></div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Pincode</label>
+                                <input className={`${inputClass} ${inputErrorClass(empErrors.pincode)}`} value={currentEmployee.pincode} onChange={(e) => { set("pincode", e.target.value); clearEmpError("pincode"); }} placeholder="600001" />
+                                <FieldError error={empErrors.pincode} />
+                            </div>
                         </div>
                     )}
 
                     {formTab === "bank" && (
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2"><label className="text-sm font-medium">Bank Name</label><input className={inputClass} value={currentEmployee.bankName} onChange={(e) => set("bankName", e.target.value)} /></div>
-                            <div className="space-y-2"><label className="text-sm font-medium">Account Number</label><input className={inputClass} value={currentEmployee.bankAccountNumber} onChange={(e) => set("bankAccountNumber", e.target.value)} /></div>
-                            <div className="space-y-2"><label className="text-sm font-medium">IFSC Code</label><input className={inputClass} value={currentEmployee.bankIfsc} onChange={(e) => set("bankIfsc", e.target.value)} /></div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Account Number</label>
+                                <input className={`${inputClass} ${inputErrorClass(empErrors.bankAccountNumber)}`} value={currentEmployee.bankAccountNumber} onChange={(e) => { set("bankAccountNumber", e.target.value); clearEmpError("bankAccountNumber"); }} />
+                                <FieldError error={empErrors.bankAccountNumber} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">IFSC Code</label>
+                                <input className={`${inputClass} ${inputErrorClass(empErrors.bankIfsc)}`} value={currentEmployee.bankIfsc} onChange={(e) => { set("bankIfsc", e.target.value.toUpperCase()); clearEmpError("bankIfsc"); }} placeholder="SBIN0001234" />
+                                <FieldError error={empErrors.bankIfsc} />
+                            </div>
                             <div className="space-y-2"><label className="text-sm font-medium">Branch</label><input className={inputClass} value={currentEmployee.bankBranch} onChange={(e) => set("bankBranch", e.target.value)} /></div>
                         </div>
                     )}

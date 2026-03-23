@@ -5,6 +5,7 @@ import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.EmployeeAdvance;
 import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.SalaryHistory;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.DesignationRepository;
 import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -65,6 +67,10 @@ public class EmployeeService {
     }
 
     public Employee createEmployee(Employee employee) {
+        // Business validations
+        validateEmployeeBusinessRules(employee);
+        validateAadharUniqueness(employee.getAadharNumber(), null);
+
         // Set PersonEntity fields
         if (employee.getPersonType() == null) {
             employee.setPersonType("Employee");
@@ -101,6 +107,10 @@ public class EmployeeService {
     public Employee updateEmployee(Long id, Employee details) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        // Business validations
+        validateEmployeeBusinessRules(details);
+        validateAadharUniqueness(details.getAadharNumber(), id);
 
         // PersonEntity fields
         employee.setName(details.getName());
@@ -315,5 +325,38 @@ public class EmployeeService {
     private String getExtension(String filename) {
         if (filename == null || !filename.contains(".")) return "bin";
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+    }
+
+    private void validateEmployeeBusinessRules(Employee employee) {
+        // DOB: must be in the past, at least 15 years old
+        if (employee.getDateOfBirth() != null) {
+            if (employee.getDateOfBirth().isAfter(LocalDate.now())) {
+                throw new BusinessException("Date of birth cannot be in the future");
+            }
+            if (Period.between(employee.getDateOfBirth(), LocalDate.now()).getYears() < 15) {
+                throw new BusinessException("Employee must be at least 15 years old");
+            }
+        }
+        // Join date vs DOB
+        if (employee.getJoinDate() != null && employee.getDateOfBirth() != null) {
+            if (employee.getJoinDate().isBefore(employee.getDateOfBirth())) {
+                throw new BusinessException("Join date cannot be before date of birth");
+            }
+        }
+        // Termination date must be after join date
+        if (employee.getTerminationDate() != null && employee.getJoinDate() != null) {
+            if (employee.getTerminationDate().isBefore(employee.getJoinDate())) {
+                throw new BusinessException("Termination date cannot be before join date");
+            }
+        }
+    }
+
+    private void validateAadharUniqueness(String aadharNumber, Long excludeId) {
+        if (aadharNumber != null && !aadharNumber.isBlank()) {
+            Optional<Employee> existing = employeeRepository.findByAadharNumber(aadharNumber);
+            if (existing.isPresent() && (excludeId == null || !existing.get().getId().equals(excludeId))) {
+                throw new BusinessException("An employee with this Aadhar number already exists");
+            }
+        }
     }
 }

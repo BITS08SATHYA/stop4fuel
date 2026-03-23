@@ -28,6 +28,11 @@ public class Supplier extends BaseEntity {
     @Email(message = "Invalid email format")
     private String email;
 
+    @Column(name = "gst_number", length = 15)
+    private String gstNumber;
+
+    private String address;
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean active = true;
 }
