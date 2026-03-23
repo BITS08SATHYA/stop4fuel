@@ -58,10 +58,10 @@ END $$;;
 DO $$
 BEGIN
 IF (SELECT COUNT(*) FROM product) = 0 THEN
-    INSERT INTO product (scid, name, hsn_code, price, category, unit, brand, active, created_at, updated_at) VALUES
-        (1, 'Petrol', '27101211', 107.50, 'FUEL', 'LITERS', 'IOCL', true, NOW(), NOW()),
-        (1, 'Diesel', '27101990', 93.20, 'FUEL', 'LITERS', 'IOCL', true, NOW(), NOW()),
-        (1, 'Xtra Premium', '27101210', 112.00, 'FUEL', 'LITERS', 'IOCL', true, NOW(), NOW());
+    INSERT INTO product (scid, name, hsn_code, price, category, unit, brand, fuel_family, active, created_at, updated_at) VALUES
+        (1, 'Petrol', '27101211', 107.50, 'FUEL', 'LITERS', 'IOCL', 'PETROL', true, NOW(), NOW()),
+        (1, 'Diesel', '27101990', 93.20, 'FUEL', 'LITERS', 'IOCL', 'DIESEL', true, NOW(), NOW()),
+        (1, 'Xtra Premium', '27101210', 112.00, 'FUEL', 'LITERS', 'IOCL', 'PETROL', true, NOW(), NOW());
 END IF;
 END $$;;
 
@@ -1161,3 +1161,7 @@ IF (SELECT COUNT(*) FROM stock_transfer) = 0 THEN
     RAISE NOTICE 'Seeded 2 stock transfers';
 END IF;
 END $$;;
+
+-- Backfill fuel_family for existing fuel products
+UPDATE product SET fuel_family = 'PETROL' WHERE LOWER(name) IN ('petrol', 'xtra premium') AND fuel_family IS NULL;
+UPDATE product SET fuel_family = 'DIESEL' WHERE LOWER(name) IN ('diesel', 'xtra mile') AND fuel_family IS NULL;

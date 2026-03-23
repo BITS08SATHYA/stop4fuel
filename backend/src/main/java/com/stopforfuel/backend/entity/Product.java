@@ -59,6 +59,13 @@ public class Product extends BaseEntity {
     @Column(name = "gst_rate", precision = 5, scale = 2)
     private BigDecimal gstRate;
 
+    /**
+     * Fuel family grouping: PETROL (includes Xtra Premium), DIESEL (includes Xtra Mile).
+     * Null for non-fuel products (oils, coolants, etc.).
+     */
+    @Column(name = "fuel_family")
+    private String fuelFamily;
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean active = true;
 }

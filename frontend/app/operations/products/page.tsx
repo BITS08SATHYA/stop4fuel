@@ -45,6 +45,7 @@ export default function ProductsPage() {
     const [supplierId, setSupplierId] = useState("");
     const [oilTypeId, setOilTypeId] = useState("");
     const [gradeTypeId, setGradeTypeId] = useState("");
+    const [fuelFamily, setFuelFamily] = useState("");
     const [active, setActive] = useState(true);
     const [apiError, setApiError] = useState("");
 
@@ -94,6 +95,7 @@ export default function ProductsPage() {
             setSupplierId(product.supplier?.id.toString() || "");
             setOilTypeId(product.oilType?.id.toString() || "");
             setGradeTypeId(product.gradeType?.id.toString() || "");
+            setFuelFamily(product.fuelFamily || "");
             setActive(product.active);
         } else {
             setEditingProduct(null);
@@ -107,6 +109,7 @@ export default function ProductsPage() {
             setSupplierId("");
             setOilTypeId("");
             setGradeTypeId("");
+            setFuelFamily("");
             setActive(true);
         }
         clearAllErrors();
@@ -130,6 +133,7 @@ export default function ProductsPage() {
                 supplier: supplierId ? { id: Number(supplierId) } : undefined,
                 oilType: oilTypeId ? { id: Number(oilTypeId) } : undefined,
                 gradeType: gradeTypeId ? { id: Number(gradeTypeId) } : undefined,
+                fuelFamily: category === 'Fuel' && fuelFamily ? fuelFamily : undefined,
                 active
             };
 
@@ -449,6 +453,26 @@ export default function ProductsPage() {
                             </select>
                             <FieldError error={errors.category} />
                         </div>
+
+                        {category === 'Fuel' && (
+                            <div>
+                                <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
+                                    Fuel Family
+                                </label>
+                                <select
+                                    value={fuelFamily}
+                                    onChange={(e) => setFuelFamily(e.target.value)}
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
+                                >
+                                    <option value="">Not Set</option>
+                                    <option value="PETROL">Petrol Family</option>
+                                    <option value="DIESEL">Diesel Family</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Groups compatible fuels (e.g. Petrol + Xtra Premium = Petrol Family)
+                                </p>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
