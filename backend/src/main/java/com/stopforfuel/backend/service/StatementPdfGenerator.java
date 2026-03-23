@@ -8,6 +8,7 @@ import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.InvoiceProduct;
 import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.exception.ReportGenerationException;
 import org.springframework.stereotype.Component;
 
 import java.awt.Color;
@@ -80,7 +81,7 @@ public class StatementPdfGenerator {
 
             document.close();
         } catch (DocumentException e) {
-            throw new RuntimeException("Failed to generate statement PDF", e);
+            throw new ReportGenerationException("Failed to generate statement PDF", e);
         }
 
         return baos.toByteArray();

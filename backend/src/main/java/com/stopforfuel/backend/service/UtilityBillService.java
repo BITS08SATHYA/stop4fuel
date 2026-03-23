@@ -1,7 +1,10 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.UtilityBill;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ReportGenerationException;
 import com.stopforfuel.backend.repository.UtilityBillRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -23,7 +26,7 @@ public class UtilityBillService {
     private UtilityBillRepository utilityBillRepository;
 
     public List<UtilityBill> getAllBills() {
-        return utilityBillRepository.findAllByOrderByBillDateDesc();
+        return utilityBillRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<UtilityBill> getBillsByType(String type) {
@@ -39,7 +42,7 @@ public class UtilityBillService {
     }
 
     public UtilityBill updateBill(Long id, UtilityBill details) {
-        UtilityBill bill = utilityBillRepository.findById(id)
+        UtilityBill bill = utilityBillRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Bill not found"));
 
         bill.setBillType(details.getBillType());
@@ -121,7 +124,7 @@ public class UtilityBillService {
 
             return bill;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse PDF: " + e.getMessage(), e);
+            throw new ReportGenerationException("Failed to parse PDF: " + e.getMessage(), e);
         }
     }
 
@@ -143,6 +146,6 @@ public class UtilityBillService {
                 return LocalDate.parse(dateStr, DateTimeFormatter.ofPattern(format));
             } catch (Exception ignored) {}
         }
-        throw new RuntimeException("Unable to parse date: " + dateStr);
+        throw new BusinessException("Unable to parse date: " + dateStr);
     }
 }

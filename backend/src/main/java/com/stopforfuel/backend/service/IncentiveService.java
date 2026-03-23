@@ -17,7 +17,7 @@ public class IncentiveService {
     private final IncentiveRepository repository;
 
     public List<Incentive> getAll() {
-        return repository.findAllWithCustomerAndProduct();
+        return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<Incentive> getByCustomer(Long customerId) {
@@ -38,7 +38,7 @@ public class IncentiveService {
 
     @Transactional
     public Incentive update(Long id, Incentive details) {
-        Incentive incentive = repository.findById(id)
+        Incentive incentive = repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Incentive not found with id: " + id));
         incentive.setMinQuantity(details.getMinQuantity());
         incentive.setDiscountRate(details.getDiscountRate());
@@ -48,7 +48,7 @@ public class IncentiveService {
 
     @Transactional
     public void deactivate(Long id) {
-        Incentive incentive = repository.findById(id)
+        Incentive incentive = repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Incentive not found with id: " + id));
         incentive.setActive(false);
         repository.save(incentive);

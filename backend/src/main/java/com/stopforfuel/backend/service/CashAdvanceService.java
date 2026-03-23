@@ -7,10 +7,13 @@ import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.Statement;
 import com.stopforfuel.backend.entity.transaction.CashTransaction;
 import com.stopforfuel.backend.entity.transaction.ExpenseTransaction;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.DuplicateResourceException;
 import com.stopforfuel.backend.repository.CashAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,11 +34,11 @@ public class CashAdvanceService {
     private final ShiftTransactionService shiftTransactionService;
 
     public List<CashAdvance> getAll() {
-        return repository.findAllByOrderByAdvanceDateDesc();
+        return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public CashAdvance getById(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + id));
     }
 
@@ -125,14 +128,14 @@ public class CashAdvanceService {
                 .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + advanceId));
 
         if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
-            throw new RuntimeException("Cannot assign invoices to a " + advance.getStatus().toLowerCase() + " advance");
+            throw new BusinessException("Cannot assign invoices to a " + advance.getStatus().toLowerCase() + " advance");
         }
 
         InvoiceBill invoice = invoiceBillRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + invoiceId));
 
         if (invoice.getCashAdvance() != null) {
-            throw new RuntimeException("Invoice is already assigned to advance #" + invoice.getCashAdvance().getId());
+            throw new DuplicateResourceException("Invoice is already assigned to advance #" + invoice.getCashAdvance().getId());
         }
 
         invoice.setCashAdvance(advance);
@@ -153,7 +156,7 @@ public class CashAdvanceService {
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + invoiceId));
 
         if (invoice.getCashAdvance() == null || !invoice.getCashAdvance().getId().equals(advanceId)) {
-            throw new RuntimeException("Invoice is not assigned to this advance");
+            throw new BusinessException("Invoice is not assigned to this advance");
         }
 
         invoice.setCashAdvance(null);
@@ -175,7 +178,7 @@ public class CashAdvanceService {
                 .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + advanceId));
 
         if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
-            throw new RuntimeException("Cannot assign statement to a " + advance.getStatus().toLowerCase() + " advance");
+            throw new BusinessException("Cannot assign statement to a " + advance.getStatus().toLowerCase() + " advance");
         }
 
         Statement statement = statementRepository.findById(statementId)

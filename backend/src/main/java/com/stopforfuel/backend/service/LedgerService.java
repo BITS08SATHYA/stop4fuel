@@ -4,6 +4,7 @@ import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Payment;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -47,7 +48,7 @@ public class LedgerService {
         BigDecimal openingBalance = getOpeningBalance(customerId, fromDate);
 
         // Fetch all credit bills in period (both linked and unlinked to statements)
-        List<InvoiceBill> allCreditBills = invoiceBillRepository.findAll().stream()
+        List<InvoiceBill> allCreditBills = invoiceBillRepository.findAllByScid(SecurityUtils.getScid()).stream()
                 .filter(b -> b.getCustomer() != null && b.getCustomer().getId().equals(customerId))
                 .filter(b -> "CREDIT".equals(b.getBillType()))
                 .filter(b -> b.getDate() != null

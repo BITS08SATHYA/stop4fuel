@@ -25,23 +25,23 @@ public class NozzleService {
     private PumpRepository pumpRepository;
 
     public List<Nozzle> getAllNozzles() {
-        return nozzleRepository.findAll();
+        return nozzleRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<Nozzle> getActiveNozzles() {
-        return nozzleRepository.findByActive(true);
+        return nozzleRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
     public List<Nozzle> getNozzlesByTank(Long tankId) {
-        return nozzleRepository.findByTankId(tankId);
+        return nozzleRepository.findByTankIdAndScid(tankId, SecurityUtils.getScid());
     }
 
     public List<Nozzle> getNozzlesByPump(Long pumpId) {
-        return nozzleRepository.findByPumpId(pumpId);
+        return nozzleRepository.findByPumpIdAndScid(pumpId, SecurityUtils.getScid());
     }
 
     public Nozzle getNozzleById(Long id) {
-        return nozzleRepository.findById(id)
+        return nozzleRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Nozzle not found with id: " + id));
     }
 
@@ -90,6 +90,7 @@ public class NozzleService {
     }
 
     public void deleteNozzle(Long id) {
-        nozzleRepository.deleteById(id);
+        Nozzle nozzle = getNozzleById(id);
+        nozzleRepository.delete(nozzle);
     }
 }

@@ -2,10 +2,13 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -49,18 +52,18 @@ public class CustomerService {
     }
 
     public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+        return customerRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public Customer getCustomerById(Long id) {
-        return customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Customer not found with id: " + id));
+        return customerRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
     }
 
     public Customer createCustomer(Customer customer) {
         if (customer.getRole() == null) {
             com.stopforfuel.backend.entity.Roles customerRole = rolesRepository.findByRoleType("CUSTOMER")
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                    .orElseThrow(() -> new ResourceNotFoundException("Error: Role is not found."));
             customer.setRole(customerRole);
         }
         if (customer.getStatus() == null) {
@@ -127,6 +130,7 @@ public class CustomerService {
     /**
      * Resets consumed liters for all customers AND vehicles on the 1st of every month.
      * Does NOT auto-unblock — admin must manually unblock.
+     * Note: Intentionally uses findAll() (cross-tenant) since this is a system-wide scheduled job.
      */
     @Scheduled(cron = "0 0 0 1 * ?")
     @Transactional
@@ -151,7 +155,7 @@ public class CustomerService {
     public Customer blockCustomer(Long id) {
         Customer customer = getCustomerById(id);
         if (!"ACTIVE".equals(customer.getStatus())) {
-            throw new RuntimeException("Customer can only be blocked when ACTIVE. Current status: " + customer.getStatus());
+            throw new BusinessException("Customer can only be blocked when ACTIVE. Current status: " + customer.getStatus());
         }
         customer.setStatus("BLOCKED");
         return customerRepository.save(customer);
@@ -164,7 +168,7 @@ public class CustomerService {
     public Customer unblockCustomer(Long id) {
         Customer customer = getCustomerById(id);
         if (!"BLOCKED".equals(customer.getStatus())) {
-            throw new RuntimeException("Customer can only be unblocked when BLOCKED. Current status: " + customer.getStatus());
+            throw new BusinessException("Customer can only be unblocked when BLOCKED. Current status: " + customer.getStatus());
         }
         customer.setStatus("ACTIVE");
         return customerRepository.save(customer);
@@ -212,7 +216,7 @@ public class CustomerService {
     }
 
     public Map<String, Object> getStats() {
-        List<Customer> allCustomers = customerRepository.findAll();
+        List<Customer> allCustomers = customerRepository.findAllByScid(SecurityUtils.getScid());
         long totalCustomers = allCustomers.size();
         long activeCustomers = allCustomers.stream()
                 .filter(c -> "ACTIVE".equals(c.getStatus()))

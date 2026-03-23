@@ -3,6 +3,8 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +51,7 @@ public class ShiftClosingReportService {
                 .orElseThrow(() -> new RuntimeException("Shift not found"));
 
         if (!"CLOSED".equals(shift.getStatus()) && !"RECONCILED".equals(shift.getStatus())) {
-            throw new RuntimeException("Shift must be CLOSED before generating a report");
+            throw new BusinessException("Shift must be CLOSED before generating a report");
         }
 
         // If report already exists, recompute it
@@ -76,7 +78,7 @@ public class ShiftClosingReportService {
     }
 
     public ShiftClosingReport getReportById(Long reportId) {
-        return reportRepository.findById(reportId)
+        return reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found: " + reportId));
     }
 
@@ -84,23 +86,23 @@ public class ShiftClosingReportService {
         if (status != null && !status.isEmpty()) {
             return reportRepository.findByStatusOrderByReportDateDesc(status);
         }
-        return reportRepository.findAllByOrderByReportDateDesc();
+        return reportRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     @Transactional
     public ShiftClosingReport editLineItem(Long reportId, Long lineItemId, BigDecimal newAmount, String reason) {
-        ShiftClosingReport report = reportRepository.findById(reportId)
+        ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
         if ("FINALIZED".equals(report.getStatus())) {
-            throw new RuntimeException("Cannot edit a finalized report");
+            throw new BusinessException("Cannot edit a finalized report");
         }
 
         ReportLineItem lineItem = lineItemRepository.findById(lineItemId)
                 .orElseThrow(() -> new RuntimeException("Line item not found"));
 
         if (!lineItem.getReport().getId().equals(reportId)) {
-            throw new RuntimeException("Line item does not belong to this report");
+            throw new BusinessException("Line item does not belong to this report");
         }
 
         BigDecimal oldAmount = lineItem.getAmount();
@@ -130,20 +132,20 @@ public class ShiftClosingReportService {
     @Transactional
     public ShiftClosingReport transferEntry(Long sourceReportId, Long lineItemId,
                                             Long targetReportId, String reason) {
-        ShiftClosingReport sourceReport = reportRepository.findById(sourceReportId)
+        ShiftClosingReport sourceReport = reportRepository.findByIdAndScid(sourceReportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Source report not found"));
-        ShiftClosingReport targetReport = reportRepository.findById(targetReportId)
+        ShiftClosingReport targetReport = reportRepository.findByIdAndScid(targetReportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Target report not found"));
 
         if ("FINALIZED".equals(sourceReport.getStatus()) || "FINALIZED".equals(targetReport.getStatus())) {
-            throw new RuntimeException("Cannot transfer entries involving finalized reports");
+            throw new BusinessException("Cannot transfer entries involving finalized reports");
         }
 
         ReportLineItem lineItem = lineItemRepository.findById(lineItemId)
                 .orElseThrow(() -> new RuntimeException("Line item not found"));
 
         if (!lineItem.getReport().getId().equals(sourceReportId)) {
-            throw new RuntimeException("Line item does not belong to source report");
+            throw new BusinessException("Line item does not belong to source report");
         }
 
         // Move the source entity's shiftId to the target shift
@@ -198,11 +200,11 @@ public class ShiftClosingReportService {
 
     @Transactional
     public ShiftClosingReport finalizeReport(Long reportId, String finalizedBy) {
-        ShiftClosingReport report = reportRepository.findById(reportId)
+        ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
         if ("FINALIZED".equals(report.getStatus())) {
-            throw new RuntimeException("Report is already finalized");
+            throw new BusinessException("Report is already finalized");
         }
 
         report.setStatus("FINALIZED");
@@ -246,11 +248,11 @@ public class ShiftClosingReportService {
 
     @Transactional
     public ShiftClosingReport recomputeReport(Long reportId) {
-        ShiftClosingReport report = reportRepository.findById(reportId)
+        ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
         if ("FINALIZED".equals(report.getStatus())) {
-            throw new RuntimeException("Cannot recompute a finalized report");
+            throw new BusinessException("Cannot recompute a finalized report");
         }
 
         Shift shift = report.getShift();
@@ -279,7 +281,7 @@ public class ShiftClosingReportService {
         ShiftClosingReport report = reportRepository.findByShiftId(shiftId)
                 .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
         if (report.getReportPdfUrl() == null || report.getReportPdfUrl().isEmpty()) {
-            throw new RuntimeException("No PDF generated for this report");
+            throw new ResourceNotFoundException("No PDF generated for this report");
         }
         return s3StorageService.getPresignedUrl(report.getReportPdfUrl());
     }

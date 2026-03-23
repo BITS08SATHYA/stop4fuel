@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Shift;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.ShiftRepository;
 import com.stopforfuel.config.SecurityUtils;
 import org.springframework.context.annotation.Lazy;
@@ -25,12 +27,12 @@ public class ShiftService {
     }
 
     public List<Shift> getAllShifts() {
-        return repository.findAll();
+        return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public Shift openShift(Shift shift) {
-        repository.findByStatus("OPEN").ifPresent(s -> {
-            throw new RuntimeException("A shift is already open. Close it before opening a new one.");
+        repository.findByStatusAndScid("OPEN", SecurityUtils.getScid()).ifPresent(s -> {
+            throw new BusinessException("A shift is already open. Close it before opening a new one.");
         });
 
         shift.setStartTime(LocalDateTime.now());
@@ -48,7 +50,7 @@ public class ShiftService {
 
     public Shift closeShift(Long id) {
         Shift shift = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Shift not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         shift.setEndTime(LocalDateTime.now());
         shift.setStatus("CLOSED");
@@ -64,6 +66,6 @@ public class ShiftService {
     }
 
     public Shift getActiveShift() {
-        return repository.findByStatus("OPEN").orElse(null);
+        return repository.findByStatusAndScid("OPEN", SecurityUtils.getScid()).orElse(null);
     }
 }

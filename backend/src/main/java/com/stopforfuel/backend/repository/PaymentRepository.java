@@ -1,7 +1,6 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Payment;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface PaymentRepository extends JpaRepository<Payment, Long> {
+public interface PaymentRepository extends ScidRepository<Payment> {
 
     List<Payment> findByScid(Long scid);
 

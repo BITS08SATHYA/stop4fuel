@@ -4,6 +4,8 @@ import com.stopforfuel.backend.dto.ReceiveItemDTO;
 import com.stopforfuel.backend.entity.GodownStock;
 import com.stopforfuel.backend.entity.PurchaseOrder;
 import com.stopforfuel.backend.entity.PurchaseOrderItem;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.GodownStockRepository;
 import com.stopforfuel.backend.repository.PurchaseOrderRepository;
 import com.stopforfuel.config.SecurityUtils;
@@ -26,8 +28,8 @@ public class PurchaseOrderService {
     }
 
     public PurchaseOrder getById(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("PurchaseOrder not found with id: " + id));
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("PurchaseOrder not found with id: " + id));
     }
 
     public List<PurchaseOrder> getByStatus(String status) {
@@ -54,7 +56,7 @@ public class PurchaseOrderService {
     public PurchaseOrder update(Long id, PurchaseOrder details) {
         PurchaseOrder existing = getById(id);
         if (!"DRAFT".equals(existing.getStatus())) {
-            throw new RuntimeException("Can only edit purchase orders in DRAFT status");
+            throw new BusinessException("Can only edit purchase orders in DRAFT status");
         }
         existing.setSupplier(details.getSupplier());
         existing.setOrderDate(details.getOrderDate());
@@ -76,14 +78,14 @@ public class PurchaseOrderService {
     public PurchaseOrder receiveDelivery(Long id, List<ReceiveItemDTO> receivedItems) {
         PurchaseOrder order = getById(id);
         if ("CANCELLED".equals(order.getStatus()) || "RECEIVED".equals(order.getStatus())) {
-            throw new RuntimeException("Cannot receive delivery for a " + order.getStatus() + " order");
+            throw new BusinessException("Cannot receive delivery for a " + order.getStatus() + " order");
         }
 
         for (ReceiveItemDTO dto : receivedItems) {
             PurchaseOrderItem item = order.getItems().stream()
                     .filter(i -> i.getId().equals(dto.getItemId()))
                     .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Item not found: " + dto.getItemId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Item not found: " + dto.getItemId()));
 
             double newReceived = (item.getReceivedQty() != null ? item.getReceivedQty() : 0.0) + dto.getReceivedQty();
             item.setReceivedQty(newReceived);
@@ -122,7 +124,7 @@ public class PurchaseOrderService {
     public PurchaseOrder cancel(Long id) {
         PurchaseOrder order = getById(id);
         if (!"DRAFT".equals(order.getStatus()) && !"ORDERED".equals(order.getStatus())) {
-            throw new RuntimeException("Can only cancel DRAFT or ORDERED purchase orders");
+            throw new BusinessException("Can only cancel DRAFT or ORDERED purchase orders");
         }
         order.setStatus("CANCELLED");
         return repository.save(order);
