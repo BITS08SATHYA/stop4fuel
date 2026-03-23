@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -7,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "person_entity")
+@Table(name = "person_entity", indexes = {
+    @Index(name = "idx_person_entity_scid", columnList = "scid")
+})
 @Inheritance(strategy = InheritanceType.JOINED)
 @Getter
 @Setter
@@ -18,12 +21,14 @@ public abstract class PersonEntity extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @ElementCollection
+    @JsonIgnore
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "person_emails", joinColumns = @JoinColumn(name = "person_id"))
     @Column(name = "email")
     private java.util.Set<String> emails = new java.util.HashSet<>();
 
-    @ElementCollection
+    @JsonIgnore
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "person_phones", joinColumns = @JoinColumn(name = "person_id"))
     @Column(name = "phone_number")
     private java.util.Set<String> phoneNumbers = new java.util.HashSet<>();
