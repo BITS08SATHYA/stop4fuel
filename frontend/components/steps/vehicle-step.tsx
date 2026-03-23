@@ -122,6 +122,25 @@ export function VehicleStep({ data, updateData, errors = {} }: VehicleStepProps)
                     )}
                 </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Monthly Liter Limit
+                    </label>
+                    <input
+                        type="number"
+                        value={data.maxLitersPerMonth || ""}
+                        onChange={(e) => updateData({ ...data, maxLitersPerMonth: e.target.value })}
+                        className={inputClass("maxLitersPerMonth")}
+                        placeholder="e.g. 2000"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Max liters this vehicle can consume per month</p>
+                    {errors.maxLitersPerMonth && (
+                        <p className="text-[11px] text-red-400 mt-1">{errors.maxLitersPerMonth}</p>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

@@ -201,6 +201,7 @@ export default function VehiclesPage() {
             id: vehicle.id,
             vehicleNumber: vehicle.vehicleNumber,
             maxCapacity: vehicle.maxCapacity,
+            maxLitersPerMonth: vehicle.maxLitersPerMonth,
             customerId: vehicle.customer?.id,
             vehicleType: vehicle.vehicleType?.id,
             fuelType: vehicle.preferredProduct?.id,
@@ -248,6 +249,10 @@ export default function VehiclesPage() {
             errors.maxCapacity = "Max capacity must be zero or positive";
         }
 
+        if (formData.maxLitersPerMonth !== undefined && formData.maxLitersPerMonth !== "" && Number(formData.maxLitersPerMonth) < 0) {
+            errors.maxLitersPerMonth = "Monthly liter limit must be zero or positive";
+        }
+
         return errors;
     };
 
@@ -266,6 +271,7 @@ export default function VehiclesPage() {
             const payload: any = {
                 vehicleNumber: formData.vehicleNumber.trim(),
                 maxCapacity: formData.maxCapacity,
+                maxLitersPerMonth: formData.maxLitersPerMonth || null,
                 customer: { id: formData.customerId },
             };
 
