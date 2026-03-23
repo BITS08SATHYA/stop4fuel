@@ -13,26 +13,26 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT c FROM Customer c LEFT JOIN c.phoneNumbers p WHERE c.group.id = :groupId AND (LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR p LIKE CONCAT('%', :search, '%'))")
     org.springframework.data.domain.Page<Customer> findByGroupIdAndSearch(@org.springframework.data.repository.query.Param("groupId") Long groupId, @org.springframework.data.repository.query.Param("search") String search, org.springframework.data.domain.Pageable pageable);
 
-    @org.springframework.data.jpa.repository.Query("SELECT c FROM Customer c WHERE " +
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM Customer c LEFT JOIN c.customerCategory cc WHERE " +
             "(:groupId IS NULL OR c.group.id = :groupId) " +
             "AND (:status IS NULL OR c.status = :status) " +
-            "AND (:customerCategory IS NULL OR c.customerCategory = :customerCategory)")
+            "AND (:categoryType IS NULL OR cc.categoryType = :categoryType)")
     org.springframework.data.domain.Page<Customer> findByGroupAndStatus(
             @org.springframework.data.repository.query.Param("groupId") Long groupId,
             @org.springframework.data.repository.query.Param("status") String status,
-            @org.springframework.data.repository.query.Param("customerCategory") String customerCategory,
+            @org.springframework.data.repository.query.Param("categoryType") String categoryType,
             org.springframework.data.domain.Pageable pageable);
 
-    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT c FROM Customer c LEFT JOIN c.phoneNumbers p WHERE " +
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT c FROM Customer c LEFT JOIN c.phoneNumbers p LEFT JOIN c.customerCategory cc WHERE " +
             "(LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR p LIKE CONCAT('%', :search, '%')) " +
             "AND (:groupId IS NULL OR c.group.id = :groupId) " +
             "AND (:status IS NULL OR c.status = :status) " +
-            "AND (:customerCategory IS NULL OR c.customerCategory = :customerCategory)")
+            "AND (:categoryType IS NULL OR cc.categoryType = :categoryType)")
     org.springframework.data.domain.Page<Customer> findBySearchAndFilters(
             @org.springframework.data.repository.query.Param("search") String search,
             @org.springframework.data.repository.query.Param("groupId") Long groupId,
             @org.springframework.data.repository.query.Param("status") String status,
-            @org.springframework.data.repository.query.Param("customerCategory") String customerCategory,
+            @org.springframework.data.repository.query.Param("categoryType") String categoryType,
             org.springframework.data.domain.Pageable pageable);
 
     java.util.List<Customer> findByGroupIsNull();

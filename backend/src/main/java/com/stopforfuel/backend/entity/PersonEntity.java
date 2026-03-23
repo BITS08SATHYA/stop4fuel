@@ -1,6 +1,5 @@
 package com.stopforfuel.backend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -21,13 +20,11 @@ public abstract class PersonEntity extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @JsonIgnore
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "person_emails", joinColumns = @JoinColumn(name = "person_id"))
     @Column(name = "email")
     private java.util.Set<String> emails = new java.util.HashSet<>();
 
-    @JsonIgnore
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "person_phones", joinColumns = @JoinColumn(name = "person_id"))
     @Column(name = "phone_number")
