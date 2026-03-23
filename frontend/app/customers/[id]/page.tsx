@@ -41,6 +41,7 @@ export default function CustomerProfilePage() {
     const [parties, setParties] = useState<any[]>([]);
     const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
 
     // Incentives
     const [customerIncentives, setCustomerIncentives] = useState<Incentive[]>([]);
@@ -77,16 +78,18 @@ export default function CustomerProfilePage() {
 
     const fetchDropdowns = async () => {
         try {
-            const [groupsRes, partiesRes, vtRes, prodRes] = await Promise.all([
+            const [groupsRes, partiesRes, vtRes, prodRes, catRes] = await Promise.all([
                 fetch(`${API}/groups`),
                 fetch(`${API}/parties`),
                 fetch(`${API}/vehicle-types`),
                 fetch(`${API}/products`),
+                fetch(`${API}/customer-categories`),
             ]);
             if (groupsRes.ok) setGroups(await groupsRes.json());
             if (partiesRes.ok) setParties(await partiesRes.json());
             if (vtRes.ok) setVehicleTypes(await vtRes.json());
             if (prodRes.ok) setProducts(await prodRes.json());
+            if (catRes.ok) setCategories(await catRes.json());
         } catch (error) {
             console.error("Failed to fetch dropdowns", error);
         }
@@ -250,7 +253,7 @@ export default function CustomerProfilePage() {
                                 {statusLabel(customerStatus)}
                             </Badge>
                             {customer.customerCategory && (
-                                <Badge variant="outline">{customer.customerCategory.replace(/_/g, ' ')}</Badge>
+                                <Badge variant="outline">{customer.customerCategory.categoryName}</Badge>
                             )}
                         </div>
                     </div>
@@ -450,16 +453,31 @@ export default function CustomerProfilePage() {
                                 <span className="text-sm text-muted-foreground">Category</span>
                                 {isEditing ? (
                                     <select
-                                        value={customer.customerCategory || ""}
-                                        onChange={(e) => setCustomer({ ...customer, customerCategory: e.target.value || null })}
+                                        value={customer.customerCategory?.id || ""}
+                                        onChange={(e) => {
+                                            const selected = categories.find((c: any) => c.id === Number(e.target.value));
+                                            setCustomer({ ...customer, customerCategory: selected || null });
+                                        }}
                                         className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
                                     >
                                         <option value="">None</option>
-                                        <option value="GOVERNMENT" className="bg-slate-900">Government</option>
-                                        <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
+                                        {categories.filter((c: any) => c.categoryType === 'GOVERNMENT').length > 0 && (
+                                            <optgroup label="Government">
+                                                {categories.filter((c: any) => c.categoryType === 'GOVERNMENT').map((c: any) => (
+                                                    <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+                                        {categories.filter((c: any) => c.categoryType === 'NON_GOVERNMENT').length > 0 && (
+                                            <optgroup label="Non-Government">
+                                                {categories.filter((c: any) => c.categoryType === 'NON_GOVERNMENT').map((c: any) => (
+                                                    <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
                                     </select>
                                 ) : (
-                                    <span className="text-sm font-medium text-foreground">{customer.customerCategory?.replace(/_/g, ' ') || "Not set"}</span>
+                                    <span className="text-sm font-medium text-foreground">{customer.customerCategory?.categoryName || "Not set"}</span>
                                 )}
                             </div>
                             <div className="flex items-center justify-between">

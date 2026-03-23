@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { useFormValidation, required, min, indianMobile } from "@/lib/validation";
+import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
 // --- Types ---
 
@@ -283,6 +285,17 @@ export default function CashAdvancesPage() {
     const [returnAmount, setReturnAmount] = useState("");
     const [returnRemarks, setReturnRemarks] = useState("");
 
+    // Validation
+    const { errors: advErrors, validate: validateAdv, clearError: clearAdvError, clearAllErrors: clearAllAdvErrors } = useFormValidation({
+        addAmount: [required("Amount is required"), min(0.01, "Amount must be greater than 0")],
+        addRecipientName: [required("Recipient name is required")],
+        addRecipientPhone: [indianMobile()],
+    });
+    const { errors: retErrors, validate: validateRet, clearError: clearRetError, clearAllErrors: clearAllRetErrors } = useFormValidation({
+        returnAmount: [required("Return amount is required"), min(0.01, "Amount must be greater than 0")],
+    });
+    const [advApiError, setAdvApiError] = useState("");
+
     // Detail / Invoice & Statement Assignment Modal
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [detailAdvance, setDetailAdvance] = useState<CashAdvance | null>(null);
@@ -363,6 +376,8 @@ export default function CashAdvancesPage() {
     const handleOpenAddModal = () => {
         if (!activeShift) return;
         resetAddForm();
+        clearAllAdvErrors();
+        setAdvApiError("");
         setIsAddModalOpen(true);
     };
 
@@ -381,7 +396,9 @@ export default function CashAdvancesPage() {
 
     const handleCreateAdvance = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!validateAdv({ addAmount, addRecipientName, addRecipientPhone })) return;
         setIsSubmitting(true);
+        setAdvApiError("");
         try {
             await createAdvance({
                 amount: Number(addAmount),
@@ -395,7 +412,7 @@ export default function CashAdvancesPage() {
             setIsAddModalOpen(false);
             await loadData();
         } catch (err: any) {
-            alert(err.message || "Failed to create advance");
+            setAdvApiError(err.message || "Failed to create advance");
         } finally {
             setIsSubmitting(false);
         }
@@ -405,13 +422,17 @@ export default function CashAdvancesPage() {
         setReturnTarget(adv);
         setReturnAmount("");
         setReturnRemarks("");
+        clearAllRetErrors();
+        setAdvApiError("");
         setIsReturnModalOpen(true);
     };
 
     const handleReturn = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!returnTarget) return;
+        if (!validateRet({ returnAmount })) return;
         setIsSubmitting(true);
+        setAdvApiError("");
         try {
             await returnAdvance(returnTarget.id, {
                 returnedAmount: Number(returnAmount),
@@ -421,7 +442,7 @@ export default function CashAdvancesPage() {
             setReturnTarget(null);
             await loadData();
         } catch (err: any) {
-            alert(err.message || "Failed to record return");
+            setAdvApiError(err.message || "Failed to record return");
         } finally {
             setIsSubmitting(false);
         }
@@ -818,6 +839,7 @@ export default function CashAdvancesPage() {
                 title="Record Cash Advance"
             >
                 <form onSubmit={handleCreateAdvance} className="space-y-4">
+                    <FormErrorBanner message={advApiError} onDismiss={() => setAdvApiError("")} />
                     {/* Advance Type Selector */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">Advance Type</label>
@@ -871,12 +893,12 @@ export default function CashAdvancesPage() {
                             type="number"
                             step="0.01"
                             min="0.01"
-                            required
                             value={addAmount}
-                            onChange={(e) => setAddAmount(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setAddAmount(e.target.value); clearAdvError("addAmount"); }}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(advErrors.addAmount)}`}
                             placeholder="0.00"
                         />
+                        <FieldError error={advErrors.addAmount} />
                     </div>
 
                     {/* Recipient Name */}
@@ -886,12 +908,12 @@ export default function CashAdvancesPage() {
                         </label>
                         <input
                             type="text"
-                            required
                             value={addRecipientName}
-                            onChange={(e) => setAddRecipientName(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setAddRecipientName(e.target.value); clearAdvError("addRecipientName"); }}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(advErrors.addRecipientName)}`}
                             placeholder="Who is taking the advance?"
                         />
+                        <FieldError error={advErrors.addRecipientName} />
                     </div>
 
                     {/* Recipient Phone */}
@@ -900,10 +922,11 @@ export default function CashAdvancesPage() {
                         <input
                             type="text"
                             value={addRecipientPhone}
-                            onChange={(e) => setAddRecipientPhone(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            onChange={(e) => { setAddRecipientPhone(e.target.value); clearAdvError("addRecipientPhone"); }}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(advErrors.addRecipientPhone)}`}
                             placeholder="Phone number (optional)"
                         />
+                        <FieldError error={advErrors.addRecipientPhone} />
                     </div>
 
                     {/* Purpose */}
@@ -1006,12 +1029,12 @@ export default function CashAdvancesPage() {
                                 step="0.01"
                                 min="0.01"
                                 max={Math.max(0, returnOutstanding)}
-                                required
                                 value={returnAmount}
-                                onChange={(e) => setReturnAmount(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                onChange={(e) => { setReturnAmount(e.target.value); clearRetError("returnAmount"); }}
+                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(retErrors.returnAmount)}`}
                                 placeholder={`Max: ${formatCurrency(Math.max(0, returnOutstanding))}`}
                             />
+                            <FieldError error={retErrors.returnAmount} />
                         </div>
 
                         {/* Return Remarks */}

@@ -12,7 +12,7 @@ import {
     AlertCircle,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
-import { FormErrorBanner } from "@/components/ui/field-error";
+import { FormErrorBanner, FieldError } from "@/components/ui/field-error";
 import { Badge } from "@/components/ui/badge";
 import {
     getEmployees,
@@ -37,6 +37,8 @@ export default function AttendancePage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [saving, setSaving] = useState<number | null>(null);
     const [apiError, setApiError] = useState("");
+    const [dateError, setDateError] = useState("");
+    const [timeErrors, setTimeErrors] = useState<Record<number, string>>({});
 
     useEffect(() => {
         loadData();
@@ -61,7 +63,29 @@ export default function AttendancePage() {
         return attendance.find((a) => a.employee?.id === empId);
     };
 
+    const handleDateChange = (newDate: string) => {
+        const selected = new Date(newDate);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        if (selected > today) {
+            setDateError("Date cannot be in the future");
+            return;
+        }
+        setDateError("");
+        setSelectedDate(newDate);
+    };
+
     const handleMarkAttendance = async (empId: number, status: string, checkIn?: string, checkOut?: string) => {
+        // Validate check-out is after check-in
+        if (checkIn && checkOut && checkOut <= checkIn) {
+            setTimeErrors((prev) => ({ ...prev, [empId]: "Check-out must be after check-in" }));
+            return;
+        }
+        setTimeErrors((prev) => {
+            const next = { ...prev };
+            delete next[empId];
+            return next;
+        });
         setSaving(empId);
         try {
             await markAttendance(empId, {
@@ -111,12 +135,16 @@ export default function AttendancePage() {
                         </h1>
                         <p className="text-muted-foreground mt-2">Mark and track employee attendance</p>
                     </div>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    <div>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            max={new Date().toISOString().split("T")[0]}
+                            onChange={(e) => handleDateChange(e.target.value)}
+                            className={`bg-background border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${dateError ? "border-red-500 focus:ring-red-500/50" : "border-border"}`}
+                        />
+                        <FieldError error={dateError} />
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -209,8 +237,11 @@ export default function AttendancePage() {
                                                                 handleMarkAttendance(emp.id, att?.status || "PRESENT", att?.checkInTime || undefined, e.target.value);
                                                             }
                                                         }}
-                                                        className="bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-28"
+                                                        className={`bg-background border rounded-lg px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-28 ${timeErrors[emp.id] ? "border-red-500 focus:ring-red-500/50" : "border-border"}`}
                                                     />
+                                                    {timeErrors[emp.id] && (
+                                                        <p className="text-[10px] text-red-500 mt-0.5">{timeErrors[emp.id]}</p>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-center text-sm font-medium text-primary">
                                                     {att?.totalHoursWorked ? att.totalHoursWorked.toFixed(1) + "h" : "-"}

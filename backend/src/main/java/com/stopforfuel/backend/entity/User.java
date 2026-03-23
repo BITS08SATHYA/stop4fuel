@@ -2,16 +2,16 @@ package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+    @Index(name = "idx_users_status", columnList = "status")
+})
 @PrimaryKeyJoinColumn(name = "id")
 @Getter
 @Setter
@@ -34,7 +34,9 @@ public class User extends PersonEntity {
     private Roles role;
 
     @Column(name = "join_date")
+    @PastOrPresent(message = "Join date cannot be in the future")
     private LocalDate joinDate;
 
+    @Pattern(regexp = "^(Active|Inactive|ACTIVE|INACTIVE)$", message = "Status must be Active or Inactive")
     private String status;
 }

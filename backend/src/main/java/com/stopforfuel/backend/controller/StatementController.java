@@ -39,8 +39,8 @@ public class StatementController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String customerCategory) {
-        return statementService.getStatements(customerId, status, customerCategory, fromDate, toDate, search,
+            @RequestParam(required = false) String categoryType) {
+        return statementService.getStatements(customerId, status, categoryType, fromDate, toDate, search,
                 PageRequest.of(page, size, org.springframework.data.domain.Sort.by("statementDate").descending()));
     }
 

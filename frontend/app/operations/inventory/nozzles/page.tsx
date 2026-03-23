@@ -242,11 +242,11 @@ export default function NozzleInventoryPage() {
                                                         <Fuel className="w-4 h-4" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-bold text-foreground">{inv.nozzle.nozzleName}</div>
+                                                        <div className="text-sm font-bold text-foreground">{inv.nozzle?.nozzleName}</div>
                                                         <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                                            <span>{inv.nozzle.pump.name}</span>
+                                                            <span>{inv.nozzle?.pump?.name}</span>
                                                             <span>•</span>
-                                                            <span>{inv.nozzle.tank.product.name}</span>
+                                                            <span>{inv.nozzle?.tank?.product?.name}</span>
                                                         </div>
                                                     </div>
                                                 </div>

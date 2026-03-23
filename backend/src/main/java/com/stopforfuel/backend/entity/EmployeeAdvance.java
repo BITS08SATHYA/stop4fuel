@@ -2,6 +2,7 @@ package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,9 +22,19 @@ public class EmployeeAdvance extends SimpleBaseEntity {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "salaryHistories", "advances"})
     private Employee employee;
 
+    @NotNull(message = "Amount is required")
+    @Positive(message = "Advance amount must be positive")
     private Double amount;
+
+    @NotNull(message = "Advance date is required")
     private LocalDate advanceDate;
+
+    @NotBlank(message = "Advance type is required")
     private String advanceType; // SALARY_ADVANCE, HOME_ADVANCE, NIGHT_ADVANCE
+
+    @Size(max = 500, message = "Remarks must not exceed 500 characters")
     private String remarks;
+
+    @Pattern(regexp = "^(PENDING|DEDUCTED|WAIVED)$", message = "Status must be PENDING, DEDUCTED, or WAIVED")
     private String status = "PENDING"; // PENDING, DEDUCTED, WAIVED
 }

@@ -55,6 +55,10 @@ public class Product extends BaseEntity {
     @com.fasterxml.jackson.annotation.JsonProperty("gradeType")
     private GradeType grade;
 
+    /** GST rate percentage (e.g., 18.0 for 18%) */
+    @Column(name = "gst_rate", precision = 5, scale = 2)
+    private BigDecimal gstRate;
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean active = true;
 }
