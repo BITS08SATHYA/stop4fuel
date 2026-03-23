@@ -3,10 +3,13 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.GroupRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +47,7 @@ public class MappingService {
     @Transactional
     public List<Customer> assignCustomersToGroup(List<Long> customerIds, Long groupId) {
         Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found with id: " + groupId));
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found with id: " + groupId));
         List<Customer> customers = customerRepository.findByIdIn(customerIds);
         for (Customer customer : customers) {
             customer.setGroup(group);
@@ -63,8 +66,8 @@ public class MappingService {
 
     @Transactional
     public List<Vehicle> assignVehiclesToCustomer(List<Long> vehicleIds, Long customerId) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Customer not found with id: " + customerId));
+        Customer customer = customerRepository.findByIdAndScid(customerId, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
         List<Vehicle> vehicles = vehicleRepository.findByIdIn(vehicleIds);
         for (Vehicle vehicle : vehicles) {
             Customer oldCustomer = vehicle.getCustomer();
@@ -73,7 +76,7 @@ public class MappingService {
                 long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
                         vehicle.getId(), oldCustomer.getId(), "NOT_PAID");
                 if (unpaidCount > 0) {
-                    throw new RuntimeException(
+                    throw new BusinessException(
                             "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +
                             " unpaid credit bill(s) under " + oldCustomer.getName() +
                             ". Settle them before reassigning.");
@@ -109,7 +112,7 @@ public class MappingService {
                 long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
                         vehicle.getId(), oldCustomer.getId(), "NOT_PAID");
                 if (unpaidCount > 0) {
-                    throw new RuntimeException(
+                    throw new BusinessException(
                             "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +
                             " unpaid credit bill(s). Settle them before unassigning.");
                 }

@@ -18,7 +18,7 @@ public class NozzleInventoryService {
     private final ShiftService shiftService;
 
     public List<NozzleInventory> getAll() {
-        return repository.findAll();
+        return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<NozzleInventory> getByDate(LocalDate date) {
@@ -30,7 +30,7 @@ public class NozzleInventoryService {
     }
 
     public NozzleInventory getById(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("NozzleInventory not found with id: " + id));
     }
 

@@ -18,7 +18,7 @@ public class TankInventoryService {
     private final ShiftService shiftService;
 
     public List<TankInventory> getAll() {
-        return repository.findAll();
+        return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<TankInventory> getByDate(LocalDate date) {
@@ -30,7 +30,7 @@ public class TankInventoryService {
     }
 
     public TankInventory getById(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("TankInventory not found with id: " + id));
     }
 

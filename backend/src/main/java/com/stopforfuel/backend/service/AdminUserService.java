@@ -31,11 +31,11 @@ public class AdminUserService {
     private boolean authEnabled;
 
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        return userRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public User getUserById(Long id) {
-        return userRepository.findById(id)
+        return userRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
@@ -86,7 +86,7 @@ public class AdminUserService {
     }
 
     public User updateUserRole(Long userId, String newRoleType) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Roles newRole = rolesRepository.findByRoleType(newRoleType)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + newRoleType));
@@ -109,7 +109,7 @@ public class AdminUserService {
     }
 
     public void disableUser(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setStatus("INACTIVE");

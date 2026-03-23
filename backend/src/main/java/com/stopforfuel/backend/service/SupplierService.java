@@ -15,15 +15,15 @@ public class SupplierService {
     private final SupplierRepository repository;
 
     public List<Supplier> getAllSuppliers() {
-        return repository.findAll();
+        return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<Supplier> getActiveSuppliers() {
-        return repository.findByActiveTrue();
+        return repository.findByActiveTrueAndScid(SecurityUtils.getScid());
     }
 
     public Supplier getSupplierById(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + id));
     }
 
@@ -41,7 +41,8 @@ public class SupplierService {
     }
 
     public Supplier updateSupplier(Long id, Supplier details) {
-        Supplier supplier = repository.findById(id).orElseThrow();
+        Supplier supplier = repository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + id));
         supplier.setName(details.getName());
         supplier.setContactPerson(details.getContactPerson());
         supplier.setPhone(details.getPhone());
@@ -51,6 +52,7 @@ public class SupplierService {
     }
 
     public void deleteSupplier(Long id) {
-        repository.deleteById(id);
+        Supplier supplier = getSupplierById(id);
+        repository.delete(supplier);
     }
 }

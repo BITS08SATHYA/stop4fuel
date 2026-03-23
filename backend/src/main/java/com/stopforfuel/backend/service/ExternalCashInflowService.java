@@ -7,6 +7,7 @@ import com.stopforfuel.backend.entity.transaction.CashTransaction;
 import com.stopforfuel.backend.entity.transaction.ExpenseTransaction;
 import com.stopforfuel.backend.repository.CashInflowRepaymentRepository;
 import com.stopforfuel.backend.repository.ExternalCashInflowRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,7 @@ public class ExternalCashInflowService {
     private final ShiftTransactionService shiftTransactionService;
 
     public List<ExternalCashInflow> getAll() {
-        return inflowRepository.findAllByOrderByInflowDateDesc();
+        return inflowRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<ExternalCashInflow> getByShift(Long shiftId) {
@@ -59,7 +60,7 @@ public class ExternalCashInflowService {
 
     @Transactional
     public CashInflowRepayment recordRepayment(Long inflowId, CashInflowRepayment repayment) {
-        ExternalCashInflow inflow = inflowRepository.findById(inflowId)
+        ExternalCashInflow inflow = inflowRepository.findByIdAndScid(inflowId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("External cash inflow not found with id: " + inflowId));
 
         repayment.setCashInflow(inflow);

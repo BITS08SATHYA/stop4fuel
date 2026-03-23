@@ -29,7 +29,7 @@ public class ProductInventoryService {
     private final ShiftService shiftService;
 
     public List<ProductInventory> getAll() {
-        return repository.findAll();
+        return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<ProductInventory> getByDate(LocalDate date) {
@@ -41,7 +41,7 @@ public class ProductInventoryService {
     }
 
     public ProductInventory getById(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("ProductInventory not found with id: " + id));
     }
 

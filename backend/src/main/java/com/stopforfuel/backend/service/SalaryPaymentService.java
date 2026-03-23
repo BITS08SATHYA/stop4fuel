@@ -6,6 +6,7 @@ import com.stopforfuel.backend.entity.SalaryPayment;
 import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.SalaryPaymentRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,7 +76,7 @@ public class SalaryPaymentService {
 
     @Transactional
     public SalaryPayment markAsPaid(Long paymentId, String paymentMode) {
-        SalaryPayment payment = salaryPaymentRepository.findById(paymentId)
+        SalaryPayment payment = salaryPaymentRepository.findByIdAndScid(paymentId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
 
         payment.setStatus("PAID");
@@ -95,7 +96,7 @@ public class SalaryPaymentService {
 
     @Transactional
     public SalaryPayment updatePayment(Long id, SalaryPayment details) {
-        SalaryPayment payment = salaryPaymentRepository.findById(id)
+        SalaryPayment payment = salaryPaymentRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
 
         payment.setBaseSalary(details.getBaseSalary());

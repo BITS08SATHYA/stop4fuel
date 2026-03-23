@@ -8,6 +8,7 @@ import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -35,7 +36,7 @@ public class CreditManagementService {
      */
     public CreditOverview getCreditOverview(String categoryType) {
         // Load all customers
-        List<Customer> allCustomers = customerRepository.findAll();
+        List<Customer> allCustomers = customerRepository.findAllByScid(SecurityUtils.getScid());
         if (categoryType != null && !categoryType.isEmpty()) {
             allCustomers = allCustomers.stream()
                     .filter(c -> c.getCustomerCategory() != null && categoryType.equals(c.getCustomerCategory().getCategoryType()))
@@ -46,7 +47,7 @@ public class CreditManagementService {
         List<InvoiceBill> allCreditBills = invoiceBillRepository.findByBillType("CREDIT");
 
         // Load all payments
-        List<Payment> allPayments = paymentRepository.findAll();
+        List<Payment> allPayments = paymentRepository.findAllByScid(SecurityUtils.getScid());
 
         // Group credit bills by customer
         Map<Long, List<InvoiceBill>> billsByCustomer = allCreditBills.stream()

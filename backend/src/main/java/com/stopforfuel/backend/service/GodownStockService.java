@@ -19,7 +19,7 @@ public class GodownStockService {
     }
 
     public GodownStock getById(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("GodownStock not found with id: " + id));
     }
 
@@ -48,6 +48,7 @@ public class GodownStockService {
     }
 
     public void delete(Long id) {
-        repository.deleteById(id);
+        GodownStock stock = getById(id); // validates scid ownership
+        repository.delete(stock);
     }
 }
