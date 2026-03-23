@@ -35,32 +35,32 @@ public interface StatementRepository extends JpaRepository<Statement, Long> {
     Page<Statement> findByCustomerIdAndStatus(Long customerId, String status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"customer"})
-    @Query("SELECT s FROM Statement s WHERE " +
+    @Query("SELECT s FROM Statement s LEFT JOIN s.customer.customerCategory cc WHERE " +
            "(:status IS NULL OR s.status = :status) AND " +
            "(:customerId IS NULL OR s.customer.id = :customerId) AND " +
-           "(:customerCategory IS NULL OR s.customer.customerCategory = :customerCategory) AND " +
+           "(:categoryType IS NULL OR cc.categoryType = :categoryType) AND " +
            "(CAST(:fromDate AS date) IS NULL OR s.fromDate >= :fromDate) AND " +
            "(CAST(:toDate AS date) IS NULL OR s.toDate <= :toDate)")
     Page<Statement> findWithFilters(
             @org.springframework.data.repository.query.Param("customerId") Long customerId,
             @org.springframework.data.repository.query.Param("status") String status,
-            @org.springframework.data.repository.query.Param("customerCategory") String customerCategory,
+            @org.springframework.data.repository.query.Param("categoryType") String categoryType,
             @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,
             @org.springframework.data.repository.query.Param("toDate") LocalDate toDate,
             Pageable pageable);
 
     @EntityGraph(attributePaths = {"customer"})
-    @Query("SELECT s FROM Statement s WHERE " +
+    @Query("SELECT s FROM Statement s LEFT JOIN s.customer.customerCategory cc WHERE " +
            "(:status IS NULL OR s.status = :status) AND " +
            "(:customerId IS NULL OR s.customer.id = :customerId) AND " +
-           "(:customerCategory IS NULL OR s.customer.customerCategory = :customerCategory) AND " +
+           "(:categoryType IS NULL OR cc.categoryType = :categoryType) AND " +
            "(CAST(:fromDate AS date) IS NULL OR s.fromDate >= :fromDate) AND " +
            "(CAST(:toDate AS date) IS NULL OR s.toDate <= :toDate) AND " +
            "(LOWER(s.customer.name) LIKE LOWER(CONCAT('%', :search, '%')) OR s.statementNo LIKE CONCAT('%', :search, '%'))")
     Page<Statement> findWithFiltersAndSearch(
             @org.springframework.data.repository.query.Param("customerId") Long customerId,
             @org.springframework.data.repository.query.Param("status") String status,
-            @org.springframework.data.repository.query.Param("customerCategory") String customerCategory,
+            @org.springframework.data.repository.query.Param("categoryType") String categoryType,
             @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,
             @org.springframework.data.repository.query.Param("toDate") LocalDate toDate,
             @org.springframework.data.repository.query.Param("search") String search,
