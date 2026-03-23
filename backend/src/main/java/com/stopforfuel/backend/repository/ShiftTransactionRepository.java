@@ -1,7 +1,6 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -10,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Repository
-public interface ShiftTransactionRepository extends JpaRepository<ShiftTransaction, Long> {
+public interface ShiftTransactionRepository extends ScidRepository<ShiftTransaction> {
     List<ShiftTransaction> findByShiftId(Long shiftId);
 
     @Query("SELECT COALESCE(SUM(st.receivedAmount), 0) FROM ShiftTransaction st WHERE st.shiftId = :shiftId AND TYPE(st) = com.stopforfuel.backend.entity.transaction.CashTransaction")

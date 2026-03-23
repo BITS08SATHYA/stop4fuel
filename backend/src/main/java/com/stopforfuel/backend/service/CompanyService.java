@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.repository.CompanyRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +16,7 @@ public class CompanyService {
     private CompanyRepository companyRepository;
 
     public List<Company> getAllCompanies() {
-        return companyRepository.findAll();
+        return companyRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<Company> getCompaniesByScid(Long scid) {
@@ -23,7 +24,7 @@ public class CompanyService {
     }
 
     public Optional<Company> getCompanyById(Long id) {
-        return companyRepository.findById(id);
+        return companyRepository.findByIdAndScid(id, SecurityUtils.getScid());
     }
 
     public Company saveCompany(Company company) {

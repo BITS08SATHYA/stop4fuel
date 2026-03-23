@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.repository.*;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +55,7 @@ public class LeaveService {
 
     @Transactional
     public List<LeaveBalance> initializeLeaveBalances(Long employeeId, Integer year) {
-        Employee employee = employeeRepository.findById(employeeId)
+        Employee employee = employeeRepository.findByIdAndScid(employeeId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         List<LeaveType> leaveTypes = leaveTypeRepository.findAll();
@@ -80,15 +81,16 @@ public class LeaveService {
     }
 
     public List<LeaveRequest> getLeaveRequestsByStatus(String status) {
+        Long scid = SecurityUtils.getScid();
         if (status == null || status.isEmpty()) {
-            return leaveRequestRepository.findAllByOrderByCreatedAtDesc();
+            return leaveRequestRepository.findAllByScidOrderByCreatedAtDesc(scid);
         }
-        return leaveRequestRepository.findByStatusOrderByCreatedAtDesc(status);
+        return leaveRequestRepository.findByScidAndStatusOrderByCreatedAtDesc(scid, status);
     }
 
     @Transactional
     public LeaveRequest createLeaveRequest(Long employeeId, LeaveRequest request) {
-        Employee employee = employeeRepository.findById(employeeId)
+        Employee employee = employeeRepository.findByIdAndScid(employeeId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         request.setEmployee(employee);
@@ -98,7 +100,7 @@ public class LeaveService {
 
     @Transactional
     public LeaveRequest approveLeaveRequest(Long requestId, String approvedBy, String remarks) {
-        LeaveRequest request = leaveRequestRepository.findById(requestId)
+        LeaveRequest request = leaveRequestRepository.findByIdAndScid(requestId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Leave request not found"));
 
         request.setStatus("APPROVED");
@@ -122,7 +124,7 @@ public class LeaveService {
 
     @Transactional
     public LeaveRequest rejectLeaveRequest(Long requestId, String remarks) {
-        LeaveRequest request = leaveRequestRepository.findById(requestId)
+        LeaveRequest request = leaveRequestRepository.findByIdAndScid(requestId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Leave request not found"));
 
         request.setStatus("REJECTED");

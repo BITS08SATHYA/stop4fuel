@@ -5,6 +5,8 @@ import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
@@ -44,11 +46,11 @@ public class StatementService {
     }
 
     public List<Statement> getAllStatements() {
-        return statementRepository.findAll();
+        return statementRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public Statement getStatementById(Long id) {
-        return statementRepository.findById(id)
+        return statementRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
     }
 
@@ -87,7 +89,7 @@ public class StatementService {
             // Validate all bills belong to this customer
             for (InvoiceBill bill : bills) {
                 if (!bill.getCustomer().getId().equals(customerId)) {
-                    throw new RuntimeException("Bill " + bill.getId() + " does not belong to customer " + customerId);
+                    throw new BusinessException("Bill " + bill.getId() + " does not belong to customer " + customerId);
                 }
             }
         } else {
@@ -111,7 +113,7 @@ public class StatementService {
         }
 
         if (bills.isEmpty()) {
-            throw new RuntimeException("No unlinked credit bills found for the selected filters");
+            throw new BusinessException("No unlinked credit bills found for the selected filters");
         }
 
         // Compute totals
@@ -191,7 +193,7 @@ public class StatementService {
                 .orElseThrow(() -> new RuntimeException("Invoice bill not found"));
 
         if (bill.getStatement() == null || !bill.getStatement().getId().equals(statementId)) {
-            throw new RuntimeException("Bill does not belong to this statement");
+            throw new BusinessException("Bill does not belong to this statement");
         }
 
         // Unlink the bill
@@ -270,7 +272,7 @@ public class StatementService {
         Statement statement = statementRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
         if (statement.getStatementPdfUrl() == null || statement.getStatementPdfUrl().isEmpty()) {
-            throw new RuntimeException("No PDF generated for this statement");
+            throw new ResourceNotFoundException("No PDF generated for this statement");
         }
         return s3StorageService.getPresignedUrl(statement.getStatementPdfUrl());
     }

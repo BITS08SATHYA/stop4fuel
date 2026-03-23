@@ -2,6 +2,8 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.entity.PurchaseInvoiceItem;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.PurchaseInvoiceRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +26,8 @@ public class PurchaseInvoiceService {
     }
 
     public PurchaseInvoice getById(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("PurchaseInvoice not found with id: " + id));
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("PurchaseInvoice not found with id: " + id));
     }
 
     public List<PurchaseInvoice> getByStatus(String status) {
@@ -55,7 +57,7 @@ public class PurchaseInvoiceService {
     public PurchaseInvoice update(Long id, PurchaseInvoice details) {
         PurchaseInvoice existing = getById(id);
         if (!"PENDING".equals(existing.getStatus())) {
-            throw new RuntimeException("Can only edit purchase invoices in PENDING status");
+            throw new BusinessException("Can only edit purchase invoices in PENDING status");
         }
         existing.setSupplier(details.getSupplier());
         existing.setPurchaseOrder(details.getPurchaseOrder());
@@ -79,7 +81,7 @@ public class PurchaseInvoiceService {
     public void delete(Long id) {
         PurchaseInvoice existing = getById(id);
         if (!"PENDING".equals(existing.getStatus())) {
-            throw new RuntimeException("Can only delete purchase invoices in PENDING status");
+            throw new BusinessException("Can only delete purchase invoices in PENDING status");
         }
         repository.delete(existing);
     }
@@ -110,7 +112,7 @@ public class PurchaseInvoiceService {
     public String getPdfPresignedUrl(Long id) {
         PurchaseInvoice invoice = getById(id);
         if (invoice.getPdfFilePath() == null || invoice.getPdfFilePath().isEmpty()) {
-            throw new RuntimeException("No PDF uploaded for this invoice");
+            throw new ResourceNotFoundException("No PDF uploaded for this invoice");
         }
         return s3StorageService.getPresignedUrl(invoice.getPdfFilePath());
     }

@@ -6,11 +6,13 @@ import com.stopforfuel.backend.entity.EmployeeAdvance;
 import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.SalaryHistory;
 import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.DesignationRepository;
 import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -48,7 +50,7 @@ public class EmployeeService {
     private RolesRepository rolesRepository;
 
     public List<Employee> getAllEmployees() {
-        return employeeRepository.findAll();
+        return employeeRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public Page<Employee> getEmployees(String search, String status, Pageable pageable) {
@@ -59,7 +61,7 @@ public class EmployeeService {
     }
 
     public Optional<Employee> getEmployeeById(Long id) {
-        return employeeRepository.findById(id);
+        return employeeRepository.findByIdAndScid(id, SecurityUtils.getScid());
     }
 
     public List<Employee> getActiveEmployees() {
@@ -105,8 +107,8 @@ public class EmployeeService {
     }
 
     public Employee updateEmployee(Long id, Employee details) {
-        Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
         // Business validations
         validateEmployeeBusinessRules(details);
@@ -170,8 +172,8 @@ public class EmployeeService {
     }
 
     public SalaryHistory addSalaryRevision(SalaryHistory history) {
-        Employee employee = employeeRepository.findById(history.getEmployee().getId())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository.findByIdAndScid(history.getEmployee().getId(), SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
         history.setOldSalary(employee.getSalary());
         employee.setSalary(history.getNewSalary());
@@ -196,7 +198,7 @@ public class EmployeeService {
 
     public EmployeeAdvance updateAdvanceStatus(Long advanceId, String status) {
         EmployeeAdvance advance = employeeAdvanceRepository.findById(advanceId)
-                .orElseThrow(() -> new RuntimeException("Advance not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Advance not found"));
         advance.setStatus(status);
         return employeeAdvanceRepository.save(advance);
     }
@@ -205,8 +207,8 @@ public class EmployeeService {
 
     public Employee uploadPhoto(Long id, MultipartFile file) throws IOException {
         validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp"}, 5 * 1024 * 1024);
-        Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         String ext = getExtension(file.getOriginalFilename());
         String key = "employees/" + id + "/photo." + ext;
         if (employee.getPhotoUrl() != null && !employee.getPhotoUrl().isEmpty()) {
@@ -219,8 +221,8 @@ public class EmployeeService {
 
     public Employee uploadAadharDoc(Long id, MultipartFile file) throws IOException {
         validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp", "application/pdf"}, 10 * 1024 * 1024);
-        Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         String ext = getExtension(file.getOriginalFilename());
         String key = "employees/" + id + "/aadhar-doc." + ext;
         if (employee.getAadharDocUrl() != null && !employee.getAadharDocUrl().isEmpty()) {
@@ -233,8 +235,8 @@ public class EmployeeService {
 
     public Employee uploadPanDoc(Long id, MultipartFile file) throws IOException {
         validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp", "application/pdf"}, 10 * 1024 * 1024);
-        Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         String ext = getExtension(file.getOriginalFilename());
         String key = "employees/" + id + "/pan-doc." + ext;
         if (employee.getPanDocUrl() != null && !employee.getPanDocUrl().isEmpty()) {
@@ -246,8 +248,8 @@ public class EmployeeService {
     }
 
     public String getFilePresignedUrl(Long id, String type) {
-        Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         String key;
         switch (type) {
             case "photo":
@@ -263,7 +265,7 @@ public class EmployeeService {
                 throw new IllegalArgumentException("Invalid file type: " + type);
         }
         if (key == null || key.isEmpty()) {
-            throw new RuntimeException("No file uploaded for type: " + type);
+            throw new ResourceNotFoundException("No file uploaded for type: " + type);
         }
         return s3StorageService.getPresignedUrl(key);
     }

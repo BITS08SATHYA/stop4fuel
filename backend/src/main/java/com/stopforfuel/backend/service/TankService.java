@@ -20,19 +20,19 @@ public class TankService {
     private ProductRepository productRepository;
 
     public List<Tank> getAllTanks() {
-        return tankRepository.findAll();
+        return tankRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<Tank> getActiveTanks() {
-        return tankRepository.findByActive(true);
+        return tankRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
     public List<Tank> getTanksByProduct(Long productId) {
-        return tankRepository.findByProductId(productId);
+        return tankRepository.findByProductIdAndScid(productId, SecurityUtils.getScid());
     }
 
     public Tank getTankById(Long id) {
-        return tankRepository.findById(id)
+        return tankRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Tank not found with id: " + id));
     }
 
@@ -74,6 +74,7 @@ public class TankService {
     }
 
     public void deleteTank(Long id) {
-        tankRepository.deleteById(id);
+        Tank tank = getTankById(id);
+        tankRepository.delete(tank);
     }
 }

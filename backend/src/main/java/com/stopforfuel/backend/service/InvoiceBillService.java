@@ -3,6 +3,8 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.entity.transaction.*;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +40,7 @@ public class InvoiceBillService {
     private final BillSequenceService billSequenceService;
 
     public List<InvoiceBill> getAllInvoices() {
-        return repository.findAll();
+        return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public List<InvoiceBill> getInvoicesByShift(Long shiftId) {
@@ -53,7 +55,7 @@ public class InvoiceBillService {
                     .orElseThrow(() -> new RuntimeException("Customer not found"));
 
             if (!customer.canRaiseInvoice()) {
-                throw new RuntimeException(
+                throw new BusinessException(
                         "Cannot create invoice: Customer '" + customer.getName() +
                         "' is " + customer.getStatus() +
                         (customer.isBlocked() ? " (credit limit exceeded)" : " (manually disabled)"));
@@ -66,7 +68,7 @@ public class InvoiceBillService {
                     .orElseThrow(() -> new RuntimeException("Vehicle not found"));
 
             if (!vehicle.canRaiseInvoice()) {
-                throw new RuntimeException(
+                throw new BusinessException(
                         "Cannot create invoice: Vehicle '" + vehicle.getVehicleNumber() +
                         "' is " + vehicle.getStatus() +
                         (vehicle.isBlocked() ? " (liter limit exceeded)" : " (manually disabled)"));
@@ -81,7 +83,7 @@ public class InvoiceBillService {
                     Product prod = productRepository.findById(ip.getProduct().getId())
                             .orElseThrow(() -> new RuntimeException("Product not found"));
                     if (!prod.isActive()) {
-                        throw new RuntimeException(
+                        throw new BusinessException(
                                 "Cannot create invoice: Product '" + prod.getName() + "' is disabled.");
                     }
 
@@ -95,18 +97,18 @@ public class InvoiceBillService {
                                 TankInventory tankInv = tankInventoryRepository
                                         .findTopByTankIdOrderByDateDescIdDesc(nozzle.getTank().getId());
                                 if (tankInv == null) {
-                                    throw new RuntimeException(
+                                    throw new BusinessException(
                                             "Cannot create invoice: No inventory record found for tank linked to product '"
                                             + prod.getName() + "'.");
                                 }
                                 double available = tankInv.getCloseStock() != null ? tankInv.getCloseStock() : 0.0;
                                 if (available <= 0) {
-                                    throw new RuntimeException(
+                                    throw new BusinessException(
                                             "Cannot create invoice: Tank stock for product '" + prod.getName()
                                             + "' is empty (0 liters available).");
                                 }
                                 if (available < requiredQty.doubleValue()) {
-                                    throw new RuntimeException(
+                                    throw new BusinessException(
                                             "Cannot create invoice: Insufficient tank stock for product '"
                                             + prod.getName() + "'. Available: " + String.format("%.2f", available)
                                             + ", Required: " + requiredQty + ".");
@@ -120,12 +122,12 @@ public class InvoiceBillService {
                         if (productInv != null) {
                             double available = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
                             if (available <= 0) {
-                                throw new RuntimeException(
+                                throw new BusinessException(
                                         "Cannot create invoice: Product '" + prod.getName()
                                         + "' is out of stock (0 available).");
                             }
                             if (available < requiredQty.doubleValue()) {
-                                throw new RuntimeException(
+                                throw new BusinessException(
                                         "Cannot create invoice: Insufficient stock for product '"
                                         + prod.getName() + "'. Available: " + String.format("%.2f", available)
                                         + ", Required: " + requiredQty + ".");
@@ -531,7 +533,8 @@ public class InvoiceBillService {
     }
 
     public InvoiceBill getInvoiceById(Long id) {
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+        return repository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
     }
 
     public void deleteInvoice(Long id) {
@@ -580,7 +583,7 @@ public class InvoiceBillService {
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
         String key = getFileKey(invoice, type);
         if (key == null || key.isEmpty()) {
-            throw new RuntimeException("No file uploaded for type: " + type);
+            throw new ResourceNotFoundException("No file uploaded for type: " + type);
         }
         return s3StorageService.getPresignedUrl(key);
     }

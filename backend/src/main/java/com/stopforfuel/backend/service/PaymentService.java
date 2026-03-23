@@ -2,7 +2,10 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.entity.transaction.*;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,12 +43,12 @@ public class PaymentService {
     }
 
     public List<Payment> getAllPayments() {
-        return paymentRepository.findAll();
+        return paymentRepository.findAllByScid(SecurityUtils.getScid());
     }
 
     public Payment getPaymentById(Long id) {
-        return paymentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + id));
+        return paymentRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
     }
 
     public List<Payment> getPaymentsByCustomer(Long customerId) {
@@ -72,18 +75,18 @@ public class PaymentService {
     @Transactional
     public Payment recordStatementPayment(Long statementId, Payment payment) {
         Statement statement = statementRepository.findById(statementId)
-                .orElseThrow(() -> new RuntimeException("Statement not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Statement not found"));
 
         if ("PAID".equals(statement.getStatus())) {
-            throw new RuntimeException("Statement " + statement.getStatementNo() + " is already fully paid");
+            throw new BusinessException("Statement " + statement.getStatementNo() + " is already fully paid");
         }
 
         if (payment.getAmount() == null || payment.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Payment amount must be greater than zero");
+            throw new BusinessException("Payment amount must be greater than zero");
         }
 
         if (payment.getAmount().compareTo(statement.getBalanceAmount()) > 0) {
-            throw new RuntimeException("Payment amount (" + payment.getAmount()
+            throw new BusinessException("Payment amount (" + payment.getAmount()
                     + ") exceeds statement balance (" + statement.getBalanceAmount() + ")");
         }
 
@@ -132,18 +135,18 @@ public class PaymentService {
     @Transactional
     public Payment recordBillPayment(Long invoiceBillId, Payment payment) {
         InvoiceBill bill = invoiceBillRepository.findById(invoiceBillId)
-                .orElseThrow(() -> new RuntimeException("Invoice bill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
 
         if (!"CREDIT".equals(bill.getBillType())) {
-            throw new RuntimeException("Cannot record payment against a non-credit bill");
+            throw new BusinessException("Cannot record payment against a non-credit bill");
         }
 
         if ("PAID".equals(bill.getPaymentStatus())) {
-            throw new RuntimeException("Bill is already fully paid");
+            throw new BusinessException("Bill is already fully paid");
         }
 
         if (payment.getAmount() == null || payment.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Payment amount must be greater than zero");
+            throw new BusinessException("Payment amount must be greater than zero");
         }
 
         // Calculate current balance for this bill
@@ -151,7 +154,7 @@ public class PaymentService {
         BigDecimal billBalance = bill.getNetAmount().subtract(totalReceived);
 
         if (payment.getAmount().compareTo(billBalance) > 0) {
-            throw new RuntimeException("Payment amount (" + payment.getAmount()
+            throw new BusinessException("Payment amount (" + payment.getAmount()
                     + ") exceeds bill balance (" + billBalance + ")");
         }
 
@@ -185,7 +188,7 @@ public class PaymentService {
      */
     public StatementPaymentSummary getStatementPaymentSummary(Long statementId) {
         Statement statement = statementRepository.findById(statementId)
-                .orElseThrow(() -> new RuntimeException("Statement not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Statement not found"));
 
         List<Payment> payments = paymentRepository.findByStatementId(statementId);
 
@@ -202,7 +205,7 @@ public class PaymentService {
      */
     public BillPaymentSummary getBillPaymentSummary(Long invoiceBillId) {
         InvoiceBill bill = invoiceBillRepository.findById(invoiceBillId)
-                .orElseThrow(() -> new RuntimeException("Invoice bill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
 
         List<Payment> payments = paymentRepository.findByInvoiceBillId(invoiceBillId);
         BigDecimal totalReceived = paymentRepository.sumPaymentsByInvoiceBillId(invoiceBillId);
@@ -289,7 +292,7 @@ public class PaymentService {
     private void resolvePaymentMode(Payment payment) {
         if (payment.getPaymentMode() != null && payment.getPaymentMode().getId() != null) {
             PaymentMode mode = paymentModeRepository.findById(payment.getPaymentMode().getId())
-                    .orElseThrow(() -> new RuntimeException("Payment mode not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Payment mode not found"));
             payment.setPaymentMode(mode);
         }
     }

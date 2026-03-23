@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.exception.ReportGenerationException;
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import org.springframework.beans.factory.annotation.Value;
@@ -116,7 +117,7 @@ public class JasperReportService {
 
             return JasperExportManager.exportReportToPdf(print);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate Customer Vehicle Report", e);
+            throw new ReportGenerationException("Failed to generate Customer Vehicle Report", e);
         }
     }
 
@@ -126,7 +127,7 @@ public class JasperReportService {
                 InputStream is = new ClassPathResource(path).getInputStream();
                 return JasperCompileManager.compileReport(is);
             } catch (Exception e) {
-                throw new RuntimeException("Failed to compile report: " + path, e);
+                throw new ReportGenerationException("Failed to compile report: " + path, e);
             }
         });
     }

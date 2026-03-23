@@ -2,7 +2,9 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.DuplicateResourceException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +63,7 @@ public class VehicleService {
     @Transactional
     public Vehicle updateVehicle(Long id, Vehicle vehicleDetails) {
         Vehicle vehicle = vehicleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
 
         // Check for duplicate vehicle number (exclude current vehicle)
         Optional<Vehicle> existing = vehicleRepository.findByVehicleNumber(vehicleDetails.getVehicleNumber());
@@ -90,7 +92,7 @@ public class VehicleService {
     @Transactional
     public Vehicle toggleStatus(Long id) {
         Vehicle vehicle = vehicleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
 
         String current = vehicle.getStatus();
         if (current == null || "ACTIVE".equals(current)) {
@@ -113,7 +115,7 @@ public class VehicleService {
 
         Long customerId = vehicle.getCustomer().getId();
         Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Customer not found with id: " + customerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
 
         if (customer.getCreditLimitLiters() == null) {
             return; // No limit set at customer level, skip validation
@@ -129,7 +131,7 @@ public class VehicleService {
 
         if (newTotal.compareTo(customer.getCreditLimitLiters()) > 0) {
             BigDecimal remaining = customer.getCreditLimitLiters().subtract(existingSum);
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Vehicle liter limit exceeds customer's credit limit. " +
                     "Customer limit: " + customer.getCreditLimitLiters() + " L, " +
                     "Already allocated: " + existingSum + " L, " +

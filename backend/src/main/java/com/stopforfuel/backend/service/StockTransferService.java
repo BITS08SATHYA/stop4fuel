@@ -5,6 +5,8 @@ import com.stopforfuel.backend.entity.GodownStock;
 import com.stopforfuel.backend.entity.ProductInventory;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.StockTransfer;
+import com.stopforfuel.backend.exception.BusinessException;
+import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CashierStockRepository;
 import com.stopforfuel.backend.repository.GodownStockRepository;
 import com.stopforfuel.backend.repository.ProductInventoryRepository;
@@ -60,9 +62,9 @@ public class StockTransferService {
         if ("GODOWN".equals(transfer.getFromLocation())) {
             // Godown -> Cashier
             GodownStock godown = godownStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
-                    .orElseThrow(() -> new RuntimeException("No godown stock found for product: " + productId));
+                    .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + productId));
             if (godown.getCurrentStock() < qty) {
-                throw new RuntimeException("Insufficient godown stock. Available: " + godown.getCurrentStock() + ", Requested: " + qty);
+                throw new BusinessException("Insufficient godown stock. Available: " + godown.getCurrentStock() + ", Requested: " + qty);
             }
             godown.setCurrentStock(godown.getCurrentStock() - qty);
             godownStockRepository.save(godown);
@@ -86,9 +88,9 @@ public class StockTransferService {
         } else {
             // Cashier -> Godown
             CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
-                    .orElseThrow(() -> new RuntimeException("No cashier stock found for product: " + productId));
+                    .orElseThrow(() -> new ResourceNotFoundException("No cashier stock found for product: " + productId));
             if (cashier.getCurrentStock() < qty) {
-                throw new RuntimeException("Insufficient cashier stock. Available: " + cashier.getCurrentStock() + ", Requested: " + qty);
+                throw new BusinessException("Insufficient cashier stock. Available: " + cashier.getCurrentStock() + ", Requested: " + qty);
             }
             cashier.setCurrentStock(cashier.getCurrentStock() - qty);
             cashierStockRepository.save(cashier);
