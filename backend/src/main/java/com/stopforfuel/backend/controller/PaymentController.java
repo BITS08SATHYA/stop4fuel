@@ -27,8 +27,8 @@ public class PaymentController {
     public Page<Payment> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String customerCategory) {
-        return paymentService.getPayments(customerCategory, PageRequest.of(page, size));
+            @RequestParam(required = false) String categoryType) {
+        return paymentService.getPayments(categoryType, PageRequest.of(page, size));
     }
 
     @GetMapping("/{id}")

@@ -46,7 +46,7 @@ export default function InvoiceHistoryPage() {
     const [filters, setFilters] = useState({
         billType: "",
         paymentStatus: "",
-        customerCategory: "",
+        categoryType: "",
         fromDate: firstDayOfMonth.toISOString().slice(0, 16),
         toDate: now.toISOString().slice(0, 16),
         search: "",
@@ -93,7 +93,7 @@ export default function InvoiceHistoryPage() {
         const params: any = {};
         if (f.billType) params.billType = f.billType;
         if (f.paymentStatus) params.paymentStatus = f.paymentStatus;
-        if (f.customerCategory) params.customerCategory = f.customerCategory;
+        if (f.categoryType) params.categoryType = f.categoryType;
         if (f.fromDate) params.fromDate = f.fromDate + ":00";
         if (f.toDate) params.toDate = f.toDate + ":00";
         if (f.search) params.search = f.search;
@@ -146,7 +146,7 @@ export default function InvoiceHistoryPage() {
         const defaultFilters = {
             billType: "",
             paymentStatus: "",
-            customerCategory: "",
+            categoryType: "",
             fromDate: firstDay2.toISOString().slice(0, 16),
             toDate: now2.toISOString().slice(0, 16),
             search: "",
@@ -353,8 +353,8 @@ export default function InvoiceHistoryPage() {
                     <div className="min-w-[150px]">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Category</label>
                         <select
-                            value={filters.customerCategory}
-                            onChange={e => setFilters(f => ({ ...f, customerCategory: e.target.value }))}
+                            value={filters.categoryType}
+                            onChange={e => setFilters(f => ({ ...f, categoryType: e.target.value }))}
                             className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
                         >
                             <option value="">All</option>

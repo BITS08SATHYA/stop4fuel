@@ -47,7 +47,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
             if (searchQuery) queryParams.set("search", searchQuery);
             if (selectedGroupId) queryParams.set("groupId", selectedGroupId);
             if (statusFilter) queryParams.set("status", statusFilter);
-            if (categoryFilter) queryParams.set("customerCategory", categoryFilter);
+            if (categoryFilter) queryParams.set("categoryType", categoryFilter);
             const res = await fetch(`${API_BASE_URL}/customers?${queryParams}`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
@@ -242,7 +242,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                                     <td className="p-4 text-sm">
                                         {customer.customerCategory ? (
                                             <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
-                                                {customer.customerCategory.replace(/_/g, ' ')}
+                                                {customer.customerCategory.categoryName}
                                             </span>
                                         ) : (
                                             <span className="text-muted-foreground">-</span>

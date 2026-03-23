@@ -1,12 +1,141 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Search, Edit2, Trash2, Truck } from "lucide-react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Plus, Search, Edit2, Trash2, Truck, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { VehicleStep } from "@/components/steps/vehicle-step";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+
+function CustomerAutocomplete({
+    customers,
+    value,
+    onChange,
+    placeholder = "Search customer...",
+    className = "",
+}: {
+    customers: any[];
+    value: string;
+    onChange: (id: string, name?: string) => void;
+    placeholder?: string;
+    className?: string;
+}) {
+    const [query, setQuery] = useState("");
+    const [isOpen, setIsOpen] = useState(false);
+    const [highlightIndex, setHighlightIndex] = useState(-1);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLUListElement>(null);
+
+    const selectedCustomer = customers.find((c) => String(c.id) === String(value));
+
+    const filtered = useMemo(() => {
+        if (!query) return customers;
+        const q = query.toLowerCase();
+        return customers.filter((c) => c.name?.toLowerCase().includes(q));
+    }, [customers, query]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        setHighlightIndex(-1);
+    }, [query]);
+
+    const handleSelect = (customer: any) => {
+        onChange(String(customer.id), customer.name);
+        setQuery("");
+        setIsOpen(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (!isOpen) return;
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setHighlightIndex((prev) => Math.min(prev + 1, filtered.length - 1));
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setHighlightIndex((prev) => Math.max(prev - 1, 0));
+        } else if (e.key === "Enter" && highlightIndex >= 0) {
+            e.preventDefault();
+            handleSelect(filtered[highlightIndex]);
+        } else if (e.key === "Escape") {
+            setIsOpen(false);
+        }
+    };
+
+    useEffect(() => {
+        if (highlightIndex >= 0 && listRef.current) {
+            const item = listRef.current.children[highlightIndex] as HTMLElement;
+            item?.scrollIntoView({ block: "nearest" });
+        }
+    }, [highlightIndex]);
+
+    return (
+        <div ref={wrapperRef} className={`relative ${className}`}>
+            {selectedCustomer && !isOpen ? (
+                <div className="flex items-center gap-2 w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground">
+                    <span className="flex-1 truncate">{selectedCustomer.name}</span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onChange("", "");
+                            setQuery("");
+                            setIsOpen(true);
+                        }}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            ) : (
+                <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => {
+                        setQuery(e.target.value);
+                        setIsOpen(true);
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={placeholder}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                />
+            )}
+            {isOpen && (
+                <ul
+                    ref={listRef}
+                    className="absolute z-50 mt-1 w-full max-h-60 overflow-auto bg-card border border-border rounded-lg shadow-xl"
+                >
+                    {filtered.length === 0 ? (
+                        <li className="px-4 py-3 text-sm text-muted-foreground">No customers found</li>
+                    ) : (
+                        filtered.map((c, i) => (
+                            <li
+                                key={c.id}
+                                onClick={() => handleSelect(c)}
+                                className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
+                                    i === highlightIndex
+                                        ? "bg-primary/20 text-foreground"
+                                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                }`}
+                            >
+                                {c.name}
+                            </li>
+                        ))
+                    )}
+                </ul>
+            )}
+        </div>
+    );
+}
 
 export default function VehiclesPage() {
     const [vehicles, setVehicles] = useState<any[]>([]);
@@ -14,6 +143,7 @@ export default function VehiclesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState<any>({});
     const [loading, setLoading] = useState(false);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [customerFilter, setCustomerFilter] = useState<string>("");
@@ -56,7 +186,7 @@ export default function VehiclesPage() {
 
     const fetchCustomers = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/customers`);
+            const res = await fetch(`${API_BASE_URL}/customers?size=1000`);
             if (res.ok) {
                 const data = await res.json();
                 setCustomers(Array.isArray(data) ? data : data.content || []);
@@ -92,16 +222,49 @@ export default function VehiclesPage() {
         }
     };
 
+    const validateForm = (): Record<string, string> => {
+        const errors: Record<string, string> = {};
+
+        if (!formData.customerId) {
+            errors.customer = "Please select a customer";
+        }
+
+        const vehicleNumber = (formData.vehicleNumber || "").trim();
+        if (!vehicleNumber) {
+            errors.vehicleNumber = "Vehicle number is required";
+        } else if (vehicleNumber.length > 20) {
+            errors.vehicleNumber = "Vehicle number must not exceed 20 characters";
+        }
+
+        if (!formData.vehicleType) {
+            errors.vehicleType = "Please select a vehicle type";
+        }
+
+        if (!formData.fuelType) {
+            errors.fuelType = "Please select a fuel type";
+        }
+
+        if (formData.maxCapacity !== undefined && formData.maxCapacity !== "" && Number(formData.maxCapacity) < 0) {
+            errors.maxCapacity = "Max capacity must be zero or positive";
+        }
+
+        return errors;
+    };
+
     const handleSave = async () => {
+        const errors = validateForm();
+        setFormErrors(errors);
+        if (Object.keys(errors).length > 0) return;
+
         setLoading(true);
         try {
-            const url = formData.id 
+            const url = formData.id
                 ? `${API_BASE_URL}/vehicles/${formData.id}`
                 : `${API_BASE_URL}/vehicles`;
             const method = formData.id ? "PUT" : "POST";
 
             const payload: any = {
-                vehicleNumber: formData.vehicleNumber,
+                vehicleNumber: formData.vehicleNumber.trim(),
                 maxCapacity: formData.maxCapacity,
                 customer: { id: formData.customerId },
             };
@@ -122,7 +285,17 @@ export default function VehiclesPage() {
             if (res.ok) {
                 setIsModalOpen(false);
                 setFormData({});
+                setFormErrors({});
                 fetchVehicles();
+            } else {
+                const errorData = await res.json().catch(() => null);
+                if (errorData?.error) {
+                    if (errorData.error.toLowerCase().includes("already exists")) {
+                        setFormErrors({ vehicleNumber: "This vehicle number already exists" });
+                    } else {
+                        setFormErrors({ _general: errorData.error });
+                    }
+                }
             }
         } catch (error) {
             console.error("Failed to save vehicle", error);
@@ -146,6 +319,7 @@ export default function VehiclesPage() {
                     <button
                         onClick={() => {
                             setFormData({});
+                            setFormErrors({});
                             setIsModalOpen(true);
                         }}
                         className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -177,16 +351,13 @@ export default function VehiclesPage() {
                         <option value="BLOCKED">Blocked</option>
                         <option value="INACTIVE">Inactive</option>
                     </select>
-                    <select
+                    <CustomerAutocomplete
+                        customers={customers}
                         value={customerFilter}
-                        onChange={(e) => setCustomerFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 max-w-[200px]"
-                    >
-                        <option value="">All Customers</option>
-                        {customers.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                    </select>
+                        onChange={(id) => setCustomerFilter(id)}
+                        placeholder="Filter by customer..."
+                        className="w-[220px]"
+                    />
                 </div>
 
                 <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
@@ -268,38 +439,46 @@ export default function VehiclesPage() {
                 onClose={() => {
                     setIsModalOpen(false);
                     setFormData({});
+                    setFormErrors({});
                 }}
                 title={formData.id ? "Edit Vehicle" : "Add New Vehicle"}
             >
                 <div className="p-6">
+                    {formErrors._general && (
+                        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                            {formErrors._general}
+                        </div>
+                    )}
                     <div className="mb-6">
                         <label className="block text-sm font-medium text-muted-foreground mb-2">
-                            Select Customer
+                            Select Customer <span className="text-red-400">*</span>
                         </label>
-                        <select
+                        <CustomerAutocomplete
+                            customers={customers}
                             value={formData.customerId || ""}
-                            onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                        >
-                            <option value="" className="bg-slate-900">Select Customer</option>
-                            {customers.map(customer => (
-                                <option key={customer.id} value={customer.id} className="bg-slate-900">{customer.name}</option>
-                            ))}
-                        </select>
+                            onChange={(id) => {
+                                setFormData({ ...formData, customerId: id });
+                                if (id) setFormErrors((prev) => { const { customer, ...rest } = prev; return rest; });
+                            }}
+                            placeholder="Type to search customer..."
+                        />
+                        {formErrors.customer && (
+                            <p className="text-[11px] text-red-400 mt-1">{formErrors.customer}</p>
+                        )}
                     </div>
-                    
-                    <VehicleStep data={formData} updateData={setFormData} />
-                    
+
+                    <VehicleStep data={formData} updateData={(d) => { setFormData(d); setFormErrors({}); }} errors={formErrors} />
+
                     <div className="flex justify-end gap-3 mt-8">
                         <button
-                            onClick={() => setIsModalOpen(false)}
+                            onClick={() => { setIsModalOpen(false); setFormErrors({}); }}
                             className="px-6 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={loading || !formData.vehicleNumber || !formData.customerId}
+                            disabled={loading}
                             className="btn-gradient px-8 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg disabled:opacity-50"
                         >
                             {loading ? "Saving..." : "Save Vehicle"}

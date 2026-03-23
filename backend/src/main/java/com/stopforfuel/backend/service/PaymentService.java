@@ -27,10 +27,10 @@ public class PaymentService {
     private final ShiftTransactionService shiftTransactionService;
     private final S3StorageService s3StorageService;
 
-    public Page<Payment> getPayments(String customerCategory, Pageable pageable) {
-        String cc = (customerCategory != null && !customerCategory.isEmpty()) ? customerCategory : null;
-        if (cc != null) {
-            return paymentRepository.findWithCategoryFilter(cc, pageable);
+    public Page<Payment> getPayments(String categoryType, Pageable pageable) {
+        String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
+        if (ct != null) {
+            return paymentRepository.findWithCategoryFilter(ct, pageable);
         }
         return paymentRepository.findAll(pageable);
     }

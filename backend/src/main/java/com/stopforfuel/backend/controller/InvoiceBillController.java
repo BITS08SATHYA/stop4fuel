@@ -47,8 +47,8 @@ public class InvoiceBillController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String customerCategory) {
-        return service.getInvoiceHistory(billType, paymentStatus, customerCategory, fromDate, toDate, search, PageRequest.of(page, size));
+            @RequestParam(required = false) String categoryType) {
+        return service.getInvoiceHistory(billType, paymentStatus, categoryType, fromDate, toDate, search, PageRequest.of(page, size));
     }
 
     @GetMapping("/history/product-summary")
@@ -58,8 +58,8 @@ public class InvoiceBillController {
             @RequestParam(required = false) String paymentStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
-            @RequestParam(required = false) String customerCategory) {
-        return service.getProductSalesSummary(billType, paymentStatus, customerCategory, fromDate, toDate);
+            @RequestParam(required = false) String categoryType) {
+        return service.getProductSalesSummary(billType, paymentStatus, categoryType, fromDate, toDate);
     }
 
     @GetMapping("/{id}")

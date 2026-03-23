@@ -11,7 +11,7 @@ trap cleanup SIGINT SIGTERM
 
 echo "Starting Spring Boot Backend on port 8080..."
 cd backend
-SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun &
+AUTH_ENABLED=false SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun &
 BACKEND_PID=$!
 cd ..
 

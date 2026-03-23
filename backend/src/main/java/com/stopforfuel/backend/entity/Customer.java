@@ -39,9 +39,11 @@ public class Customer extends User {
     @Column(name = "gst_number", length = 15)
     private String gstNumber;
 
-    /** Customer category: GOVERNMENT, NON_GOVERNMENT */
-    @Column(name = "customer_category", length = 30)
-    private String customerCategory;
+    /** Customer category (dynamic master data with GOVERNMENT/NON_GOVERNMENT type) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_category_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "customers"})
+    private CustomerCategory customerCategory;
 
     /** GPS coordinates for customer location */
     @Column(name = "latitude", precision = 10, scale = 7)
