@@ -15,6 +15,7 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
     const [categories, setCategories] = React.useState<any[]>([]);
     const [showPassword, setShowPassword] = React.useState(false);
     const [ceilingType, setCeilingType] = React.useState<"amount" | "liters">("amount");
+    const [customerType, setCustomerType] = React.useState<string>(data.customerCategory?.categoryType || "");
 
     React.useEffect(() => {
         const fetchOptions = async () => {
@@ -201,34 +202,50 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
             <div className="grid grid-cols-3 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                        Category <span className="text-red-500">*</span>
+                        Customer Type <span className="text-red-500">*</span>
                     </label>
                     <select
-                        value={data.customerCategory?.id || ""}
+                        value={customerType}
                         onChange={(e) => {
-                            const selected = categories.find(c => c.id === Number(e.target.value));
-                            handleChange("customerCategory", selected || null);
+                            const type = e.target.value;
+                            setCustomerType(type);
+                            // Clear category when type changes
+                            handleChange("customerCategory", null);
+                            // If Government, auto-select the first government category (if any)
+                            if (type === "GOVERNMENT") {
+                                const govCat = categories.find(c => c.categoryType === "GOVERNMENT");
+                                if (govCat) handleChange("customerCategory", govCat);
+                            }
                         }}
                         className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.customerCategory)}`}
                     >
-                        <option value="" className="bg-slate-900">Select Category</option>
-                        {categories.filter(c => c.categoryType === 'GOVERNMENT').length > 0 && (
-                            <optgroup label="Government">
-                                {categories.filter(c => c.categoryType === 'GOVERNMENT').map(c => (
-                                    <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
-                                ))}
-                            </optgroup>
-                        )}
-                        {categories.filter(c => c.categoryType === 'NON_GOVERNMENT').length > 0 && (
-                            <optgroup label="Non-Government">
-                                {categories.filter(c => c.categoryType === 'NON_GOVERNMENT').map(c => (
-                                    <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
-                                ))}
-                            </optgroup>
-                        )}
+                        <option value="" className="bg-slate-900">Select Type</option>
+                        <option value="GOVERNMENT" className="bg-slate-900">Government</option>
+                        <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
                     </select>
-                    <FieldError error={errors.customerCategory} />
+                    {!customerType && <FieldError error={errors.customerCategory} />}
                 </div>
+                {customerType === "NON_GOVERNMENT" && (
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">
+                            Category <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                            value={data.customerCategory?.id || ""}
+                            onChange={(e) => {
+                                const selected = categories.find(c => c.id === Number(e.target.value));
+                                handleChange("customerCategory", selected || null);
+                            }}
+                            className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.customerCategory)}`}
+                        >
+                            <option value="" className="bg-slate-900">Select Category</option>
+                            {categories.filter(c => c.categoryType === "NON_GOVERNMENT").map(c => (
+                                <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
+                            ))}
+                        </select>
+                        <FieldError error={errors.customerCategory} />
+                    </div>
+                )}
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
                         Party Type <span className="text-red-500">*</span>
