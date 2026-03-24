@@ -42,6 +42,7 @@ export default function CustomerProfilePage() {
     const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
+    const [editCustomerType, setEditCustomerType] = useState<string>("");
 
     // Incentives
     const [customerIncentives, setCustomerIncentives] = useState<Incentive[]>([]);
@@ -275,7 +276,14 @@ export default function CustomerProfilePage() {
                         {customerStatus === "BLOCKED" && <><ShieldAlert className="w-4 h-4" /> Unblock</>}
                     </button>
                     <button
-                        onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                        onClick={() => {
+                            if (isEditing) {
+                                handleSave();
+                            } else {
+                                setEditCustomerType(customer?.customerCategory?.categoryType || "");
+                                setIsEditing(true);
+                            }
+                        }}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${isEditing
                             ? "bg-cyan-500 text-white hover:bg-cyan-600"
                             : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -450,36 +458,54 @@ export default function CustomerProfilePage() {
                                 )}
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Category</span>
+                                <span className="text-sm text-muted-foreground">Customer Type</span>
                                 {isEditing ? (
                                     <select
-                                        value={customer.customerCategory?.id || ""}
+                                        value={editCustomerType}
                                         onChange={(e) => {
-                                            const selected = categories.find((c: any) => c.id === Number(e.target.value));
-                                            setCustomer({ ...customer, customerCategory: selected || null });
+                                            const type = e.target.value;
+                                            setEditCustomerType(type);
+                                            setCustomer({ ...customer, customerCategory: null });
+                                            if (type === "GOVERNMENT") {
+                                                const govCat = categories.find((c: any) => c.categoryType === "GOVERNMENT");
+                                                if (govCat) setCustomer({ ...customer, customerCategory: govCat });
+                                            }
                                         }}
                                         className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
                                     >
-                                        <option value="">None</option>
-                                        {categories.filter((c: any) => c.categoryType === 'GOVERNMENT').length > 0 && (
-                                            <optgroup label="Government">
-                                                {categories.filter((c: any) => c.categoryType === 'GOVERNMENT').map((c: any) => (
-                                                    <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
-                                                ))}
-                                            </optgroup>
-                                        )}
-                                        {categories.filter((c: any) => c.categoryType === 'NON_GOVERNMENT').length > 0 && (
-                                            <optgroup label="Non-Government">
-                                                {categories.filter((c: any) => c.categoryType === 'NON_GOVERNMENT').map((c: any) => (
-                                                    <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
-                                                ))}
-                                            </optgroup>
-                                        )}
+                                        <option value="">Select Type</option>
+                                        <option value="GOVERNMENT" className="bg-slate-900">Government</option>
+                                        <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
                                     </select>
                                 ) : (
-                                    <span className="text-sm font-medium text-foreground">{customer.customerCategory?.categoryName || "Not set"}</span>
+                                    <span className="text-sm font-medium text-foreground">
+                                        {customer.customerCategory?.categoryType === "GOVERNMENT" ? "Government" :
+                                         customer.customerCategory?.categoryType === "NON_GOVERNMENT" ? "Non-Government" : "Not set"}
+                                    </span>
                                 )}
                             </div>
+                            {(isEditing ? editCustomerType === "NON_GOVERNMENT" : customer.customerCategory?.categoryType === "NON_GOVERNMENT") && (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">Category</span>
+                                    {isEditing ? (
+                                        <select
+                                            value={customer.customerCategory?.id || ""}
+                                            onChange={(e) => {
+                                                const selected = categories.find((c: any) => c.id === Number(e.target.value));
+                                                setCustomer({ ...customer, customerCategory: selected || null });
+                                            }}
+                                            className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        >
+                                            <option value="">Select Category</option>
+                                            {categories.filter((c: any) => c.categoryType === "NON_GOVERNMENT").map((c: any) => (
+                                                <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <span className="text-sm font-medium text-foreground">{customer.customerCategory?.categoryName || "Not set"}</span>
+                                    )}
+                                </div>
+                            )}
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">GST Number</span>
                                 {isEditing ? (
@@ -575,7 +601,7 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Blocked Vehicles</span>
                                 <span className="text-sm font-bold text-destructive">
-                                    {vehicles.filter((v: any) => v.status === "BLOCKED").length}
+                                    {vehicles.filter((v: any) => v.status !== "ACTIVE" && v.status != null).length}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
