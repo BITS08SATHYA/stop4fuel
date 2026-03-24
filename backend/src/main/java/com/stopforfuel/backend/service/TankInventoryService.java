@@ -18,15 +18,15 @@ public class TankInventoryService {
     private final ShiftService shiftService;
 
     public List<TankInventory> getAll() {
-        return repository.findAllByScid(SecurityUtils.getScid());
+        return repository.findAllByScidWithTank(SecurityUtils.getScid());
     }
 
     public List<TankInventory> getByDate(LocalDate date) {
-        return repository.findByDate(date);
+        return repository.findByDateWithTank(date);
     }
 
     public List<TankInventory> getByTankId(Long tankId) {
-        return repository.findByTankId(tankId);
+        return repository.findByTankIdWithTank(tankId);
     }
 
     public TankInventory getById(Long id) {
