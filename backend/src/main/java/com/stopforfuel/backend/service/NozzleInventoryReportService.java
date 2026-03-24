@@ -25,7 +25,8 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class NozzleInventoryReportService {
@@ -42,9 +43,34 @@ public class NozzleInventoryReportService {
     @Value("${app.company.phone:044-2234 5678}")
     private String companyPhone;
 
+    // ======================== Aggregation helper ========================
+
+    private record DailySummary(LocalDate date, String product, String nozzles, double totalSales) {}
+
+    private List<DailySummary> aggregateByDate(List<NozzleInventory> data) {
+        Map<LocalDate, List<NozzleInventory>> grouped = data.stream()
+                .collect(Collectors.groupingBy(NozzleInventory::getDate, TreeMap::new, Collectors.toList()));
+
+        List<DailySummary> summaries = new ArrayList<>();
+        for (var entry : grouped.entrySet()) {
+            List<NozzleInventory> dayItems = entry.getValue();
+            String product = dayItems.get(0).getNozzle().getTank().getProduct().getName();
+            String nozzleNames = dayItems.stream()
+                    .map(inv -> inv.getNozzle().getNozzleName())
+                    .distinct()
+                    .sorted()
+                    .collect(Collectors.joining(", "));
+            double totalSales = dayItems.stream()
+                    .mapToDouble(inv -> inv.getSales() != null ? inv.getSales() : 0)
+                    .sum();
+            summaries.add(new DailySummary(entry.getKey(), product, nozzleNames, totalSales));
+        }
+        return summaries;
+    }
+
     // ======================== PDF (OpenPDF) ========================
 
-    public byte[] generatePdf(List<NozzleInventory> data, LocalDate fromDate, LocalDate toDate, String filterLabel) {
+    public byte[] generatePdf(List<NozzleInventory> data, LocalDate fromDate, LocalDate toDate, String filterLabel, boolean aggregated) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             Document doc = new Document(PageSize.A4.rotate(), 20, 20, 20, 20);
@@ -77,7 +103,7 @@ public class NozzleInventoryReportService {
             doc.add(title);
 
             String displayLabel = filterLabel.replace("_", " ");
-            Paragraph meta = new Paragraph("Filter: " + displayLabel + "  |  Period: " + fromDate.format(DATE_FMT) + " to " + toDate.format(DATE_FMT), subFont);
+            Paragraph meta = new Paragraph((aggregated ? "Product: " : "Filter: ") + displayLabel + "  |  Period: " + fromDate.format(DATE_FMT) + " to " + toDate.format(DATE_FMT), subFont);
             meta.setAlignment(Element.ALIGN_LEFT);
             doc.add(meta);
 
@@ -88,68 +114,16 @@ public class NozzleInventoryReportService {
 
             doc.add(Chunk.NEWLINE);
 
-            // Table
-            float[] widths = {4f, 8f, 10f, 8f, 10f, 12f, 12f, 12f};
-            PdfPTable table = new PdfPTable(widths);
-            table.setWidthPercentage(100);
-
-            String[] headers = {"#", "DATE", "NOZZLE", "PUMP", "PRODUCT", "OPEN READING", "CLOSE READING", "TOTAL SALES (L)"};
-            Color headerBg = new Color(245, 245, 245);
-            Color salesHeaderBg = new Color(255, 243, 224);
-
-            for (int i = 0; i < headers.length; i++) {
-                PdfPCell cell = new PdfPCell(new Phrase(headers[i], headerFont));
-                cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-                cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                cell.setPadding(5);
-                cell.setBackgroundColor(i == headers.length - 1 ? salesHeaderBg : headerBg);
-                cell.setBorderColor(new Color(204, 204, 204));
-                table.addCell(cell);
+            if (aggregated) {
+                buildAggregatedPdfTable(doc, data, headerFont, cellFont, boldCellFont, salesFont, summaryFont);
+            } else {
+                buildDetailedPdfTable(doc, data, headerFont, cellFont, boldCellFont, salesFont, summaryFont);
             }
-
-            int rowNum = 0;
-            double totalSales = 0;
-            for (NozzleInventory inv : data) {
-                rowNum++;
-                Color rowBg = (rowNum % 2 == 0) ? new Color(250, 250, 250) : Color.WHITE;
-                Color borderColor = new Color(238, 238, 238);
-
-                addCell(table, String.valueOf(rowNum), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
-                addCell(table, inv.getDate().format(DATE_FMT), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
-                addCell(table, inv.getNozzle().getNozzleName(), boldCellFont, Element.ALIGN_CENTER, rowBg, borderColor);
-                addCell(table, inv.getNozzle().getPump().getName(), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
-                String productName = inv.getNozzle().getTank() != null && inv.getNozzle().getTank().getProduct() != null
-                        ? inv.getNozzle().getTank().getProduct().getName() : "-";
-                addCell(table, productName, cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
-                addCell(table, formatNum(inv.getOpenMeterReading()), cellFont, Element.ALIGN_RIGHT, rowBg, borderColor);
-                addCell(table, formatNum(inv.getCloseMeterReading()), cellFont, Element.ALIGN_RIGHT, rowBg, borderColor);
-
-                double sale = inv.getSales() != null ? inv.getSales() : 0;
-                addCell(table, formatNum(sale), salesFont, Element.ALIGN_RIGHT, new Color(255, 248, 225), borderColor);
-                totalSales += sale;
-            }
-
-            // Summary row
-            PdfPCell totalLabel = new PdfPCell(new Phrase("TOTALS", summaryFont));
-            totalLabel.setColspan(7);
-            totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            totalLabel.setPadding(5);
-            totalLabel.setBackgroundColor(new Color(232, 232, 232));
-            totalLabel.setBorderColor(new Color(204, 204, 204));
-            table.addCell(totalLabel);
-
-            PdfPCell salesTotal = new PdfPCell(new Phrase(NUM_FMT.format(totalSales), new Font(Font.HELVETICA, 9, Font.BOLD, new Color(230, 81, 0))));
-            salesTotal.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            salesTotal.setPadding(5);
-            salesTotal.setBackgroundColor(new Color(255, 243, 224));
-            salesTotal.setBorderColor(new Color(204, 204, 204));
-            table.addCell(salesTotal);
-
-            doc.add(table);
 
             // Footer
             doc.add(Chunk.NEWLINE);
-            Paragraph footer = new Paragraph("Total Records: " + data.size() + "  |  Report generated on " + generatedDate, footerFont);
+            int recordCount = aggregated ? aggregateByDate(data).size() : data.size();
+            Paragraph footer = new Paragraph("Total Records: " + recordCount + "  |  Report generated on " + generatedDate, footerFont);
             footer.setAlignment(Element.ALIGN_CENTER);
             doc.add(footer);
 
@@ -158,6 +132,121 @@ public class NozzleInventoryReportService {
         } catch (Exception e) {
             throw new ReportGenerationException("Failed to generate Nozzle Inventory PDF report", e);
         }
+    }
+
+    private void buildAggregatedPdfTable(Document doc, List<NozzleInventory> data, Font headerFont, Font cellFont, Font boldCellFont, Font salesFont, Font summaryFont) throws Exception {
+        List<DailySummary> summaries = aggregateByDate(data);
+
+        float[] widths = {5f, 10f, 12f, 15f, 14f};
+        PdfPTable table = new PdfPTable(widths);
+        table.setWidthPercentage(100);
+
+        String[] headers = {"#", "DATE", "PRODUCT", "NOZZLES", "TOTAL SALES (L)"};
+        Color headerBg = new Color(245, 245, 245);
+        Color salesHeaderBg = new Color(255, 243, 224);
+
+        for (int i = 0; i < headers.length; i++) {
+            PdfPCell cell = new PdfPCell(new Phrase(headers[i], headerFont));
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            cell.setPadding(5);
+            cell.setBackgroundColor(i == headers.length - 1 ? salesHeaderBg : headerBg);
+            cell.setBorderColor(new Color(204, 204, 204));
+            table.addCell(cell);
+        }
+
+        int rowNum = 0;
+        double grandTotal = 0;
+        for (DailySummary s : summaries) {
+            rowNum++;
+            Color rowBg = (rowNum % 2 == 0) ? new Color(250, 250, 250) : Color.WHITE;
+            Color borderColor = new Color(238, 238, 238);
+
+            addCell(table, String.valueOf(rowNum), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            addCell(table, s.date().format(DATE_FMT), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            addCell(table, s.product(), boldCellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            addCell(table, s.nozzles(), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            addCell(table, formatNum(s.totalSales()), salesFont, Element.ALIGN_RIGHT, new Color(255, 248, 225), borderColor);
+            grandTotal += s.totalSales();
+        }
+
+        // Summary row
+        PdfPCell totalLabel = new PdfPCell(new Phrase("TOTALS", summaryFont));
+        totalLabel.setColspan(4);
+        totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totalLabel.setPadding(5);
+        totalLabel.setBackgroundColor(new Color(232, 232, 232));
+        totalLabel.setBorderColor(new Color(204, 204, 204));
+        table.addCell(totalLabel);
+
+        PdfPCell salesTotal = new PdfPCell(new Phrase(NUM_FMT.format(grandTotal), new Font(Font.HELVETICA, 9, Font.BOLD, new Color(230, 81, 0))));
+        salesTotal.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        salesTotal.setPadding(5);
+        salesTotal.setBackgroundColor(new Color(255, 243, 224));
+        salesTotal.setBorderColor(new Color(204, 204, 204));
+        table.addCell(salesTotal);
+
+        doc.add(table);
+    }
+
+    private void buildDetailedPdfTable(Document doc, List<NozzleInventory> data, Font headerFont, Font cellFont, Font boldCellFont, Font salesFont, Font summaryFont) throws Exception {
+        float[] widths = {4f, 8f, 10f, 8f, 10f, 12f, 12f, 12f};
+        PdfPTable table = new PdfPTable(widths);
+        table.setWidthPercentage(100);
+
+        String[] headers = {"#", "DATE", "NOZZLE", "PUMP", "PRODUCT", "OPEN READING", "CLOSE READING", "TOTAL SALES (L)"};
+        Color headerBg = new Color(245, 245, 245);
+        Color salesHeaderBg = new Color(255, 243, 224);
+
+        for (int i = 0; i < headers.length; i++) {
+            PdfPCell cell = new PdfPCell(new Phrase(headers[i], headerFont));
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            cell.setPadding(5);
+            cell.setBackgroundColor(i == headers.length - 1 ? salesHeaderBg : headerBg);
+            cell.setBorderColor(new Color(204, 204, 204));
+            table.addCell(cell);
+        }
+
+        int rowNum = 0;
+        double totalSales = 0;
+        for (NozzleInventory inv : data) {
+            rowNum++;
+            Color rowBg = (rowNum % 2 == 0) ? new Color(250, 250, 250) : Color.WHITE;
+            Color borderColor = new Color(238, 238, 238);
+
+            addCell(table, String.valueOf(rowNum), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            addCell(table, inv.getDate().format(DATE_FMT), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            addCell(table, inv.getNozzle().getNozzleName(), boldCellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            addCell(table, inv.getNozzle().getPump().getName(), cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            String productName = inv.getNozzle().getTank() != null && inv.getNozzle().getTank().getProduct() != null
+                    ? inv.getNozzle().getTank().getProduct().getName() : "-";
+            addCell(table, productName, cellFont, Element.ALIGN_CENTER, rowBg, borderColor);
+            addCell(table, formatNum(inv.getOpenMeterReading()), cellFont, Element.ALIGN_RIGHT, rowBg, borderColor);
+            addCell(table, formatNum(inv.getCloseMeterReading()), cellFont, Element.ALIGN_RIGHT, rowBg, borderColor);
+
+            double sale = inv.getSales() != null ? inv.getSales() : 0;
+            addCell(table, formatNum(sale), salesFont, Element.ALIGN_RIGHT, new Color(255, 248, 225), borderColor);
+            totalSales += sale;
+        }
+
+        // Summary row
+        PdfPCell totalLabel = new PdfPCell(new Phrase("TOTALS", summaryFont));
+        totalLabel.setColspan(7);
+        totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totalLabel.setPadding(5);
+        totalLabel.setBackgroundColor(new Color(232, 232, 232));
+        totalLabel.setBorderColor(new Color(204, 204, 204));
+        table.addCell(totalLabel);
+
+        PdfPCell salesTotal = new PdfPCell(new Phrase(NUM_FMT.format(totalSales), new Font(Font.HELVETICA, 9, Font.BOLD, new Color(230, 81, 0))));
+        salesTotal.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        salesTotal.setPadding(5);
+        salesTotal.setBackgroundColor(new Color(255, 243, 224));
+        salesTotal.setBorderColor(new Color(204, 204, 204));
+        table.addCell(salesTotal);
+
+        doc.add(table);
     }
 
     private void addCell(PdfPTable table, String text, Font font, int alignment, Color bg, Color border) {
@@ -172,7 +261,7 @@ public class NozzleInventoryReportService {
 
     // ======================== EXCEL (POI) ========================
 
-    public byte[] generateExcel(List<NozzleInventory> data, LocalDate fromDate, LocalDate toDate, String filterLabel) {
+    public byte[] generateExcel(List<NozzleInventory> data, LocalDate fromDate, LocalDate toDate, String filterLabel, boolean aggregated) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             XSSFSheet sheet = workbook.createSheet("Nozzle Daily Inventory");
 
@@ -237,7 +326,7 @@ public class NozzleInventoryReportService {
             summaryStyle.setFillForegroundColor(new XSSFColor(new byte[]{(byte) 232, (byte) 232, (byte) 232}, null));
             summaryStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-            int colCount = 8;
+            int colCount = aggregated ? 5 : 8;
 
             // Title rows
             int rowIdx = 0;
@@ -271,78 +360,17 @@ public class NozzleInventoryReportService {
             XSSFRow metaRow = sheet.createRow(rowIdx++);
             XSSFCell metaCell = metaRow.createCell(0);
             String displayLabel = filterLabel.replace("_", " ");
-            metaCell.setCellValue("Filter: " + displayLabel + "  |  Period: " + fromDate.format(DATE_FMT) + " to " + toDate.format(DATE_FMT));
+            metaCell.setCellValue((aggregated ? "Product: " : "Filter: ") + displayLabel + "  |  Period: " + fromDate.format(DATE_FMT) + " to " + toDate.format(DATE_FMT));
             metaCell.setCellStyle(subStyle);
             sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, colCount - 1));
 
             rowIdx++; // blank row
 
-            // Header row
-            String[] headers = {"#", "Date", "Nozzle", "Pump", "Product", "Open Reading", "Close Reading", "Total Sales (L)"};
-            XSSFRow headerRow = sheet.createRow(rowIdx++);
-            for (int i = 0; i < headers.length; i++) {
-                XSSFCell c = headerRow.createCell(i);
-                c.setCellValue(headers[i]);
-                c.setCellStyle(headerStyle);
+            if (aggregated) {
+                rowIdx = buildAggregatedExcelRows(sheet, data, rowIdx, headerStyle, cellStyle, numStyle, salesStyle, summaryStyle, colCount);
+            } else {
+                rowIdx = buildDetailedExcelRows(sheet, data, rowIdx, headerStyle, cellStyle, numStyle, salesStyle, summaryStyle, colCount);
             }
-
-            // Data rows
-            int num = 0;
-            double totalSales = 0;
-            for (NozzleInventory inv : data) {
-                num++;
-                XSSFRow row = sheet.createRow(rowIdx++);
-
-                XSSFCell c0 = row.createCell(0);
-                c0.setCellValue(num);
-                c0.setCellStyle(cellStyle);
-
-                XSSFCell c1 = row.createCell(1);
-                c1.setCellValue(inv.getDate().format(DATE_FMT));
-                c1.setCellStyle(cellStyle);
-
-                XSSFCell c2 = row.createCell(2);
-                c2.setCellValue(inv.getNozzle().getNozzleName());
-                c2.setCellStyle(cellStyle);
-
-                XSSFCell c3 = row.createCell(3);
-                c3.setCellValue(inv.getNozzle().getPump().getName());
-                c3.setCellStyle(cellStyle);
-
-                XSSFCell c4 = row.createCell(4);
-                String productName = inv.getNozzle().getTank() != null && inv.getNozzle().getTank().getProduct() != null
-                        ? inv.getNozzle().getTank().getProduct().getName() : "-";
-                c4.setCellValue(productName);
-                c4.setCellStyle(cellStyle);
-
-                XSSFCell c5 = row.createCell(5);
-                c5.setCellValue(inv.getOpenMeterReading() != null ? inv.getOpenMeterReading() : 0);
-                c5.setCellStyle(numStyle);
-
-                XSSFCell c6 = row.createCell(6);
-                c6.setCellValue(inv.getCloseMeterReading() != null ? inv.getCloseMeterReading() : 0);
-                c6.setCellStyle(numStyle);
-
-                double sale = inv.getSales() != null ? inv.getSales() : 0;
-                XSSFCell c7 = row.createCell(7);
-                c7.setCellValue(sale);
-                c7.setCellStyle(salesStyle);
-                totalSales += sale;
-            }
-
-            // Summary row
-            XSSFRow sumRow = sheet.createRow(rowIdx++);
-            XSSFCell sumLabel = sumRow.createCell(0);
-            sumLabel.setCellValue("TOTALS");
-            sumLabel.setCellStyle(summaryStyle);
-            for (int i = 1; i < 7; i++) {
-                sumRow.createCell(i).setCellStyle(summaryStyle);
-            }
-            sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 6));
-
-            XSSFCell sumSales = sumRow.createCell(7);
-            sumSales.setCellValue(totalSales);
-            sumSales.setCellStyle(summaryStyle);
 
             // Auto-size columns
             for (int i = 0; i < colCount; i++) {
@@ -354,6 +382,101 @@ public class NozzleInventoryReportService {
         } catch (Exception e) {
             throw new ReportGenerationException("Failed to generate Nozzle Inventory Excel report", e);
         }
+    }
+
+    private int buildAggregatedExcelRows(XSSFSheet sheet, List<NozzleInventory> data, int rowIdx,
+            XSSFCellStyle headerStyle, XSSFCellStyle cellStyle, XSSFCellStyle numStyle,
+            XSSFCellStyle salesStyle, XSSFCellStyle summaryStyle, int colCount) {
+
+        List<DailySummary> summaries = aggregateByDate(data);
+
+        String[] headers = {"#", "Date", "Product", "Nozzles", "Total Sales (L)"};
+        XSSFRow headerRow = sheet.createRow(rowIdx++);
+        for (int i = 0; i < headers.length; i++) {
+            XSSFCell c = headerRow.createCell(i);
+            c.setCellValue(headers[i]);
+            c.setCellStyle(headerStyle);
+        }
+
+        int num = 0;
+        double grandTotal = 0;
+        for (DailySummary s : summaries) {
+            num++;
+            XSSFRow row = sheet.createRow(rowIdx++);
+
+            XSSFCell c0 = row.createCell(0); c0.setCellValue(num); c0.setCellStyle(cellStyle);
+            XSSFCell c1 = row.createCell(1); c1.setCellValue(s.date().format(DATE_FMT)); c1.setCellStyle(cellStyle);
+            XSSFCell c2 = row.createCell(2); c2.setCellValue(s.product()); c2.setCellStyle(cellStyle);
+            XSSFCell c3 = row.createCell(3); c3.setCellValue(s.nozzles()); c3.setCellStyle(cellStyle);
+            XSSFCell c4 = row.createCell(4); c4.setCellValue(s.totalSales()); c4.setCellStyle(salesStyle);
+            grandTotal += s.totalSales();
+        }
+
+        // Summary row
+        XSSFRow sumRow = sheet.createRow(rowIdx++);
+        XSSFCell sumLabel = sumRow.createCell(0);
+        sumLabel.setCellValue("TOTALS");
+        sumLabel.setCellStyle(summaryStyle);
+        for (int i = 1; i < colCount - 1; i++) {
+            sumRow.createCell(i).setCellStyle(summaryStyle);
+        }
+        sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, colCount - 2));
+
+        XSSFCell sumSales = sumRow.createCell(colCount - 1);
+        sumSales.setCellValue(grandTotal);
+        sumSales.setCellStyle(summaryStyle);
+
+        return rowIdx;
+    }
+
+    private int buildDetailedExcelRows(XSSFSheet sheet, List<NozzleInventory> data, int rowIdx,
+            XSSFCellStyle headerStyle, XSSFCellStyle cellStyle, XSSFCellStyle numStyle,
+            XSSFCellStyle salesStyle, XSSFCellStyle summaryStyle, int colCount) {
+
+        String[] headers = {"#", "Date", "Nozzle", "Pump", "Product", "Open Reading", "Close Reading", "Total Sales (L)"};
+        XSSFRow headerRow = sheet.createRow(rowIdx++);
+        for (int i = 0; i < headers.length; i++) {
+            XSSFCell c = headerRow.createCell(i);
+            c.setCellValue(headers[i]);
+            c.setCellStyle(headerStyle);
+        }
+
+        int num = 0;
+        double totalSales = 0;
+        for (NozzleInventory inv : data) {
+            num++;
+            XSSFRow row = sheet.createRow(rowIdx++);
+
+            XSSFCell c0 = row.createCell(0); c0.setCellValue(num); c0.setCellStyle(cellStyle);
+            XSSFCell c1 = row.createCell(1); c1.setCellValue(inv.getDate().format(DATE_FMT)); c1.setCellStyle(cellStyle);
+            XSSFCell c2 = row.createCell(2); c2.setCellValue(inv.getNozzle().getNozzleName()); c2.setCellStyle(cellStyle);
+            XSSFCell c3 = row.createCell(3); c3.setCellValue(inv.getNozzle().getPump().getName()); c3.setCellStyle(cellStyle);
+            String productName = inv.getNozzle().getTank() != null && inv.getNozzle().getTank().getProduct() != null
+                    ? inv.getNozzle().getTank().getProduct().getName() : "-";
+            XSSFCell c4 = row.createCell(4); c4.setCellValue(productName); c4.setCellStyle(cellStyle);
+            XSSFCell c5 = row.createCell(5); c5.setCellValue(inv.getOpenMeterReading() != null ? inv.getOpenMeterReading() : 0); c5.setCellStyle(numStyle);
+            XSSFCell c6 = row.createCell(6); c6.setCellValue(inv.getCloseMeterReading() != null ? inv.getCloseMeterReading() : 0); c6.setCellStyle(numStyle);
+
+            double sale = inv.getSales() != null ? inv.getSales() : 0;
+            XSSFCell c7 = row.createCell(7); c7.setCellValue(sale); c7.setCellStyle(salesStyle);
+            totalSales += sale;
+        }
+
+        // Summary row
+        XSSFRow sumRow = sheet.createRow(rowIdx++);
+        XSSFCell sumLabel = sumRow.createCell(0);
+        sumLabel.setCellValue("TOTALS");
+        sumLabel.setCellStyle(summaryStyle);
+        for (int i = 1; i < colCount - 1; i++) {
+            sumRow.createCell(i).setCellStyle(summaryStyle);
+        }
+        sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, colCount - 2));
+
+        XSSFCell sumSales = sumRow.createCell(colCount - 1);
+        sumSales.setCellValue(totalSales);
+        sumSales.setCellStyle(summaryStyle);
+
+        return rowIdx;
     }
 
     private String formatNum(Double value) {
