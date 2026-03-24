@@ -29,15 +29,23 @@ public class ProductInventoryService {
     private final ShiftService shiftService;
 
     public List<ProductInventory> getAll() {
-        return repository.findAllByScid(SecurityUtils.getScid());
+        return repository.findAllByScidWithProduct(SecurityUtils.getScid());
     }
 
     public List<ProductInventory> getByDate(LocalDate date) {
-        return repository.findByDate(date);
+        return repository.findByDateWithProduct(date);
     }
 
     public List<ProductInventory> getByProductId(Long productId) {
-        return repository.findByProductId(productId);
+        return repository.findByProductIdWithProduct(productId);
+    }
+
+    public List<ProductInventory> getByDateRange(LocalDate fromDate, LocalDate toDate) {
+        return repository.findByScidAndDateBetween(SecurityUtils.getScid(), fromDate, toDate);
+    }
+
+    public List<ProductInventory> getByProductAndDateRange(Long productId, LocalDate fromDate, LocalDate toDate) {
+        return repository.findByScidAndProductIdAndDateBetween(SecurityUtils.getScid(), productId, fromDate, toDate);
     }
 
     public ProductInventory getById(Long id) {
