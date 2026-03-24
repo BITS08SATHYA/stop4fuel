@@ -1464,6 +1464,14 @@ export const uploadPurchaseInvoicePdf = (id: number, file: File): Promise<Purcha
 export const getPurchaseInvoicePdfUrl = (id: number): Promise<string> =>
     fetchWithAuth(`${API_BASE_URL}/purchase-invoices/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
 
+export const downloadPurchaseInvoiceReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> => {
+    const query = new URLSearchParams({ fromDate, toDate, format });
+    return fetchWithAuth(`${API_BASE_URL}/purchase-invoices/report?${query.toString()}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};
+
 // ────────────────────────────────────────────────────────────
 // Employee Management Types & APIs
 // ────────────────────────────────────────────────────────────
