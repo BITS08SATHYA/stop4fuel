@@ -124,6 +124,8 @@ export interface ProductInventory {
     totalStock?: number;
     closeStock?: number;
     sales?: number;
+    rate?: number;
+    amount?: number;
 }
 
 export interface Vehicle {

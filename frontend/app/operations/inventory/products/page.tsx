@@ -311,6 +311,8 @@ export default function ProductInventoryPage() {
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-24">Arrivals (+)</th>
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-24">Closing</th>
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-24 italic">Units Sold</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-20">Rate</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-24">Amount</th>
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-24">Actions</th>
                                     </tr>
                                 </thead>
@@ -353,6 +355,12 @@ export default function ProductInventoryPage() {
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-primary text-base font-mono bg-primary/5">
                                                 {inv.sales?.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="text-sm font-mono text-muted-foreground">{inv.rate != null ? `₹${Number(inv.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : "-"}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="text-sm font-mono font-semibold">{inv.amount != null ? `₹${Number(inv.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : "-"}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center gap-2">
