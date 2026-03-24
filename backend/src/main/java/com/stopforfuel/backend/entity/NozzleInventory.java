@@ -27,8 +27,12 @@ public class NozzleInventory extends BaseEntity {
     private Nozzle nozzle;
 
     private Double openMeterReading;
-    
+
     private Double closeMeterReading;
-    
+
     private Double sales;
+
+    private Double rate;
+
+    private Double amount;
 }
