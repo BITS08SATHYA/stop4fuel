@@ -517,71 +517,64 @@ def export_customers(cursor, outdir):
 
 
 def export_vehicles(cursor, outdir):
-    """Export vehicles from MySQL vehicle table + creditbill vehicle references."""
-    print("\n[9] Exporting vehicles...")
+    """Export vehicles from MySQL vehicle_new table (single source of truth).
 
-    # Get vehicles from the vehicle table (linked to old customer IDs)
-    cursor.execute("SELECT * FROM vehicle ORDER BY VehicleID")
+    vehicle_new has: Vehicle_ID, Customer_ID, VehicleNo, VehicleType, VehicleLimit
+    Credit/cash invoices resolve vehicles by matching against vehicle_new — we do NOT
+    create vehicle records from invoice data.
+    """
+    print("\n[9] Exporting vehicles from vehicle_new...")
+
+    cursor.execute("""
+        SELECT vn.Vehicle_ID, vn.Customer_ID, vn.VehicleNo, vn.VehicleType, vn.VehicleLimit,
+               cd.Customer_Name
+        FROM vehicle_new vn
+        LEFT JOIN customer_data cd ON cd.Customer_ID = vn.Customer_ID
+        ORDER BY vn.Vehicle_ID
+    """)
     vehicles = cursor.fetchall()
 
-    # Get unique vehicle numbers from credit bills that have customer linkage
-    cursor.execute("""
-        SELECT DISTINCT cb.idx_VehicleNo, cb.CID, cb.idx_CustomerName
-        FROM creditbill_test cb
-        WHERE cb.idx_VehicleNo IS NOT NULL
-        AND cb.idx_VehicleNo != ''
-        AND cb.idx_VehicleNo != '0'
-        AND cb.CID > 0
-        ORDER BY cb.idx_VehicleNo
-    """)
-    bill_vehicles = cursor.fetchall()
-
-    # Build unique vehicle set
-    seen_numbers = set()
-    vehicle_list = []
-
-    # From vehicle table first
-    for v in vehicles:
-        vno = clean_str(v['VehicleNo'])
-        if not vno or vno in seen_numbers:
-            continue
-        seen_numbers.add(vno.upper())
-        vtype = clean_str(v.get('VehicleType'))
-        pg_vtype = VEHICLE_TYPE_MAP.get(vtype, vtype) if vtype else None
-        # Old customer table CID (1-7) - these are test data, skip linkage
-        vehicle_list.append((vno, pg_vtype, None, None))
-
-    # From credit bills - extract unique vehicles with customer mapping
-    for bv in bill_vehicles:
-        vno = clean_str(bv['idx_VehicleNo'])
-        if not vno or vno.upper() in seen_numbers:
-            continue
-        seen_numbers.add(vno.upper())
-        cust_name = clean_str(bv['idx_CustomerName'])
-        vehicle_list.append((vno, None, cust_name, bv['CID']))
-
     path = os.path.join(outdir, '09_vehicles.sql')
+    seen_numbers = set()
+
     with open(path, 'w') as f:
-        f.write("-- Vehicles from MySQL vehicle table + credit bill references\n")
+        f.write("-- Vehicles from MySQL vehicle_new table (single source of truth)\n")
         f.write("-- IMPORTANT: Run AFTER 08_customers.sql\n\n")
 
         count = 0
-        for vno, vtype, cust_name, mysql_cid in vehicle_list:
+        for v in vehicles:
+            vno = clean_str(v['VehicleNo'])
+            if not vno or vno.upper() in seen_numbers:
+                continue
+            seen_numbers.add(vno.upper())
+
             # Truncate to 20 chars (PG column limit)
             if len(vno) > 20:
                 vno = vno[:20]
 
-            vtype_ref = f"(SELECT id FROM vehicle_type WHERE type_name = {sql_str(vtype)} LIMIT 1)" if vtype else 'NULL'
+            # Vehicle type mapping
+            vtype = clean_str(v.get('VehicleType'))
+            pg_vtype = VEHICLE_TYPE_MAP.get(vtype, vtype) if vtype else None
+            vtype_ref = f"(SELECT id FROM vehicle_type WHERE type_name = {sql_str(pg_vtype)} LIMIT 1)" if pg_vtype else 'NULL'
+
+            # Customer mapping via customer_data name -> person_entity
+            cust_name = clean_str(v.get('Customer_Name'))
             cust_ref = 'NULL'
             if cust_name:
                 cust_ref = f"(SELECT pe.id FROM person_entity pe JOIN customer c ON c.id = pe.id WHERE pe.name = {sql_str(cust_name)} LIMIT 1)"
 
-            f.write(f"INSERT INTO vehicle (vehicle_number, vehicle_type_id, customer_id, status, created_at, updated_at)\n")
-            f.write(f"  VALUES ({sql_str(vno)}, {vtype_ref}, {cust_ref}, 'ACTIVE', '{NOW}', '{NOW}')\n")
+            # Monthly limit: -1 means no limit
+            vehicle_limit = v.get('VehicleLimit', -1)
+            limit_val = 'NULL'
+            if vehicle_limit and vehicle_limit > 0:
+                limit_val = str(vehicle_limit)
+
+            f.write(f"INSERT INTO vehicle (vehicle_number, vehicle_type_id, customer_id, max_liters_per_month, status, created_at, updated_at)\n")
+            f.write(f"  VALUES ({sql_str(vno)}, {vtype_ref}, {cust_ref}, {limit_val}, 'ACTIVE', '{NOW}', '{NOW}')\n")
             f.write(f"  ON CONFLICT (vehicle_number) DO NOTHING;\n")
             count += 1
 
-        f.write(f"\n-- Total: {count} vehicles\n")
+        f.write(f"\n-- Total: {count} vehicles (from vehicle_new)\n")
 
     print(f"  -> {path} ({count} vehicles)")
     return count
