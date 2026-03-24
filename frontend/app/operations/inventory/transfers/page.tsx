@@ -10,12 +10,14 @@ import {
     getGodownStocks,
     getCashierStocks,
     createStockTransfer,
+    updateStockTransfer,
+    deleteStockTransfer,
     StockTransfer,
     Product,
     GodownStock,
     CashierStock,
 } from "@/lib/api/station";
-import { ArrowLeftRight, Plus, Search, Warehouse, ShoppingBag, ArrowRight } from "lucide-react";
+import { ArrowLeftRight, Plus, Search, Warehouse, ShoppingBag, ArrowRight, Trash2, Eye, Edit3 } from "lucide-react";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
@@ -27,6 +29,9 @@ export default function StockTransferPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewTransfer, setViewTransfer] = useState<StockTransfer | null>(null);
 
     // Form state
     const [productId, setProductId] = useState("");
@@ -95,7 +100,11 @@ export default function StockTransferPage() {
                 remarks: remarks || null,
                 transferredBy: transferredBy || null,
             };
-            await createStockTransfer(payload as any);
+            if (editingId) {
+                await updateStockTransfer(editingId, payload as any);
+            } else {
+                await createStockTransfer(payload as any);
+            }
             setIsModalOpen(false);
             resetForm();
             loadData();
@@ -105,7 +114,36 @@ export default function StockTransferPage() {
         }
     };
 
+    const handleEdit = (t: StockTransfer) => {
+        clearAllErrors();
+        setApiError("");
+        setEditingId(t.id);
+        setProductId(String(t.product.id));
+        setQuantity(String(t.quantity));
+        setDirection(t.fromLocation === "GODOWN" ? "GODOWN_TO_CASHIER" : "CASHIER_TO_GODOWN");
+        setRemarks(t.remarks || "");
+        setTransferredBy(t.transferredBy || "");
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm("Are you sure? This will reverse the stock changes.")) return;
+        try {
+            await deleteStockTransfer(id);
+            loadData();
+        } catch (err: any) {
+            console.error("Failed to delete", err);
+            setApiError(err.message || "Error deleting transfer");
+        }
+    };
+
+    const handleView = (t: StockTransfer) => {
+        setViewTransfer(t);
+        setIsViewModalOpen(true);
+    };
+
     const resetForm = () => {
+        setEditingId(null);
         setProductId("");
         setQuantity("");
         setDirection("GODOWN_TO_CASHIER");
@@ -190,6 +228,7 @@ export default function StockTransferPage() {
                                             <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Quantity</th>
                                             <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">By</th>
                                             <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Remarks</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-32">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/30">
@@ -220,6 +259,19 @@ export default function StockTransferPage() {
                                                 <td className="px-6 py-4 text-right font-bold font-mono text-base text-primary">{t.quantity}</td>
                                                 <td className="px-6 py-4 text-sm text-muted-foreground">{t.transferredBy || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-muted-foreground max-w-[200px] truncate">{t.remarks || '-'}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex justify-center gap-1">
+                                                        <button onClick={() => handleView(t)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors" title="View">
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => handleEdit(t)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Edit">
+                                                            <Edit3 className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -231,7 +283,7 @@ export default function StockTransferPage() {
                 )}
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title="New Stock Transfer">
+            <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title={editingId ? "Edit Stock Transfer" : "New Stock Transfer"}>
                 <form onSubmit={handleSave} className="space-y-4">
                     <FormErrorBanner message={apiError} />
                     {/* Direction Toggle */}
@@ -332,10 +384,44 @@ export default function StockTransferPage() {
                             Cancel
                         </button>
                         <button type="submit" className="btn-gradient px-8 py-2.5 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all">
-                            Transfer Stock
+                            {editingId ? "Update Transfer" : "Transfer Stock"}
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            <Modal isOpen={isViewModalOpen} onClose={() => { setIsViewModalOpen(false); setViewTransfer(null); }} title="Transfer Details">
+                {viewTransfer && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span className="text-muted-foreground">Date & Time:</span>
+                                <div className="font-medium text-foreground">{new Date(viewTransfer.transferDate).toLocaleString()}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground">Product:</span>
+                                <div className="font-medium text-foreground">{viewTransfer.product.name}</div>
+                                <div className="text-[10px] text-muted-foreground uppercase">{viewTransfer.product.category}{viewTransfer.product.brand ? ` • ${viewTransfer.product.brand}` : ''}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground">Direction:</span>
+                                <div className="font-medium text-foreground">{viewTransfer.fromLocation} → {viewTransfer.toLocation}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground">Quantity:</span>
+                                <div className="font-bold text-primary text-lg">{viewTransfer.quantity}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground">Transferred By:</span>
+                                <div className="font-medium text-foreground">{viewTransfer.transferredBy || '-'}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground">Remarks:</span>
+                                <div className="font-medium text-foreground">{viewTransfer.remarks || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </div>
     );

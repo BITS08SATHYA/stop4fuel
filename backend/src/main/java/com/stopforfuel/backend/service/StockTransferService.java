@@ -117,6 +117,158 @@ public class StockTransferService {
         return repository.save(transfer);
     }
 
+    @Transactional
+    public StockTransfer updateTransfer(Long id, StockTransfer details) {
+        StockTransfer existing = repository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Stock transfer not found: " + id));
+
+        Long oldProductId = existing.getProduct().getId();
+        Double oldQty = existing.getQuantity();
+        String oldFromLocation = existing.getFromLocation();
+
+        // Reverse old stock changes
+        if ("GODOWN".equals(oldFromLocation)) {
+            // Was Godown -> Cashier, so add back to godown, subtract from cashier
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(oldProductId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + oldProductId));
+            godown.setCurrentStock(godown.getCurrentStock() + oldQty);
+            godownStockRepository.save(godown);
+
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(oldProductId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No cashier stock found for product: " + oldProductId));
+            cashier.setCurrentStock(cashier.getCurrentStock() - oldQty);
+            cashierStockRepository.save(cashier);
+
+            if (existing.getShiftId() != null) {
+                updateProductInventoryIncome(existing.getShiftId(), oldProductId, -oldQty);
+            }
+        } else {
+            // Was Cashier -> Godown, so add back to cashier, subtract from godown
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(oldProductId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No cashier stock found for product: " + oldProductId));
+            cashier.setCurrentStock(cashier.getCurrentStock() + oldQty);
+            cashierStockRepository.save(cashier);
+
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(oldProductId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + oldProductId));
+            godown.setCurrentStock(godown.getCurrentStock() - oldQty);
+            godownStockRepository.save(godown);
+
+            if (existing.getShiftId() != null) {
+                updateProductInventoryIncome(existing.getShiftId(), oldProductId, oldQty);
+            }
+        }
+
+        // Update fields
+        existing.setProduct(details.getProduct());
+        existing.setQuantity(details.getQuantity());
+        existing.setFromLocation(details.getFromLocation());
+        existing.setToLocation(details.getToLocation());
+        existing.setRemarks(details.getRemarks());
+        existing.setTransferredBy(details.getTransferredBy());
+
+        // Apply new stock changes
+        Long newProductId = details.getProduct().getId();
+        Double newQty = details.getQuantity();
+
+        if ("GODOWN".equals(details.getFromLocation())) {
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(newProductId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + newProductId));
+            if (godown.getCurrentStock() < newQty) {
+                throw new BusinessException("Insufficient godown stock. Available: " + godown.getCurrentStock() + ", Requested: " + newQty);
+            }
+            godown.setCurrentStock(godown.getCurrentStock() - newQty);
+            godownStockRepository.save(godown);
+
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(newProductId, SecurityUtils.getScid())
+                    .orElseGet(() -> {
+                        CashierStock cs = new CashierStock();
+                        cs.setProduct(details.getProduct());
+                        cs.setCurrentStock(0.0);
+                        cs.setMaxCapacity(0.0);
+                        cs.setScid(SecurityUtils.getScid());
+                        return cs;
+                    });
+            cashier.setCurrentStock(cashier.getCurrentStock() + newQty);
+            cashierStockRepository.save(cashier);
+
+            if (existing.getShiftId() != null) {
+                updateProductInventoryIncome(existing.getShiftId(), newProductId, newQty);
+            }
+        } else {
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(newProductId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No cashier stock found for product: " + newProductId));
+            if (cashier.getCurrentStock() < newQty) {
+                throw new BusinessException("Insufficient cashier stock. Available: " + cashier.getCurrentStock() + ", Requested: " + newQty);
+            }
+            cashier.setCurrentStock(cashier.getCurrentStock() - newQty);
+            cashierStockRepository.save(cashier);
+
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(newProductId, SecurityUtils.getScid())
+                    .orElseGet(() -> {
+                        GodownStock gs = new GodownStock();
+                        gs.setProduct(details.getProduct());
+                        gs.setCurrentStock(0.0);
+                        gs.setReorderLevel(0.0);
+                        gs.setMaxStock(0.0);
+                        gs.setScid(SecurityUtils.getScid());
+                        return gs;
+                    });
+            godown.setCurrentStock(godown.getCurrentStock() + newQty);
+            godownStockRepository.save(godown);
+
+            if (existing.getShiftId() != null) {
+                updateProductInventoryIncome(existing.getShiftId(), newProductId, -newQty);
+            }
+        }
+
+        return repository.save(existing);
+    }
+
+    @Transactional
+    public void deleteTransfer(Long id) {
+        StockTransfer existing = repository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Stock transfer not found: " + id));
+
+        Long productId = existing.getProduct().getId();
+        Double qty = existing.getQuantity();
+
+        // Reverse stock changes
+        if ("GODOWN".equals(existing.getFromLocation())) {
+            // Was Godown -> Cashier, so add back to godown, subtract from cashier
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + productId));
+            godown.setCurrentStock(godown.getCurrentStock() + qty);
+            godownStockRepository.save(godown);
+
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No cashier stock found for product: " + productId));
+            cashier.setCurrentStock(cashier.getCurrentStock() - qty);
+            cashierStockRepository.save(cashier);
+
+            if (existing.getShiftId() != null) {
+                updateProductInventoryIncome(existing.getShiftId(), productId, -qty);
+            }
+        } else {
+            // Was Cashier -> Godown, so add back to cashier, subtract from godown
+            CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No cashier stock found for product: " + productId));
+            cashier.setCurrentStock(cashier.getCurrentStock() + qty);
+            cashierStockRepository.save(cashier);
+
+            GodownStock godown = godownStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
+                    .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + productId));
+            godown.setCurrentStock(godown.getCurrentStock() - qty);
+            godownStockRepository.save(godown);
+
+            if (existing.getShiftId() != null) {
+                updateProductInventoryIncome(existing.getShiftId(), productId, qty);
+            }
+        }
+
+        repository.delete(existing);
+    }
+
     /**
      * Auto-update ProductInventory.incomeStock when a stock transfer happens.
      * Positive qty = stock received at counter (GODOWN→CASHIER).
