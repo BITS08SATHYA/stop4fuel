@@ -55,7 +55,29 @@ export default function NozzleInventoryPage() {
         return matchesSearch && matchesNozzle && matchesProduct;
     }), [inventories, searchQuery, nozzleFilter, productFilter]);
 
-    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedInv } = useClientPagination(filteredInv);
+    // When product filter is active, aggregate by date (one row per date, sum sales across nozzles)
+    type DailySummary = { date: string; product: string; nozzles: string; totalSales: number };
+    const isAggregated = !!productFilter;
+    const aggregatedData = useMemo<DailySummary[]>(() => {
+        if (!isAggregated) return [];
+        const grouped = new Map<string, NozzleInventory[]>();
+        filteredInv.forEach(inv => {
+            const key = inv.date;
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key)!.push(inv);
+        });
+        return Array.from(grouped.entries())
+            .map(([date, items]) => ({
+                date,
+                product: items[0]?.nozzle?.tank?.product?.name || '-',
+                nozzles: [...new Set(items.map(i => i.nozzle?.nozzleName))].sort().join(', '),
+                totalSales: items.reduce((sum, i) => sum + (i.sales || 0), 0),
+            }))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [filteredInv, isAggregated]);
+
+    const displayData = isAggregated ? aggregatedData : filteredInv;
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedData } = useClientPagination(displayData as any[]);
 
     // Form State
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -309,7 +331,7 @@ export default function NozzleInventoryPage() {
                         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
                         <p className="animate-pulse">Loading reading logs...</p>
                     </div>
-                ) : filteredInv.length === 0 ? (
+                ) : displayData.length === 0 ? (
                     <div className="text-center py-20 bg-black/5 dark:bg-white/5 rounded-2xl border border-dashed border-border">
                         <Calendar className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
                         <h3 className="text-xl font-semibold text-foreground mb-2">No Records Found</h3>
@@ -327,60 +349,91 @@ export default function NozzleInventoryPage() {
                                     <tr className="bg-white/5 border-b border-border/50">
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-16">#</th>
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-32">Date</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nozzle/Pump Details</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-32">Open Reading</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-32">Close Reading</th>
+                                        {isAggregated ? (
+                                            <>
+                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Product</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nozzles</th>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nozzle/Pump Details</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-32">Open Reading</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-32">Close Reading</th>
+                                            </>
+                                        )}
                                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-32 italic">Total Sales</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-24">Actions</th>
+                                        {!isAggregated && (
+                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-24">Actions</th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/30">
-                                    {pagedInv.map((inv, idx) => (
-                                        <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 rounded-lg bg-green-500/10 text-green-500">
-                                                        <Fuel className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-bold text-foreground">{inv.nozzle?.nozzleName || '-'}</div>
-                                                        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                                            <span>{inv.nozzle?.pump?.name || '-'}</span>
-                                                            <span>•</span>
-                                                            <span>{inv.nozzle?.tank?.product?.name || '-'}</span>
+                                    {isAggregated ? (
+                                        (pagedData as DailySummary[]).map((row, idx) => (
+                                            <tr key={row.date} className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-medium text-foreground">{new Date(row.date).toLocaleDateString('en-GB')}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-bold text-foreground">{row.product}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-xs text-muted-foreground">{row.nozzles}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-black text-primary text-base font-mono bg-primary/5">
+                                                    {row.totalSales?.toLocaleString()} <span className="text-[10px] font-bold opacity-70 ml-1">L</span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        (pagedData as NozzleInventory[]).map((inv, idx) => (
+                                            <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
+                                                <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2 rounded-lg bg-green-500/10 text-green-500">
+                                                            <Fuel className="w-4 h-4" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-bold text-foreground">{inv.nozzle?.nozzleName || '-'}</div>
+                                                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                                <span>{inv.nozzle?.pump?.name || '-'}</span>
+                                                                <span>•</span>
+                                                                <span>{inv.nozzle?.tank?.product?.name || '-'}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-mono text-sm">{inv.openMeterReading?.toLocaleString()}</td>
-                                            <td className="px-6 py-4 text-right font-mono text-sm">{inv.closeMeterReading?.toLocaleString()}</td>
-                                            <td className="px-6 py-4 text-right font-black text-primary text-base font-mono bg-primary/5">
-                                                {inv.sales?.toLocaleString()} <span className="text-[10px] font-bold opacity-70 ml-1">L</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex justify-center gap-2">
-                                                    <button
-                                                        onClick={() => handleEdit(inv)}
-                                                        className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(inv.id)}
-                                                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-mono text-sm">{inv.openMeterReading?.toLocaleString()}</td>
+                                                <td className="px-6 py-4 text-right font-mono text-sm">{inv.closeMeterReading?.toLocaleString()}</td>
+                                                <td className="px-6 py-4 text-right font-black text-primary text-base font-mono bg-primary/5">
+                                                    {inv.sales?.toLocaleString()} <span className="text-[10px] font-bold opacity-70 ml-1">L</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            onClick={() => handleEdit(inv)}
+                                                            className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(inv.id)}
+                                                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
