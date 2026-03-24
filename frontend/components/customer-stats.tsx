@@ -76,12 +76,12 @@ export function CustomerStats({ refreshTrigger }: { refreshTrigger?: number }) {
             <GlassCard className="relative overflow-hidden">
                 <div className="flex justify-between items-start">
                     <div>
-                        <p className="text-muted-foreground text-sm font-medium">Blocked</p>
+                        <p className="text-muted-foreground text-sm font-medium">Blocked / Inactive</p>
                         <h3 className={`text-3xl font-bold mt-2 ${stats.blockedCustomers > 0 ? 'text-destructive' : 'text-foreground'}`}>
                             {stats.blockedCustomers}
                         </h3>
                         <div className="flex items-center mt-2 text-muted-foreground text-sm">
-                            <span>limit exceeded</span>
+                            <span>customers</span>
                         </div>
                     </div>
                     <div className="p-3 bg-red-500/10 rounded-lg">

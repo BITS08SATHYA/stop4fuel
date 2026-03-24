@@ -60,10 +60,14 @@ public class ProductService {
     }
 
     private void validateGradeOilTypeLink(Product product) {
-        if (product.getGrade() != null && product.getGrade().getId() != null && product.getOilType() != null) {
+        if (product.getGrade() != null && product.getGrade().getId() != null) {
             GradeType grade = gradeTypeRepository.findById(product.getGrade().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Grade not found with id: " + product.getGrade().getId()));
-            if (grade.getOilType() != null
+            if (!grade.isActive()) {
+                throw new BusinessException(
+                        "Grade '" + grade.getName() + "' is disabled and cannot be used for new products");
+            }
+            if (product.getOilType() != null && grade.getOilType() != null
                     && !grade.getOilType().getId().equals(product.getOilType().getId())) {
                 throw new BusinessException(
                         "Grade '" + grade.getName() + "' belongs to oil type '" +

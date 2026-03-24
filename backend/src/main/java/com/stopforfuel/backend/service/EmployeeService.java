@@ -13,8 +13,10 @@ import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
 import com.stopforfuel.config.SecurityUtils;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.data.domain.Page;
@@ -49,6 +51,9 @@ public class EmployeeService {
     @Autowired
     private RolesRepository rolesRepository;
 
+    @Autowired
+    private EntityManager entityManager;
+
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAllByScid(SecurityUtils.getScid());
     }
@@ -65,9 +70,10 @@ public class EmployeeService {
     }
 
     public List<Employee> getActiveEmployees() {
-        return employeeRepository.findByStatus("Active");
+        return employeeRepository.findByStatus("ACTIVE");
     }
 
+    @Transactional
     public Employee createEmployee(Employee employee) {
         // Business validations
         validateEmployeeBusinessRules(employee);
@@ -103,9 +109,13 @@ public class EmployeeService {
             employee.setStatus("Active");
         }
 
-        return employeeRepository.save(employee);
+        Employee saved = employeeRepository.save(employee);
+        entityManager.flush();
+        entityManager.refresh(saved);
+        return saved;
     }
 
+    @Transactional
     public Employee updateEmployee(Long id, Employee details) {
         Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));

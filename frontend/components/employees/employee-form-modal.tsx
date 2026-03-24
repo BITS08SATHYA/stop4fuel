@@ -37,14 +37,14 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
         aadharNumber: [aadhar()],
         // Additional Details
         employeeCode: [maxLength(20, "Employee code must not exceed 20 characters")],
-        panNumber: [pan()],
+        panNumber: [],
         dateOfBirth: [pastDate("Date of birth must be in the past"), minAge(15, "Employee must be at least 15 years old")],
         emergencyPhone: [indianMobile("Emergency phone must be a valid Indian mobile number")],
         // Address
         pincode: [indianPincode()],
         // Bank Details
         bankAccountNumber: [bankAccount()],
-        bankIfsc: [ifsc()],
+        bankIfsc: [],
     });
 
     const set = (field: string, value: any) => setCurrentEmployee({ ...currentEmployee, [field]: value });
@@ -85,6 +85,7 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                 additionalPhones: currentEmployee.additionalPhones || null,
                 salary: currentEmployee.salary,
                 salaryDay: currentEmployee.salaryDay,
+                monthlyLeaveThreshold: currentEmployee.monthlyLeaveThreshold ?? 4,
                 joinDate: currentEmployee.joinDate || null,
                 status: currentEmployee.status,
                 aadharNumber: currentEmployee.aadharNumber || null,
@@ -226,6 +227,11 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                                         <option key={d} value={d}>{d}{d === 1 ? "st" : d === 2 ? "nd" : d === 3 ? "rd" : "th"} of every month</option>
                                     ))}
                                 </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Monthly Leave Threshold</label>
+                                <input type="number" min={0} max={31} className={inputClass} value={currentEmployee.monthlyLeaveThreshold ?? 4} onChange={(e) => set("monthlyLeaveThreshold", Number(e.target.value))} />
+                                <p className="text-[10px] text-muted-foreground">Days/month before LOP kicks in</p>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Join Date *</label>

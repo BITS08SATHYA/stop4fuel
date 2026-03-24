@@ -574,20 +574,26 @@ export default function ProductsPage() {
                         )}
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 rounded-xl border border-border mt-2">
+                    <div className="flex items-center justify-between p-4 bg-background border border-border rounded-2xl mt-2">
                         <div>
-                            <p className="font-medium text-foreground text-sm">Product Status</p>
-                            <p className="text-xs text-muted-foreground">Is this product currently available for sale?</p>
+                            <label className="block text-sm font-bold text-foreground">Product Status</label>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                {active ? "This product is available for sale and invoicing" : "This product is disabled — cannot be used in invoices"}
+                            </p>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="sr-only peer"
-                                checked={active}
-                                onChange={(e) => setActive(e.target.checked)}
+                        <button
+                            type="button"
+                            onClick={() => setActive(!active)}
+                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                                active ? 'bg-green-500' : 'bg-muted-foreground/30'
+                            }`}
+                        >
+                            <span
+                                className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ${
+                                    active ? 'translate-x-6' : 'translate-x-1'
+                                }`}
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                        </label>
+                        </button>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-6 border-t border-border mt-6">

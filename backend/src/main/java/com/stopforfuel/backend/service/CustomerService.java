@@ -330,7 +330,7 @@ public class CustomerService {
                 .filter(c -> "ACTIVE".equals(c.getStatus()))
                 .count();
         long blockedCustomers = allCustomers.stream()
-                .filter(c -> "BLOCKED".equals(c.getStatus()))
+                .filter(c -> "BLOCKED".equals(c.getStatus()) || "INACTIVE".equals(c.getStatus()))
                 .count();
 
         BigDecimal totalCreditGiven = allCustomers.stream()
