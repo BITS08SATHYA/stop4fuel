@@ -33,6 +33,10 @@ public class ProductService {
         return productRepository.findByCategoryIgnoreCaseAndActiveAndScid(category, true, SecurityUtils.getScid());
     }
 
+    public List<Product> getActiveNonFuelProducts() {
+        return productRepository.findByCategoryNotIgnoreCaseAndActiveAndScid("FUEL", true, SecurityUtils.getScid());
+    }
+
     public Product getProductById(Long id) {
         return productRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
