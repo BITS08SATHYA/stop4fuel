@@ -4,7 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import { getTanks, getFuelProducts, createTank, updateTank, deleteTank, Tank, Product } from "@/lib/api/station";
-import { Droplets, Plus, Edit2, Trash2, Search, Gauge } from "lucide-react";
+import { Droplets, Plus, Edit2, Trash2, Search, Gauge, AlertTriangle } from "lucide-react";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
@@ -265,14 +266,20 @@ export default function TanksPage() {
                         </select>
                         <FieldError error={errors.productId} />
                     </div>
-                    <div className="flex items-center gap-2 pt-2">
-                        <input
-                            type="checkbox"
+                    <div className="pt-2">
+                        <ToggleSwitch
                             checked={active}
-                            onChange={(e) => setActive(e.target.checked)}
-                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                            onChange={setActive}
+                            label={active ? "Active" : "Inactive"}
                         />
-                        <label className="text-sm font-medium text-foreground">Tank is Active</label>
+                        {!active && (
+                            <div className="mt-2 flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                                <p className="text-xs text-amber-500">
+                                    Setting this tank as inactive will also deactivate all nozzles connected to it.
+                                </p>
+                            </div>
+                        )}
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
                         <button
