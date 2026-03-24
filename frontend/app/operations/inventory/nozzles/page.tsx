@@ -65,7 +65,7 @@ export default function NozzleInventoryPage() {
         return Array.from(grouped.entries())
             .map(([date, items]) => {
                 const totalSales = items.reduce((sum, i) => sum + (i.sales || 0), 0);
-                const rate = items[0]?.rate || 0;
+                const rate = items[0]?.rate || items[0]?.nozzle?.tank?.product?.price || 0;
                 return {
                     date,
                     product: items[0]?.nozzle?.tank?.product?.name || '-',
@@ -288,7 +288,8 @@ export default function NozzleInventoryPage() {
                                             </>
                                         ) : (
                                             <>
-                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nozzle/Pump Details</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nozzle / Pump</th>
+                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Product</th>
                                                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-28">Open Reading</th>
                                                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right w-28">Close Reading</th>
                                             </>
@@ -319,7 +320,10 @@ export default function NozzleInventoryPage() {
                                             </tr>
                                         ))
                                     ) : (
-                                        (pagedData as NozzleInventory[]).map((inv, idx) => (
+                                        (pagedData as NozzleInventory[]).map((inv, idx) => {
+                                            const rate = inv.rate || inv.nozzle?.tank?.product?.price || 0;
+                                            const amount = inv.amount || (inv.sales && rate ? inv.sales * rate : 0);
+                                            return (
                                             <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
                                                 <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                                 <td className="px-6 py-4"><div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div></td>
@@ -328,20 +332,21 @@ export default function NozzleInventoryPage() {
                                                         <div className="p-2 rounded-lg bg-green-500/10 text-green-500"><Fuel className="w-4 h-4" /></div>
                                                         <div>
                                                             <div className="text-sm font-bold text-foreground">{inv.nozzle?.nozzleName || '-'}</div>
-                                                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                                                <span>{inv.nozzle?.pump?.name || '-'}</span><span>•</span><span>{inv.nozzle?.tank?.product?.name || '-'}</span>
-                                                            </div>
+                                                            <div className="text-[10px] text-muted-foreground">{inv.nozzle?.pump?.name || '-'}</div>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-medium text-foreground">{inv.nozzle?.tank?.product?.name || '-'}</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-mono text-sm">{inv.openMeterReading?.toLocaleString()}</td>
                                                 <td className="px-6 py-4 text-right font-mono text-sm">{inv.closeMeterReading?.toLocaleString()}</td>
                                                 <td className="px-6 py-4 text-right font-black text-primary text-base font-mono bg-primary/5">
                                                     {inv.sales?.toLocaleString()} <span className="text-[10px] font-bold opacity-70 ml-1">L</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-right font-mono text-sm text-muted-foreground">{inv.rate?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '-'}</td>
+                                                <td className="px-6 py-4 text-right font-mono text-sm text-muted-foreground">{rate ? rate.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
                                                 <td className="px-6 py-4 text-right font-bold text-foreground font-mono text-sm bg-primary/5">
-                                                    {inv.amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '-'}
+                                                    {amount ? amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex justify-center gap-2">
@@ -354,7 +359,7 @@ export default function NozzleInventoryPage() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))
+                                        ); })
                                     )}
                                 </tbody>
                             </table>
