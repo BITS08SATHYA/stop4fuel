@@ -24,7 +24,6 @@ import {
     BookOpen,
     Eye,
     UserCog,
-    ClipboardList,
     Warehouse,
     ShoppingBag,
     ArrowLeftRight,
@@ -95,7 +94,6 @@ const inventoryManagementNav = [
     { name: "Godown Stock", href: "/operations/inventory/godown", icon: Warehouse },
     { name: "Cashier Stock", href: "/operations/inventory/cashier", icon: ShoppingBag },
     { name: "Stock Transfer", href: "/operations/inventory/transfers", icon: ArrowLeftRight },
-    { name: "Purchase Orders", href: "/operations/inventory/purchase-orders", icon: ClipboardList },
     { name: "Purchase Invoices", href: "/operations/inventory/purchase-invoices", icon: FileText },
 ];
 
