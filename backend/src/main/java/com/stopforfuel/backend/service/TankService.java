@@ -1,8 +1,10 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Tank;
+import com.stopforfuel.backend.entity.Nozzle;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.repository.TankRepository;
+import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,9 @@ public class TankService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private NozzleRepository nozzleRepository;
 
     public List<Tank> getAllTanks() {
         return tankRepository.findAllByScid(SecurityUtils.getScid());
@@ -64,12 +69,34 @@ public class TankService {
                     .orElseThrow(() -> new RuntimeException("Product not found with id: " + tankDetails.getProduct().getId()));
             tank.setProduct(product);
         }
+        // Cascade: deactivate connected nozzles when tank is set inactive
+        if (!tankDetails.isActive() && tank.isActive()) {
+            List<Nozzle> connectedNozzles = nozzleRepository.findByTankIdAndScid(id, SecurityUtils.getScid());
+            for (Nozzle nozzle : connectedNozzles) {
+                if (nozzle.isActive()) {
+                    nozzle.setActive(false);
+                    nozzleRepository.save(nozzle);
+                }
+            }
+        }
+        tank.setActive(tankDetails.isActive());
         return tankRepository.save(tank);
     }
 
     public Tank toggleStatus(Long id) {
         Tank tank = getTankById(id);
-        tank.setActive(!tank.isActive());
+        boolean newStatus = !tank.isActive();
+        // Cascade: deactivate connected nozzles when tank is set inactive
+        if (!newStatus) {
+            List<Nozzle> connectedNozzles = nozzleRepository.findByTankIdAndScid(id, SecurityUtils.getScid());
+            for (Nozzle nozzle : connectedNozzles) {
+                if (nozzle.isActive()) {
+                    nozzle.setActive(false);
+                    nozzleRepository.save(nozzle);
+                }
+            }
+        }
+        tank.setActive(newStatus);
         return tankRepository.save(tank);
     }
 
