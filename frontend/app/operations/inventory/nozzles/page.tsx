@@ -7,33 +7,53 @@ import { Modal } from "@/components/ui/modal";
 import {
     getNozzleInventories,
     getNozzles,
+    getProducts,
     createNozzleInventory,
     updateNozzleInventory,
+    downloadNozzleInventoryReport,
     NozzleInventory,
     Nozzle,
+    Product,
     deleteNozzleInventory
 } from "@/lib/api/station";
-import { Fuel, Plus, Calendar, Hash, ArrowUpRight, Trash2, Edit2, Search } from "lucide-react";
+import { Fuel, Plus, Calendar, Trash2, Edit2, Search, FileText, FileSpreadsheet } from "lucide-react";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+
+function getCurrentMonthRange() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    return {
+        fromDate: `${y}-${m}-01`,
+        toDate: `${y}-${m}-${String(now.getDate()).padStart(2, "0")}`
+    };
+}
 
 export default function NozzleInventoryPage() {
     const [inventories, setInventories] = useState<NozzleInventory[]>([]);
     const [nozzles, setNozzles] = useState<Nozzle[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [dateFilter, setDateFilter] = useState("");
     const [nozzleFilter, setNozzleFilter] = useState<string>("");
+    const [productFilter, setProductFilter] = useState<string>("");
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    // Date range filter — defaults to current month
+    const { fromDate: defaultFrom, toDate: defaultTo } = getCurrentMonthRange();
+    const [fromDate, setFromDate] = useState(defaultFrom);
+    const [toDate, setToDate] = useState(defaultTo);
 
     const filteredInv = useMemo(() => inventories.filter((inv) => {
         const q = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery || inv.nozzle.nozzleName?.toLowerCase().includes(q) || inv.nozzle.pump.name?.toLowerCase().includes(q) || inv.nozzle.tank.product.name?.toLowerCase().includes(q);
-        const matchesNozzle = !nozzleFilter || String(inv.nozzle.id) === nozzleFilter;
-        const matchesDate = !dateFilter || inv.date === dateFilter;
-        return matchesSearch && matchesNozzle && matchesDate;
-    }), [inventories, searchQuery, nozzleFilter, dateFilter]);
+        const matchesSearch = !searchQuery || inv.nozzle?.nozzleName?.toLowerCase().includes(q) || inv.nozzle?.pump?.name?.toLowerCase().includes(q) || inv.nozzle?.tank?.product?.name?.toLowerCase().includes(q);
+        const matchesNozzle = !nozzleFilter || String(inv.nozzle?.id) === nozzleFilter;
+        const matchesProduct = !productFilter || String(inv.nozzle?.tank?.product?.id) === productFilter;
+        return matchesSearch && matchesNozzle && matchesProduct;
+    }), [inventories, searchQuery, nozzleFilter, productFilter]);
 
     const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedInv } = useClientPagination(filteredInv);
 
@@ -51,9 +71,19 @@ export default function NozzleInventoryPage() {
     }), []);
     const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
+    // Build unique product list from nozzles (multiple nozzles can give same product)
+    const uniqueProducts = useMemo(() => {
+        const map = new Map<number, { id: number; name: string }>();
+        nozzles.forEach(n => {
+            if (n.tank?.product) {
+                map.set(n.tank.product.id, { id: n.tank.product.id, name: n.tank.product.name });
+            }
+        });
+        return Array.from(map.values());
+    }, [nozzles]);
+
     const loadData = async () => {
         setIsLoading(true);
-        // Load Nozzles (for the dropdown)
         try {
             const nData = await getNozzles();
             setNozzles(nData.filter(n => n.active));
@@ -61,20 +91,21 @@ export default function NozzleInventoryPage() {
             console.error("Failed to load nozzles", err);
         }
 
-        // Load Inventories (for the table)
         try {
-            const iData = await getNozzleInventories();
+            const params: { fromDate?: string; toDate?: string } = {};
+            if (fromDate) params.fromDate = fromDate;
+            if (toDate) params.toDate = toDate;
+            const iData = await getNozzleInventories(params);
             setInventories(iData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         } catch (err) {
             console.error("Failed to load nozzle inventory logs", err);
-            // Don't alert here to avoid annoying the user if logs are just empty/erroring
         }
         setIsLoading(false);
     };
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [fromDate, toDate]);
 
     // Auto-calculate sales when readings change
     useEffect(() => {
@@ -135,6 +166,35 @@ export default function NozzleInventoryPage() {
         }
     };
 
+    const handleDownload = async (format: 'pdf' | 'excel') => {
+        if (!fromDate || !toDate) return;
+        setIsDownloading(true);
+        try {
+            const nid = nozzleFilter ? Number(nozzleFilter) : undefined;
+            const pid = productFilter ? Number(productFilter) : undefined;
+            const blob = await downloadNozzleInventoryReport(fromDate, toDate, format, nid, pid);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+            let label = 'All_Nozzles';
+            if (nozzleFilter) {
+                label = nozzles.find(n => String(n.id) === nozzleFilter)?.nozzleName || 'Nozzle';
+            } else if (productFilter) {
+                label = uniqueProducts.find(p => String(p.id) === productFilter)?.name || 'Product';
+            }
+            a.download = `NozzleInventory_${label}_${fromDate}_${toDate}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Failed to download report", err);
+            setApiError("Error downloading report");
+        }
+        setIsDownloading(false);
+    };
+
     const resetForm = () => {
         setEditingId(null);
         setNozzleId("");
@@ -164,57 +224,102 @@ export default function NozzleInventoryPage() {
                     </button>
                 </div>
 
+                {/* Filter Bar */}
+                <div className="mb-6 flex flex-wrap gap-3 items-center">
+                    <div className="relative flex-1 min-w-[200px] max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Search by nozzle, pump, or product..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    <select
+                        value={nozzleFilter}
+                        onChange={(e) => { setNozzleFilter(e.target.value); if (e.target.value) setProductFilter(""); }}
+                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                        <option value="">All Nozzles</option>
+                        {nozzles.map((n) => (
+                            <option key={n.id} value={n.id}>{n.nozzleName} ({n.pump.name})</option>
+                        ))}
+                    </select>
+                    <select
+                        value={productFilter}
+                        onChange={(e) => { setProductFilter(e.target.value); if (e.target.value) setNozzleFilter(""); }}
+                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                        <option value="">All Products</option>
+                        {uniqueProducts.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-muted-foreground font-medium">From</label>
+                        <input
+                            type="date"
+                            value={fromDate}
+                            onChange={(e) => setFromDate(e.target.value)}
+                            className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                        <label className="text-xs text-muted-foreground font-medium">To</label>
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    {(searchQuery || nozzleFilter || productFilter || fromDate !== defaultFrom || toDate !== defaultTo) && (
+                        <button
+                            onClick={() => { setSearchQuery(""); setNozzleFilter(""); setProductFilter(""); setFromDate(defaultFrom); setToDate(defaultTo); }}
+                            className="px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                            Reset
+                        </button>
+                    )}
+
+                    {/* Download Buttons */}
+                    <div className="flex items-center gap-1 ml-auto">
+                        <button
+                            onClick={() => handleDownload('pdf')}
+                            disabled={isDownloading || !fromDate || !toDate}
+                            className="flex items-center gap-1.5 px-3 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download PDF Report"
+                        >
+                            <FileText className="w-3.5 h-3.5" />
+                            PDF
+                        </button>
+                        <button
+                            onClick={() => handleDownload('excel')}
+                            disabled={isDownloading || !fromDate || !toDate}
+                            className="flex items-center gap-1.5 px-3 py-2.5 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download Excel Report"
+                        >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            Excel
+                        </button>
+                    </div>
+                </div>
+
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
                         <p className="animate-pulse">Loading reading logs...</p>
                     </div>
-                ) : inventories.length === 0 ? (
+                ) : filteredInv.length === 0 ? (
                     <div className="text-center py-20 bg-black/5 dark:bg-white/5 rounded-2xl border border-dashed border-border">
                         <Calendar className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
                         <h3 className="text-xl font-semibold text-foreground mb-2">No Records Found</h3>
-                        <p className="text-muted-foreground mb-6">Start by recording your first daily nozzle meter reading.</p>
+                        <p className="text-muted-foreground mb-6">
+                            {inventories.length === 0
+                                ? "Start by recording your first daily nozzle meter reading."
+                                : "No readings match the selected filters."}
+                        </p>
                     </div>
                 ) : (
-                    <>
-                    {/* Filter Bar */}
-                    <div className="mb-6 flex flex-wrap gap-3 items-center">
-                        <div className="relative flex-1 min-w-[200px] max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Search by nozzle, pump, or product..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
-                        </div>
-                        <select
-                            value={nozzleFilter}
-                            onChange={(e) => setNozzleFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="">All Nozzles</option>
-                            {nozzles.map((n) => (
-                                <option key={n.id} value={n.id}>{n.nozzleName} ({n.pump.name})</option>
-                            ))}
-                        </select>
-                        <input
-                            type="date"
-                            value={dateFilter}
-                            onChange={(e) => setDateFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        />
-                        {(searchQuery || nozzleFilter || dateFilter) && (
-                            <button
-                                onClick={() => { setSearchQuery(""); setNozzleFilter(""); setDateFilter(""); }}
-                                className="px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground"
-                            >
-                                Clear
-                            </button>
-                        )}
-                    </div>
-
                     <GlassCard className="overflow-hidden border-none p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -234,7 +339,7 @@ export default function NozzleInventoryPage() {
                                         <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
                                             <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
+                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
@@ -242,11 +347,11 @@ export default function NozzleInventoryPage() {
                                                         <Fuel className="w-4 h-4" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-bold text-foreground">{inv.nozzle?.nozzleName}</div>
+                                                        <div className="text-sm font-bold text-foreground">{inv.nozzle?.nozzleName || '-'}</div>
                                                         <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                                            <span>{inv.nozzle?.pump?.name}</span>
+                                                            <span>{inv.nozzle?.pump?.name || '-'}</span>
                                                             <span>•</span>
-                                                            <span>{inv.nozzle?.tank?.product?.name}</span>
+                                                            <span>{inv.nozzle?.tank?.product?.name || '-'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -265,7 +370,7 @@ export default function NozzleInventoryPage() {
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleDelete(inv.id)}
                                                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
                                                         title="Delete"
@@ -281,7 +386,6 @@ export default function NozzleInventoryPage() {
                         </div>
                         <TablePagination page={page} totalPages={totalPages} totalElements={totalElements} pageSize={pageSize} onPageChange={setPage} />
                     </GlassCard>
-                    </>
                 )}
             </div>
 

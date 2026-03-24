@@ -276,8 +276,25 @@ const handleResponse = async (res: Response) => {
 // ... existing products functions ...
 
 // Daily Inventory - Nozzles
-export const getNozzleInventories = (): Promise<NozzleInventory[]> =>
-    fetchWithAuth(`${API_BASE_URL}/inventory/nozzles`).then(handleResponse);
+export const getNozzleInventories = (params?: { fromDate?: string; toDate?: string; nozzleId?: number; productId?: number }): Promise<NozzleInventory[]> => {
+    const query = new URLSearchParams();
+    if (params?.fromDate) query.set('fromDate', params.fromDate);
+    if (params?.toDate) query.set('toDate', params.toDate);
+    if (params?.nozzleId) query.set('nozzleId', String(params.nozzleId));
+    if (params?.productId) query.set('productId', String(params.productId));
+    const qs = query.toString();
+    return fetchWithAuth(`${API_BASE_URL}/inventory/nozzles${qs ? '?' + qs : ''}`).then(handleResponse);
+};
+
+export const downloadNozzleInventoryReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel', nozzleId?: number, productId?: number): Promise<Blob> => {
+    const query = new URLSearchParams({ fromDate, toDate, format });
+    if (nozzleId) query.set('nozzleId', String(nozzleId));
+    if (productId) query.set('productId', String(productId));
+    return fetchWithAuth(`${API_BASE_URL}/inventory/nozzles/report?${query.toString()}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};
 
 export const createNozzleInventory = (inventory: Partial<NozzleInventory>): Promise<NozzleInventory> =>
     fetchWithAuth(`${API_BASE_URL}/inventory/nozzles`, {
