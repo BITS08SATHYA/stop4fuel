@@ -70,7 +70,7 @@ These were previously listed as gaps but are now DONE:
 Look at the eager-tumbling-noodle.md plan for ML, employee management, salary management, eb management
 
 
-# In the vehicle management, add a vehicle limit liters ...that should connected to some level to the Customer Credit Limit
-# Make sure that an invoice cannot be generated for vehicles with product quantity greater than the Vehicle Max Capacity limit
-# In the company module, a provision is necessary for uploading company related documents such as partnership deed, GST, PAN, nozzle expirations etc..,
+# In the vehicle management, add a vehicle limit liters ...that should connected to some level to the Customer Credit Limit 
+# Make sure that an invoice cannot be generated for vehicles with product quantity greater than the Vehicle Max Capacity limit (working)
+# In the company module, a provision is necessary for uploading company related documents such as partnership deed, GST, PAN, nozzle expirations etc..,(working)
 
