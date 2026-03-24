@@ -70,7 +70,24 @@ These were previously listed as gaps but are now DONE:
 Look at the eager-tumbling-noodle.md plan for ML, employee management, salary management, eb management
 
 
-# In the vehicle management, add a vehicle limit liters ...that should connected to some level to the Customer Credit Limit 
-# Make sure that an invoice cannot be generated for vehicles with product quantity greater than the Vehicle Max Capacity limit (working)
-# In the company module, a provision is necessary for uploading company related documents such as partnership deed, GST, PAN, nozzle expirations etc..,(working)
+# In the vehicle management, add a vehicle limit liters ...that should connected to some level to the Customer Credit Limit (done)
+# Make sure that an invoice cannot be generated for vehicles with product quantity greater than the Vehicle Max Capacity limit (done)
+# In the company module, a provision is necessary for uploading company related documents such as partnership deed, GST, PAN, nozzle expirations etc..,(done)
 
+# in the customer management, add a dropbox (government vs non-government) ...if the selected is non-government, a another dropbox should come up and contains these options categories  like (Bus_operators, restaurants, schools, Manfacturing, etc..,) ...and in the category section independently let me add (Bus_operators, restaurants, schools, Manfacturing, etc..,)
+
+# Key commands
+Step 1 — SCP the dump to EC2:                                                                                                                                             
+                                                                                                                                                                            
+  scp -i /home/sathipa/Aws_Keys/stopforfuel-key.pem stopforfuel_dump.sql ubuntu@100.52.228.13:~/                                                                            
+                                                                                                                                                                            
+  Step 2 — SSH into EC2 and import:
+                                                                                                                                                                            
+  ssh -i /home/sathipa/Aws_Keys/stopforfuel-key.pem ubuntu@100.52.228.13
+                                                                                                                                                                            
+  # On EC2, import into the running postgres container                                                                                                                      
+  docker exec -i stopforfuel-postgres psql -U postgres -d stopforfuel < ~/stopforfuel_dump.sql                                                                              
+                                                                                                                                                                            
+  Let me also update the memory with the new EC2 IP.            
+
+android app --> update customer credit limits 

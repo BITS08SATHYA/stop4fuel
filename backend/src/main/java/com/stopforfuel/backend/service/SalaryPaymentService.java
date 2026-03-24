@@ -2,9 +2,11 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.LeaveRequest;
 import com.stopforfuel.backend.entity.SalaryPayment;
 import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
+import com.stopforfuel.backend.repository.LeaveRequestRepository;
 import com.stopforfuel.backend.repository.SalaryPaymentRepository;
 import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +30,9 @@ public class SalaryPaymentService {
     @Autowired
     private EmployeeAdvanceRepository employeeAdvanceRepository;
 
+    @Autowired
+    private LeaveRequestRepository leaveRequestRepository;
+
     public List<SalaryPayment> getMonthlyPayments(Integer month, Integer year) {
         return salaryPaymentRepository.findByMonthAndYear(month, year);
     }
@@ -37,7 +43,7 @@ public class SalaryPaymentService {
 
     @Transactional
     public List<SalaryPayment> processMonthlyPayroll(Integer month, Integer year) {
-        List<Employee> employees = employeeRepository.findByStatus("Active");
+        List<Employee> employees = employeeRepository.findByStatus("ACTIVE");
         List<SalaryPayment> payments = new ArrayList<>();
 
         for (Employee emp : employees) {
@@ -57,15 +63,31 @@ public class SalaryPaymentService {
                     .mapToDouble(EmployeeAdvance::getAmount)
                     .sum();
 
+            // Calculate LOP (Loss of Pay) based on monthly leave threshold
+            int lopDays = 0;
+            double lopDeduction = 0.0;
+            int threshold = emp.getMonthlyLeaveThreshold() != null ? emp.getMonthlyLeaveThreshold() : 4;
+            int totalLeaveDays = calculateLeaveDaysInMonth(emp.getId(), month, year);
+            if (totalLeaveDays > threshold) {
+                lopDays = totalLeaveDays - threshold;
+                double baseSalary = emp.getSalary() != null ? emp.getSalary() : 0.0;
+                int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
+                double perDaySalary = baseSalary / daysInMonth;
+                lopDeduction = Math.round(perDaySalary * lopDays * 100.0) / 100.0;
+            }
+
             SalaryPayment payment = new SalaryPayment();
             payment.setEmployee(emp);
             payment.setMonth(month);
             payment.setYear(year);
             payment.setBaseSalary(emp.getSalary() != null ? emp.getSalary() : 0.0);
             payment.setAdvanceDeduction(advanceDeduction);
+            payment.setLopDays(lopDays);
+            payment.setLopDeduction(lopDeduction);
             payment.setIncentiveAmount(0.0);
             payment.setOtherDeductions(0.0);
-            payment.setNetPayable(payment.getBaseSalary() - advanceDeduction + payment.getIncentiveAmount() - payment.getOtherDeductions());
+            payment.setNetPayable(payment.getBaseSalary() - advanceDeduction - lopDeduction
+                    + payment.getIncentiveAmount() - payment.getOtherDeductions());
             payment.setStatus("DRAFT");
 
             payments.add(salaryPaymentRepository.save(payment));
@@ -101,12 +123,35 @@ public class SalaryPaymentService {
 
         payment.setBaseSalary(details.getBaseSalary());
         payment.setAdvanceDeduction(details.getAdvanceDeduction());
+        payment.setLopDays(details.getLopDays() != null ? details.getLopDays() : 0);
+        payment.setLopDeduction(details.getLopDeduction() != null ? details.getLopDeduction() : 0.0);
         payment.setIncentiveAmount(details.getIncentiveAmount());
         payment.setOtherDeductions(details.getOtherDeductions());
         payment.setNetPayable(details.getBaseSalary() - details.getAdvanceDeduction()
+                - (details.getLopDeduction() != null ? details.getLopDeduction() : 0.0)
                 + details.getIncentiveAmount() - details.getOtherDeductions());
         payment.setRemarks(details.getRemarks());
 
         return salaryPaymentRepository.save(payment);
+    }
+
+    /**
+     * Calculate total approved leave days for an employee in a given month.
+     * Handles leaves that span across months by counting only the days within the target month.
+     */
+    private int calculateLeaveDaysInMonth(Long employeeId, int month, int year) {
+        LocalDate monthStart = LocalDate.of(year, month, 1);
+        LocalDate monthEnd = YearMonth.of(year, month).atEndOfMonth();
+
+        List<LeaveRequest> approvedLeaves = leaveRequestRepository
+                .findApprovedLeavesOverlappingMonth(employeeId, monthStart, monthEnd);
+
+        int totalDays = 0;
+        for (LeaveRequest leave : approvedLeaves) {
+            LocalDate effectiveStart = leave.getFromDate().isBefore(monthStart) ? monthStart : leave.getFromDate();
+            LocalDate effectiveEnd = leave.getToDate().isAfter(monthEnd) ? monthEnd : leave.getToDate();
+            totalDays += (int) (effectiveEnd.toEpochDay() - effectiveStart.toEpochDay()) + 1;
+        }
+        return totalDays;
     }
 }

@@ -239,6 +239,28 @@ export default function OilTypesPage() {
                                 placeholder="Details about this oil type..."
                             />
                         </div>
+
+                        <div className="flex items-center justify-between p-4 bg-background border border-border rounded-2xl">
+                            <div>
+                                <label className="block text-sm font-bold text-foreground">Status</label>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    {active ? "This oil type is enabled and available for grades" : "This oil type is disabled — grades cannot use it"}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setActive(!active)}
+                                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                                    active ? 'bg-green-500' : 'bg-muted-foreground/30'
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ${
+                                        active ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                                />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-6 border-t border-border">

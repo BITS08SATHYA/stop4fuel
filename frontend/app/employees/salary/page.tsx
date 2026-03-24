@@ -85,7 +85,8 @@ export default function SalaryProcessingPage() {
 
     // Stats
     const totalBase = payments.reduce((s, p) => s + (p.baseSalary || 0), 0);
-    const totalDeductions = payments.reduce((s, p) => s + (p.advanceDeduction || 0) + (p.otherDeductions || 0), 0);
+    const totalLop = payments.reduce((s, p) => s + (p.lopDeduction || 0), 0);
+    const totalDeductions = payments.reduce((s, p) => s + (p.advanceDeduction || 0) + (p.lopDeduction || 0) + (p.otherDeductions || 0), 0);
     const totalNet = payments.reduce((s, p) => s + (p.netPayable || 0), 0);
     const paidCount = payments.filter((p) => p.status === "PAID").length;
     const draftCount = payments.filter((p) => p.status === "DRAFT").length;
@@ -182,8 +183,8 @@ export default function SalaryProcessingPage() {
                                 </button>
                             </div>
                         )}
-                        <GlassCard className="overflow-hidden border-none p-0 flex-1">
-                            <div className="overflow-x-auto">
+                        <GlassCard className="overflow-hidden border-none p-0 flex-1 flex flex-col">
+                            <div className="overflow-auto flex-1">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-white/5 border-b border-border/50">
@@ -192,6 +193,7 @@ export default function SalaryProcessingPage() {
                                             <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Pay Day</th>
                                             <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Base</th>
                                             <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Adv Ded.</th>
+                                            <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">LOP</th>
                                             <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Incentive</th>
                                             <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Other</th>
                                             <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Net</th>
@@ -214,6 +216,13 @@ export default function SalaryProcessingPage() {
                                                 </td>
                                                 <td className="px-4 py-4 text-right font-medium">{formatRupees(p.baseSalary || 0)}</td>
                                                 <td className="px-4 py-4 text-right text-red-500">{p.advanceDeduction > 0 ? `-${formatRupees(p.advanceDeduction)}` : "-"}</td>
+                                                <td className="px-4 py-4 text-right text-red-500">
+                                                    {p.lopDays > 0 ? (
+                                                        <span title={`${p.lopDays} day${p.lopDays > 1 ? "s" : ""} LOP`}>
+                                                            -{formatRupees(p.lopDeduction)} <span className="text-[10px]">({p.lopDays}d)</span>
+                                                        </span>
+                                                    ) : "-"}
+                                                </td>
                                                 <td className="px-4 py-4 text-right text-emerald-500">{p.incentiveAmount > 0 ? `+${formatRupees(p.incentiveAmount)}` : "-"}</td>
                                                 <td className="px-4 py-4 text-right text-red-500">{p.otherDeductions > 0 ? `-${formatRupees(p.otherDeductions)}` : "-"}</td>
                                                 <td className="px-4 py-4 text-right font-bold text-primary">{formatRupees(p.netPayable || 0)}</td>

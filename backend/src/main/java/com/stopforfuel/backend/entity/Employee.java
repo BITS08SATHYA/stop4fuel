@@ -40,6 +40,11 @@ public class Employee extends User {
     @Max(value = 31, message = "Salary day must be between 1 and 31")
     private Integer salaryDay;
 
+    @Column(name = "monthly_leave_threshold")
+    @Min(value = 0, message = "Monthly leave threshold must be zero or positive")
+    @Max(value = 31, message = "Monthly leave threshold cannot exceed 31")
+    private Integer monthlyLeaveThreshold = 4;
+
     @Column(name = "aadhar_number")
     @Pattern(regexp = "^[2-9]\\d{11}$", message = "Aadhar must be 12 digits starting with 2-9")
     private String aadharNumber;
@@ -56,12 +61,10 @@ public class Employee extends User {
     private String bankAccountNumber;
     @Size(max = 100)
     private String bankName;
-    @Pattern(regexp = "^[A-Z]{4}0[A-Z0-9]{6}$", message = "IFSC must be 4 letters + 0 + 6 alphanumeric")
     private String bankIfsc;
     @Size(max = 100)
     private String bankBranch;
 
-    @Pattern(regexp = "^[A-Z]{5}[0-9]{4}[A-Z]$", message = "PAN must be in format AAAAA0000A")
     private String panNumber;
     @Size(max = 100)
     private String department;
