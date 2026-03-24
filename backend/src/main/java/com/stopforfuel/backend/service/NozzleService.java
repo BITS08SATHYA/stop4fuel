@@ -80,6 +80,7 @@ public class NozzleService {
                     .orElseThrow(() -> new RuntimeException("Pump not found with id: " + nozzleDetails.getPump().getId()));
             nozzle.setPump(pump);
         }
+        nozzle.setActive(nozzleDetails.isActive());
         return nozzleRepository.save(nozzle);
     }
 
