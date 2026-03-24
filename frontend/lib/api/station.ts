@@ -1453,7 +1453,7 @@ export interface EmployeeType {
 }
 
 export const getEmployees = (): Promise<EmployeeType[]> =>
-    fetchWithAuth(`${API_BASE_URL}/employees`).then(handleResponse);
+    fetchWithAuth(`${API_BASE_URL}/employees?size=1000`).then(handleResponse).then(data => data.content ?? data);
 
 export const getActiveEmployees = (): Promise<EmployeeType[]> =>
     fetchWithAuth(`${API_BASE_URL}/employees/active`).then(handleResponse);
@@ -1630,6 +1630,8 @@ export interface SalaryPayment {
     year: number;
     baseSalary: number;
     advanceDeduction: number;
+    lopDays: number;
+    lopDeduction: number;
     incentiveAmount: number;
     otherDeductions: number;
     netPayable: number;

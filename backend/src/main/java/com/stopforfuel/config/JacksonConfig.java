@@ -12,6 +12,7 @@ public class JacksonConfig {
         Hibernate6Module module = new Hibernate6Module();
         module.configure(Hibernate6Module.Feature.FORCE_LAZY_LOADING, false);
         module.configure(Hibernate6Module.Feature.SERIALIZE_IDENTIFIER_FOR_LAZY_NOT_LOADED_OBJECTS, true);
+        module.configure(Hibernate6Module.Feature.USE_TRANSIENT_ANNOTATION, false);
         return module;
     }
 }

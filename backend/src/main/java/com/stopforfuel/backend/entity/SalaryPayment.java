@@ -30,6 +30,8 @@ public class SalaryPayment extends BaseEntity {
     private Double advanceDeduction = 0.0;
     private Double incentiveAmount = 0.0;
     private Double otherDeductions = 0.0;
+    private Integer lopDays = 0;
+    private Double lopDeduction = 0.0;
     private Double netPayable;
 
     private LocalDate paymentDate;

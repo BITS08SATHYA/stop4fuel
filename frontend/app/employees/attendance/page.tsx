@@ -51,7 +51,7 @@ export default function AttendancePage() {
                 getEmployees(),
                 getDailyAttendance(selectedDate),
             ]);
-            setEmployees(emps.filter(e => e.status === "Active"));
+            setEmployees(emps.filter(e => e.status?.toUpperCase() === "ACTIVE"));
             setAttendance(att);
         } catch (e) {
             console.error(e);
