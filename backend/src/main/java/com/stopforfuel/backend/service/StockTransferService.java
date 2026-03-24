@@ -123,7 +123,7 @@ public class StockTransferService {
      * Negative qty = stock returned to godown (CASHIER→GODOWN).
      */
     private void updateProductInventoryIncome(Long shiftId, Long productId, double qty) {
-        ProductInventory pi = productInventoryRepository.findByShiftIdAndProductId(shiftId, productId);
+        ProductInventory pi = productInventoryRepository.findTopByShiftIdAndProductIdOrderByIdDesc(shiftId, productId);
         if (pi != null) {
             double currentIncome = pi.getIncomeStock() != null ? pi.getIncomeStock() : 0.0;
             pi.setIncomeStock(currentIncome + qty);

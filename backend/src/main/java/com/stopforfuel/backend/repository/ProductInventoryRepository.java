@@ -29,5 +29,5 @@ public interface ProductInventoryRepository extends ScidRepository<ProductInvent
     List<ProductInventory> findByProductId(Long productId);
     ProductInventory findTopByProductIdOrderByDateDescIdDesc(Long productId);
     List<ProductInventory> findByShiftId(Long shiftId);
-    ProductInventory findByShiftIdAndProductId(Long shiftId, Long productId);
+    ProductInventory findTopByShiftIdAndProductIdOrderByIdDesc(Long shiftId, Long productId);
 }
