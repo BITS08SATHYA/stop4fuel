@@ -22,4 +22,10 @@ public interface TankInventoryRepository extends ScidRepository<TankInventory> {
     List<TankInventory> findByTankId(Long tankId);
     TankInventory findTopByTankIdOrderByDateDescIdDesc(Long tankId);
     List<TankInventory> findByShiftId(Long shiftId);
+
+    @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.scid = :scid AND ti.date BETWEEN :fromDate AND :toDate ORDER BY ti.date DESC, ti.id DESC")
+    List<TankInventory> findByScidAndDateBetween(Long scid, LocalDate fromDate, LocalDate toDate);
+
+    @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.scid = :scid AND ti.tank.id = :tankId AND ti.date BETWEEN :fromDate AND :toDate ORDER BY ti.date DESC, ti.id DESC")
+    List<TankInventory> findByScidAndTankIdAndDateBetween(Long scid, Long tankId, LocalDate fromDate, LocalDate toDate);
 }

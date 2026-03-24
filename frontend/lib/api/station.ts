@@ -290,8 +290,23 @@ export const deleteNozzleInventory = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/inventory/nozzles/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Daily Inventory - Tanks
-export const getTankInventories = (): Promise<TankInventory[]> =>
-    fetchWithAuth(`${API_BASE_URL}/inventory/tanks`).then(handleResponse);
+export const getTankInventories = (params?: { fromDate?: string; toDate?: string; tankId?: number }): Promise<TankInventory[]> => {
+    const query = new URLSearchParams();
+    if (params?.fromDate) query.set('fromDate', params.fromDate);
+    if (params?.toDate) query.set('toDate', params.toDate);
+    if (params?.tankId) query.set('tankId', String(params.tankId));
+    const qs = query.toString();
+    return fetchWithAuth(`${API_BASE_URL}/inventory/tanks${qs ? '?' + qs : ''}`).then(handleResponse);
+};
+
+export const downloadTankDipReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel', tankId?: number): Promise<Blob> => {
+    const query = new URLSearchParams({ fromDate, toDate, format });
+    if (tankId) query.set('tankId', String(tankId));
+    return fetchWithAuth(`${API_BASE_URL}/inventory/tanks/report?${query.toString()}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};
 
 export const createTankInventory = (inventory: Partial<TankInventory>): Promise<TankInventory> =>
     fetchWithAuth(`${API_BASE_URL}/inventory/tanks`, {
