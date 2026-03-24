@@ -6,16 +6,27 @@ import { TablePagination, useClientPagination } from "@/components/ui/table-pagi
 import { Modal } from "@/components/ui/modal";
 import {
     getProductInventories,
-    getActiveProducts,
+    getActiveNonFuelProducts,
     createProductInventory,
     updateProductInventory,
+    downloadProductInventoryReport,
     ProductInventory,
     Product,
     deleteProductInventory
 } from "@/lib/api/station";
-import { Box, Plus, Calendar, Archive, TrendingUp, Trash2, Edit2, Search } from "lucide-react";
+import { Box, Plus, Calendar, Archive, TrendingUp, Trash2, Edit2, Search, FileText, FileSpreadsheet } from "lucide-react";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+
+function getCurrentMonthRange() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    return {
+        fromDate: `${y}-${m}-01`,
+        toDate: `${y}-${m}-${String(now.getDate()).padStart(2, "0")}`
+    };
+}
 
 export default function ProductInventoryPage() {
     const [inventories, setInventories] = useState<ProductInventory[]>([]);
@@ -24,16 +35,20 @@ export default function ProductInventoryPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [dateFilter, setDateFilter] = useState("");
     const [productFilter, setProductFilter] = useState<string>("");
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    // Date range filter — defaults to current month
+    const { fromDate: defaultFrom, toDate: defaultTo } = getCurrentMonthRange();
+    const [fromDate, setFromDate] = useState(defaultFrom);
+    const [toDate, setToDate] = useState(defaultTo);
 
     const filteredInv = useMemo(() => inventories.filter((inv) => {
         const q = searchQuery.toLowerCase();
         const matchesSearch = !searchQuery || inv.product.name?.toLowerCase().includes(q) || inv.product.category?.toLowerCase().includes(q) || inv.product.brand?.toLowerCase().includes(q);
         const matchesProduct = !productFilter || String(inv.product.id) === productFilter;
-        const matchesDate = !dateFilter || inv.date === dateFilter;
-        return matchesSearch && matchesProduct && matchesDate;
-    }), [inventories, searchQuery, productFilter, dateFilter]);
+        return matchesSearch && matchesProduct;
+    }), [inventories, searchQuery, productFilter]);
 
     const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedInv } = useClientPagination(filteredInv);
 
@@ -57,17 +72,18 @@ export default function ProductInventoryPage() {
 
     const loadData = async () => {
         setIsLoading(true);
-        // Load Products (for the dropdown)
         try {
-            const pData = await getActiveProducts();
+            const pData = await getActiveNonFuelProducts();
             setProducts(pData);
         } catch (err) {
             console.error("Failed to load products", err);
         }
 
-        // Load Inventories (for the list)
         try {
-            const iData = await getProductInventories();
+            const params: { fromDate?: string; toDate?: string } = {};
+            if (fromDate) params.fromDate = fromDate;
+            if (toDate) params.toDate = toDate;
+            const iData = await getProductInventories(params);
             setInventories(iData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         } catch (err) {
             console.error("Failed to load product inventory logs", err);
@@ -77,14 +93,14 @@ export default function ProductInventoryPage() {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [fromDate, toDate]);
 
     // Derived auto-calculations
     useEffect(() => {
         const o = parseFloat(openStock) || 0;
         const i = parseFloat(incomeStock) || 0;
         const c = parseFloat(closeStock) || 0;
-        
+
         const total = o + i;
         setTotalStock(total);
         setSales(Math.max(0, total - c));
@@ -140,6 +156,29 @@ export default function ProductInventoryPage() {
         }
     };
 
+    const handleDownload = async (format: 'pdf' | 'excel') => {
+        if (!fromDate || !toDate) return;
+        setIsDownloading(true);
+        try {
+            const pid = productFilter ? Number(productFilter) : undefined;
+            const blob = await downloadProductInventoryReport(fromDate, toDate, format, pid);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+            const productLabel = productFilter ? products.find(p => String(p.id) === productFilter)?.name || 'Product' : 'All_Products';
+            a.download = `ProductInventory_${productLabel}_${fromDate}_${toDate}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Failed to download report", err);
+            setApiError("Error downloading report");
+        }
+        setIsDownloading(false);
+    };
+
     const resetForm = () => {
         setEditingId(null);
         setProductId("");
@@ -174,57 +213,92 @@ export default function ProductInventoryPage() {
                     </button>
                 </div>
 
+                {/* Filter Bar */}
+                <div className="mb-6 flex flex-wrap gap-3 items-center">
+                    <div className="relative flex-1 min-w-[200px] max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Search by product name, category, brand..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    <select
+                        value={productFilter}
+                        onChange={(e) => setProductFilter(e.target.value)}
+                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                        <option value="">All Products</option>
+                        {products.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-muted-foreground font-medium">From</label>
+                        <input
+                            type="date"
+                            value={fromDate}
+                            onChange={(e) => setFromDate(e.target.value)}
+                            className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                        <label className="text-xs text-muted-foreground font-medium">To</label>
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    {(searchQuery || productFilter || fromDate !== defaultFrom || toDate !== defaultTo) && (
+                        <button
+                            onClick={() => { setSearchQuery(""); setProductFilter(""); setFromDate(defaultFrom); setToDate(defaultTo); }}
+                            className="px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                            Reset
+                        </button>
+                    )}
+
+                    {/* Download Buttons */}
+                    <div className="flex items-center gap-1 ml-auto">
+                        <button
+                            onClick={() => handleDownload('pdf')}
+                            disabled={isDownloading || !fromDate || !toDate}
+                            className="flex items-center gap-1.5 px-3 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download PDF Report"
+                        >
+                            <FileText className="w-3.5 h-3.5" />
+                            PDF
+                        </button>
+                        <button
+                            onClick={() => handleDownload('excel')}
+                            disabled={isDownloading || !fromDate || !toDate}
+                            className="flex items-center gap-1.5 px-3 py-2.5 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download Excel Report"
+                        >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            Excel
+                        </button>
+                    </div>
+                </div>
+
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
                         <p className="animate-pulse">Loading product checks...</p>
                     </div>
-                ) : inventories.length === 0 ? (
+                ) : filteredInv.length === 0 ? (
                     <div className="text-center py-20 bg-black/5 dark:bg-white/5 rounded-2xl border border-dashed border-border">
                         <Archive className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
                         <h3 className="text-xl font-semibold text-foreground mb-2">No Records Found</h3>
-                        <p className="text-muted-foreground mb-6">Track your daily shop sales and stock levels here.</p>
+                        <p className="text-muted-foreground mb-6">
+                            {inventories.length === 0
+                                ? "Track your daily shop sales and stock levels here."
+                                : "No records match the selected filters."}
+                        </p>
                     </div>
                 ) : (
-                    <>
-                    {/* Filter Bar */}
-                    <div className="mb-6 flex flex-wrap gap-3 items-center">
-                        <div className="relative flex-1 min-w-[200px] max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Search by product name, category, brand..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
-                        </div>
-                        <select
-                            value={productFilter}
-                            onChange={(e) => setProductFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="">All Products</option>
-                            {products.map((p) => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                        </select>
-                        <input
-                            type="date"
-                            value={dateFilter}
-                            onChange={(e) => setDateFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        />
-                        {(searchQuery || productFilter || dateFilter) && (
-                            <button
-                                onClick={() => { setSearchQuery(""); setProductFilter(""); setDateFilter(""); }}
-                                className="px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground"
-                            >
-                                Clear
-                            </button>
-                        )}
-                    </div>
-
                     <GlassCard className="overflow-hidden border-none p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -245,7 +319,7 @@ export default function ProductInventoryPage() {
                                         <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
                                             <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
+                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
@@ -253,10 +327,10 @@ export default function ProductInventoryPage() {
                                                         <Box className="w-4 h-4" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-bold text-foreground">{inv.product.name}</div>
+                                                        <div className="text-sm font-bold text-foreground">{inv.product?.name}</div>
                                                         <div className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
-                                                            <span>{inv.product.category}</span>
-                                                            {inv.product.brand && (
+                                                            <span>{inv.product?.category}</span>
+                                                            {inv.product?.brand && (
                                                                 <>
                                                                     <span>•</span>
                                                                     <span>{inv.product.brand}</span>
@@ -268,14 +342,14 @@ export default function ProductInventoryPage() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="text-sm font-mono">{inv.openStock?.toLocaleString()}</div>
-                                                <div className="text-[9px] text-muted-foreground uppercase">{inv.product.unit}</div>
+                                                <div className="text-[9px] text-muted-foreground uppercase">{inv.product?.unit}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right text-blue-500 font-medium font-mono text-sm leading-none">
                                                 {inv.incomeStock && inv.incomeStock > 0 ? `+${inv.incomeStock.toLocaleString()}` : "-"}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="text-sm font-mono">{inv.closeStock?.toLocaleString()}</div>
-                                                <div className="text-[9px] text-muted-foreground uppercase">{inv.product.unit}</div>
+                                                <div className="text-[9px] text-muted-foreground uppercase">{inv.product?.unit}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-primary text-base font-mono bg-primary/5">
                                                 {inv.sales?.toLocaleString()}
@@ -289,7 +363,7 @@ export default function ProductInventoryPage() {
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleDelete(inv.id)}
                                                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
                                                         title="Delete"
@@ -305,7 +379,6 @@ export default function ProductInventoryPage() {
                         </div>
                         <TablePagination page={page} totalPages={totalPages} totalElements={totalElements} pageSize={pageSize} onPageChange={setPage} />
                     </GlassCard>
-                    </>
                 )}
             </div>
 
@@ -329,7 +402,7 @@ export default function ProductInventoryPage() {
                                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
                             />
                         </div>
-                        
+
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-foreground mb-1.5">Select Product</label>
                             <select

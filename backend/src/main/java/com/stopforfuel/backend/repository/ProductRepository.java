@@ -12,5 +12,6 @@ public interface ProductRepository extends ScidRepository<Product> {
     List<Product> findByCategoryIgnoreCaseAndActive(String category, boolean active);
     List<Product> findByActiveAndScid(boolean active, Long scid);
     List<Product> findByCategoryIgnoreCaseAndActiveAndScid(String category, boolean active, Long scid);
+    List<Product> findByCategoryNotIgnoreCaseAndActiveAndScid(String category, boolean active, Long scid);
 }
 
