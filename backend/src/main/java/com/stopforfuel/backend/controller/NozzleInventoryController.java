@@ -59,12 +59,14 @@ public class NozzleInventoryController {
 
         List<NozzleInventory> data;
         String filterLabel;
+        boolean aggregated = false;
         if (nozzleId != null) {
             data = service.getByNozzleAndDateRange(nozzleId, fromDate, toDate);
             filterLabel = !data.isEmpty() ? data.get(0).getNozzle().getNozzleName() : "Nozzle";
         } else if (productId != null) {
             data = service.getByProductAndDateRange(productId, fromDate, toDate);
             filterLabel = !data.isEmpty() ? data.get(0).getNozzle().getTank().getProduct().getName() : "Product";
+            aggregated = true;
         } else {
             data = service.getByDateRange(fromDate, toDate);
             filterLabel = "All_Nozzles";
@@ -73,13 +75,13 @@ public class NozzleInventoryController {
         String dateRange = fromDate.format(DateTimeFormatter.ofPattern("ddMMyyyy")) + "_" + toDate.format(DateTimeFormatter.ofPattern("ddMMyyyy"));
 
         if ("excel".equalsIgnoreCase(format)) {
-            byte[] bytes = reportService.generateExcel(data, fromDate, toDate, filterLabel);
+            byte[] bytes = reportService.generateExcel(data, fromDate, toDate, filterLabel, aggregated);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=NozzleInventory_" + filterLabel + "_" + dateRange + ".xlsx")
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(bytes);
         } else {
-            byte[] bytes = reportService.generatePdf(data, fromDate, toDate, filterLabel);
+            byte[] bytes = reportService.generatePdf(data, fromDate, toDate, filterLabel, aggregated);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=NozzleInventory_" + filterLabel + "_" + dateRange + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
