@@ -61,6 +61,14 @@ public class TankInventoryService {
         return repository.save(existing);
     }
 
+    public List<TankInventory> getByDateRange(LocalDate fromDate, LocalDate toDate) {
+        return repository.findByScidAndDateBetween(SecurityUtils.getScid(), fromDate, toDate);
+    }
+
+    public List<TankInventory> getByTankAndDateRange(Long tankId, LocalDate fromDate, LocalDate toDate) {
+        return repository.findByScidAndTankIdAndDateBetween(SecurityUtils.getScid(), tankId, fromDate, toDate);
+    }
+
     public void delete(Long id) {
         repository.deleteById(id);
     }
