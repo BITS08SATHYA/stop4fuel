@@ -55,35 +55,45 @@ public class NozzleInventoryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) Long nozzleId,
             @RequestParam(required = false) Long productId,
-            @RequestParam(defaultValue = "pdf") String format) {
+            @RequestParam(defaultValue = "pdf") String format,
+            @RequestParam(defaultValue = "detailed") String reportType) {
 
         List<NozzleInventory> data;
         String filterLabel;
-        boolean aggregated = false;
+        // Determine reportType: product_sales or meter_tracker when product is selected, detailed otherwise
+        String effectiveType = reportType;
         if (nozzleId != null) {
             data = service.getByNozzleAndDateRange(nozzleId, fromDate, toDate);
             filterLabel = !data.isEmpty() ? data.get(0).getNozzle().getNozzleName() : "Nozzle";
+            effectiveType = "detailed";
         } else if (productId != null) {
             data = service.getByProductAndDateRange(productId, fromDate, toDate);
             filterLabel = !data.isEmpty() ? data.get(0).getNozzle().getTank().getProduct().getName() : "Product";
-            aggregated = true;
+            // Default to product_sales if not explicitly set to meter_tracker
+            if ("detailed".equals(effectiveType)) effectiveType = "product_sales";
         } else {
             data = service.getByDateRange(fromDate, toDate);
             filterLabel = "All_Nozzles";
+            effectiveType = "detailed";
         }
 
         String dateRange = fromDate.format(DateTimeFormatter.ofPattern("ddMMyyyy")) + "_" + toDate.format(DateTimeFormatter.ofPattern("ddMMyyyy"));
+        String filePrefix = switch (effectiveType) {
+            case "product_sales" -> "ProductDailySales";
+            case "meter_tracker" -> "MeterReadingTracker";
+            default -> "NozzleInventory";
+        };
 
         if ("excel".equalsIgnoreCase(format)) {
-            byte[] bytes = reportService.generateExcel(data, fromDate, toDate, filterLabel, aggregated);
+            byte[] bytes = reportService.generateExcel(data, fromDate, toDate, filterLabel, effectiveType);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=NozzleInventory_" + filterLabel + "_" + dateRange + ".xlsx")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filePrefix + "_" + filterLabel + "_" + dateRange + ".xlsx")
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(bytes);
         } else {
-            byte[] bytes = reportService.generatePdf(data, fromDate, toDate, filterLabel, aggregated);
+            byte[] bytes = reportService.generatePdf(data, fromDate, toDate, filterLabel, effectiveType);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=NozzleInventory_" + filterLabel + "_" + dateRange + ".pdf")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filePrefix + "_" + filterLabel + "_" + dateRange + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(bytes);
         }
