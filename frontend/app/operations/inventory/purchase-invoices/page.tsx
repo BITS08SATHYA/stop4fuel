@@ -15,12 +15,13 @@ import {
     updatePurchaseInvoiceStatus,
     uploadPurchaseInvoicePdf,
     getPurchaseInvoicePdfUrl,
+    downloadPurchaseInvoiceReport,
     PurchaseInvoice,
     Product,
     Supplier,
     PurchaseOrder,
 } from "@/lib/api/station";
-import { FileText, Plus, Search, Trash2, Eye, Edit3, Upload, ExternalLink } from "lucide-react";
+import { FileText, Plus, Search, Trash2, Eye, Edit3, Upload, ExternalLink, Download, Calendar } from "lucide-react";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 
@@ -54,6 +55,9 @@ export default function PurchaseInvoicesPage() {
     const [statusFilter, setStatusFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
     const [viewInvoice, setViewInvoice] = useState<PurchaseInvoice | null>(null);
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Form state
     const [invoiceType, setInvoiceType] = useState<"FUEL" | "NON_FUEL">("FUEL");
@@ -206,6 +210,27 @@ export default function PurchaseInvoicesPage() {
         setIsViewModalOpen(true);
     };
 
+    const handleDownload = async (format: 'pdf' | 'excel') => {
+        if (!fromDate || !toDate) return;
+        setIsDownloading(true);
+        try {
+            const blob = await downloadPurchaseInvoiceReport(fromDate, toDate, format);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+            a.download = `PurchaseInvoices_${fromDate}_${toDate}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Failed to download report", err);
+            setApiError("Error downloading report");
+        }
+        setIsDownloading(false);
+    };
+
     const handleEdit = (invoice: PurchaseInvoice) => {
         clearAllErrors();
         setApiError("");
@@ -317,8 +342,43 @@ export default function PurchaseInvoicesPage() {
                                 <option value="FUEL">Fuel</option>
                                 <option value="NON_FUEL">Non-Fuel</option>
                             </select>
-                            {(searchQuery || statusFilter || typeFilter) && (
-                                <button onClick={() => { setSearchQuery(""); setStatusFilter(""); setTypeFilter(""); }} className="px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground">
+                            <div className="flex items-center gap-1.5">
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                                <span className="text-muted-foreground text-xs">to</span>
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                            </div>
+                            {fromDate && toDate && (
+                                <div className="flex gap-1.5">
+                                    <button
+                                        onClick={() => handleDownload('pdf')}
+                                        disabled={isDownloading}
+                                        className="px-3 py-2.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+                                        title="Download PDF"
+                                    >
+                                        PDF
+                                    </button>
+                                    <button
+                                        onClick={() => handleDownload('excel')}
+                                        disabled={isDownloading}
+                                        className="px-3 py-2.5 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+                                        title="Download Excel"
+                                    >
+                                        Excel
+                                    </button>
+                                </div>
+                            )}
+                            {(searchQuery || statusFilter || typeFilter || fromDate || toDate) && (
+                                <button onClick={() => { setSearchQuery(""); setStatusFilter(""); setTypeFilter(""); setFromDate(""); setToDate(""); }} className="px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground">
                                     Clear
                                 </button>
                             )}
@@ -388,18 +448,20 @@ export default function PurchaseInvoicesPage() {
                                                         <button onClick={() => handleView(inv)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors" title="View">
                                                             <Eye className="w-4 h-4" />
                                                         </button>
-                                                        {inv.status === "PENDING" && (
+                                                        {inv.status !== "PAID" && (
                                                             <>
                                                                 <button onClick={() => handleEdit(inv)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Edit">
                                                                     <Edit3 className="w-4 h-4" />
-                                                                </button>
-                                                                <button onClick={() => handleStatusUpdate(inv.id!, "VERIFIED")} className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Mark Verified">
-                                                                    <span className="text-xs font-bold">V</span>
                                                                 </button>
                                                                 <button onClick={() => handleDelete(inv.id!)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
                                                                     <Trash2 className="w-4 h-4" />
                                                                 </button>
                                                             </>
+                                                        )}
+                                                        {inv.status === "PENDING" && (
+                                                            <button onClick={() => handleStatusUpdate(inv.id!, "VERIFIED")} className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Mark Verified">
+                                                                <span className="text-xs font-bold">V</span>
+                                                            </button>
                                                         )}
                                                         {inv.status === "VERIFIED" && (
                                                             <button onClick={() => handleStatusUpdate(inv.id!, "PAID")} className="p-1.5 rounded-lg hover:bg-green-500/10 text-muted-foreground hover:text-green-500 transition-colors" title="Mark Paid">
