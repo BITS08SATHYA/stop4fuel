@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="tank_dip_report"
+              pageWidth="842" pageHeight="595"
+              orientation="Landscape"
+              columnWidth="822" leftMargin="10" rightMargin="10" topMargin="10" bottomMargin="10"
+              uuid="b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e">
+
+    <!-- Parameters -->
+    <parameter name="companyName" class="java.lang.String"/>
+    <parameter name="companyAddress" class="java.lang.String"/>
+    <parameter name="companyPhone" class="java.lang.String"/>
+    <parameter name="reportTitle" class="java.lang.String"/>
+    <parameter name="tankName" class="java.lang.String"/>
+    <parameter name="fromDate" class="java.lang.String"/>
+    <parameter name="toDate" class="java.lang.String"/>
+    <parameter name="generatedDate" class="java.lang.String"/>
+    <parameter name="totalRecords" class="java.lang.Integer"/>
+    <parameter name="totalSales" class="java.lang.String"/>
+    <parameter name="totalIncome" class="java.lang.String"/>
+
+    <!-- Data Fields -->
+    <field name="rowNum" class="java.lang.Integer"/>
+    <field name="date" class="java.lang.String"/>
+    <field name="tankName" class="java.lang.String"/>
+    <field name="productName" class="java.lang.String"/>
+    <field name="openDip" class="java.lang.String"/>
+    <field name="openStock" class="java.lang.String"/>
+    <field name="incomeStock" class="java.lang.String"/>
+    <field name="closeDip" class="java.lang.String"/>
+    <field name="closeStock" class="java.lang.String"/>
+    <field name="saleStock" class="java.lang.String"/>
+
+    <background><band splitType="Stretch"/></background>
+
+    <!-- TITLE -->
+    <title>
+        <band height="80" splitType="Stretch">
+            <textField>
+                <reportElement x="0" y="0" width="822" height="24" forecolor="#333333"/>
+                <textElement textAlignment="Center">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{companyName}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="24" width="822" height="14" forecolor="#666666"/>
+                <textElement textAlignment="Center">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{companyAddress} + " | " + $P{companyPhone}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="42" width="822" height="18" forecolor="#E65100"/>
+                <textElement textAlignment="Center">
+                    <font size="12" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{reportTitle}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="60" width="411" height="14" forecolor="#666666"/>
+                <textElement>
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Tank: " + $P{tankName} + "  |  Period: " + $P{fromDate} + " to " + $P{toDate}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="411" y="60" width="411" height="14" forecolor="#666666"/>
+                <textElement textAlignment="Right">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Generated: " + $P{generatedDate}]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- COLUMN HEADER -->
+    <columnHeader>
+        <band height="22" splitType="Stretch">
+            <staticText>
+                <reportElement mode="Opaque" x="0" y="0" width="35" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[#]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="35" y="0" width="75" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[DATE]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="110" y="0" width="110" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[TANK]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="220" y="0" width="90" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[PRODUCT]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="310" y="0" width="65" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[OPEN DIP]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="375" y="0" width="85" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[OPEN STOCK (L)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="460" y="0" width="85" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[INCOME (L)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="545" y="0" width="65" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[CLOSE DIP]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="610" y="0" width="85" height="22" backcolor="#F5F5F5"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[CLOSE STOCK (L)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement mode="Opaque" x="695" y="0" width="127" height="22" backcolor="#FFF3E0"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <text><![CDATA[DAILY SALES (L)]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="18" splitType="Stretch">
+            <textField>
+                <reportElement x="0" y="0" width="35" height="18"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{rowNum}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="35" y="0" width="75" height="18"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{date}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="110" y="0" width="110" height="18"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{tankName}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="220" y="0" width="90" height="18"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{productName}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="310" y="0" width="65" height="18"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{openDip}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="375" y="0" width="85" height="18"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{openStock}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="460" y="0" width="85" height="18" forecolor="#1565C0"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="7" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{incomeStock}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="545" y="0" width="65" height="18"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{closeDip}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="610" y="0" width="85" height="18"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{closeStock}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement mode="Opaque" x="695" y="0" width="127" height="18" backcolor="#FFF8E1"/>
+                <box><pen lineWidth="0.25" lineColor="#EEEEEE"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{saleStock}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+    <!-- SUMMARY -->
+    <summary>
+        <band height="50" splitType="Stretch">
+            <staticText>
+                <reportElement mode="Opaque" x="0" y="5" width="460" height="20" backcolor="#E8E8E8"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[TOTALS    ]]></text>
+            </staticText>
+            <textField>
+                <reportElement mode="Opaque" x="460" y="5" width="85" height="20" backcolor="#E3F2FD"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{totalIncome}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement mode="Opaque" x="545" y="5" width="150" height="20" backcolor="#E8E8E8"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="7"/>
+                </textElement>
+                <text><![CDATA[]]></text>
+            </staticText>
+            <textField>
+                <reportElement mode="Opaque" x="695" y="5" width="127" height="20" backcolor="#FFF3E0"/>
+                <box><pen lineWidth="0.5" lineColor="#CCCCCC"/></box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{totalSales}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="30" width="822" height="14" forecolor="#999999"/>
+                <textElement textAlignment="Center">
+                    <font size="7" isItalic="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Total Records: " + $P{totalRecords} + "  |  Report generated on " + $P{generatedDate}]]></textFieldExpression>
+            </textField>
+        </band>
+    </summary>
+
+    <!-- PAGE FOOTER -->
+    <pageFooter>
+        <band height="16">
+            <textField>
+                <reportElement x="0" y="0" width="411" height="16" forecolor="#999999"/>
+                <textElement>
+                    <font size="6"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{companyName} + " - Tank Dip Report"]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="411" y="0" width="411" height="16" forecolor="#999999"/>
+                <textElement textAlignment="Right">
+                    <font size="6"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+        </band>
+    </pageFooter>
+
+</jasperReport>

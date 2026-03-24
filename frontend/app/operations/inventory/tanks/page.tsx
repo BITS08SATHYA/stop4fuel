@@ -9,13 +9,24 @@ import {
     getTanks,
     createTankInventory,
     updateTankInventory,
+    downloadTankDipReport,
     TankInventory,
     Tank,
     deleteTankInventory
 } from "@/lib/api/station";
-import { Droplets, Plus, Calendar, Ruler, TrendingDown, Trash2, Edit2, Search } from "lucide-react";
+import { Droplets, Plus, Calendar, Ruler, TrendingDown, Trash2, Edit2, Search, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+
+function getCurrentMonthRange() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    return {
+        fromDate: `${y}-${m}-01`,
+        toDate: `${y}-${m}-${String(now.getDate()).padStart(2, "0")}`
+    };
+}
 
 export default function TankInventoryPage() {
     const [inventories, setInventories] = useState<TankInventory[]>([]);
@@ -24,16 +35,20 @@ export default function TankInventoryPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [dateFilter, setDateFilter] = useState("");
     const [tankFilter, setTankFilter] = useState<string>("");
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    // Date range filter — defaults to current month
+    const { fromDate: defaultFrom, toDate: defaultTo } = getCurrentMonthRange();
+    const [fromDate, setFromDate] = useState(defaultFrom);
+    const [toDate, setToDate] = useState(defaultTo);
 
     const filteredInv = useMemo(() => inventories.filter((inv) => {
         const q = searchQuery.toLowerCase();
         const matchesSearch = !searchQuery || inv.tank.name?.toLowerCase().includes(q) || inv.tank.product.name?.toLowerCase().includes(q);
         const matchesTank = !tankFilter || String(inv.tank.id) === tankFilter;
-        const matchesDate = !dateFilter || inv.date === dateFilter;
-        return matchesSearch && matchesTank && matchesDate;
-    }), [inventories, searchQuery, tankFilter, dateFilter]);
+        return matchesSearch && matchesTank;
+    }), [inventories, searchQuery, tankFilter]);
 
     const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedInv } = useClientPagination(filteredInv);
 
@@ -61,20 +76,19 @@ export default function TankInventoryPage() {
 
     const loadData = async () => {
         setIsLoading(true);
-        // Load Tanks (for the dropdown)
         try {
-            console.log("Fetching tanks from:", getTanks);
             const tData = await getTanks();
-            console.log("Loaded tanks:", tData);
             setTanks(tData.filter(t => t.active));
         } catch (err) {
             console.error("Failed to load tanks", err);
-            // alert("Failed to fetch tanks master data. Check if backend is running at http://localhost:8080");
         }
 
-        // Load Inventories (for the table)
         try {
-            const iData = await getTankInventories();
+            const params: { fromDate?: string; toDate?: string } = {};
+            if (fromDate) params.fromDate = fromDate;
+            if (toDate) params.toDate = toDate;
+            const iData = await getTankInventories(params);
+            // Already sorted DESC from backend, but ensure it
             setInventories(iData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         } catch (err) {
             console.error("Failed to load tank inventory logs", err);
@@ -84,14 +98,14 @@ export default function TankInventoryPage() {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [fromDate, toDate]);
 
     // Derived auto-calculations
     useEffect(() => {
         const o = parseFloat(openStock) || 0;
         const i = parseFloat(incomeStock) || 0;
         const c = parseFloat(closeStock) || 0;
-        
+
         const total = o + i;
         setTotalStock(total);
         setSaleStock(Math.max(0, total - c));
@@ -151,6 +165,29 @@ export default function TankInventoryPage() {
         }
     };
 
+    const handleDownload = async (format: 'pdf' | 'excel') => {
+        if (!fromDate || !toDate) return;
+        setIsDownloading(true);
+        try {
+            const tid = tankFilter ? Number(tankFilter) : undefined;
+            const blob = await downloadTankDipReport(fromDate, toDate, format, tid);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+            const tankLabel = tankFilter ? tanks.find(t => String(t.id) === tankFilter)?.name || 'Tank' : 'All_Tanks';
+            a.download = `TankDip_${tankLabel}_${fromDate}_${toDate}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Failed to download report", err);
+            setApiError("Error downloading report");
+        }
+        setIsDownloading(false);
+    };
+
     const resetForm = () => {
         setEditingId(null);
         setTankId("");
@@ -182,57 +219,92 @@ export default function TankInventoryPage() {
                     </button>
                 </div>
 
+                {/* Filter Bar */}
+                <div className="mb-6 flex flex-wrap gap-3 items-center">
+                    <div className="relative flex-1 min-w-[200px] max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Search by tank or product name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    <select
+                        value={tankFilter}
+                        onChange={(e) => setTankFilter(e.target.value)}
+                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                        <option value="">All Tanks</option>
+                        {tanks.map((t) => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-muted-foreground font-medium">From</label>
+                        <input
+                            type="date"
+                            value={fromDate}
+                            onChange={(e) => setFromDate(e.target.value)}
+                            className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                        <label className="text-xs text-muted-foreground font-medium">To</label>
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    {(searchQuery || tankFilter || fromDate !== defaultFrom || toDate !== defaultTo) && (
+                        <button
+                            onClick={() => { setSearchQuery(""); setTankFilter(""); setFromDate(defaultFrom); setToDate(defaultTo); }}
+                            className="px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                            Reset
+                        </button>
+                    )}
+
+                    {/* Download Buttons */}
+                    <div className="flex items-center gap-1 ml-auto">
+                        <button
+                            onClick={() => handleDownload('pdf')}
+                            disabled={isDownloading || !fromDate || !toDate}
+                            className="flex items-center gap-1.5 px-3 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download PDF Report"
+                        >
+                            <FileText className="w-3.5 h-3.5" />
+                            PDF
+                        </button>
+                        <button
+                            onClick={() => handleDownload('excel')}
+                            disabled={isDownloading || !fromDate || !toDate}
+                            className="flex items-center gap-1.5 px-3 py-2.5 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download Excel Report"
+                        >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            Excel
+                        </button>
+                    </div>
+                </div>
+
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
                         <p className="animate-pulse">Loading dip logs...</p>
                     </div>
-                ) : inventories.length === 0 ? (
+                ) : filteredInv.length === 0 ? (
                     <div className="text-center py-20 bg-black/5 dark:bg-white/5 rounded-2xl border border-dashed border-border">
                         <Ruler className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
                         <h3 className="text-xl font-semibold text-foreground mb-2">No Records Found</h3>
-                        <p className="text-muted-foreground mb-6">Start by recording your first physical tank dip measurement.</p>
+                        <p className="text-muted-foreground mb-6">
+                            {inventories.length === 0
+                                ? "Start by recording your first physical tank dip measurement."
+                                : "No readings match the selected filters."}
+                        </p>
                     </div>
                 ) : (
-                    <>
-                    {/* Filter Bar */}
-                    <div className="mb-6 flex flex-wrap gap-3 items-center">
-                        <div className="relative flex-1 min-w-[200px] max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Search by tank or product name..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
-                        </div>
-                        <select
-                            value={tankFilter}
-                            onChange={(e) => setTankFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="">All Tanks</option>
-                            {tanks.map((t) => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                        </select>
-                        <input
-                            type="date"
-                            value={dateFilter}
-                            onChange={(e) => setDateFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        />
-                        {(searchQuery || tankFilter || dateFilter) && (
-                            <button
-                                onClick={() => { setSearchQuery(""); setTankFilter(""); setDateFilter(""); }}
-                                className="px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground"
-                            >
-                                Clear
-                            </button>
-                        )}
-                    </div>
-
                     <GlassCard className="overflow-hidden border-none p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -253,7 +325,7 @@ export default function TankInventoryPage() {
                                         <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
                                             <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
+                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div>
                                             </td>
                                             <td className="px-6 py-4 font-bold">
                                                 <div className="text-sm text-foreground">{inv.tank?.name}</div>
@@ -282,7 +354,7 @@ export default function TankInventoryPage() {
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleDelete(inv.id)}
                                                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
                                                         title="Delete"
@@ -298,7 +370,6 @@ export default function TankInventoryPage() {
                         </div>
                         <TablePagination page={page} totalPages={totalPages} totalElements={totalElements} pageSize={pageSize} onPageChange={setPage} />
                     </GlassCard>
-                    </>
                 )}
             </div>
 
