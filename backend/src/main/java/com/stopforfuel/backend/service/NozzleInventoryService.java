@@ -1,8 +1,10 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Nozzle;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.repository.NozzleInventoryRepository;
+import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import java.util.List;
 public class NozzleInventoryService {
 
     private final NozzleInventoryRepository repository;
+    private final NozzleRepository nozzleRepository;
     private final ShiftService shiftService;
 
     public List<NozzleInventory> getAll() {
@@ -76,7 +79,28 @@ public class NozzleInventoryService {
 
     private void calculateFields(NozzleInventory inventory) {
         if (inventory.getOpenMeterReading() != null && inventory.getCloseMeterReading() != null) {
-            inventory.setSales(inventory.getCloseMeterReading() - inventory.getOpenMeterReading());
+            double sales = inventory.getCloseMeterReading() - inventory.getOpenMeterReading();
+            inventory.setSales(sales);
+
+            // Set rate from product price and calculate amount
+            Double rate = getProductRate(inventory);
+            if (rate != null) {
+                inventory.setRate(rate);
+                inventory.setAmount(sales * rate);
+            }
         }
+    }
+
+    private Double getProductRate(NozzleInventory inventory) {
+        try {
+            if (inventory.getNozzle() != null && inventory.getNozzle().getId() != null) {
+                Nozzle nozzle = nozzleRepository.findById(inventory.getNozzle().getId()).orElse(null);
+                if (nozzle != null && nozzle.getTank() != null && nozzle.getTank().getProduct() != null
+                        && nozzle.getTank().getProduct().getPrice() != null) {
+                    return nozzle.getTank().getProduct().getPrice().doubleValue();
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 }

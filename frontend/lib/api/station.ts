@@ -113,6 +113,8 @@ export interface NozzleInventory {
     openMeterReading: number;
     closeMeterReading: number;
     sales: number;
+    rate?: number;
+    amount?: number;
 }
 
 export interface ProductInventory {
@@ -288,10 +290,11 @@ export const getNozzleInventories = (params?: { fromDate?: string; toDate?: stri
     return fetchWithAuth(`${API_BASE_URL}/inventory/nozzles${qs ? '?' + qs : ''}`).then(handleResponse);
 };
 
-export const downloadNozzleInventoryReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel', nozzleId?: number, productId?: number): Promise<Blob> => {
+export const downloadNozzleInventoryReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel', nozzleId?: number, productId?: number, reportType?: string): Promise<Blob> => {
     const query = new URLSearchParams({ fromDate, toDate, format });
     if (nozzleId) query.set('nozzleId', String(nozzleId));
     if (productId) query.set('productId', String(productId));
+    if (reportType) query.set('reportType', reportType);
     return fetchWithAuth(`${API_BASE_URL}/inventory/nozzles/report?${query.toString()}`).then(res => {
         if (!res.ok) throw new Error('Report generation failed');
         return res.blob();
