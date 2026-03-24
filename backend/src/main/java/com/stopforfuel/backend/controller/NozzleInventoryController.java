@@ -3,13 +3,17 @@ package com.stopforfuel.backend.controller;
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.service.NozzleInventoryService;
+import com.stopforfuel.backend.service.NozzleInventoryReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @RestController
@@ -18,12 +22,21 @@ import java.util.List;
 public class NozzleInventoryController {
 
     private final NozzleInventoryService service;
+    private final NozzleInventoryReportService reportService;
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
     public List<NozzleInventory> getAll(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) Long nozzleId) {
+            @RequestParam(required = false) Long nozzleId,
+            @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        if (fromDate != null && toDate != null) {
+            if (nozzleId != null) return service.getByNozzleAndDateRange(nozzleId, fromDate, toDate);
+            if (productId != null) return service.getByProductAndDateRange(productId, fromDate, toDate);
+            return service.getByDateRange(fromDate, toDate);
+        }
         if (date != null) return service.getByDate(date);
         if (nozzleId != null) return service.getByNozzleId(nozzleId);
         return service.getAll();
@@ -33,6 +46,45 @@ public class NozzleInventoryController {
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
     public NozzleInventory getById(@PathVariable Long id) {
         return service.getById(id);
+    }
+
+    @GetMapping("/report")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
+    public ResponseEntity<byte[]> downloadReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Long nozzleId,
+            @RequestParam(required = false) Long productId,
+            @RequestParam(defaultValue = "pdf") String format) {
+
+        List<NozzleInventory> data;
+        String filterLabel;
+        if (nozzleId != null) {
+            data = service.getByNozzleAndDateRange(nozzleId, fromDate, toDate);
+            filterLabel = !data.isEmpty() ? data.get(0).getNozzle().getNozzleName() : "Nozzle";
+        } else if (productId != null) {
+            data = service.getByProductAndDateRange(productId, fromDate, toDate);
+            filterLabel = !data.isEmpty() ? data.get(0).getNozzle().getTank().getProduct().getName() : "Product";
+        } else {
+            data = service.getByDateRange(fromDate, toDate);
+            filterLabel = "All_Nozzles";
+        }
+
+        String dateRange = fromDate.format(DateTimeFormatter.ofPattern("ddMMyyyy")) + "_" + toDate.format(DateTimeFormatter.ofPattern("ddMMyyyy"));
+
+        if ("excel".equalsIgnoreCase(format)) {
+            byte[] bytes = reportService.generateExcel(data, fromDate, toDate, filterLabel);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=NozzleInventory_" + filterLabel + "_" + dateRange + ".xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(bytes);
+        } else {
+            byte[] bytes = reportService.generatePdf(data, fromDate, toDate, filterLabel);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=NozzleInventory_" + filterLabel + "_" + dateRange + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(bytes);
+        }
     }
 
     @PostMapping

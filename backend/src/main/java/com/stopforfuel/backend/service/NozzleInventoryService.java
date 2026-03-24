@@ -18,7 +18,7 @@ public class NozzleInventoryService {
     private final ShiftService shiftService;
 
     public List<NozzleInventory> getAll() {
-        return repository.findAllByScid(SecurityUtils.getScid());
+        return repository.findAllByScidWithNozzle(SecurityUtils.getScid());
     }
 
     public List<NozzleInventory> getByDate(LocalDate date) {
@@ -56,6 +56,18 @@ public class NozzleInventoryService {
         existing.setCloseMeterReading(details.getCloseMeterReading());
         calculateFields(existing);
         return repository.save(existing);
+    }
+
+    public List<NozzleInventory> getByDateRange(LocalDate fromDate, LocalDate toDate) {
+        return repository.findByScidAndDateBetween(SecurityUtils.getScid(), fromDate, toDate);
+    }
+
+    public List<NozzleInventory> getByNozzleAndDateRange(Long nozzleId, LocalDate fromDate, LocalDate toDate) {
+        return repository.findByScidAndNozzleIdAndDateBetween(SecurityUtils.getScid(), nozzleId, fromDate, toDate);
+    }
+
+    public List<NozzleInventory> getByProductAndDateRange(Long productId, LocalDate fromDate, LocalDate toDate) {
+        return repository.findByScidAndProductIdAndDateBetween(SecurityUtils.getScid(), productId, fromDate, toDate);
     }
 
     public void delete(Long id) {
