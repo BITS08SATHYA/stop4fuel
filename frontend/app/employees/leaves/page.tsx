@@ -475,7 +475,7 @@ export default function LeaveManagementPage() {
                                     className="bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none min-w-[200px]"
                                 >
                                     <option value="">Select Employee</option>
-                                    {employees.filter(e => e.status === "Active").map((emp) => (
+                                    {employees.filter(e => e.status?.toUpperCase() === "ACTIVE").map((emp) => (
                                         <option key={emp.id} value={emp.id}>{emp.name}</option>
                                     ))}
                                 </select>
@@ -547,7 +547,7 @@ export default function LeaveManagementPage() {
                                 className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none ${inputErrorClass(reqErrors.employeeId)}`}
                             >
                                 <option value="">Select Employee</option>
-                                {employees.filter(e => e.status === "Active").map((emp) => (
+                                {employees.filter(e => e.status?.toUpperCase() === "ACTIVE").map((emp) => (
                                     <option key={emp.id} value={emp.id}>{emp.name}</option>
                                 ))}
                             </select>
