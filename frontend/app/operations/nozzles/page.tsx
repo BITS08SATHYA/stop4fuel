@@ -5,6 +5,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import { getNozzles, getTanks, getPumps, createNozzle, updateNozzle, deleteNozzle, Nozzle, Tank, Pump } from "@/lib/api/station";
 import { Fuel, Plus, Edit2, Trash2, Search, Activity, Droplets } from "lucide-react";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
@@ -324,14 +325,12 @@ export default function NozzlesPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2">
-                        <input
-                            type="checkbox"
+                    <div className="pt-2">
+                        <ToggleSwitch
                             checked={active}
-                            onChange={(e) => setActive(e.target.checked)}
-                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                            onChange={setActive}
+                            label={active ? "Active" : "Inactive"}
                         />
-                        <label className="text-sm font-medium text-foreground">Nozzle is Active</label>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
