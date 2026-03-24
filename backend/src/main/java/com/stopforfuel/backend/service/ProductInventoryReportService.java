@@ -90,11 +90,11 @@ public class ProductInventoryReportService {
             doc.add(Chunk.NEWLINE);
 
             // Table
-            float[] widths = {4f, 8f, 14f, 8f, 8f, 9f, 9f, 9f, 12f};
+            float[] widths = {3f, 7f, 13f, 7f, 7f, 8f, 8f, 8f, 9f, 8f, 10f};
             PdfPTable table = new PdfPTable(widths);
             table.setWidthPercentage(100);
 
-            String[] headers = {"#", "DATE", "PRODUCT", "CATEGORY", "BRAND", "OPENING", "ARRIVALS (+)", "CLOSING", "UNITS SOLD"};
+            String[] headers = {"#", "DATE", "PRODUCT", "CATEGORY", "BRAND", "OPENING", "ARRIVALS (+)", "CLOSING", "UNITS SOLD", "RATE", "AMOUNT"};
             Color headerBg = new Color(245, 245, 245);
             Color salesHeaderBg = new Color(255, 243, 224);
 
@@ -111,6 +111,7 @@ public class ProductInventoryReportService {
             int rowNum = 0;
             double totalSales = 0;
             double totalIncome = 0;
+            double totalAmount = 0;
             for (ProductInventory inv : data) {
                 rowNum++;
                 Color rowBg = (rowNum % 2 == 0) ? new Color(250, 250, 250) : Color.WHITE;
@@ -132,6 +133,13 @@ public class ProductInventoryReportService {
                 double sale = inv.getSales() != null ? inv.getSales() : 0;
                 addCell(table, formatNum(sale), salesFont, Element.ALIGN_RIGHT, new Color(255, 248, 225), borderColor);
                 totalSales += sale;
+
+                String rateStr = inv.getRate() != null ? NUM_FMT.format(inv.getRate()) : "-";
+                addCell(table, rateStr, cellFont, Element.ALIGN_RIGHT, rowBg, borderColor);
+
+                double amt = inv.getAmount() != null ? inv.getAmount().doubleValue() : 0;
+                addCell(table, NUM_FMT.format(amt), boldCellFont, Element.ALIGN_RIGHT, rowBg, borderColor);
+                totalAmount += amt;
             }
 
             // Summary row
@@ -161,6 +169,18 @@ public class ProductInventoryReportService {
             salesTotal.setBackgroundColor(new Color(255, 243, 224));
             salesTotal.setBorderColor(new Color(204, 204, 204));
             table.addCell(salesTotal);
+
+            PdfPCell rateSpacer = new PdfPCell(new Phrase("", cellFont));
+            rateSpacer.setBackgroundColor(new Color(232, 232, 232));
+            rateSpacer.setBorderColor(new Color(204, 204, 204));
+            table.addCell(rateSpacer);
+
+            PdfPCell amountTotal = new PdfPCell(new Phrase(NUM_FMT.format(totalAmount), summaryFont));
+            amountTotal.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            amountTotal.setPadding(5);
+            amountTotal.setBackgroundColor(new Color(232, 232, 232));
+            amountTotal.setBorderColor(new Color(204, 204, 204));
+            table.addCell(amountTotal);
 
             doc.add(table);
 
@@ -254,7 +274,7 @@ public class ProductInventoryReportService {
             summaryStyle.setFillForegroundColor(new XSSFColor(new byte[]{(byte) 232, (byte) 232, (byte) 232}, null));
             summaryStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-            int colCount = 9;
+            int colCount = 11;
 
             // Title rows
             int rowIdx = 0;
@@ -295,7 +315,7 @@ public class ProductInventoryReportService {
             rowIdx++; // blank row
 
             // Header row
-            String[] headers = {"#", "Date", "Product", "Category", "Brand", "Opening", "Arrivals (+)", "Closing", "Units Sold"};
+            String[] headers = {"#", "Date", "Product", "Category", "Brand", "Opening", "Arrivals (+)", "Closing", "Units Sold", "Rate", "Amount"};
             XSSFRow headerRow = sheet.createRow(rowIdx++);
             for (int i = 0; i < headers.length; i++) {
                 XSSFCell c = headerRow.createCell(i);
@@ -307,6 +327,7 @@ public class ProductInventoryReportService {
             int num = 0;
             double totalSales = 0;
             double totalIncome = 0;
+            double totalAmount = 0;
             for (ProductInventory inv : data) {
                 num++;
                 XSSFRow row = sheet.createRow(rowIdx++);
@@ -350,6 +371,16 @@ public class ProductInventoryReportService {
                 c8.setCellValue(sale);
                 c8.setCellStyle(salesStyle);
                 totalSales += sale;
+
+                XSSFCell c9 = row.createCell(9);
+                c9.setCellValue(inv.getRate() != null ? inv.getRate().doubleValue() : 0);
+                c9.setCellStyle(numStyle);
+
+                double amt = inv.getAmount() != null ? inv.getAmount().doubleValue() : 0;
+                XSSFCell c10 = row.createCell(10);
+                c10.setCellValue(amt);
+                c10.setCellStyle(numStyle);
+                totalAmount += amt;
             }
 
             // Summary row
@@ -371,6 +402,12 @@ public class ProductInventoryReportService {
             XSSFCell sumSales = sumRow.createCell(8);
             sumSales.setCellValue(totalSales);
             sumSales.setCellStyle(summaryStyle);
+
+            sumRow.createCell(9).setCellStyle(summaryStyle);
+
+            XSSFCell sumAmount = sumRow.createCell(10);
+            sumAmount.setCellValue(totalAmount);
+            sumAmount.setCellStyle(summaryStyle);
 
             // Auto-size columns
             for (int i = 0; i < colCount; i++) {
