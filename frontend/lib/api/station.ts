@@ -336,8 +336,23 @@ export const deleteTankInventory = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/inventory/tanks/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 // Daily Inventory - Products
-export const getProductInventories = (): Promise<ProductInventory[]> =>
-    fetchWithAuth(`${API_BASE_URL}/inventory/products`).then(handleResponse);
+export const getProductInventories = (params?: { fromDate?: string; toDate?: string; productId?: number }): Promise<ProductInventory[]> => {
+    const query = new URLSearchParams();
+    if (params?.fromDate) query.set('fromDate', params.fromDate);
+    if (params?.toDate) query.set('toDate', params.toDate);
+    if (params?.productId) query.set('productId', String(params.productId));
+    const qs = query.toString();
+    return fetchWithAuth(`${API_BASE_URL}/inventory/products${qs ? '?' + qs : ''}`).then(handleResponse);
+};
+
+export const downloadProductInventoryReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel', productId?: number): Promise<Blob> => {
+    const query = new URLSearchParams({ fromDate, toDate, format });
+    if (productId) query.set('productId', String(productId));
+    return fetchWithAuth(`${API_BASE_URL}/inventory/products/report?${query.toString()}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};
 
 export const createProductInventory = (inventory: Partial<ProductInventory>): Promise<ProductInventory> =>
     fetchWithAuth(`${API_BASE_URL}/inventory/products`, {
@@ -373,6 +388,9 @@ export const updateProductInventory = (id: number, inventory: Partial<ProductInv
 // Products
 export const getActiveProducts = (): Promise<Product[]> =>
     fetchWithAuth(`${API_BASE_URL}/products/active`).then(handleResponse);
+
+export const getActiveNonFuelProducts = (): Promise<Product[]> =>
+    fetchWithAuth(`${API_BASE_URL}/products/active/non-fuel`).then(handleResponse);
 
 export const getFuelProducts = (): Promise<Product[]> =>
     fetchWithAuth(`${API_BASE_URL}/products/category/Fuel`).then(handleResponse);

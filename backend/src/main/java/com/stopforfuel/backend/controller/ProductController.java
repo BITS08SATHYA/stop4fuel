@@ -29,6 +29,12 @@ public class ProductController {
         return productService.getActiveProducts();
     }
 
+    @GetMapping("/active/non-fuel")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
+    public List<Product> getActiveNonFuelProducts() {
+        return productService.getActiveNonFuelProducts();
+    }
+
     @GetMapping("/category/{category}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
     public List<Product> getProductsByCategory(@PathVariable String category) {
