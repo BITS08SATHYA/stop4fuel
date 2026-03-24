@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Nozzle;
 import com.stopforfuel.backend.entity.Pump;
+import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.backend.repository.PumpRepository;
 import com.stopforfuel.config.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,9 @@ public class PumpService {
 
     @Autowired
     private PumpRepository pumpRepository;
+
+    @Autowired
+    private NozzleRepository nozzleRepository;
 
     public List<Pump> getAllPumps() {
         return pumpRepository.findAllByScid(SecurityUtils.getScid());
@@ -37,13 +42,33 @@ public class PumpService {
     public Pump updatePump(Long id, Pump pumpDetails) {
         Pump pump = getPumpById(id);
         pump.setName(pumpDetails.getName());
+        // Cascade: deactivate connected nozzles when pump is set inactive
+        if (!pumpDetails.isActive() && pump.isActive()) {
+            deactivateConnectedNozzles(id);
+        }
+        pump.setActive(pumpDetails.isActive());
         return pumpRepository.save(pump);
     }
 
     public Pump toggleStatus(Long id) {
         Pump pump = getPumpById(id);
-        pump.setActive(!pump.isActive());
+        boolean newStatus = !pump.isActive();
+        // Cascade: deactivate connected nozzles when pump is set inactive
+        if (!newStatus) {
+            deactivateConnectedNozzles(id);
+        }
+        pump.setActive(newStatus);
         return pumpRepository.save(pump);
+    }
+
+    private void deactivateConnectedNozzles(Long pumpId) {
+        List<Nozzle> connectedNozzles = nozzleRepository.findByPumpIdAndScid(pumpId, SecurityUtils.getScid());
+        for (Nozzle nozzle : connectedNozzles) {
+            if (nozzle.isActive()) {
+                nozzle.setActive(false);
+                nozzleRepository.save(nozzle);
+            }
+        }
     }
 
     public void deletePump(Long id) {
