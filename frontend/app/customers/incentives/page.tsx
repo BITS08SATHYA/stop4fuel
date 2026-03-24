@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -41,7 +41,6 @@ function getProductName(inc: Incentive): string {
 
 export default function IncentivesPage() {
     const [incentives, setIncentives] = useState<Incentive[]>([]);
-    const [customers, setCustomers] = useState<Customer[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -59,16 +58,22 @@ export default function IncentivesPage() {
     const [formMinQuantity, setFormMinQuantity] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Customer autocomplete
+    const [customerSearch, setCustomerSearch] = useState("");
+    const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+    const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+    const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+    const customerDropdownRef = useRef<HTMLDivElement>(null);
+    const customerSearchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [incs, custs, prods] = await Promise.all([
+            const [incs, prods] = await Promise.all([
                 getAllIncentives(),
-                getCustomers(),
                 getActiveProducts(),
             ]);
             setIncentives(incs);
-            setCustomers(Array.isArray(custs) ? custs : custs.content || []);
             setProducts(prods);
         } catch (err) {
             console.error("Failed to load data", err);
@@ -80,6 +85,48 @@ export default function IncentivesPage() {
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    // Customer autocomplete search with debounce
+    const handleCustomerSearch = useCallback((query: string) => {
+        setCustomerSearch(query);
+        setFormCustomerId("");
+        if (customerSearchTimerRef.current) clearTimeout(customerSearchTimerRef.current);
+        if (query.trim().length < 1) {
+            setCustomerResults([]);
+            setShowCustomerDropdown(false);
+            return;
+        }
+        setIsSearchingCustomers(true);
+        customerSearchTimerRef.current = setTimeout(async () => {
+            try {
+                const res = await getCustomers(query.trim());
+                const list = Array.isArray(res) ? res : res.content || [];
+                setCustomerResults(list);
+                setShowCustomerDropdown(list.length > 0);
+            } catch {
+                setCustomerResults([]);
+            } finally {
+                setIsSearchingCustomers(false);
+            }
+        }, 300);
+    }, []);
+
+    const selectCustomer = (c: Customer) => {
+        setFormCustomerId(String(c.id));
+        setCustomerSearch(c.name);
+        setShowCustomerDropdown(false);
+    };
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (customerDropdownRef.current && !customerDropdownRef.current.contains(e.target as Node)) {
+                setShowCustomerDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // Summary
     const summary = useMemo(() => {
@@ -132,6 +179,9 @@ export default function IncentivesPage() {
         setFormDiscountRate("");
         setFormMinQuantity("");
         setEditingIncentive(null);
+        setCustomerSearch("");
+        setCustomerResults([]);
+        setShowCustomerDropdown(false);
     };
 
     const handleOpenCreate = () => {
@@ -142,6 +192,7 @@ export default function IncentivesPage() {
     const handleOpenEdit = (inc: Incentive) => {
         setEditingIncentive(inc);
         setFormCustomerId(String("id" in inc.customer ? inc.customer.id : ""));
+        setCustomerSearch(getCustomerName(inc));
         setFormProductId(String("id" in inc.product ? inc.product.id : ""));
         setFormDiscountRate(String(inc.discountRate));
         setFormMinQuantity(inc.minQuantity != null ? String(inc.minQuantity) : "");
@@ -416,24 +467,41 @@ export default function IncentivesPage() {
             >
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Customer */}
-                    <div>
+                    <div ref={customerDropdownRef} className="relative">
                         <label className="block text-sm font-medium text-foreground mb-1.5">
                             Customer <span className="text-red-500">*</span>
                         </label>
-                        <select
-                            required
+                        <input type="hidden" required value={formCustomerId} />
+                        <input
+                            type="text"
+                            required={!formCustomerId}
                             disabled={!!editingIncentive}
-                            value={formCustomerId}
-                            onChange={(e) => setFormCustomerId(e.target.value)}
+                            value={customerSearch}
+                            onChange={(e) => handleCustomerSearch(e.target.value)}
+                            onFocus={() => { if (customerResults.length > 0) setShowCustomerDropdown(true); }}
+                            placeholder="Type to search customer..."
                             className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-                        >
-                            <option value="">Select customer...</option>
-                            {customers.map((c) => (
-                                <option key={c.id} value={String(c.id)}>
-                                    {c.name}
-                                </option>
-                            ))}
-                        </select>
+                            autoComplete="off"
+                        />
+                        {isSearchingCustomers && (
+                            <div className="absolute right-3 top-[42px]">
+                                <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                            </div>
+                        )}
+                        {showCustomerDropdown && customerResults.length > 0 && (
+                            <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                                {customerResults.map((c) => (
+                                    <button
+                                        key={c.id}
+                                        type="button"
+                                        onClick={() => selectCustomer(c)}
+                                        className="w-full text-left px-4 py-2.5 text-sm text-foreground hover:bg-white/10 transition-colors first:rounded-t-xl last:rounded-b-xl"
+                                    >
+                                        {c.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Product */}

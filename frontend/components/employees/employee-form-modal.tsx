@@ -76,8 +76,41 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
         try {
             const url = isEditing ? `${API_BASE}/${currentEmployee.id}` : API_BASE;
             const method = isEditing ? "PUT" : "POST";
-            // Strip DTO-only fields that the backend cannot deserialize
-            const { role, designationEntity, emails, phoneNumbers, maskedAadhar, maskedPan, maskedBankAccount, personType, createdAt, updatedAt, scid, username, ...payload } = currentEmployee;
+            // Build payload with only fields the backend Employee entity accepts
+            const payload: Record<string, any> = {
+                name: currentEmployee.name,
+                designation: currentEmployee.designation,
+                email: currentEmployee.email,
+                phone: currentEmployee.phone,
+                additionalPhones: currentEmployee.additionalPhones || null,
+                salary: currentEmployee.salary,
+                salaryDay: currentEmployee.salaryDay,
+                joinDate: currentEmployee.joinDate || null,
+                status: currentEmployee.status,
+                aadharNumber: currentEmployee.aadharNumber || null,
+                address: currentEmployee.address || null,
+                city: currentEmployee.city || null,
+                state: currentEmployee.state || null,
+                pincode: currentEmployee.pincode || null,
+                photoUrl: currentEmployee.photoUrl || null,
+                bankAccountNumber: currentEmployee.bankAccountNumber || null,
+                bankName: currentEmployee.bankName || null,
+                bankIfsc: currentEmployee.bankIfsc || null,
+                bankBranch: currentEmployee.bankBranch || null,
+                panNumber: currentEmployee.panNumber || null,
+                department: currentEmployee.department || null,
+                employeeCode: currentEmployee.employeeCode || null,
+                emergencyContact: currentEmployee.emergencyContact || null,
+                emergencyPhone: currentEmployee.emergencyPhone || null,
+                bloodGroup: currentEmployee.bloodGroup || null,
+                dateOfBirth: currentEmployee.dateOfBirth || null,
+                gender: currentEmployee.gender || null,
+                maritalStatus: currentEmployee.maritalStatus || null,
+                aadharDocUrl: currentEmployee.aadharDocUrl || null,
+                panDocUrl: currentEmployee.panDocUrl || null,
+                terminationDate: currentEmployee.terminationDate || null,
+            };
+            if (isEditing) payload.id = currentEmployee.id;
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
