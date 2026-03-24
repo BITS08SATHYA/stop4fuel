@@ -22,7 +22,7 @@ public class PurchaseInvoiceService {
     private final S3StorageService s3StorageService;
 
     public List<PurchaseInvoice> getAll() {
-        return repository.findByScidOrderByInvoiceDateDesc(SecurityUtils.getScid());
+        return repository.findAllWithDetails(SecurityUtils.getScid());
     }
 
     public PurchaseInvoice getById(Long id) {
@@ -31,15 +31,19 @@ public class PurchaseInvoiceService {
     }
 
     public List<PurchaseInvoice> getByStatus(String status) {
-        return repository.findByStatusAndScid(status, SecurityUtils.getScid());
+        return repository.findByStatusWithDetails(status, SecurityUtils.getScid());
     }
 
     public List<PurchaseInvoice> getBySupplier(Long supplierId) {
-        return repository.findBySupplierIdAndScid(supplierId, SecurityUtils.getScid());
+        return repository.findBySupplierWithDetails(supplierId, SecurityUtils.getScid());
     }
 
     public List<PurchaseInvoice> getByType(String invoiceType) {
-        return repository.findByInvoiceTypeAndScid(invoiceType, SecurityUtils.getScid());
+        return repository.findByTypeWithDetails(invoiceType, SecurityUtils.getScid());
+    }
+
+    public List<PurchaseInvoice> getByDateRange(LocalDate fromDate, LocalDate toDate) {
+        return repository.findByDateRangeWithDetails(SecurityUtils.getScid(), fromDate, toDate);
     }
 
     public PurchaseInvoice save(PurchaseInvoice invoice) {
@@ -56,8 +60,8 @@ public class PurchaseInvoiceService {
 
     public PurchaseInvoice update(Long id, PurchaseInvoice details) {
         PurchaseInvoice existing = getById(id);
-        if (!"PENDING".equals(existing.getStatus())) {
-            throw new BusinessException("Can only edit purchase invoices in PENDING status");
+        if ("PAID".equals(existing.getStatus())) {
+            throw new BusinessException("Cannot edit purchase invoices in PAID status");
         }
         existing.setSupplier(details.getSupplier());
         existing.setPurchaseOrder(details.getPurchaseOrder());
@@ -80,8 +84,8 @@ public class PurchaseInvoiceService {
 
     public void delete(Long id) {
         PurchaseInvoice existing = getById(id);
-        if (!"PENDING".equals(existing.getStatus())) {
-            throw new BusinessException("Can only delete purchase invoices in PENDING status");
+        if ("PAID".equals(existing.getStatus())) {
+            throw new BusinessException("Cannot delete purchase invoices in PAID status");
         }
         repository.delete(existing);
     }
