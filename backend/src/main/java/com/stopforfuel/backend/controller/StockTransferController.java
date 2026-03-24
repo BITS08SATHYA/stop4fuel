@@ -6,6 +6,7 @@ import com.stopforfuel.backend.service.StockTransferService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -33,5 +34,18 @@ public class StockTransferController {
     @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
     public StockTransfer create(@Valid @RequestBody StockTransfer transfer) {
         return service.createTransfer(transfer);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    public StockTransfer update(@PathVariable Long id, @Valid @RequestBody StockTransfer transfer) {
+        return service.updateTransfer(id, transfer);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.deleteTransfer(id);
+        return ResponseEntity.noContent().build();
     }
 }

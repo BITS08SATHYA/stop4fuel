@@ -1365,6 +1365,16 @@ export const createStockTransfer = (transfer: Partial<StockTransfer>): Promise<S
         body: JSON.stringify(transfer),
     }).then(handleResponse);
 
+export const updateStockTransfer = (id: number, transfer: Partial<StockTransfer>): Promise<StockTransfer> =>
+    fetchWithAuth(`${API_BASE_URL}/stock-transfers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transfer),
+    }).then(handleResponse);
+
+export const deleteStockTransfer = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/stock-transfers/${id}`, { method: 'DELETE' }).then(handleResponse);
+
 // --- Purchase Orders ---
 export const getPurchaseOrders = (status?: string, supplierId?: number): Promise<PurchaseOrder[]> => {
     const params = new URLSearchParams();
