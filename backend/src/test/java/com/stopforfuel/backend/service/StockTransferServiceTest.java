@@ -112,7 +112,7 @@ class StockTransferServiceTest {
         pi.setIncomeStock(0.0);
         pi.setTotalStock(20.0);
         pi.setCloseStock(20.0);
-        when(productInventoryRepository.findByShiftIdAndProductId(5L, 1L)).thenReturn(pi);
+        when(productInventoryRepository.findTopByShiftIdAndProductIdOrderByIdDesc(5L, 1L)).thenReturn(pi);
 
         when(godownStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testGodownStock));
         when(cashierStockRepository.findByProductIdAndScid(1L, 1L)).thenReturn(Optional.of(testCashierStock));
