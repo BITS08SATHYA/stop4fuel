@@ -6,7 +6,7 @@ import { TablePagination, useClientPagination } from "@/components/ui/table-pagi
 import { Modal } from "@/components/ui/modal";
 import {
     getProductInventories,
-    getActiveNonFuelProducts,
+    getActiveProducts,
     createProductInventory,
     updateProductInventory,
     downloadProductInventoryReport,
@@ -17,6 +17,7 @@ import {
 import { Box, Plus, Calendar, Archive, TrendingUp, Trash2, Edit2, Search, FileText, FileSpreadsheet } from "lucide-react";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 function getCurrentMonthRange() {
     const now = new Date();
@@ -73,7 +74,7 @@ export default function ProductInventoryPage() {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const pData = await getActiveNonFuelProducts();
+            const pData = await getActiveProducts();
             setProducts(pData);
         } catch (err) {
             console.error("Failed to load products", err);
@@ -198,19 +199,21 @@ export default function ProductInventoryPage() {
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-4xl font-bold text-foreground tracking-tight">
-                            Non-Fuel <span className="text-gradient">Daily Check</span>
+                            Product <span className="text-gradient">Stock</span>
                         </h1>
                         <p className="text-muted-foreground mt-2">
-                            Monitor lubricants, accessories, and other retail items inventory levels.
+                            Monitor fuel, lubricants, accessories, and all product inventory levels.
                         </p>
                     </div>
-                    <button
-                        onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Record Inventory
-                    </button>
+                    <PermissionGate permission="INVENTORY_MANAGE">
+                        <button
+                            onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Record Inventory
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filter Bar */}
@@ -364,20 +367,22 @@ export default function ProductInventoryPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center gap-2">
-                                                    <button
-                                                        onClick={() => handleEdit(inv)}
-                                                        className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(inv.id)}
-                                                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    <PermissionGate permission="INVENTORY_MANAGE">
+                                                        <button
+                                                            onClick={() => handleEdit(inv)}
+                                                            className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(inv.id)}
+                                                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </PermissionGate>
                                                 </div>
                                             </td>
                                         </tr>
@@ -393,7 +398,7 @@ export default function ProductInventoryPage() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => { setIsModalOpen(false); resetForm(); }}
-                title={editingId ? "Edit Inventory Check" : "Daily Non-Fuel Inventory Check"}
+                title={editingId ? "Edit Inventory Check" : "Daily Inventory Check"}
             >
                 <form onSubmit={handleSave} className="space-y-4">
                     <FormErrorBanner message={apiError} onDismiss={() => setApiError("")} />
