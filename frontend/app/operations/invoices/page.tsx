@@ -137,6 +137,15 @@ export default function InvoicesPage() {
             // Merge credit info (ledger balance) into selected customer
             if (creditInfo) {
                 setSelectedCustomer((prev: any) => ({ ...prev, ...creditInfo }));
+                // Auto-set bill type based on credit limits
+                const hasCreditLimit = (creditInfo.creditLimitAmount && Number(creditInfo.creditLimitAmount) > 0) ||
+                    (creditInfo.creditLimitLiters && Number(creditInfo.creditLimitLiters) > 0);
+                if (hasCreditLimit) {
+                    setBillType('CREDIT');
+                } else {
+                    setBillType('CASH');
+                    setPaymentMode('CASH');
+                }
             }
         } catch (err) { console.error(err); }
     };
@@ -357,6 +366,10 @@ export default function InvoicesPage() {
 
     const isCustomerBlocked = selectedCustomer && (selectedCustomer.status === "BLOCKED" || selectedCustomer.status === "INACTIVE");
     const isVehicleBlocked = selectedVehicle && (selectedVehicle.status === "BLOCKED" || selectedVehicle.status === "INACTIVE");
+    const isCreditCustomer = selectedCustomer && (
+        (selectedCustomer.creditLimitAmount && Number(selectedCustomer.creditLimitAmount) > 0) ||
+        (selectedCustomer.creditLimitLiters && Number(selectedCustomer.creditLimitLiters) > 0)
+    );
 
     const stepperSteps = isWalkIn
         ? [
@@ -905,9 +918,13 @@ export default function InvoicesPage() {
                     <div className="space-y-6">
                         <div>
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Bill Type</label>
-                            {isWalkIn ? (
+                            {isWalkIn || (!isCreditCustomer && selectedCustomer) ? (
                                 <div className="py-4 px-4 rounded-2xl font-bold text-sm uppercase border-2 bg-primary text-primary-foreground border-primary text-center">
                                     Cash
+                                </div>
+                            ) : isCreditCustomer ? (
+                                <div className="py-4 px-4 rounded-2xl font-bold text-sm uppercase border-2 bg-primary text-primary-foreground border-primary text-center">
+                                    Credit
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-4">
