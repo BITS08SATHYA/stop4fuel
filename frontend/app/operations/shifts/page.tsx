@@ -43,6 +43,7 @@ import {
     Moon,
 } from "lucide-react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { PermissionGate } from "@/components/permission-gate";
 
 const TXN_TYPES = [
     { value: "CASH", label: "Cash", icon: Banknote, color: "text-green-500 bg-green-500/10" },
@@ -304,22 +305,26 @@ export default function ShiftsPage() {
                                         Shift #{activeShift.id} - Active
                                     </span>
                                 </div>
-                                <button
-                                    onClick={handleCloseShift}
-                                    className="px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-colors"
-                                >
-                                    <Square className="w-4 h-4" />
-                                    Close Shift
-                                </button>
+                                <PermissionGate permission="SHIFT_MANAGE">
+                                    <button
+                                        onClick={handleCloseShift}
+                                        className="px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+                                    >
+                                        <Square className="w-4 h-4" />
+                                        Close Shift
+                                    </button>
+                                </PermissionGate>
                             </>
                         ) : (
-                            <button
-                                onClick={handleOpenShift}
-                                className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                            >
-                                <Play className="w-5 h-5" />
-                                Open New Shift
-                            </button>
+                            <PermissionGate permission="SHIFT_MANAGE">
+                                <button
+                                    onClick={handleOpenShift}
+                                    className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                                >
+                                    <Play className="w-5 h-5" />
+                                    Open New Shift
+                                </button>
+                            </PermissionGate>
                         )}
                     </div>
                 </div>
@@ -336,12 +341,14 @@ export default function ShiftsPage() {
                         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                             Open a new shift to start recording transactions.
                         </p>
-                        <button
-                            onClick={handleOpenShift}
-                            className="bg-primary/10 text-primary hover:bg-primary/20 px-6 py-2 rounded-xl font-medium transition-colors"
-                        >
-                            Open Shift
-                        </button>
+                        <PermissionGate permission="SHIFT_MANAGE">
+                            <button
+                                onClick={handleOpenShift}
+                                className="bg-primary/10 text-primary hover:bg-primary/20 px-6 py-2 rounded-xl font-medium transition-colors"
+                            >
+                                Open Shift
+                            </button>
+                        </PermissionGate>
                     </div>
                 ) : (
                     <>
@@ -409,13 +416,15 @@ export default function ShiftsPage() {
                                 ))}
                             </select>
                             {isViewingActive && (
-                                <button
-                                    onClick={handleOpenAddModal}
-                                    className="btn-gradient px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Add Transaction
-                                </button>
+                                <PermissionGate permission="SHIFT_MANAGE">
+                                    <button
+                                        onClick={handleOpenAddModal}
+                                        className="btn-gradient px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Add Transaction
+                                    </button>
+                                </PermissionGate>
                             )}
                         </div>
 
@@ -475,12 +484,14 @@ export default function ShiftsPage() {
                                                         </td>
                                                         {isViewingActive && (
                                                             <td className="px-6 py-3 text-center">
-                                                                <button
-                                                                    onClick={() => txn.id && handleDeleteTransaction(txn.id)}
-                                                                    className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
+                                                                <PermissionGate permission="SHIFT_MANAGE">
+                                                                    <button
+                                                                        onClick={() => txn.id && handleDeleteTransaction(txn.id)}
+                                                                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </PermissionGate>
                                                             </td>
                                                         )}
                                                     </tr>

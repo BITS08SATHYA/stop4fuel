@@ -16,6 +16,7 @@ import {
 import { Warehouse, Plus, Search, Edit2, Trash2, AlertTriangle } from "lucide-react";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function GodownStockPage() {
     const [stocks, setStocks] = useState<GodownStock[]>([]);
@@ -152,13 +153,15 @@ export default function GodownStockPage() {
                                 {lowStockCount} Low Stock
                             </div>
                         )}
-                        <button
-                            onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
-                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Add Stock
-                        </button>
+                        <PermissionGate permission="INVENTORY_MANAGE">
+                            <button
+                                onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
+                                className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Add Stock
+                            </button>
+                        </PermissionGate>
                     </div>
                 </div>
 
@@ -248,12 +251,14 @@ export default function GodownStockPage() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex justify-center gap-2">
-                                                        <button onClick={() => handleEdit(stock)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors" title="Edit">
-                                                            <Edit2 className="w-4 h-4" />
-                                                        </button>
-                                                        <button onClick={() => handleDelete(stock.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        <PermissionGate permission="INVENTORY_MANAGE">
+                                                            <button onClick={() => handleEdit(stock)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors" title="Edit">
+                                                                <Edit2 className="w-4 h-4" />
+                                                            </button>
+                                                            <button onClick={() => handleDelete(stock.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </PermissionGate>
                                                     </div>
                                                 </td>
                                             </tr>

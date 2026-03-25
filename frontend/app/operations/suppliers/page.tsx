@@ -15,6 +15,7 @@ import {
 import { Truck, Plus, Edit2, Trash2, Phone, Mail, User, Search } from "lucide-react";
 import { useFormValidation, required, email, phone } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function SuppliersPage() {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -139,13 +140,15 @@ export default function SuppliersPage() {
                             Manage entities that supply oil, lubricants, and other retail products.
                         </p>
                     </div>
-                    <button
-                        onClick={() => { resetForm(); setIsModalOpen(true); }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Supplier
-                    </button>
+                    <PermissionGate permission="STATION_MANAGE">
+                        <button
+                            onClick={() => { resetForm(); setIsModalOpen(true); }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New Supplier
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {isLoading ? (
@@ -231,29 +234,33 @@ export default function SuppliersPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <button onClick={() => handleToggleStatus(s.id)}>
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase cursor-pointer hover:opacity-80 transition-opacity ${
-                                                        s.active ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                                                    }`}>
-                                                        {s.active ? 'Active' : 'Inactive'}
-                                                    </span>
-                                                </button>
+                                                <PermissionGate permission="STATION_MANAGE">
+                                                    <button onClick={() => handleToggleStatus(s.id)}>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase cursor-pointer hover:opacity-80 transition-opacity ${
+                                                            s.active ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                                                        }`}>
+                                                            {s.active ? 'Active' : 'Inactive'}
+                                                        </span>
+                                                    </button>
+                                                </PermissionGate>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleEdit(s)}
-                                                        className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(s.id)}
-                                                        className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                                <PermissionGate permission="STATION_MANAGE">
+                                                    <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => handleEdit(s)}
+                                                            className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(s.id)}
+                                                            className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </PermissionGate>
                                             </td>
                                         </tr>
                                     ))}

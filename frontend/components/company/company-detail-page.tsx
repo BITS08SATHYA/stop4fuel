@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Building2, Save, ArrowLeft, Pencil, Loader2 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
 import { CompanyDocuments } from "./company-documents";
+import { PermissionGate } from "@/components/permission-gate";
 
 interface Company {
     id?: number;
@@ -133,13 +134,15 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
                     </div>
                     <div className="flex items-center gap-2">
                         {!isNew && !editing && (
-                            <button
-                                onClick={() => setEditing(true)}
-                                className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
-                            >
-                                <Pencil className="w-4 h-4" />
-                                Edit
-                            </button>
+                            <PermissionGate permission="SETTINGS_MANAGE">
+                                <button
+                                    onClick={() => setEditing(true)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                    Edit
+                                </button>
+                            </PermissionGate>
                         )}
                         <div className="p-2 bg-primary/10 rounded-full text-primary">
                             <Building2 className="w-5 h-5" />
