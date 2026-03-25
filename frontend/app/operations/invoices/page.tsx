@@ -918,13 +918,9 @@ export default function InvoicesPage() {
                     <div className="space-y-6">
                         <div>
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Bill Type</label>
-                            {isWalkIn || (!isCreditCustomer && selectedCustomer) ? (
+                            {isWalkIn ? (
                                 <div className="py-4 px-4 rounded-2xl font-bold text-sm uppercase border-2 bg-primary text-primary-foreground border-primary text-center">
                                     Cash
-                                </div>
-                            ) : isCreditCustomer ? (
-                                <div className="py-4 px-4 rounded-2xl font-bold text-sm uppercase border-2 bg-primary text-primary-foreground border-primary text-center">
-                                    Credit
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-4">
