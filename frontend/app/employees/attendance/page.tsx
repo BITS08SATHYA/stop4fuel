@@ -21,6 +21,7 @@ import {
     EmployeeType,
     Attendance,
 } from "@/lib/api/station";
+import { PermissionGate } from "@/components/permission-gate";
 
 const statusOptions = [
     { value: "PRESENT", label: "Present", color: "text-emerald-500 bg-emerald-500/10" },
@@ -217,53 +218,59 @@ export default function AttendancePage() {
                                                 <td className="px-6 py-4 font-medium text-foreground">{emp.name}</td>
                                                 <td className="px-6 py-4 text-sm text-muted-foreground">{emp.designation}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <input
-                                                        type="time"
-                                                        defaultValue={att?.checkInTime || ""}
-                                                        onBlur={(e) => {
-                                                            if (e.target.value) {
-                                                                handleMarkAttendance(emp.id, att?.status || "PRESENT", e.target.value, att?.checkOutTime || undefined);
-                                                            }
-                                                        }}
-                                                        className="bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-28"
-                                                    />
+                                                    <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                        <input
+                                                            type="time"
+                                                            defaultValue={att?.checkInTime || ""}
+                                                            onBlur={(e) => {
+                                                                if (e.target.value) {
+                                                                    handleMarkAttendance(emp.id, att?.status || "PRESENT", e.target.value, att?.checkOutTime || undefined);
+                                                                }
+                                                            }}
+                                                            className="bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-28"
+                                                        />
+                                                    </PermissionGate>
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <input
-                                                        type="time"
-                                                        defaultValue={att?.checkOutTime || ""}
-                                                        onBlur={(e) => {
-                                                            if (e.target.value) {
-                                                                handleMarkAttendance(emp.id, att?.status || "PRESENT", att?.checkInTime || undefined, e.target.value);
-                                                            }
-                                                        }}
-                                                        className={`bg-background border rounded-lg px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-28 ${timeErrors[emp.id] ? "border-red-500 focus:ring-red-500/50" : "border-border"}`}
-                                                    />
-                                                    {timeErrors[emp.id] && (
-                                                        <p className="text-[10px] text-red-500 mt-0.5">{timeErrors[emp.id]}</p>
-                                                    )}
+                                                    <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                        <input
+                                                            type="time"
+                                                            defaultValue={att?.checkOutTime || ""}
+                                                            onBlur={(e) => {
+                                                                if (e.target.value) {
+                                                                    handleMarkAttendance(emp.id, att?.status || "PRESENT", att?.checkInTime || undefined, e.target.value);
+                                                                }
+                                                            }}
+                                                            className={`bg-background border rounded-lg px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-28 ${timeErrors[emp.id] ? "border-red-500 focus:ring-red-500/50" : "border-border"}`}
+                                                        />
+                                                        {timeErrors[emp.id] && (
+                                                            <p className="text-[10px] text-red-500 mt-0.5">{timeErrors[emp.id]}</p>
+                                                        )}
+                                                    </PermissionGate>
                                                 </td>
                                                 <td className="px-6 py-4 text-center text-sm font-medium text-primary">
                                                     {att?.totalHoursWorked ? att.totalHoursWorked.toFixed(1) + "h" : "-"}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <div className="flex justify-center gap-1">
-                                                        {statusOptions.map((opt) => (
-                                                            <button
-                                                                key={opt.value}
-                                                                onClick={() => handleMarkAttendance(emp.id, opt.value, att?.checkInTime || undefined, att?.checkOutTime || undefined)}
-                                                                disabled={saving === emp.id}
-                                                                className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${
-                                                                    att?.status === opt.value
-                                                                        ? opt.color + " ring-2 ring-offset-1 ring-current"
-                                                                        : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                                                                }`}
-                                                                title={opt.label}
-                                                            >
-                                                                {opt.label.charAt(0)}
-                                                            </button>
-                                                        ))}
-                                                    </div>
+                                                    <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                        <div className="flex justify-center gap-1">
+                                                            {statusOptions.map((opt) => (
+                                                                <button
+                                                                    key={opt.value}
+                                                                    onClick={() => handleMarkAttendance(emp.id, opt.value, att?.checkInTime || undefined, att?.checkOutTime || undefined)}
+                                                                    disabled={saving === emp.id}
+                                                                    className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${
+                                                                        att?.status === opt.value
+                                                                            ? opt.color + " ring-2 ring-offset-1 ring-current"
+                                                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                                                    }`}
+                                                                    title={opt.label}
+                                                                >
+                                                                    {opt.label.charAt(0)}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </PermissionGate>
                                                 </td>
                                             </tr>
                                         );

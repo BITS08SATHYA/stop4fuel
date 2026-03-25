@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Edit2, Trash2, ChevronDown, ChevronRight, Users } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { PermissionGate } from "@/components/permission-gate";
 import { GroupStep } from "@/components/steps/group-step";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api/station";
@@ -128,16 +129,18 @@ export default function GroupsPage() {
                             Manage logical groupings of customers for easier billing and reporting.
                         </p>
                     </div>
-                    <button
-                        onClick={() => {
-                            setFormData({});
-                            setIsModalOpen(true);
-                        }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Group
-                    </button>
+                    <PermissionGate permission="CUSTOMER_MANAGE">
+                        <button
+                            onClick={() => {
+                                setFormData({});
+                                setIsModalOpen(true);
+                            }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New Group
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Search Bar */}
@@ -183,20 +186,22 @@ export default function GroupsPage() {
                                         <td className="px-6 py-4 font-medium">{group.groupName}</td>
                                         <td className="px-6 py-4 text-muted-foreground">{group.description || "-"}</td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(group)}
-                                                    className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(group.id)}
-                                                    className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
+                                            <PermissionGate permission="CUSTOMER_MANAGE">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleEdit(group)}
+                                                        className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(group.id)}
+                                                        className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </PermissionGate>
                                         </td>
                                     </tr>
                                     {expandedGroupId === group.id && (

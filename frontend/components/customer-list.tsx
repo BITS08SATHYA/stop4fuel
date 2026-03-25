@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useRouter } from "next/navigation";
@@ -315,18 +316,20 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                                         </div>
                                     </td>
                                     <td className="p-4 text-right">
-                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="p-2 hover:bg-accent/10 hover:text-accent rounded-md transition-colors" title="Edit">
-                                                <Edit className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-md transition-colors"
-                                                title="Delete"
-                                                onClick={(e) => handleDelete(e, customer.id)}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        <PermissionGate permission="CUSTOMER_MANAGE">
+                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button className="p-2 hover:bg-accent/10 hover:text-accent rounded-md transition-colors" title="Edit">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-md transition-colors"
+                                                    title="Delete"
+                                                    onClick={(e) => handleDelete(e, customer.id)}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </PermissionGate>
                                     </td>
                                 </tr>
                             )
@@ -374,27 +377,29 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                     >
                         <Eye className="w-4 h-4" /> View Profile
                     </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            // Handle Edit
-                            setContextMenu(null);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted flex items-center gap-2"
-                    >
-                        <Edit className="w-4 h-4" /> Edit
-                    </button>
-                    <div className="h-px bg-border my-1" />
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            // Handle Delete
-                            setContextMenu(null);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
-                    >
-                        <Trash2 className="w-4 h-4" /> Delete
-                    </button>
+                    <PermissionGate permission="CUSTOMER_MANAGE">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle Edit
+                                setContextMenu(null);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted flex items-center gap-2"
+                        >
+                            <Edit className="w-4 h-4" /> Edit
+                        </button>
+                        <div className="h-px bg-border my-1" />
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle Delete
+                                setContextMenu(null);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" /> Delete
+                        </button>
+                    </PermissionGate>
                 </div>
             )}
         </GlassCard>

@@ -19,6 +19,7 @@ import {
     type Statement, type InvoiceBill, type Customer, type Vehicle,
     type Product, type PageResponse, type StatementStats
 } from "@/lib/api/station";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function StatementsPage() {
     const [statements, setStatements] = useState<Statement[]>([]);
@@ -310,13 +311,15 @@ export default function StatementsPage() {
                             Generate and manage monthly credit statements for statement customers.
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowGenerateModal(true)}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Generate Statement
-                    </button>
+                    <PermissionGate permission="PAYMENT_MANAGE">
+                        <button
+                            onClick={() => setShowGenerateModal(true)}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Generate Statement
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filters */}
@@ -480,13 +483,15 @@ export default function StatementsPage() {
                                                         </button>
                                                     )}
                                                     {stmt.status !== "PAID" && (
-                                                        <button
-                                                            onClick={() => handleDelete(stmt.id!)}
-                                                            className="p-1.5 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        <PermissionGate permission="PAYMENT_MANAGE">
+                                                            <button
+                                                                onClick={() => handleDelete(stmt.id!)}
+                                                                className="p-1.5 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </PermissionGate>
                                                     )}
                                                 </div>
                                             </td>
@@ -872,22 +877,24 @@ export default function StatementsPage() {
                                     </button>
                                 )}
                                 {detailStatement.status !== "PAID" && (
-                                    <button
-                                        onClick={async () => {
-                                            if (!confirm("Delete this statement? Bills will be unlinked.")) return;
-                                            try {
-                                                await deleteStatement(detailStatement.id!);
-                                                setShowDetailModal(false);
-                                                loadStatements();
-                                                loadStats();
-                                            } catch (e) {
-                                                console.error("Failed to delete statement", e);
-                                            }
-                                        }}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors flex items-center gap-1.5"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" /> Delete
-                                    </button>
+                                    <PermissionGate permission="PAYMENT_MANAGE">
+                                        <button
+                                            onClick={async () => {
+                                                if (!confirm("Delete this statement? Bills will be unlinked.")) return;
+                                                try {
+                                                    await deleteStatement(detailStatement.id!);
+                                                    setShowDetailModal(false);
+                                                    loadStatements();
+                                                    loadStats();
+                                                } catch (e) {
+                                                    console.error("Failed to delete statement", e);
+                                                }
+                                            }}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors flex items-center gap-1.5"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                                        </button>
+                                    </PermissionGate>
                                 )}
                             </div>
                         </div>
@@ -949,13 +956,15 @@ export default function StatementsPage() {
                                                         </td>
                                                         <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                                                             {detailStatement.status !== "PAID" && (
-                                                                <button
-                                                                    onClick={() => handleRemoveBill(detailStatement.id!, bill.id!)}
-                                                                    className="p-1 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"
-                                                                    title="Remove from statement"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
+                                                                <PermissionGate permission="PAYMENT_MANAGE">
+                                                                    <button
+                                                                        onClick={() => handleRemoveBill(detailStatement.id!, bill.id!)}
+                                                                        className="p-1 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"
+                                                                        title="Remove from statement"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </PermissionGate>
                                                             )}
                                                         </td>
                                                     </tr>

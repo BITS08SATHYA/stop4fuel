@@ -12,6 +12,7 @@ import {
     OilType
 } from "@/lib/api/station";
 import { Droplets, Plus, Edit2, Trash2, CheckCircle2, XCircle, Search, FileText } from "lucide-react";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function OilTypesPage() {
     const [oilTypes, setOilTypes] = useState<OilType[]>([]);
@@ -114,13 +115,15 @@ export default function OilTypesPage() {
                             Manage fluid/oil type categories (e.g. Engine Oil, Gear Oil, Diesel, Petrol).
                         </p>
                     </div>
-                    <button
-                        onClick={() => { resetForm(); setIsModalOpen(true); }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add Oil Type
-                    </button>
+                    <PermissionGate permission="PRODUCT_MANAGE">
+                        <button
+                            onClick={() => { resetForm(); setIsModalOpen(true); }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add Oil Type
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filter Bar */}
@@ -165,30 +168,34 @@ export default function OilTypesPage() {
                                     <div className="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
                                         <Droplets className="w-8 h-8" />
                                     </div>
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={() => handleEdit(oilType)}
-                                            className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                                        >
-                                            <Edit2 className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(oilType.id)}
-                                            className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
+                                    <PermissionGate permission="PRODUCT_MANAGE">
+                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => handleEdit(oilType)}
+                                                className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(oilType.id)}
+                                                className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </PermissionGate>
                                 </div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <h3 className="text-2xl font-black text-foreground">{oilType.name}</h3>
-                                    <button onClick={() => handleToggleStatus(oilType.id)}>
-                                        {oilType.active ? (
-                                            <CheckCircle2 className="w-4 h-4 text-green-500 cursor-pointer hover:opacity-70" />
-                                        ) : (
-                                            <XCircle className="w-4 h-4 text-red-500 cursor-pointer hover:opacity-70" />
-                                        )}
-                                    </button>
+                                    <PermissionGate permission="PRODUCT_MANAGE">
+                                        <button onClick={() => handleToggleStatus(oilType.id)}>
+                                            {oilType.active ? (
+                                                <CheckCircle2 className="w-4 h-4 text-green-500 cursor-pointer hover:opacity-70" />
+                                            ) : (
+                                                <XCircle className="w-4 h-4 text-red-500 cursor-pointer hover:opacity-70" />
+                                            )}
+                                        </button>
+                                    </PermissionGate>
                                 </div>
                                 <p className="text-muted-foreground text-sm line-clamp-2 min-h-[2.5rem] mb-4">
                                     {oilType.description || "No description provided."}

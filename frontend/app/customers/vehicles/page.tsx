@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Plus, Search, Edit2, Trash2, Truck, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { PermissionGate } from "@/components/permission-gate";
 import { VehicleStep } from "@/components/steps/vehicle-step";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
@@ -322,17 +323,19 @@ export default function VehiclesPage() {
                             Manage fleet vehicles and their customer associations.
                         </p>
                     </div>
-                    <button
-                        onClick={() => {
-                            setFormData({});
-                            setFormErrors({});
-                            setIsModalOpen(true);
-                        }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Vehicle
-                    </button>
+                    <PermissionGate permission="VEHICLE_MANAGE">
+                        <button
+                            onClick={() => {
+                                setFormData({});
+                                setFormErrors({});
+                                setIsModalOpen(true);
+                            }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New Vehicle
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filter Bar */}
@@ -405,20 +408,22 @@ export default function VehiclesPage() {
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(vehicle)}
-                                                    className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(vehicle.id)}
-                                                    className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
+                                            <PermissionGate permission="VEHICLE_MANAGE">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleEdit(vehicle)}
+                                                        className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(vehicle.id)}
+                                                        className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </PermissionGate>
                                         </td>
                                     </tr>
                                 );

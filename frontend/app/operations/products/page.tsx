@@ -21,6 +21,7 @@ import { Package, Plus, Edit2, Trash2, Fuel, Box, Truck, Award, Search } from "l
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -212,13 +213,15 @@ export default function ProductsPage() {
                             Manage fuel products, lubricants, and other retail items.
                         </p>
                     </div>
-                    <button
-                        onClick={() => openModal()}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Product
-                    </button>
+                    <PermissionGate permission="PRODUCT_MANAGE">
+                        <button
+                            onClick={() => openModal()}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New Product
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filter Bar */}
@@ -265,12 +268,14 @@ export default function ProductsPage() {
                         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                             Your product catalog is currently empty. Add fuel products or shop items to get started.
                         </p>
-                        <button
-                            onClick={() => openModal()}
-                            className="bg-primary/10 text-primary hover:bg-primary/20 px-6 py-2 rounded-xl font-medium transition-colors"
-                        >
-                            Create First Product
-                        </button>
+                        <PermissionGate permission="PRODUCT_MANAGE">
+                            <button
+                                onClick={() => openModal()}
+                                className="bg-primary/10 text-primary hover:bg-primary/20 px-6 py-2 rounded-xl font-medium transition-colors"
+                            >
+                                Create First Product
+                            </button>
+                        </PermissionGate>
                     </div>
                 ) : (
                     <GlassCard className="overflow-hidden border-none p-0">
@@ -357,20 +362,22 @@ export default function ProductsPage() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => openModal(product)}
-                                                        className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(product.id)}
-                                                        className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                                <PermissionGate permission="PRODUCT_MANAGE">
+                                                    <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => openModal(product)}
+                                                            className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(product.id)}
+                                                            className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </PermissionGate>
                                             </td>
                                         </tr>
                                     ))}

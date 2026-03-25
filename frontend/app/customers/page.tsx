@@ -5,6 +5,7 @@ import { CustomerList } from "@/components/customer-list";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
+import { PermissionGate } from "@/components/permission-gate";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { API_BASE_URL } from "@/lib/api/station";
 
@@ -63,13 +64,15 @@ export default function CustomersPage() {
                             Manage fleets, credit limits, and vehicle associations.
                         </p>
                     </div>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Customer
-                    </button>
+                    <PermissionGate permission="CUSTOMER_MANAGE">
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New Customer
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Stats */}

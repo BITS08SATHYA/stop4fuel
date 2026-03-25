@@ -16,7 +16,7 @@ import lombok.Setter;
 public class CashierStock extends BaseEntity {
 
     @NotNull(message = "Product is required")
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product product;

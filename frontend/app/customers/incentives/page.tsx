@@ -28,6 +28,7 @@ import {
     deleteIncentive,
 } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { PermissionGate } from "@/components/permission-gate";
 
 function getCustomerName(inc: Incentive): string {
     if ("name" in inc.customer) return inc.customer.name;
@@ -259,13 +260,15 @@ export default function IncentivesPage() {
                             Manage discount rules across all customers and products.
                         </p>
                     </div>
-                    <button
-                        onClick={handleOpenCreate}
-                        className="btn-gradient px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Add Incentive
-                    </button>
+                    <PermissionGate permission="CUSTOMER_MANAGE">
+                        <button
+                            onClick={handleOpenCreate}
+                            className="btn-gradient px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Incentive
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {isLoading ? (
@@ -406,37 +409,39 @@ export default function IncentivesPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-3 text-center">
-                                                        <div className="flex items-center justify-center gap-1">
-                                                            <button
-                                                                onClick={() => handleOpenEdit(inc)}
-                                                                title="Edit"
-                                                                className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
-                                                            >
-                                                                <Edit3 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleToggleActive(inc)}
-                                                                title={inc.active ? "Deactivate" : "Activate"}
-                                                                className={`p-1.5 rounded-lg opacity-100 md:opacity-0 group-hover:opacity-100 transition-all ${
-                                                                    inc.active
-                                                                        ? "hover:bg-amber-500/10 text-muted-foreground hover:text-amber-500"
-                                                                        : "hover:bg-green-500/10 text-muted-foreground hover:text-green-500"
-                                                                }`}
-                                                            >
-                                                                {inc.active ? (
-                                                                    <ToggleRight className="w-3.5 h-3.5" />
-                                                                ) : (
-                                                                    <ToggleLeft className="w-3.5 h-3.5" />
-                                                                )}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete(inc)}
-                                                                title="Delete"
-                                                                className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
+                                                        <PermissionGate permission="CUSTOMER_MANAGE">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <button
+                                                                    onClick={() => handleOpenEdit(inc)}
+                                                                    title="Edit"
+                                                                    className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                                >
+                                                                    <Edit3 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleToggleActive(inc)}
+                                                                    title={inc.active ? "Deactivate" : "Activate"}
+                                                                    className={`p-1.5 rounded-lg opacity-100 md:opacity-0 group-hover:opacity-100 transition-all ${
+                                                                        inc.active
+                                                                            ? "hover:bg-amber-500/10 text-muted-foreground hover:text-amber-500"
+                                                                            : "hover:bg-green-500/10 text-muted-foreground hover:text-green-500"
+                                                                    }`}
+                                                                >
+                                                                    {inc.active ? (
+                                                                        <ToggleRight className="w-3.5 h-3.5" />
+                                                                    ) : (
+                                                                        <ToggleLeft className="w-3.5 h-3.5" />
+                                                                    )}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(inc)}
+                                                                    title="Delete"
+                                                                    className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </PermissionGate>
                                                     </td>
                                                 </tr>
                                             ))

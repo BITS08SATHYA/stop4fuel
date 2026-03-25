@@ -20,6 +20,7 @@ import {
     markSalaryAsPaid,
     SalaryPayment,
 } from "@/lib/api/station";
+import { PermissionGate } from "@/components/permission-gate";
 
 const months = [
     "January", "February", "March", "April", "May", "June",
@@ -118,14 +119,16 @@ export default function SalaryProcessingPage() {
                             onChange={(e) => setSelectedYear(Number(e.target.value))}
                             className="bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-24"
                         />
-                        <button
-                            onClick={handleProcess}
-                            disabled={processing}
-                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 disabled:opacity-50"
-                        >
-                            <PlayCircle className="w-5 h-5" />
-                            {processing ? "Processing..." : "Process Payroll"}
-                        </button>
+                        <PermissionGate permission="EMPLOYEE_MANAGE">
+                            <button
+                                onClick={handleProcess}
+                                disabled={processing}
+                                className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 disabled:opacity-50"
+                            >
+                                <PlayCircle className="w-5 h-5" />
+                                {processing ? "Processing..." : "Process Payroll"}
+                            </button>
+                        </PermissionGate>
                     </div>
                 </div>
 
@@ -178,9 +181,11 @@ export default function SalaryProcessingPage() {
                     <div className="flex-1 overflow-hidden flex flex-col">
                         {draftCount > 0 && (
                             <div className="mb-3 flex justify-end">
-                                <button onClick={handleMarkAllPaid} className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
-                                    Mark All as Paid ({draftCount})
-                                </button>
+                                <PermissionGate permission="EMPLOYEE_MANAGE">
+                                    <button onClick={handleMarkAllPaid} className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                                        Mark All as Paid ({draftCount})
+                                    </button>
+                                </PermissionGate>
                             </div>
                         )}
                         <GlassCard className="overflow-hidden border-none p-0 flex-1 flex flex-col">
@@ -233,12 +238,14 @@ export default function SalaryProcessingPage() {
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
                                                     {p.status === "DRAFT" && (
-                                                        <button
-                                                            onClick={() => handleMarkPaid(p.id)}
-                                                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors"
-                                                        >
-                                                            Pay
-                                                        </button>
+                                                        <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                            <button
+                                                                onClick={() => handleMarkPaid(p.id)}
+                                                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors"
+                                                            >
+                                                                Pay
+                                                            </button>
+                                                        </PermissionGate>
                                                     )}
                                                     {p.status === "PAID" && p.paymentDate && (
                                                         <span className="text-xs text-muted-foreground">{p.paymentDate}</span>
