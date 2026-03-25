@@ -138,7 +138,7 @@ public class InputSanitizationFilter implements Filter {
                         // Find the end of this string
                         int start = i + 1;
                         int end = findStringEnd(json, start);
-                        if (end > start) {
+                        if (end >= start && end < json.length()) {
                             String strValue = json.substring(start, end);
                             // Only sanitize values, not keys
                             if (!isKey) {
