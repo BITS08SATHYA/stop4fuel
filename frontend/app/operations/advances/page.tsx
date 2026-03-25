@@ -25,6 +25,7 @@ import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { useFormValidation, required, min, indianMobile } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 // --- Types ---
 
@@ -591,19 +592,21 @@ export default function CashAdvancesPage() {
                                 <span className="text-sm font-medium text-amber-500">No active shift</span>
                             </div>
                         )}
-                        <button
-                            onClick={handleOpenAddModal}
-                            disabled={!activeShift}
-                            title={!activeShift ? "Open a shift first to record advances" : "Record a new cash advance"}
-                            className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg transition-all ${
-                                activeShift
-                                    ? "btn-gradient hover:shadow-xl"
-                                    : "bg-gray-500/10 text-gray-500 border border-gray-500/20 cursor-not-allowed shadow-none"
-                            }`}
-                        >
-                            <Plus className="w-4 h-4" />
-                            Record Advance
-                        </button>
+                        <PermissionGate permission="FINANCE_MANAGE">
+                            <button
+                                onClick={handleOpenAddModal}
+                                disabled={!activeShift}
+                                title={!activeShift ? "Open a shift first to record advances" : "Record a new cash advance"}
+                                className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg transition-all ${
+                                    activeShift
+                                        ? "btn-gradient hover:shadow-xl"
+                                        : "bg-gray-500/10 text-gray-500 border border-gray-500/20 cursor-not-allowed shadow-none"
+                                }`}
+                            >
+                                <Plus className="w-4 h-4" />
+                                Record Advance
+                            </button>
+                        </PermissionGate>
                     </div>
                 </div>
 
@@ -794,22 +797,26 @@ export default function CashAdvancesPage() {
                                                                     <Eye className="w-3.5 h-3.5" />
                                                                 </button>
                                                                 {canReturn && (
-                                                                    <button
-                                                                        onClick={() => handleOpenReturnModal(adv)}
-                                                                        title="Record return"
-                                                                        className="p-1.5 rounded-lg hover:bg-green-500/10 text-muted-foreground hover:text-green-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
-                                                                    >
-                                                                        <Undo2 className="w-3.5 h-3.5" />
-                                                                    </button>
+                                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                                        <button
+                                                                            onClick={() => handleOpenReturnModal(adv)}
+                                                                            title="Record return"
+                                                                            className="p-1.5 rounded-lg hover:bg-green-500/10 text-muted-foreground hover:text-green-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                                        >
+                                                                            <Undo2 className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </PermissionGate>
                                                                 )}
                                                                 {canCancel && (
-                                                                    <button
-                                                                        onClick={() => handleCancel(adv)}
-                                                                        title="Cancel advance"
-                                                                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
-                                                                    >
-                                                                        <XCircle className="w-3.5 h-3.5" />
-                                                                    </button>
+                                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                                        <button
+                                                                            onClick={() => handleCancel(adv)}
+                                                                            title="Cancel advance"
+                                                                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                                        >
+                                                                            <XCircle className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </PermissionGate>
                                                                 )}
                                                             </div>
                                                         </td>

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { PermissionGate } from "@/components/permission-gate";
 
 // --- Types ---
 
@@ -278,19 +279,21 @@ export default function CashInflowsPage() {
                                 <span className="text-sm font-medium text-amber-500">No active shift</span>
                             </div>
                         )}
-                        <button
-                            onClick={handleOpenAddModal}
-                            disabled={!activeShift}
-                            title={!activeShift ? "Open a shift first to record inflows" : "Record a new cash inflow"}
-                            className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg transition-all ${
-                                activeShift
-                                    ? "btn-gradient hover:shadow-xl"
-                                    : "bg-gray-500/10 text-gray-500 border border-gray-500/20 cursor-not-allowed shadow-none"
-                            }`}
-                        >
-                            <Plus className="w-4 h-4" />
-                            Record Inflow
-                        </button>
+                        <PermissionGate permission="FINANCE_MANAGE">
+                            <button
+                                onClick={handleOpenAddModal}
+                                disabled={!activeShift}
+                                title={!activeShift ? "Open a shift first to record inflows" : "Record a new cash inflow"}
+                                className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg transition-all ${
+                                    activeShift
+                                        ? "btn-gradient hover:shadow-xl"
+                                        : "bg-gray-500/10 text-gray-500 border border-gray-500/20 cursor-not-allowed shadow-none"
+                                }`}
+                            >
+                                <Plus className="w-4 h-4" />
+                                Record Inflow
+                            </button>
+                        </PermissionGate>
                     </div>
                 </div>
 
@@ -445,13 +448,15 @@ export default function CashInflowsPage() {
                                                                     <Eye className="w-4 h-4" />
                                                                 </button>
                                                                 {canRepay && (
-                                                                    <button
-                                                                        onClick={() => handleOpenRepayModal(inf)}
-                                                                        className="p-1.5 rounded-lg text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"
-                                                                        title="Record repayment"
-                                                                    >
-                                                                        <Undo2 className="w-4 h-4" />
-                                                                    </button>
+                                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                                        <button
+                                                                            onClick={() => handleOpenRepayModal(inf)}
+                                                                            className="p-1.5 rounded-lg text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"
+                                                                            title="Record repayment"
+                                                                        >
+                                                                            <Undo2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    </PermissionGate>
                                                                 )}
                                                             </div>
                                                         </td>

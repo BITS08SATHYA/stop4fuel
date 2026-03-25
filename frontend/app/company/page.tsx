@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Plus, Eye, Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { PermissionGate } from "@/components/permission-gate";
 
 interface Company {
     id: number;
@@ -77,13 +78,15 @@ export default function CompanyListPage() {
                             Manage company profiles, documents, and certifications.
                         </p>
                     </div>
-                    <button
-                        onClick={() => router.push("/company/new")}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add Company
-                    </button>
+                    <PermissionGate permission="SETTINGS_MANAGE">
+                        <button
+                            onClick={() => router.push("/company/new")}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add Company
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {error && (
@@ -148,20 +151,22 @@ export default function CompanyListPage() {
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
-                                                <button
-                                                    onClick={() => router.push(`/company/${company.id}?edit=true`)}
-                                                    className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                                                    title="Edit"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteId(company.id)}
-                                                    className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/30 transition-colors text-muted-foreground hover:text-red-600"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                <PermissionGate permission="SETTINGS_MANAGE">
+                                                    <button
+                                                        onClick={() => router.push(`/company/${company.id}?edit=true`)}
+                                                        className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                                        title="Edit"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setDeleteId(company.id)}
+                                                        className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/30 transition-colors text-muted-foreground hover:text-red-600"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </PermissionGate>
                                             </div>
                                         </td>
                                     </tr>

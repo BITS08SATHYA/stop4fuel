@@ -14,6 +14,7 @@ import {
     OilType
 } from "@/lib/api/station";
 import { Award, Plus, Edit2, Trash2, FileText, CheckCircle2, XCircle, Search } from "lucide-react";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function GradeTypesPage() {
     const [grades, setGrades] = useState<GradeType[]>([]);
@@ -143,13 +144,15 @@ export default function GradeTypesPage() {
                             Define fluid types and their variant grades (e.g. Engine Oil: 20W-40, 20W-50).
                         </p>
                     </div>
-                    <button
-                        onClick={() => { resetForm(); setIsModalOpen(true); }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Define New Grade
-                    </button>
+                    <PermissionGate permission="PRODUCT_MANAGE">
+                        <button
+                            onClick={() => { resetForm(); setIsModalOpen(true); }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Define New Grade
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filter Bar */}
@@ -212,30 +215,34 @@ export default function GradeTypesPage() {
                                                 <div className="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
                                                     <Award className="w-8 h-8" />
                                                 </div>
-                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleEdit(grade)}
-                                                        className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(grade.id)}
-                                                        className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                                <PermissionGate permission="PRODUCT_MANAGE">
+                                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => handleEdit(grade)}
+                                                            className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(grade.id)}
+                                                            className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </PermissionGate>
                                             </div>
                                             <div className="flex items-center gap-2 mb-1">
                                                 <h3 className="text-2xl font-black text-foreground">{grade.name}</h3>
-                                                <button onClick={() => handleToggleStatus(grade.id)}>
-                                                    {grade.active ? (
-                                                        <CheckCircle2 className="w-4 h-4 text-green-500 cursor-pointer hover:opacity-70" />
-                                                    ) : (
-                                                        <XCircle className="w-4 h-4 text-red-500 cursor-pointer hover:opacity-70" />
-                                                    )}
-                                                </button>
+                                                <PermissionGate permission="PRODUCT_MANAGE">
+                                                    <button onClick={() => handleToggleStatus(grade.id)}>
+                                                        {grade.active ? (
+                                                            <CheckCircle2 className="w-4 h-4 text-green-500 cursor-pointer hover:opacity-70" />
+                                                        ) : (
+                                                            <XCircle className="w-4 h-4 text-red-500 cursor-pointer hover:opacity-70" />
+                                                        )}
+                                                    </button>
+                                                </PermissionGate>
                                             </div>
                                             {grade.oilType && (
                                                 <p className="text-xs text-primary/70 font-medium mb-2">{grade.oilType.name}</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { RouteGuard } from "@/components/route-guard";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { Save, Loader2 } from "lucide-react";
@@ -116,8 +116,8 @@ export default function PermissionsPage() {
                             </thead>
                             <tbody>
                                 {modules.map(module => (
-                                    <>
-                                        <tr key={`mod-${module}`} className="bg-muted/30">
+                                    <React.Fragment key={`mod-${module}`}>
+                                        <tr className="bg-muted/30">
                                             <td colSpan={2 + EDITABLE_ROLES.length} className="p-2 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
                                                 {module}
                                             </td>
@@ -143,7 +143,7 @@ export default function PermissionsPage() {
                                                 ))}
                                             </tr>
                                         ))}
-                                    </>
+                                    </React.Fragment>
                                 ))}
                             </tbody>
                         </table>

@@ -8,6 +8,7 @@ import { Droplets, Plus, Edit2, Trash2, Search, Gauge, AlertTriangle } from "luc
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function TanksPage() {
     const [tanks, setTanks] = useState<Tank[]>([]);
@@ -121,13 +122,15 @@ export default function TanksPage() {
                             Manage underground fuel storage tanks and capacities.
                         </p>
                     </div>
-                    <button
-                        onClick={() => openModal()}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Tank
-                    </button>
+                    <PermissionGate permission="STATION_MANAGE">
+                        <button
+                            onClick={() => openModal()}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New Tank
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filter Bar */}
@@ -199,14 +202,16 @@ export default function TanksPage() {
                                     <span className="font-medium text-foreground">{tank.product.name}</span>
                                 </div>
 
-                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => openModal(tank)} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition-colors">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => handleDelete(tank.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                <PermissionGate permission="STATION_MANAGE">
+                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => openModal(tank)} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition-colors">
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => handleDelete(tank.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </PermissionGate>
                             </GlassCard>
                         ))}
                     </div>

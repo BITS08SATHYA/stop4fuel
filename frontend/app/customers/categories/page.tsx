@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Edit2, Trash2, Shield, Building2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
@@ -121,13 +122,15 @@ export default function CategoriesPage() {
                             </Badge>
                         </div>
                     </div>
-                    <button
-                        onClick={() => { setFormData({}); setError(""); setIsModalOpen(true); }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add Category
-                    </button>
+                    <PermissionGate permission="CUSTOMER_MANAGE">
+                        <button
+                            onClick={() => { setFormData({}); setError(""); setIsModalOpen(true); }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add Category
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 <div className="mb-6">
@@ -170,20 +173,22 @@ export default function CategoriesPage() {
                                     </td>
                                     <td className="px-6 py-4 text-muted-foreground">{cat.description || "-"}</td>
                                     <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => handleEdit(cat)}
-                                                className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(cat.id)}
-                                                className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        <PermissionGate permission="CUSTOMER_MANAGE">
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(cat)}
+                                                    className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(cat.id)}
+                                                    className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </PermissionGate>
                                     </td>
                                 </tr>
                             ))}
