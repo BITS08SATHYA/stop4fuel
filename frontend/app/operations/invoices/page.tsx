@@ -45,6 +45,7 @@ import {
     Info
 } from "lucide-react";
 import Link from "next/link";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function InvoicesPage() {
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
@@ -316,7 +317,7 @@ export default function InvoicesPage() {
                 billType,
                 vehicleKM: vehicleKM ? Number(vehicleKM) : undefined,
                 paymentMode: billType === 'CASH' ? paymentMode : undefined,
-                indentNo: billType === 'CREDIT' ? indentNo : undefined,
+                indentNo: (billType === 'CREDIT' && indentNo) ? indentNo : undefined,
                 netAmount: calculateTotal(),
                 status: 'PAID',
                 products: selectedProducts.map((p: any) => ({
@@ -328,8 +329,8 @@ export default function InvoicesPage() {
                 })),
                 customer: selectedCustomer ? { id: selectedCustomer.id } : undefined,
                 vehicle: selectedVehicle ? { id: selectedVehicle.id } : undefined,
-                driverName,
-                driverPhone,
+                driverName: driverName || undefined,
+                driverPhone: driverPhone || undefined,
                 date: new Date().toISOString()
             };
 
@@ -1163,13 +1164,15 @@ export default function InvoicesPage() {
                     </div>
 
                     <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-2xl border border-border/50">
-                        <button
-                            onClick={() => { setActiveTab('create'); resetForm(); }}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all ${activeTab === 'create' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <Receipt className="w-4 h-4" />
-                            New Bill
-                        </button>
+                        <PermissionGate permission="INVOICE_CREATE">
+                            <button
+                                onClick={() => { setActiveTab('create'); resetForm(); }}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all ${activeTab === 'create' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
+                            >
+                                <Receipt className="w-4 h-4" />
+                                New Bill
+                            </button>
+                        </PermissionGate>
                         <button
                             onClick={() => setActiveTab('history')}
                             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all ${activeTab === 'history' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
