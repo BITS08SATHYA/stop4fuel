@@ -64,6 +64,9 @@ export default function InvoicesPage() {
     const [selectedVehicle, setSelectedVehicle] = useState<any>(undefined);
     const [isSaving, setIsSaving] = useState(false);
     const [isWalkIn, setIsWalkIn] = useState(false);
+    const [walkInCustomerName, setWalkInCustomerName] = useState("");
+    const [walkInVehicleNo, setWalkInVehicleNo] = useState("");
+    const [walkInGST, setWalkInGST] = useState("");
 
     // Vehicle search (cross-customer)
     const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
@@ -305,6 +308,9 @@ export default function InvoicesPage() {
         setCurrentStep(1);
         setError("");
         setIsWalkIn(false);
+        setWalkInCustomerName("");
+        setWalkInVehicleNo("");
+        setWalkInGST("");
         setVehicleSearchQuery("");
         setVehicleSearchResults([]);
     };
@@ -331,6 +337,9 @@ export default function InvoicesPage() {
                 vehicle: selectedVehicle ? { id: selectedVehicle.id } : undefined,
                 driverName: driverName || undefined,
                 driverPhone: driverPhone || undefined,
+                signatoryName: walkInCustomerName || undefined,
+                billDesc: walkInVehicleNo || undefined,
+                customerGST: walkInGST || undefined,
                 date: new Date().toISOString()
             };
 
@@ -396,7 +405,6 @@ export default function InvoicesPage() {
         setCustomerSearch("");
         setIncentives([]);
         setBillType('CASH');
-        setCurrentStep(3);
     };
 
     const renderStep1 = () => (
@@ -408,22 +416,75 @@ export default function InvoicesPage() {
                 </h3>
 
                 {/* Walk-in option */}
-                <div className="mb-6 p-5 bg-primary/5 border border-primary/15 rounded-2xl">
+                <div className={`mb-6 p-5 border rounded-2xl transition-all ${isWalkIn ? 'bg-green-500/5 border-green-500/20' : 'bg-primary/5 border-primary/15'}`}>
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="font-bold text-foreground text-sm">Walk-in Customer?</p>
+                            <p className="font-bold text-foreground text-sm">{isWalkIn ? 'Walk-in Customer' : 'Walk-in Customer?'}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                                For passing-by customers paying cash/card/UPI — no registration needed.
+                                {isWalkIn ? 'Optionally enter customer details for the bill.' : 'For passing-by customers paying cash/card/UPI — no registration needed.'}
                             </p>
                         </div>
-                        <button
-                            onClick={handleWalkIn}
-                            className="px-6 py-3 bg-foreground text-background rounded-xl font-bold text-sm transition-all hover:opacity-90 flex items-center gap-2 shrink-0"
-                        >
-                            <User size={16} />
-                            Walk-in Bill
-                        </button>
+                        {!isWalkIn ? (
+                            <button
+                                onClick={handleWalkIn}
+                                className="px-6 py-3 bg-foreground text-background rounded-xl font-bold text-sm transition-all hover:opacity-90 flex items-center gap-2 shrink-0"
+                            >
+                                <User size={16} />
+                                Walk-in Bill
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => { setIsWalkIn(false); setWalkInCustomerName(""); setWalkInVehicleNo(""); setWalkInGST(""); }}
+                                className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground border border-border rounded-xl transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        )}
                     </div>
+
+                    {isWalkIn && (
+                        <div className="mt-4 pt-4 border-t border-border/50 space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 block">Customer Name <span className="font-normal normal-case">(Optional)</span></label>
+                                    <input
+                                        type="text"
+                                        value={walkInCustomerName}
+                                        onChange={(e) => setWalkInCustomerName(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm"
+                                        placeholder="e.g. Ravi Kumar"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 block">Vehicle No <span className="font-normal normal-case">(Optional)</span></label>
+                                    <input
+                                        type="text"
+                                        value={walkInVehicleNo}
+                                        onChange={(e) => setWalkInVehicleNo(e.target.value.toUpperCase())}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm font-mono"
+                                        placeholder="e.g. TN 30 H 1234"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 block">GST Number <span className="font-normal normal-case">(Optional)</span></label>
+                                    <input
+                                        type="text"
+                                        value={walkInGST}
+                                        onChange={(e) => setWalkInGST(e.target.value.toUpperCase())}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm font-mono"
+                                        placeholder="e.g. 33AABCS1234F1Z5"
+                                        maxLength={15}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setCurrentStep(3)}
+                                className="w-full py-3 btn-gradient text-white rounded-xl font-bold text-sm transition-all shadow-lg flex items-center justify-center gap-2"
+                            >
+                                Continue as Walk-in <ArrowRight size={16} />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="relative flex items-center gap-4 mb-2">
@@ -933,11 +994,11 @@ export default function InvoicesPage() {
                         <div className="w-full space-y-2 mt-6 text-left px-4">
                             <div className="flex justify-between text-xs">
                                 <span className="text-muted-foreground font-bold">Customer:</span>
-                                <span className="text-foreground font-bold">{isWalkIn ? "Walk-in" : selectedCustomer?.name}</span>
+                                <span className="text-foreground font-bold">{isWalkIn ? (walkInCustomerName || "Walk-in") : selectedCustomer?.name}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                                 <span className="text-muted-foreground font-bold">Vehicle:</span>
-                                <span className="text-foreground font-bold">{isWalkIn ? "—" : selectedVehicle?.vehicleNumber}</span>
+                                <span className="text-foreground font-bold">{isWalkIn ? (walkInVehicleNo || "—") : selectedVehicle?.vehicleNumber}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                                 <span className="text-muted-foreground font-bold">Type:</span>
@@ -979,11 +1040,11 @@ export default function InvoicesPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="p-4 bg-muted rounded-xl">
                             <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Customer</p>
-                            <p className="font-bold text-foreground">{isWalkIn ? "Walk-in" : selectedCustomer?.name}</p>
+                            <p className="font-bold text-foreground">{isWalkIn ? (walkInCustomerName || "Walk-in") : selectedCustomer?.name}</p>
                         </div>
                         <div className="p-4 bg-muted rounded-xl">
                             <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Vehicle</p>
-                            <p className="font-bold text-foreground">{isWalkIn ? "—" : selectedVehicle?.vehicleNumber}</p>
+                            <p className="font-bold text-foreground">{isWalkIn ? (walkInVehicleNo || "—") : selectedVehicle?.vehicleNumber}</p>
                         </div>
                         <div className="p-4 bg-muted rounded-xl">
                             <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Bill Type</p>
@@ -994,6 +1055,12 @@ export default function InvoicesPage() {
                             <p className="font-bold text-foreground">{driverName || "—"}</p>
                         </div>
                     </div>
+                    {walkInGST && (
+                        <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground font-bold">GST:</span>
+                            <span className="font-mono font-bold text-foreground">{walkInGST}</span>
+                        </div>
+                    )}
 
                     {/* Product lines */}
                     <div className="border border-border rounded-xl overflow-hidden">
