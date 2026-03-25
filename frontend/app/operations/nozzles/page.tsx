@@ -9,6 +9,7 @@ import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function NozzlesPage() {
     const [nozzles, setNozzles] = useState<Nozzle[]>([]);
@@ -133,13 +134,15 @@ export default function NozzlesPage() {
                             Manage fuel nozzles and their connections to tanks and pumps.
                         </p>
                     </div>
-                    <button
-                        onClick={() => openModal()}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Nozzle
-                    </button>
+                    <PermissionGate permission="STATION_MANAGE">
+                        <button
+                            onClick={() => openModal()}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New Nozzle
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filter Bar */}
@@ -238,20 +241,22 @@ export default function NozzlesPage() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => openModal(nozzle)}
-                                                        className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(nozzle.id)}
-                                                        className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                                <PermissionGate permission="STATION_MANAGE">
+                                                    <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => openModal(nozzle)}
+                                                            className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(nozzle.id)}
+                                                            className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </PermissionGate>
                                             </td>
                                         </tr>
                                     ))}

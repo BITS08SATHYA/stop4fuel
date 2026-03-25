@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/station";
 
 import { API_BASE_URL } from "@/lib/api/station";
+import { PermissionGate } from "@/components/permission-gate";
 
 const API = API_BASE_URL;
 
@@ -275,38 +276,40 @@ export default function CustomerProfilePage() {
                         {customerStatus === "INACTIVE" && <><ShieldOff className="w-4 h-4" /> Activate</>}
                         {customerStatus === "BLOCKED" && <><ShieldAlert className="w-4 h-4" /> Unblock</>}
                     </button>
-                    <button
-                        onClick={() => {
-                            if (isEditing) {
-                                handleSave();
-                            } else {
-                                setEditCustomerType(customer?.customerCategory?.categoryType || "");
-                                setIsEditing(true);
-                            }
-                        }}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${isEditing
-                            ? "bg-cyan-500 text-white hover:bg-cyan-600"
-                            : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                        }`}
-                    >
-                        {isEditing ? <Save className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-                        {isEditing ? "Save Changes" : "Edit Profile"}
-                    </button>
-                    {isEditing && (
+                    <PermissionGate permission="CUSTOMER_MANAGE">
                         <button
-                            onClick={() => { setIsEditing(false); fetchData(); }}
-                            className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 transition-colors"
+                            onClick={() => {
+                                if (isEditing) {
+                                    handleSave();
+                                } else {
+                                    setEditCustomerType(customer?.customerCategory?.categoryType || "");
+                                    setIsEditing(true);
+                                }
+                            }}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${isEditing
+                                ? "bg-cyan-500 text-white hover:bg-cyan-600"
+                                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                            }`}
                         >
-                            Cancel
+                            {isEditing ? <Save className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                            {isEditing ? "Save Changes" : "Edit Profile"}
                         </button>
-                    )}
-                    <button
-                        onClick={handleDelete}
-                        className="px-4 py-2 bg-destructive/10 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/20 transition-colors flex items-center gap-2"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                    </button>
+                        {isEditing && (
+                            <button
+                                onClick={() => { setIsEditing(false); fetchData(); }}
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        )}
+                        <button
+                            onClick={handleDelete}
+                            className="px-4 py-2 bg-destructive/10 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/20 transition-colors flex items-center gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                        </button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -348,7 +351,7 @@ export default function CustomerProfilePage() {
                                         type="text"
                                         value={Array.isArray(customer.emails) ? customer.emails.join(', ') : customer.emails}
                                         onChange={(e) => setCustomer({ ...customer, emails: e.target.value.split(',').map((s: string) => s.trim()) })}
-                                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                         placeholder="Comma separated emails"
                                     />
                                 ) : (
@@ -366,7 +369,7 @@ export default function CustomerProfilePage() {
                                         type="text"
                                         value={Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers.join(', ') : customer.phoneNumbers}
                                         onChange={(e) => setCustomer({ ...customer, phoneNumbers: e.target.value.split(',').map((s: string) => s.trim()) })}
-                                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                         placeholder="Comma separated phones"
                                     />
                                 ) : (
@@ -383,7 +386,7 @@ export default function CustomerProfilePage() {
                                     <textarea
                                         value={customer.address || ""}
                                         onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                         rows={2}
                                     />
                                 ) : (
@@ -392,7 +395,16 @@ export default function CustomerProfilePage() {
                             </div>
                             <div className="flex items-center gap-3 text-sm">
                                 <Calendar className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-foreground">Joined {customer.joinDate || "N/A"}</span>
+                                {isEditing ? (
+                                    <input
+                                        type="date"
+                                        value={customer.joinDate || ""}
+                                        onChange={(e) => setCustomer({ ...customer, joinDate: e.target.value })}
+                                        className="bg-secondary border border-border rounded px-2 py-1 text-foreground text-sm"
+                                    />
+                                ) : (
+                                    <span className="text-foreground">Joined {customer.joinDate || "N/A"}</span>
+                                )}
                             </div>
                         </div>
                     </GlassCard>
@@ -407,7 +419,7 @@ export default function CustomerProfilePage() {
                                         type="text"
                                         value={customer.username || ""}
                                         onChange={(e) => setCustomer({ ...customer, username: e.target.value })}
-                                        className="text-sm font-medium text-foreground bg-white/5 border border-white/10 rounded px-2 py-1 text-right w-32"
+                                        className="text-sm font-medium text-foreground bg-secondary border border-border rounded px-2 py-1 text-right w-32"
                                     />
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.username}</span>
@@ -426,11 +438,11 @@ export default function CustomerProfilePage() {
                                             const selected = parties.find((p: any) => p.id === Number(e.target.value));
                                             setCustomer({ ...customer, party: selected || null });
                                         }}
-                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                     >
                                         <option value="">None</option>
                                         {parties.map((p: any) => (
-                                            <option key={p.id} value={p.id} className="bg-slate-900">{p.partyType}</option>
+                                            <option key={p.id} value={p.id} className="bg-card text-foreground">{p.partyType}</option>
                                         ))}
                                     </select>
                                 ) : (
@@ -446,11 +458,11 @@ export default function CustomerProfilePage() {
                                             const selected = groups.find((g: any) => g.id === Number(e.target.value));
                                             setCustomer({ ...customer, group: selected || null });
                                         }}
-                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                     >
                                         <option value="">None</option>
                                         {groups.map((g: any) => (
-                                            <option key={g.id} value={g.id} className="bg-slate-900">{g.groupName}</option>
+                                            <option key={g.id} value={g.id} className="bg-card text-foreground">{g.groupName}</option>
                                         ))}
                                     </select>
                                 ) : (
@@ -471,11 +483,11 @@ export default function CustomerProfilePage() {
                                                 if (govCat) setCustomer({ ...customer, customerCategory: govCat });
                                             }
                                         }}
-                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                     >
                                         <option value="">Select Type</option>
-                                        <option value="GOVERNMENT" className="bg-slate-900">Government</option>
-                                        <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
+                                        <option value="GOVERNMENT" className="bg-card text-foreground">Government</option>
+                                        <option value="NON_GOVERNMENT" className="bg-card text-foreground">Non-Government</option>
                                     </select>
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">
@@ -494,11 +506,11 @@ export default function CustomerProfilePage() {
                                                 const selected = categories.find((c: any) => c.id === Number(e.target.value));
                                                 setCustomer({ ...customer, customerCategory: selected || null });
                                             }}
-                                            className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                            className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                         >
                                             <option value="">Select Category</option>
                                             {categories.filter((c: any) => c.categoryType === "NON_GOVERNMENT").map((c: any) => (
-                                                <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
+                                                <option key={c.id} value={c.id} className="bg-card text-foreground">{c.categoryName}</option>
                                             ))}
                                         </select>
                                     ) : (
@@ -513,7 +525,7 @@ export default function CustomerProfilePage() {
                                         type="text"
                                         value={customer.gstNumber || ""}
                                         onChange={(e) => setCustomer({ ...customer, gstNumber: e.target.value })}
-                                        className="text-sm font-medium text-foreground bg-white/5 border border-white/10 rounded px-2 py-1 text-right w-40"
+                                        className="text-sm font-medium text-foreground bg-secondary border border-border rounded px-2 py-1 text-right w-40"
                                         placeholder="e.g. 33AABCT1332L1ZZ"
                                         maxLength={15}
                                     />
@@ -553,7 +565,7 @@ export default function CustomerProfilePage() {
                                                 type="number"
                                                 value={customer.creditLimitLiters || ""}
                                                 onChange={(e) => setCustomer({ ...customer, creditLimitLiters: parseFloat(e.target.value) || null })}
-                                                className="w-20 bg-white/5 border border-white/10 rounded px-1 py-0.5 text-right text-foreground"
+                                                className="w-20 bg-secondary border border-border rounded px-1 py-0.5 text-right text-foreground"
                                             />
                                             <span>L limit</span>
                                         </div>
@@ -623,7 +635,7 @@ export default function CustomerProfilePage() {
                                         step="0.0000001"
                                         value={customer.latitude || ""}
                                         onChange={(e) => setCustomer({ ...customer, latitude: e.target.value ? parseFloat(e.target.value) : null })}
-                                        className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-foreground"
+                                        className="flex-1 bg-secondary border border-border rounded px-2 py-1 text-sm text-foreground"
                                         placeholder="e.g. 13.0827"
                                     />
                                 </div>
@@ -634,7 +646,7 @@ export default function CustomerProfilePage() {
                                         step="0.0000001"
                                         value={customer.longitude || ""}
                                         onChange={(e) => setCustomer({ ...customer, longitude: e.target.value ? parseFloat(e.target.value) : null })}
-                                        className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-foreground"
+                                        className="flex-1 bg-secondary border border-border rounded px-2 py-1 text-sm text-foreground"
                                         placeholder="e.g. 80.2707"
                                     />
                                 </div>
@@ -667,13 +679,13 @@ export default function CustomerProfilePage() {
                                     <select
                                         value={customer.statementFrequency || ""}
                                         onChange={(e) => setCustomer({ ...customer, statementFrequency: e.target.value || null })}
-                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                     >
                                         <option value="">Not set</option>
-                                        <option value="MONTHLY" className="bg-slate-900">Monthly</option>
-                                        <option value="BIWEEKLY" className="bg-slate-900">Biweekly</option>
-                                        <option value="WEEKLY" className="bg-slate-900">Weekly</option>
-                                        <option value="CUSTOM" className="bg-slate-900">Custom</option>
+                                        <option value="MONTHLY" className="bg-card text-foreground">Monthly</option>
+                                        <option value="BIWEEKLY" className="bg-card text-foreground">Biweekly</option>
+                                        <option value="WEEKLY" className="bg-card text-foreground">Weekly</option>
+                                        <option value="CUSTOM" className="bg-card text-foreground">Custom</option>
                                     </select>
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.statementFrequency || "Not set"}</span>
@@ -685,12 +697,12 @@ export default function CustomerProfilePage() {
                                     <select
                                         value={customer.statementGrouping || ""}
                                         onChange={(e) => setCustomer({ ...customer, statementGrouping: e.target.value || null })}
-                                        className="text-sm bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
                                     >
                                         <option value="">Not set</option>
-                                        <option value="CUSTOMER_WISE" className="bg-slate-900">Customer Wise</option>
-                                        <option value="VEHICLE_WISE" className="bg-slate-900">Vehicle Wise</option>
-                                        <option value="BILL_WISE" className="bg-slate-900">Bill Wise</option>
+                                        <option value="CUSTOMER_WISE" className="bg-card text-foreground">Customer Wise</option>
+                                        <option value="VEHICLE_WISE" className="bg-card text-foreground">Vehicle Wise</option>
+                                        <option value="BILL_WISE" className="bg-card text-foreground">Bill Wise</option>
                                     </select>
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.statementGrouping?.replace(/_/g, ' ') || "Not set"}</span>
@@ -917,13 +929,13 @@ export default function CustomerProfilePage() {
                                 <select
                                     value={newIncentive.productId}
                                     onChange={(e) => setNewIncentive({ ...newIncentive, productId: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
+                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
                                 >
-                                    <option value="" className="bg-slate-900">Select Product</option>
+                                    <option value="" className="bg-card text-foreground">Select Product</option>
                                     {allProducts
                                         .filter(p => !customerIncentives.some((inc: any) => inc.product?.id === p.id && inc.active))
                                         .map(p => (
-                                            <option key={p.id} value={p.id} className="bg-slate-900">{p.name} ({p.category})</option>
+                                            <option key={p.id} value={p.id} className="bg-card text-foreground">{p.name} ({p.category})</option>
                                         ))}
                                 </select>
                             </div>
@@ -934,7 +946,7 @@ export default function CustomerProfilePage() {
                                     step="0.01"
                                     value={newIncentive.minQuantity}
                                     onChange={(e) => setNewIncentive({ ...newIncentive, minQuantity: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
+                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
                                     placeholder="Leave empty for no minimum"
                                 />
                             </div>
@@ -945,7 +957,7 @@ export default function CustomerProfilePage() {
                                     step="0.01"
                                     value={newIncentive.discountRate}
                                     onChange={(e) => setNewIncentive({ ...newIncentive, discountRate: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
+                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
                                     placeholder="e.g. 0.50"
                                 />
                             </div>
@@ -999,7 +1011,7 @@ export default function CustomerProfilePage() {
                                     type="text"
                                     value={newVehicle.vehicleNumber}
                                     onChange={(e) => setNewVehicle({ ...newVehicle, vehicleNumber: e.target.value.toUpperCase() })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500 uppercase"
+                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500 uppercase"
                                     placeholder="e.g. TN 28 BZ 5131"
                                 />
                             </div>
@@ -1008,11 +1020,11 @@ export default function CustomerProfilePage() {
                                 <select
                                     value={newVehicle.vehicleTypeId}
                                     onChange={(e) => setNewVehicle({ ...newVehicle, vehicleTypeId: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
+                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
                                 >
-                                    <option value="" className="bg-slate-900">Select Type</option>
+                                    <option value="" className="bg-card text-foreground">Select Type</option>
                                     {vehicleTypes.map(vt => (
-                                        <option key={vt.id} value={vt.id} className="bg-slate-900">{vt.typeName}</option>
+                                        <option key={vt.id} value={vt.id} className="bg-card text-foreground">{vt.typeName}</option>
                                     ))}
                                 </select>
                             </div>
@@ -1021,11 +1033,11 @@ export default function CustomerProfilePage() {
                                 <select
                                     value={newVehicle.fuelType}
                                     onChange={(e) => setNewVehicle({ ...newVehicle, fuelType: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
+                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
                                 >
-                                    <option value="" className="bg-slate-900">Select Fuel</option>
+                                    <option value="" className="bg-card text-foreground">Select Fuel</option>
                                     {products.map(p => (
-                                        <option key={p.id} value={p.id} className="bg-slate-900">{p.name}</option>
+                                        <option key={p.id} value={p.id} className="bg-card text-foreground">{p.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -1035,7 +1047,7 @@ export default function CustomerProfilePage() {
                                     type="number"
                                     value={newVehicle.maxCapacity}
                                     onChange={(e) => setNewVehicle({ ...newVehicle, maxCapacity: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
+                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
                                     placeholder="e.g. 500"
                                 />
                             </div>
@@ -1052,7 +1064,7 @@ export default function CustomerProfilePage() {
                                     type="number"
                                     value={newVehicle.maxLitersPerMonth}
                                     onChange={(e) => setNewVehicle({ ...newVehicle, maxLitersPerMonth: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
+                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
                                     placeholder="e.g. 200"
                                 />
                             </div>

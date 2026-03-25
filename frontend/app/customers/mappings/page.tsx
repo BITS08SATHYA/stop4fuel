@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Users, Truck, ArrowRight, Check, X, AlertCircle, Link2, Unlink } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
@@ -202,23 +203,25 @@ function CustomerGroupMapping() {
                     ))}
                 </select>
 
-                <button
-                    onClick={handleAssign}
-                    disabled={loading || selectedIds.size === 0 || !targetGroupId}
-                    className="btn-gradient px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
-                >
-                    <Link2 className="w-4 h-4" />
-                    Assign ({selectedIds.size})
-                </button>
+                <PermissionGate permission="CUSTOMER_MANAGE">
+                    <button
+                        onClick={handleAssign}
+                        disabled={loading || selectedIds.size === 0 || !targetGroupId}
+                        className="btn-gradient px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <Link2 className="w-4 h-4" />
+                        Assign ({selectedIds.size})
+                    </button>
 
-                <button
-                    onClick={handleUnassign}
-                    disabled={loading || selectedIds.size === 0}
-                    className="px-4 py-2 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                    <Unlink className="w-4 h-4" />
-                    Unassign ({selectedIds.size})
-                </button>
+                    <button
+                        onClick={handleUnassign}
+                        disabled={loading || selectedIds.size === 0}
+                        className="px-4 py-2 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <Unlink className="w-4 h-4" />
+                        Unassign ({selectedIds.size})
+                    </button>
+                </PermissionGate>
 
                 {message && (
                     <div className={`ml-auto flex items-center gap-2 text-sm ${message.type === "success" ? "text-green-500" : "text-destructive"}`}>
@@ -447,23 +450,25 @@ function VehicleCustomerMapping() {
                     ))}
                 </select>
 
-                <button
-                    onClick={handleAssign}
-                    disabled={loading || selectedIds.size === 0 || !targetCustomerId}
-                    className="btn-gradient px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
-                >
-                    <Link2 className="w-4 h-4" />
-                    Assign ({selectedIds.size})
-                </button>
+                <PermissionGate permission="VEHICLE_MANAGE">
+                    <button
+                        onClick={handleAssign}
+                        disabled={loading || selectedIds.size === 0 || !targetCustomerId}
+                        className="btn-gradient px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <Link2 className="w-4 h-4" />
+                        Assign ({selectedIds.size})
+                    </button>
 
-                <button
-                    onClick={handleUnassign}
-                    disabled={loading || selectedIds.size === 0}
-                    className="px-4 py-2 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                    <Unlink className="w-4 h-4" />
-                    Unassign ({selectedIds.size})
-                </button>
+                    <button
+                        onClick={handleUnassign}
+                        disabled={loading || selectedIds.size === 0}
+                        className="px-4 py-2 rounded-lg text-sm font-medium border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <Unlink className="w-4 h-4" />
+                        Unassign ({selectedIds.size})
+                    </button>
+                </PermissionGate>
 
                 {message && (
                     <div className={`ml-auto flex items-center gap-2 text-sm ${message.type === "success" ? "text-green-500" : "text-destructive"}`}>

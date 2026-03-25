@@ -8,6 +8,7 @@ import { Activity, Plus, Edit2, Trash2, Search, AlertTriangle } from "lucide-rea
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function PumpsPage() {
     const [pumps, setPumps] = useState<Pump[]>([]);
@@ -102,13 +103,15 @@ export default function PumpsPage() {
                             Manage physical fuel dispenser pumps.
                         </p>
                     </div>
-                    <button
-                        onClick={() => openModal()}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Add New Pump
-                    </button>
+                    <PermissionGate permission="STATION_MANAGE">
+                        <button
+                            onClick={() => openModal()}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New Pump
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Filter Bar */}
@@ -154,14 +157,16 @@ export default function PumpsPage() {
                                 </div>
                                 <h3 className="text-2xl font-bold text-foreground mb-4">{pump.name}</h3>
                                 
-                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => openModal(pump)} className="p-2 bg-orange-500/10 text-orange-500 rounded-lg hover:bg-orange-500/20 transition-colors">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => handleDelete(pump.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                <PermissionGate permission="STATION_MANAGE">
+                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => openModal(pump)} className="p-2 bg-orange-500/10 text-orange-500 rounded-lg hover:bg-orange-500/20 transition-colors">
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => handleDelete(pump.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </PermissionGate>
                             </GlassCard>
                         ))}
                     </div>

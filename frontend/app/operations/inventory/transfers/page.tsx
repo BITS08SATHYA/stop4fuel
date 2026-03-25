@@ -20,6 +20,7 @@ import {
 import { ArrowLeftRight, Plus, Search, Warehouse, ShoppingBag, ArrowRight, Trash2, Eye, Edit3 } from "lucide-react";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 export default function StockTransferPage() {
     const [transfers, setTransfers] = useState<StockTransfer[]>([]);
@@ -176,13 +177,15 @@ export default function StockTransferPage() {
                             Transfer non-fuel products between Godown and Cashier.
                         </p>
                     </div>
-                    <button
-                        onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        New Transfer
-                    </button>
+                    <PermissionGate permission="INVENTORY_MANAGE">
+                        <button
+                            onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            New Transfer
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {isLoading ? (
@@ -264,12 +267,14 @@ export default function StockTransferPage() {
                                                         <button onClick={() => handleView(t)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors" title="View">
                                                             <Eye className="w-4 h-4" />
                                                         </button>
-                                                        <button onClick={() => handleEdit(t)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Edit">
-                                                            <Edit3 className="w-4 h-4" />
-                                                        </button>
-                                                        <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        <PermissionGate permission="INVENTORY_MANAGE">
+                                                            <button onClick={() => handleEdit(t)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Edit">
+                                                                <Edit3 className="w-4 h-4" />
+                                                            </button>
+                                                            <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </PermissionGate>
                                                     </div>
                                                 </td>
                                             </tr>

@@ -24,6 +24,7 @@ import {
     uploadUtilityBillPdf,
     UtilityBill,
 } from "@/lib/api/station";
+import { PermissionGate } from "@/components/permission-gate";
 
 const formatRupees = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
@@ -201,30 +202,32 @@ export default function UtilityBillsPage() {
                         </h1>
                         <p className="text-muted-foreground mt-2">Track electricity, water, and other utility bills</p>
                     </div>
-                    <div className="flex gap-3">
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".pdf"
-                            onChange={handlePdfUpload}
-                            className="hidden"
-                        />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploading}
-                            className="px-5 py-3 rounded-xl font-medium flex items-center gap-2 border border-border text-foreground hover:bg-muted transition-colors"
-                        >
-                            <Upload className="w-5 h-5" />
-                            {isUploading ? "Parsing..." : "Upload PDF"}
-                        </button>
-                        <button
-                            onClick={() => { resetForm(); setEditingBill(null); setIsModalOpen(true); }}
-                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Add Bill
-                        </button>
-                    </div>
+                    <PermissionGate permission="FINANCE_MANAGE">
+                        <div className="flex gap-3">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pdf"
+                                onChange={handlePdfUpload}
+                                className="hidden"
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                                className="px-5 py-3 rounded-xl font-medium flex items-center gap-2 border border-border text-foreground hover:bg-muted transition-colors"
+                            >
+                                <Upload className="w-5 h-5" />
+                                {isUploading ? "Parsing..." : "Upload PDF"}
+                            </button>
+                            <button
+                                onClick={() => { resetForm(); setEditingBill(null); setIsModalOpen(true); }}
+                                className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Add Bill
+                            </button>
+                        </div>
+                    </PermissionGate>
                 </div>
 
                 {/* Stats */}
@@ -324,8 +327,12 @@ export default function UtilityBillsPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => handleEdit(b)} className="p-2 rounded-lg hover:bg-white/10"><Pencil className="w-4 h-4" /></button>
-                                                    <button onClick={() => handleDelete(b.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                        <button onClick={() => handleEdit(b)} className="p-2 rounded-lg hover:bg-white/10"><Pencil className="w-4 h-4" /></button>
+                                                    </PermissionGate>
+                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                        <button onClick={() => handleDelete(b.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                                    </PermissionGate>
                                                 </div>
                                             </td>
                                         </tr>

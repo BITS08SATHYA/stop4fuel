@@ -14,6 +14,7 @@ import {
     getOutstandingBills, uploadPaymentProof, getPaymentProofUrl,
     type Payment, type PaymentMode, type Statement, type InvoiceBill, type Customer, type PageResponse
 } from "@/lib/api/station";
+import { PermissionGate } from "@/components/permission-gate";
 
 type PayTarget = "statement" | "bill";
 
@@ -252,13 +253,15 @@ export default function PaymentsPage() {
                             Record and track credit payments from customers.
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowPayModal(true)}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        <CreditCard className="w-5 h-5" />
-                        Record Payment
-                    </button>
+                    <PermissionGate permission="PAYMENT_MANAGE">
+                        <button
+                            onClick={() => setShowPayModal(true)}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                        >
+                            <CreditCard className="w-5 h-5" />
+                            Record Payment
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {/* Stats */}

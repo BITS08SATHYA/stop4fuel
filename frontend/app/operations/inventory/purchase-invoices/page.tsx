@@ -24,6 +24,7 @@ import {
 import { FileText, Plus, Search, Trash2, Eye, Edit3, Upload, ExternalLink, Download, Calendar } from "lucide-react";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 
 const STATUS_COLORS: Record<string, string> = {
     PENDING: "bg-yellow-500/10 text-yellow-500",
@@ -290,13 +291,15 @@ export default function PurchaseInvoicesPage() {
                             Manage supplier invoices for fuel and non-fuel purchases.
                         </p>
                     </div>
-                    <button
-                        onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
-                        className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <Plus className="w-5 h-5" />
-                        New Invoice
-                    </button>
+                    <PermissionGate permission="INVENTORY_MANAGE">
+                        <button
+                            onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                            New Invoice
+                        </button>
+                    </PermissionGate>
                 </div>
 
                 {isLoading ? (
@@ -448,26 +451,28 @@ export default function PurchaseInvoicesPage() {
                                                         <button onClick={() => handleView(inv)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors" title="View">
                                                             <Eye className="w-4 h-4" />
                                                         </button>
-                                                        {inv.status !== "PAID" && (
-                                                            <>
-                                                                <button onClick={() => handleEdit(inv)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Edit">
-                                                                    <Edit3 className="w-4 h-4" />
+                                                        <PermissionGate permission="INVENTORY_MANAGE">
+                                                            {inv.status !== "PAID" && (
+                                                                <>
+                                                                    <button onClick={() => handleEdit(inv)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Edit">
+                                                                        <Edit3 className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button onClick={() => handleDelete(inv.id!)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {inv.status === "PENDING" && (
+                                                                <button onClick={() => handleStatusUpdate(inv.id!, "VERIFIED")} className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Mark Verified">
+                                                                    <span className="text-xs font-bold">V</span>
                                                                 </button>
-                                                                <button onClick={() => handleDelete(inv.id!)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors" title="Delete">
-                                                                    <Trash2 className="w-4 h-4" />
+                                                            )}
+                                                            {inv.status === "VERIFIED" && (
+                                                                <button onClick={() => handleStatusUpdate(inv.id!, "PAID")} className="p-1.5 rounded-lg hover:bg-green-500/10 text-muted-foreground hover:text-green-500 transition-colors" title="Mark Paid">
+                                                                    <span className="text-xs font-bold">₹</span>
                                                                 </button>
-                                                            </>
-                                                        )}
-                                                        {inv.status === "PENDING" && (
-                                                            <button onClick={() => handleStatusUpdate(inv.id!, "VERIFIED")} className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-colors" title="Mark Verified">
-                                                                <span className="text-xs font-bold">V</span>
-                                                            </button>
-                                                        )}
-                                                        {inv.status === "VERIFIED" && (
-                                                            <button onClick={() => handleStatusUpdate(inv.id!, "PAID")} className="p-1.5 rounded-lg hover:bg-green-500/10 text-muted-foreground hover:text-green-500 transition-colors" title="Mark Paid">
-                                                                <span className="text-xs font-bold">₹</span>
-                                                            </button>
-                                                        )}
+                                                            )}
+                                                        </PermissionGate>
                                                     </div>
                                                 </td>
                                             </tr>
