@@ -9,6 +9,7 @@ import {
     Package, RotateCcw, Pencil, Trash2, Plus, X, Save
 } from "lucide-react";
 import { FormErrorBanner } from "@/components/ui/field-error";
+import { PermissionGate } from "@/components/permission-gate";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
@@ -40,15 +41,16 @@ export default function InvoiceHistoryPage() {
 
     const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 
-    // Filters
+    // Filters — toDate uses end of day so newly created invoices are always visible
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59);
     const [filters, setFilters] = useState({
         billType: "",
         paymentStatus: "",
         categoryType: "",
         fromDate: firstDayOfMonth.toISOString().slice(0, 16),
-        toDate: now.toISOString().slice(0, 16),
+        toDate: endOfToday.toISOString().slice(0, 16),
         search: "",
     });
     const [appliedFilters, setAppliedFilters] = useState({ ...filters });
@@ -143,12 +145,13 @@ export default function InvoiceHistoryPage() {
     const handleReset = () => {
         const now2 = new Date();
         const firstDay2 = new Date(now2.getFullYear(), now2.getMonth(), 1);
+        const endOfDay2 = new Date(now2.getFullYear(), now2.getMonth(), now2.getDate(), 23, 59);
         const defaultFilters = {
             billType: "",
             paymentStatus: "",
             categoryType: "",
             fromDate: firstDay2.toISOString().slice(0, 16),
-            toDate: now2.toISOString().slice(0, 16),
+            toDate: endOfDay2.toISOString().slice(0, 16),
             search: "",
         };
         setFilters(defaultFilters);
@@ -490,20 +493,24 @@ export default function InvoiceHistoryPage() {
                                                 </td>
                                                 <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                                                     <div className="flex items-center justify-center gap-1">
-                                                        <button
-                                                            onClick={() => openEdit(inv)}
-                                                            className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <Pencil className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setDeleteConfirm(inv)}
-                                                            className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
+                                                        <PermissionGate permission="INVOICE_MODIFY">
+                                                            <button
+                                                                onClick={() => openEdit(inv)}
+                                                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                                                                title="Edit"
+                                                            >
+                                                                <Pencil className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </PermissionGate>
+                                                        <PermissionGate permission="INVOICE_DELETE">
+                                                            <button
+                                                                onClick={() => setDeleteConfirm(inv)}
+                                                                className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </PermissionGate>
                                                     </div>
                                                 </td>
                                             </tr>
