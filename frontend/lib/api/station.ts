@@ -241,6 +241,8 @@ export interface Payment {
     shiftId?: number;
     remarks?: string;
     proofImageKey?: string;
+    receivedBy?: { id: number; name: string };
+    targetPaymentStatus?: string;
 }
 
 export interface LedgerEntry {
@@ -788,11 +790,42 @@ export const getStatementStats = (): Promise<StatementStats> =>
     fetchWithAuth(`${API_BASE_URL}/statements/stats`).then(handleResponse);
 
 // Payments
-export const getPayments = (page = 0, size = 10, categoryType?: string): Promise<PageResponse<Payment>> => {
+export const getPayments = (
+    page = 0, size = 10, categoryType?: string,
+    paidAgainst?: string, fromDate?: string, toDate?: string
+): Promise<PageResponse<Payment>> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (categoryType) params.append('categoryType', categoryType);
+    if (paidAgainst) params.append('paidAgainst', paidAgainst);
+    if (fromDate) params.append('fromDate', fromDate);
+    if (toDate) params.append('toDate', toDate);
     return fetchWithAuth(`${API_BASE_URL}/payments?${params}`).then(handleResponse);
 };
+
+export const exportPaymentsPdf = (
+    categoryType?: string, paidAgainst?: string, fromDate?: string, toDate?: string
+): Promise<Blob> => {
+    const params = new URLSearchParams();
+    if (categoryType) params.append('categoryType', categoryType);
+    if (paidAgainst) params.append('paidAgainst', paidAgainst);
+    if (fromDate) params.append('fromDate', fromDate);
+    if (toDate) params.append('toDate', toDate);
+    return fetchWithAuth(`${API_BASE_URL}/payments/export/pdf?${params}`).then(r => r.blob());
+};
+
+export const exportPaymentsExcel = (
+    categoryType?: string, paidAgainst?: string, fromDate?: string, toDate?: string
+): Promise<Blob> => {
+    const params = new URLSearchParams();
+    if (categoryType) params.append('categoryType', categoryType);
+    if (paidAgainst) params.append('paidAgainst', paidAgainst);
+    if (fromDate) params.append('fromDate', fromDate);
+    if (toDate) params.append('toDate', toDate);
+    return fetchWithAuth(`${API_BASE_URL}/payments/export/excel?${params}`).then(r => r.blob());
+};
+
+export const downloadPaymentReceipt = (paymentId: number): Promise<Blob> =>
+    fetchWithAuth(`${API_BASE_URL}/payments/${paymentId}/receipt/pdf`).then(r => r.blob());
 
 export const getPaymentsByCustomer = (customerId: number, page = 0, size = 10): Promise<PageResponse<Payment>> =>
     fetchWithAuth(`${API_BASE_URL}/payments/customer/${customerId}?page=${page}&size=${size}`).then(handleResponse);
