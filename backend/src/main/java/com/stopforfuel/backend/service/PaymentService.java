@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -29,12 +30,22 @@ public class PaymentService {
     private final EAdvanceService eAdvanceService;
     private final S3StorageService s3StorageService;
 
-    public Page<Payment> getPayments(String categoryType, Pageable pageable) {
+    public Page<Payment> getPayments(String categoryType, String paidAgainst,
+                                      LocalDateTime fromDate, LocalDateTime toDate,
+                                      Pageable pageable) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
-        if (ct != null) {
-            return paymentRepository.findWithCategoryFilter(ct, pageable);
+        String pa = (paidAgainst != null && !paidAgainst.isEmpty()) ? paidAgainst : null;
+        if (ct != null || pa != null || fromDate != null || toDate != null) {
+            return paymentRepository.findWithFilters(ct, pa, fromDate, toDate, pageable);
         }
-        return paymentRepository.findAll(pageable);
+        return paymentRepository.findAllEager(pageable);
+    }
+
+    public List<Payment> getPaymentsForExport(String categoryType, String paidAgainst,
+                                               LocalDateTime fromDate, LocalDateTime toDate) {
+        String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
+        String pa = (paidAgainst != null && !paidAgainst.isEmpty()) ? paidAgainst : null;
+        return paymentRepository.findAllForExport(ct, pa, fromDate, toDate);
     }
 
     public Page<Payment> getPaymentsByCustomer(Long customerId, Pageable pageable) {
@@ -96,8 +107,9 @@ public class PaymentService {
             payment.setScid(statement.getScid());
         }
 
-        // Resolve payment mode
+        // Resolve payment mode and set employee
         resolvePaymentMode(payment);
+        resolveReceivedBy(payment);
 
         Payment saved = paymentRepository.save(payment);
 
@@ -164,8 +176,9 @@ public class PaymentService {
             payment.setScid(bill.getScid());
         }
 
-        // Resolve payment mode
+        // Resolve payment mode and set employee
         resolvePaymentMode(payment);
+        resolveReceivedBy(payment);
 
         Payment saved = paymentRepository.save(payment);
 
@@ -263,6 +276,18 @@ public class PaymentService {
             default:
                 // CASH — no separate record needed, Payment is the source of truth
                 break;
+        }
+    }
+
+    /**
+     * Set receivedBy from the active shift's attendant if not already set.
+     */
+    private void resolveReceivedBy(Payment payment) {
+        if (payment.getReceivedBy() == null) {
+            Shift activeShift = shiftService.getActiveShift();
+            if (activeShift != null && activeShift.getAttendant() != null) {
+                payment.setReceivedBy(activeShift.getAttendant());
+            }
         }
     }
 
