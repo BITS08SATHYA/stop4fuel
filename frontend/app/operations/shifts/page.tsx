@@ -9,17 +9,22 @@ import {
     getShifts,
     openShift,
     closeShift,
-    getShiftTransactions,
-    getShiftTransactionSummary,
-    createShiftTransaction,
-    deleteShiftTransaction,
+    getEAdvancesByShift,
+    getEAdvanceSummary,
+    createEAdvance,
+    deleteEAdvance,
+    getExpensesByShift,
+    getExpenseShiftTotal,
+    createExpense,
+    deleteExpense,
     getUpiCompanies,
     createUpiCompany,
     getExpenseTypes,
     createExpenseType,
     Shift,
-    ShiftTransaction,
-    ShiftTransactionSummary,
+    EAdvance,
+    ShiftExpense,
+    EAdvanceSummary,
     UpiCompany,
     ExpenseType,
 } from "@/lib/api/station";
@@ -39,25 +44,41 @@ import {
     Search,
     ChevronDown,
     ChevronUp,
-    AlertCircle,
-    Moon,
 } from "lucide-react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { PermissionGate } from "@/components/permission-gate";
 
+// Unified row for display — merges EAdvance and Expense
+interface ShiftTxnRow {
+    id: number;
+    source: "EADVANCE" | "EXPENSE";
+    type: string;
+    amount: number;
+    date?: string;
+    remarks?: string;
+    // EAdvance detail fields
+    upiCompany?: UpiCompany;
+    bankName?: string;
+    cardLast4Digit?: string;
+    customerName?: string;
+    chequeNo?: string;
+    ccmsNumber?: string;
+    // Expense detail fields
+    description?: string;
+    expenseType?: ExpenseType;
+}
+
 const TXN_TYPES = [
-    { value: "CASH", label: "Cash", icon: Banknote, color: "text-green-500 bg-green-500/10" },
-    { value: "NIGHT_CASH", label: "Night Cash", icon: Moon, color: "text-indigo-500 bg-indigo-500/10" },
     { value: "UPI", label: "UPI", icon: Smartphone, color: "text-purple-500 bg-purple-500/10" },
     { value: "CARD", label: "Card", icon: CreditCard, color: "text-blue-500 bg-blue-500/10" },
     { value: "CHEQUE", label: "Cheque", icon: FileText, color: "text-amber-500 bg-amber-500/10" },
-    { value: "BANK", label: "Bank Transfer", icon: Building2, color: "text-cyan-500 bg-cyan-500/10" },
+    { value: "BANK_TRANSFER", label: "Bank Transfer", icon: Building2, color: "text-cyan-500 bg-cyan-500/10" },
     { value: "CCMS", label: "CCMS", icon: Receipt, color: "text-pink-500 bg-pink-500/10" },
     { value: "EXPENSE", label: "Expense", icon: Wallet, color: "text-red-500 bg-red-500/10" },
 ];
 
 function getTxnMeta(type: string) {
-    return TXN_TYPES.find((t) => t.value === type) || TXN_TYPES[0];
+    return TXN_TYPES.find((t) => t.value === type) || { value: type, label: type, icon: Banknote, color: "text-gray-500 bg-gray-500/10" };
 }
 
 function formatDateTime(dt?: string) {
@@ -73,19 +94,29 @@ function formatCurrency(val?: number) {
     return val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+interface ShiftSummary {
+    upi: number;
+    card: number;
+    cheque: number;
+    ccms: number;
+    bankTransfer: number;
+    eAdvanceTotal: number;
+    expense: number;
+}
+
 export default function ShiftsPage() {
     const router = useRouter();
     const [activeShift, setActiveShift] = useState<Shift | null>(null);
     const [pastShifts, setPastShifts] = useState<Shift[]>([]);
-    const [transactions, setTransactions] = useState<ShiftTransaction[]>([]);
-    const [summary, setSummary] = useState<ShiftTransactionSummary | null>(null);
+    const [transactions, setTransactions] = useState<ShiftTxnRow[]>([]);
+    const [summary, setSummary] = useState<ShiftSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [showPastShifts, setShowPastShifts] = useState(false);
     const [selectedPastShift, setSelectedPastShift] = useState<Shift | null>(null);
 
     // Add transaction modal
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [txnType, setTxnType] = useState("CASH");
+    const [txnType, setTxnType] = useState("UPI");
     const [txnAmount, setTxnAmount] = useState("");
     const [txnRemarks, setTxnRemarks] = useState("");
     // UPI fields
@@ -109,7 +140,6 @@ export default function ShiftsPage() {
     // CCMS fields
     const [ccmsNumber, setCcmsNumber] = useState("");
     // Expense fields
-    const [expenseAmount, setExpenseAmount] = useState("");
     const [expenseDescription, setExpenseDescription] = useState("");
     const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([]);
     const [selectedExpenseTypeId, setSelectedExpenseTypeId] = useState("");
@@ -121,6 +151,54 @@ export default function ShiftsPage() {
 
     const viewingShift = selectedPastShift || activeShift;
 
+    const loadTransactions = async (shiftId: number) => {
+        const [eAdvances, expenses, eAdvSummary, expenseTotal] = await Promise.all([
+            getEAdvancesByShift(shiftId),
+            getExpensesByShift(shiftId),
+            getEAdvanceSummary(shiftId),
+            getExpenseShiftTotal(shiftId),
+        ]);
+
+        // Merge into unified rows
+        const rows: ShiftTxnRow[] = [
+            ...eAdvances.map((ea): ShiftTxnRow => ({
+                id: ea.id!,
+                source: "EADVANCE",
+                type: ea.advanceType,
+                amount: ea.amount,
+                date: ea.transactionDate,
+                remarks: ea.remarks,
+                upiCompany: ea.upiCompany,
+                bankName: ea.bankName,
+                cardLast4Digit: ea.cardLast4Digit,
+                customerName: ea.customerName,
+                chequeNo: ea.chequeNo,
+                ccmsNumber: ea.ccmsNumber,
+            })),
+            ...expenses.map((exp): ShiftTxnRow => ({
+                id: exp.id!,
+                source: "EXPENSE",
+                type: "EXPENSE",
+                amount: exp.amount,
+                date: exp.expenseDate,
+                remarks: exp.remarks,
+                description: exp.description,
+                expenseType: exp.expenseType,
+            })),
+        ].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+        setTransactions(rows);
+        setSummary({
+            upi: eAdvSummary.upi || 0,
+            card: eAdvSummary.card || 0,
+            cheque: eAdvSummary.cheque || 0,
+            ccms: eAdvSummary.ccms || 0,
+            bankTransfer: eAdvSummary.bank_transfer || 0,
+            eAdvanceTotal: eAdvSummary.total || 0,
+            expense: expenseTotal || 0,
+        });
+    };
+
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -130,12 +208,7 @@ export default function ShiftsPage() {
 
             const shiftToView = selectedPastShift || active;
             if (shiftToView) {
-                const [txns, sum] = await Promise.all([
-                    getShiftTransactions(shiftToView.id),
-                    getShiftTransactionSummary(shiftToView.id),
-                ]);
-                setTransactions(txns);
-                setSummary(sum);
+                await loadTransactions(shiftToView.id);
             } else {
                 setTransactions([]);
                 setSummary(null);
@@ -151,15 +224,6 @@ export default function ShiftsPage() {
         loadData();
     }, [loadData]);
 
-    const loadTransactions = async (shiftId: number) => {
-        const [txns, sum] = await Promise.all([
-            getShiftTransactions(shiftId),
-            getShiftTransactionSummary(shiftId),
-        ]);
-        setTransactions(txns);
-        setSummary(sum);
-    };
-
     const handleOpenShift = async () => {
         try {
             const shift = await openShift({});
@@ -173,10 +237,12 @@ export default function ShiftsPage() {
 
     const handleCloseShift = async () => {
         if (!activeShift) return;
-        if (!confirm("Are you sure you want to close this shift?")) return;
+        if (!confirm("Close this shift? This will generate the closing report.")) return;
         try {
             const closedShiftId = activeShift.id;
-            await closeShift(closedShiftId);
+            await closeShift(activeShift.id);
+            setActiveShift(null);
+            setSelectedPastShift(null);
             router.push(`/operations/shifts/report/${closedShiftId}`);
         } catch (err: any) {
             alert(err.message || "Failed to close shift");
@@ -184,7 +250,7 @@ export default function ShiftsPage() {
     };
 
     const resetForm = () => {
-        setTxnType("CASH");
+        setTxnType("UPI");
         setTxnAmount("");
         setTxnRemarks("");
         setSelectedUpiCompanyId("");
@@ -193,7 +259,7 @@ export default function ShiftsPage() {
         setChequeBankName(""); setChequeInFavorOf(""); setChequeNo(""); setChequeDate("");
         setBankName("");
         setCcmsNumber("");
-        setExpenseAmount(""); setExpenseDescription(""); setSelectedExpenseTypeId(""); setNewExpenseTypeName("");
+        setExpenseDescription(""); setSelectedExpenseTypeId(""); setNewExpenseTypeName("");
     };
 
     const handleOpenAddModal = async () => {
@@ -209,48 +275,58 @@ export default function ShiftsPage() {
         if (!viewingShift) return;
 
         try {
-            const payload: Partial<ShiftTransaction> = {
-                txnType,
-                shiftId: viewingShift.id,
-                receivedAmount: Number(txnAmount),
-                remarks: txnRemarks || undefined,
-            };
-
-            if (txnType === "UPI") {
-                if (newUpiCompanyName) {
-                    const created = await createUpiCompany({ companyName: newUpiCompanyName });
-                    payload.upiCompany = created;
-                } else if (selectedUpiCompanyId) {
-                    payload.upiCompany = { id: Number(selectedUpiCompanyId), companyName: "" };
-                }
-            } else if (txnType === "CARD") {
-                payload.batchId = cardBatchId || undefined;
-                payload.tid = cardTid || undefined;
-                payload.customerName = cardCustomerName || undefined;
-                payload.customerPhone = cardCustomerPhone || undefined;
-                payload.bankName = cardBankName || undefined;
-                payload.cardLast4Digit = cardLast4 || undefined;
-            } else if (txnType === "CHEQUE") {
-                payload.bankName = chequeBankName || undefined;
-                payload.inFavorOf = chequeInFavorOf || undefined;
-                payload.chequeNo = chequeNo || undefined;
-                payload.chequeDate = chequeDate || undefined;
-            } else if (txnType === "BANK") {
-                payload.bankName = bankName || undefined;
-            } else if (txnType === "CCMS") {
-                payload.ccmsNumber = ccmsNumber || undefined;
-            } else if (txnType === "EXPENSE") {
-                payload.expenseAmount = expenseAmount ? Number(expenseAmount) : undefined;
-                payload.expenseDescription = expenseDescription || undefined;
+            if (txnType === "EXPENSE") {
+                // Create Expense
+                const payload: Partial<ShiftExpense> = {
+                    shiftId: viewingShift.id,
+                    amount: Number(txnAmount),
+                    description: expenseDescription || undefined,
+                    remarks: txnRemarks || undefined,
+                };
                 if (newExpenseTypeName) {
                     const created = await createExpenseType({ typeName: newExpenseTypeName });
                     payload.expenseType = created;
                 } else if (selectedExpenseTypeId) {
                     payload.expenseType = { id: Number(selectedExpenseTypeId), typeName: "" };
                 }
+                await createExpense(payload);
+            } else {
+                // Create EAdvance
+                const payload: Partial<EAdvance> = {
+                    advanceType: txnType,
+                    shiftId: viewingShift.id,
+                    amount: Number(txnAmount),
+                    remarks: txnRemarks || undefined,
+                };
+
+                if (txnType === "UPI") {
+                    if (newUpiCompanyName) {
+                        const created = await createUpiCompany({ companyName: newUpiCompanyName });
+                        payload.upiCompany = created;
+                    } else if (selectedUpiCompanyId) {
+                        payload.upiCompany = { id: Number(selectedUpiCompanyId), companyName: "" };
+                    }
+                } else if (txnType === "CARD") {
+                    payload.batchId = cardBatchId || undefined;
+                    payload.tid = cardTid || undefined;
+                    payload.customerName = cardCustomerName || undefined;
+                    payload.customerPhone = cardCustomerPhone || undefined;
+                    payload.bankName = cardBankName || undefined;
+                    payload.cardLast4Digit = cardLast4 || undefined;
+                } else if (txnType === "CHEQUE") {
+                    payload.bankName = chequeBankName || undefined;
+                    payload.inFavorOf = chequeInFavorOf || undefined;
+                    payload.chequeNo = chequeNo || undefined;
+                    payload.chequeDate = chequeDate || undefined;
+                } else if (txnType === "BANK_TRANSFER") {
+                    payload.bankName = bankName || undefined;
+                } else if (txnType === "CCMS") {
+                    payload.ccmsNumber = ccmsNumber || undefined;
+                }
+
+                await createEAdvance(payload);
             }
 
-            await createShiftTransaction(payload);
             setIsAddModalOpen(false);
             await loadTransactions(viewingShift.id);
         } catch (err: any) {
@@ -258,10 +334,14 @@ export default function ShiftsPage() {
         }
     };
 
-    const handleDeleteTransaction = async (id: number) => {
+    const handleDeleteTransaction = async (row: ShiftTxnRow) => {
         if (!confirm("Delete this transaction?")) return;
         try {
-            await deleteShiftTransaction(id);
+            if (row.source === "EADVANCE") {
+                await deleteEAdvance(row.id);
+            } else {
+                await deleteExpense(row.id);
+            }
             if (viewingShift) await loadTransactions(viewingShift.id);
         } catch (err) {
             alert("Failed to delete transaction");
@@ -269,13 +349,14 @@ export default function ShiftsPage() {
     };
 
     const filtered = transactions.filter((t) => {
-        const matchType = typeFilter === "ALL" || t.txnType === typeFilter;
+        const matchType = typeFilter === "ALL" || t.type === typeFilter;
         const q = searchQuery.toLowerCase();
         const matchSearch = !searchQuery ||
             t.remarks?.toLowerCase().includes(q) ||
             t.customerName?.toLowerCase().includes(q) ||
             t.bankName?.toLowerCase().includes(q) ||
-            t.upiCompany?.companyName?.toLowerCase().includes(q);
+            t.upiCompany?.companyName?.toLowerCase().includes(q) ||
+            t.description?.toLowerCase().includes(q);
         return matchType && matchSearch;
     });
 
@@ -293,7 +374,7 @@ export default function ShiftsPage() {
                             Shift <span className="text-gradient">Register</span>
                         </h1>
                         <p className="text-muted-foreground mt-2">
-                            Manage shifts and record all transactions during a shift.
+                            Manage shifts and record advance entries during a shift.
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -376,19 +457,20 @@ export default function ShiftsPage() {
 
                             {summary && (
                                 <>
-                                    <SummaryCard label="Cash + UPI + Card" value={summary.total} color="text-blue-500" />
+                                    <SummaryCard label="E-Advance Total" value={summary.eAdvanceTotal} color="text-blue-500" />
                                     <SummaryCard label="Expenses" value={summary.expense} color="text-red-500" />
-                                    <SummaryCard label="Net Revenue" value={summary.net} color="text-green-500" />
+                                    <SummaryCard label="Net Advance" value={summary.eAdvanceTotal - summary.expense} color="text-green-500" />
                                 </>
                             )}
                         </div>
 
                         {/* Summary Breakdown */}
                         {summary && (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                                <MiniStat label="Cash" value={summary.cash} icon={Banknote} color="text-green-500 bg-green-500/10" />
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
                                 <MiniStat label="UPI" value={summary.upi} icon={Smartphone} color="text-purple-500 bg-purple-500/10" />
                                 <MiniStat label="Card" value={summary.card} icon={CreditCard} color="text-blue-500 bg-blue-500/10" />
+                                <MiniStat label="Cheque" value={summary.cheque} icon={FileText} color="text-amber-500 bg-amber-500/10" />
+                                <MiniStat label="CCMS" value={summary.ccms} icon={Receipt} color="text-pink-500 bg-pink-500/10" />
                                 <MiniStat label="Expense" value={summary.expense} icon={Wallet} color="text-red-500 bg-red-500/10" />
                             </div>
                         )}
@@ -422,7 +504,7 @@ export default function ShiftsPage() {
                                         className="btn-gradient px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                                     >
                                         <Plus className="w-4 h-4" />
-                                        Add Transaction
+                                        Add Entry
                                     </button>
                                 </PermissionGate>
                             )}
@@ -449,15 +531,15 @@ export default function ShiftsPage() {
                                         {filtered.length === 0 ? (
                                             <tr>
                                                 <td colSpan={isViewingActive ? 7 : 6} className="px-6 py-12 text-center text-muted-foreground">
-                                                    No transactions found
+                                                    No entries found
                                                 </td>
                                             </tr>
                                         ) : (
                                             pagedTxns.map((txn, idx) => {
-                                                const meta = getTxnMeta(txn.txnType);
+                                                const meta = getTxnMeta(txn.type);
                                                 const Icon = meta.icon;
                                                 return (
-                                                    <tr key={txn.id} className="hover:bg-white/5 transition-colors group">
+                                                    <tr key={`${txn.source}-${txn.id}`} className="hover:bg-white/5 transition-colors group">
                                                         <td className="px-6 py-3 text-xs font-mono text-muted-foreground text-center">{txnPage * txnPageSize + idx + 1}</td>
                                                         <td className="px-6 py-3">
                                                             <div className="flex items-center gap-2">
@@ -468,9 +550,9 @@ export default function ShiftsPage() {
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-3 text-right">
-                                                            <span className={`text-sm font-bold ${txn.txnType === 'EXPENSE' ? 'text-red-500' : 'text-green-500'}`}>
-                                                                {txn.txnType === 'EXPENSE' ? '-' : '+'}
-                                                                {formatCurrency(txn.receivedAmount)}
+                                                            <span className={`text-sm font-bold ${txn.source === 'EXPENSE' ? 'text-red-500' : 'text-green-500'}`}>
+                                                                {txn.source === 'EXPENSE' ? '-' : '+'}
+                                                                {formatCurrency(txn.amount)}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-3">
@@ -480,13 +562,13 @@ export default function ShiftsPage() {
                                                             {txn.remarks || "-"}
                                                         </td>
                                                         <td className="px-6 py-3 text-xs text-muted-foreground">
-                                                            {formatDateTime(txn.transactionDate)}
+                                                            {formatDateTime(txn.date)}
                                                         </td>
                                                         {isViewingActive && (
                                                             <td className="px-6 py-3 text-center">
                                                                 <PermissionGate permission="SHIFT_MANAGE">
                                                                     <button
-                                                                        onClick={() => txn.id && handleDeleteTransaction(txn.id)}
+                                                                        onClick={() => handleDeleteTransaction(txn)}
                                                                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
                                                                     >
                                                                         <Trash2 className="w-3.5 h-3.5" />
@@ -566,13 +648,13 @@ export default function ShiftsPage() {
             <Modal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
-                title="Add Shift Transaction"
+                title="Add Shift Entry"
             >
                 <form onSubmit={handleAddTransaction} className="space-y-4">
                     {/* Transaction Type Selector */}
                     <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">Transaction Type</label>
-                        <div className="grid grid-cols-4 gap-2">
+                        <label className="block text-sm font-medium text-foreground mb-2">Entry Type</label>
+                        <div className="grid grid-cols-3 gap-2">
                             {TXN_TYPES.map((t) => {
                                 const Icon = t.icon;
                                 return (
@@ -665,7 +747,7 @@ export default function ShiftsPage() {
                         </div>
                     )}
 
-                    {txnType === "BANK" && (
+                    {txnType === "BANK_TRANSFER" && (
                         <InputField label="Bank Name" value={bankName} onChange={setBankName} placeholder="e.g. ICICI" />
                     )}
 
@@ -675,18 +757,6 @@ export default function ShiftsPage() {
 
                     {txnType === "EXPENSE" && (
                         <div className="space-y-3">
-                            <div>
-                                <label className="block text-xs font-medium text-foreground mb-1">Expense Amount</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={expenseAmount}
-                                    onChange={(e) => setExpenseAmount(e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    placeholder="0.00"
-                                />
-                            </div>
                             <InputField label="Description" value={expenseDescription} onChange={setExpenseDescription} placeholder="What was the expense for?" />
                             <div>
                                 <label className="block text-xs font-medium text-foreground mb-1">Expense Type</label>
@@ -737,7 +807,7 @@ export default function ShiftsPage() {
                             type="submit"
                             className="btn-gradient px-8 py-2.5 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all"
                         >
-                            Add Transaction
+                            Add Entry
                         </button>
                     </div>
                 </form>
@@ -786,7 +856,7 @@ function InputField({ label, value, onChange, placeholder }: { label: string; va
     );
 }
 
-function TxnDetails({ txn }: { txn: ShiftTransaction }) {
+function TxnDetails({ txn }: { txn: ShiftTxnRow }) {
     const details: string[] = [];
     if (txn.upiCompany?.companyName) details.push(txn.upiCompany.companyName);
     if (txn.bankName) details.push(txn.bankName);
@@ -794,7 +864,7 @@ function TxnDetails({ txn }: { txn: ShiftTransaction }) {
     if (txn.customerName) details.push(txn.customerName);
     if (txn.chequeNo) details.push(`Chq: ${txn.chequeNo}`);
     if (txn.ccmsNumber) details.push(`CCMS: ${txn.ccmsNumber}`);
-    if (txn.expenseDescription) details.push(txn.expenseDescription);
+    if (txn.description) details.push(txn.description);
     if (txn.expenseType?.typeName) details.push(`[${txn.expenseType.typeName}]`);
 
     if (details.length === 0) return <span className="text-xs text-muted-foreground">-</span>;

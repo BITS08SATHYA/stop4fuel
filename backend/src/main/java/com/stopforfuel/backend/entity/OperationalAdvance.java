@@ -4,21 +4,22 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "cash_advances", indexes = {
-    @Index(name = "idx_cash_adv_shift_id", columnList = "shift_id"),
-    @Index(name = "idx_cash_adv_status", columnList = "status"),
-    @Index(name = "idx_cash_adv_advance_type", columnList = "advance_type"),
-    @Index(name = "idx_cash_adv_employee_id", columnList = "employee_id")
+@Table(name = "operational_advance", indexes = {
+    @Index(name = "idx_op_adv_shift_id", columnList = "shift_id"),
+    @Index(name = "idx_op_adv_status", columnList = "status"),
+    @Index(name = "idx_op_adv_advance_type", columnList = "advance_type"),
+    @Index(name = "idx_op_adv_employee_id", columnList = "employee_id")
 })
 @Getter
 @Setter
-public class CashAdvance extends BaseEntity {
+public class OperationalAdvance extends BaseEntity {
 
     @Column(name = "advance_date")
     private LocalDateTime advanceDate;
@@ -27,7 +28,7 @@ public class CashAdvance extends BaseEntity {
     private BigDecimal amount;
 
     @Column(name = "advance_type", nullable = false)
-    private String advanceType; // CASH_ADVANCE, SALARY_ADVANCE
+    private String advanceType; // CASH, SALARY, MANAGEMENT
 
     @Column(name = "recipient_name")
     private String recipientName;
@@ -42,7 +43,7 @@ public class CashAdvance extends BaseEntity {
     private String remarks;
 
     @Column(name = "status", nullable = false)
-    private String status = "GIVEN"; // GIVEN, RETURNED, PARTIALLY_RETURNED, SETTLED, CANCELLED
+    private String status = "GIVEN"; // GIVEN, RETURNED, PARTIALLY_RETURNED, SETTLED, CANCELLED, PENDING, DEDUCTED, WAIVED
 
     @Column(name = "returned_amount", precision = 19, scale = 4)
     private BigDecimal returnedAmount;
@@ -53,21 +54,21 @@ public class CashAdvance extends BaseEntity {
     @Column(name = "return_remarks")
     private String returnRemarks;
 
+    @Column(name = "utilized_amount", precision = 19, scale = 4)
+    private BigDecimal utilizedAmount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "salaryHistories", "advances"})
     private Employee employee;
-
-    @Column(name = "utilized_amount", precision = 19, scale = 4)
-    private BigDecimal utilizedAmount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "statement_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Statement statement;
 
-    @OneToMany(mappedBy = "cashAdvance")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "cashAdvance", "products", "statement", "raisedBy"})
+    @OneToMany(mappedBy = "operationalAdvance")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "operationalAdvance", "products", "statement", "raisedBy"})
     private List<InvoiceBill> invoiceBills = new ArrayList<>();
 
     @PrePersist

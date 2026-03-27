@@ -1,17 +1,15 @@
 package com.stopforfuel.backend.service;
 
-import com.stopforfuel.backend.entity.CashAdvance;
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.InvoiceBill;
+import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.Statement;
-import com.stopforfuel.backend.entity.transaction.CashTransaction;
-import com.stopforfuel.backend.entity.transaction.ExpenseTransaction;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.DuplicateResourceException;
-import com.stopforfuel.backend.repository.CashAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
+import com.stopforfuel.backend.repository.OperationalAdvanceRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -24,48 +22,55 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class CashAdvanceService {
+public class OperationalAdvanceService {
 
-    private final CashAdvanceRepository repository;
+    private final OperationalAdvanceRepository repository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final StatementRepository statementRepository;
     private final EmployeeRepository employeeRepository;
     private final ShiftService shiftService;
-    private final ShiftTransactionService shiftTransactionService;
 
-    public List<CashAdvance> getAll() {
+    public List<OperationalAdvance> getAll() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
-    public CashAdvance getById(Long id) {
+    public OperationalAdvance getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
-                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + id));
     }
 
-    public List<CashAdvance> getByStatus(String status) {
+    public List<OperationalAdvance> getByStatus(String status) {
         return repository.findByStatusOrderByAdvanceDateDesc(status);
     }
 
-    public List<CashAdvance> getByShift(Long shiftId) {
+    public List<OperationalAdvance> getByShift(Long shiftId) {
         return repository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
     }
 
-    public List<CashAdvance> getByEmployee(Long employeeId) {
+    public List<OperationalAdvance> getByEmployee(Long employeeId) {
         return repository.findByEmployeeIdOrderByAdvanceDateDesc(employeeId);
     }
 
-    public List<CashAdvance> getOutstanding() {
+    public List<OperationalAdvance> getByType(String advanceType) {
+        return repository.findByAdvanceTypeOrderByAdvanceDateDesc(advanceType);
+    }
+
+    public List<OperationalAdvance> getOutstanding() {
         return repository.findByStatusInOrderByAdvanceDateDesc(List.of("GIVEN", "PARTIALLY_RETURNED"));
     }
 
+    public List<OperationalAdvance> getPendingByEmployee(Long employeeId) {
+        return repository.findByEmployeeIdAndStatus(employeeId, "PENDING");
+    }
+
     @Transactional
-    public CashAdvance create(CashAdvance advance) {
+    public OperationalAdvance create(OperationalAdvance advance) {
         Shift activeShift = shiftService.getActiveShift();
         if (activeShift != null) {
             advance.setShiftId(activeShift.getId());
         }
 
-        // Link employee if employeeId is provided via transient field
+        // Link employee if employeeId is provided
         if (advance.getEmployee() != null && advance.getEmployee().getId() != null) {
             Employee emp = employeeRepository.findById(advance.getEmployee().getId())
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
@@ -78,27 +83,13 @@ public class CashAdvanceService {
             }
         }
 
-        CashAdvance saved = repository.save(advance);
-
-        // Auto-create an ExpenseTransaction to deduct from the shift register
-        if (activeShift != null) {
-            ExpenseTransaction expTxn = new ExpenseTransaction();
-            expTxn.setReceivedAmount(advance.getAmount());
-            expTxn.setExpenseAmount(advance.getAmount());
-            expTxn.setExpenseDescription("Cash Advance: " + advance.getAdvanceType() + " - " + advance.getRecipientName());
-            expTxn.setRemarks("Auto: Advance #" + saved.getId());
-            expTxn.setShiftId(activeShift.getId());
-            expTxn.setScid(advance.getScid());
-            shiftTransactionService.create(expTxn);
-        }
-
-        return saved;
+        return repository.save(advance);
     }
 
     @Transactional
-    public CashAdvance recordReturn(Long id, BigDecimal returnedAmount, String returnRemarks) {
-        CashAdvance advance = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + id));
+    public OperationalAdvance recordReturn(Long id, BigDecimal returnedAmount, String returnRemarks) {
+        OperationalAdvance advance = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + id));
 
         advance.setReturnedAmount(returnedAmount);
         advance.setReturnDate(LocalDateTime.now());
@@ -106,26 +97,13 @@ public class CashAdvanceService {
 
         updateAdvanceStatus(advance);
 
-        CashAdvance updated = repository.save(advance);
-
-        // Create a CashTransaction in the active shift for the returned amount
-        Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null && returnedAmount.compareTo(BigDecimal.ZERO) > 0) {
-            CashTransaction cashTxn = new CashTransaction();
-            cashTxn.setReceivedAmount(returnedAmount);
-            cashTxn.setRemarks("Advance Return #" + id);
-            cashTxn.setShiftId(activeShift.getId());
-            cashTxn.setScid(advance.getScid());
-            shiftTransactionService.create(cashTxn);
-        }
-
-        return updated;
+        return repository.save(advance);
     }
 
     @Transactional
-    public CashAdvance assignInvoice(Long advanceId, Long invoiceId) {
-        CashAdvance advance = repository.findById(advanceId)
-                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + advanceId));
+    public OperationalAdvance assignInvoice(Long advanceId, Long invoiceId) {
+        OperationalAdvance advance = repository.findById(advanceId)
+                .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
         if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
             throw new BusinessException("Cannot assign invoices to a " + advance.getStatus().toLowerCase() + " advance");
@@ -134,48 +112,46 @@ public class CashAdvanceService {
         InvoiceBill invoice = invoiceBillRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + invoiceId));
 
-        if (invoice.getCashAdvance() != null) {
-            throw new DuplicateResourceException("Invoice is already assigned to advance #" + invoice.getCashAdvance().getId());
+        if (invoice.getOperationalAdvance() != null) {
+            throw new DuplicateResourceException("Invoice is already assigned to advance #" + invoice.getOperationalAdvance().getId());
         }
 
-        invoice.setCashAdvance(advance);
+        invoice.setOperationalAdvance(advance);
         invoiceBillRepository.save(invoice);
 
-        // Recalculate utilized amount
         recalculateUtilizedAmount(advance);
 
         return repository.save(advance);
     }
 
     @Transactional
-    public CashAdvance unassignInvoice(Long advanceId, Long invoiceId) {
-        CashAdvance advance = repository.findById(advanceId)
-                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + advanceId));
+    public OperationalAdvance unassignInvoice(Long advanceId, Long invoiceId) {
+        OperationalAdvance advance = repository.findById(advanceId)
+                .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
         InvoiceBill invoice = invoiceBillRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + invoiceId));
 
-        if (invoice.getCashAdvance() == null || !invoice.getCashAdvance().getId().equals(advanceId)) {
+        if (invoice.getOperationalAdvance() == null || !invoice.getOperationalAdvance().getId().equals(advanceId)) {
             throw new BusinessException("Invoice is not assigned to this advance");
         }
 
-        invoice.setCashAdvance(null);
+        invoice.setOperationalAdvance(null);
         invoiceBillRepository.save(invoice);
 
-        // Recalculate utilized amount
         recalculateUtilizedAmount(advance);
 
         return repository.save(advance);
     }
 
     public List<InvoiceBill> getAssignedInvoices(Long advanceId) {
-        return invoiceBillRepository.findByCashAdvanceId(advanceId);
+        return invoiceBillRepository.findByOperationalAdvanceId(advanceId);
     }
 
     @Transactional
-    public CashAdvance assignStatement(Long advanceId, Long statementId) {
-        CashAdvance advance = repository.findById(advanceId)
-                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + advanceId));
+    public OperationalAdvance assignStatement(Long advanceId, Long statementId) {
+        OperationalAdvance advance = repository.findById(advanceId)
+                .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
         if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
             throw new BusinessException("Cannot assign statement to a " + advance.getStatus().toLowerCase() + " advance");
@@ -185,56 +161,55 @@ public class CashAdvanceService {
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + statementId));
 
         advance.setStatement(statement);
-
-        // Include statement amount in utilized calculation
         recalculateUtilizedAmount(advance);
 
         return repository.save(advance);
     }
 
     @Transactional
-    public CashAdvance unassignStatement(Long advanceId) {
-        CashAdvance advance = repository.findById(advanceId)
-                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + advanceId));
+    public OperationalAdvance unassignStatement(Long advanceId) {
+        OperationalAdvance advance = repository.findById(advanceId)
+                .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
         advance.setStatement(null);
-
         recalculateUtilizedAmount(advance);
 
         return repository.save(advance);
     }
 
     @Transactional
-    public CashAdvance cancel(Long id) {
-        CashAdvance advance = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cash advance not found with id: " + id));
-        advance.setStatus("CANCELLED");
+    public OperationalAdvance updateStatus(Long id, String status) {
+        OperationalAdvance advance = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + id));
+        advance.setStatus(status);
         return repository.save(advance);
+    }
+
+    @Transactional
+    public OperationalAdvance cancel(Long id) {
+        return updateStatus(id, "CANCELLED");
     }
 
     @Transactional
     public void delete(Long id) {
-        // Unlink any assigned invoices first
-        List<InvoiceBill> assignedInvoices = invoiceBillRepository.findByCashAdvanceId(id);
+        List<InvoiceBill> assignedInvoices = invoiceBillRepository.findByOperationalAdvanceId(id);
         for (InvoiceBill invoice : assignedInvoices) {
-            invoice.setCashAdvance(null);
+            invoice.setOperationalAdvance(null);
             invoiceBillRepository.save(invoice);
         }
         repository.deleteById(id);
     }
 
-    private void recalculateUtilizedAmount(CashAdvance advance) {
+    private void recalculateUtilizedAmount(OperationalAdvance advance) {
         BigDecimal utilized = BigDecimal.ZERO;
 
-        // Sum from assigned invoices
-        List<InvoiceBill> invoices = invoiceBillRepository.findByCashAdvanceId(advance.getId());
+        List<InvoiceBill> invoices = invoiceBillRepository.findByOperationalAdvanceId(advance.getId());
         for (InvoiceBill inv : invoices) {
             if (inv.getNetAmount() != null) {
                 utilized = utilized.add(inv.getNetAmount());
             }
         }
 
-        // Add statement net amount if assigned
         if (advance.getStatement() != null && advance.getStatement().getNetAmount() != null) {
             utilized = utilized.add(advance.getStatement().getNetAmount());
         }
@@ -243,13 +218,12 @@ public class CashAdvanceService {
         updateAdvanceStatus(advance);
     }
 
-    private void updateAdvanceStatus(CashAdvance advance) {
+    private void updateAdvanceStatus(OperationalAdvance advance) {
         BigDecimal returned = advance.getReturnedAmount() != null ? advance.getReturnedAmount() : BigDecimal.ZERO;
         BigDecimal utilized = advance.getUtilizedAmount() != null ? advance.getUtilizedAmount() : BigDecimal.ZERO;
         BigDecimal settled = returned.add(utilized);
 
         if (settled.compareTo(advance.getAmount()) >= 0) {
-            // If all cash returned: RETURNED, if mix of bills + return: SETTLED
             if (utilized.compareTo(BigDecimal.ZERO) > 0) {
                 advance.setStatus("SETTLED");
             } else {
@@ -258,6 +232,5 @@ public class CashAdvanceService {
         } else if (settled.compareTo(BigDecimal.ZERO) > 0) {
             advance.setStatus("PARTIALLY_RETURNED");
         }
-        // Don't change status if nothing settled yet (keep GIVEN)
     }
 }
