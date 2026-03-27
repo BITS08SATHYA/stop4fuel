@@ -41,6 +41,17 @@ public class TankService {
                 .orElseThrow(() -> new RuntimeException("Tank not found with id: " + id));
     }
 
+    private void validateStockLimits(Tank tank) {
+        double cap = tank.getCapacity();
+        double stock = tank.getAvailableStock() != null ? tank.getAvailableStock() : 0;
+        if (stock < 0) throw new IllegalArgumentException("Available stock cannot be negative");
+        if (stock > cap) throw new IllegalArgumentException("Available stock cannot exceed capacity (" + (int) cap + " L)");
+        if (tank.getThresholdStock() != null) {
+            if (tank.getThresholdStock() < 0) throw new IllegalArgumentException("Threshold stock cannot be negative");
+            if (tank.getThresholdStock() > cap) throw new IllegalArgumentException("Threshold stock cannot exceed capacity (" + (int) cap + " L)");
+        }
+    }
+
     public Tank createTank(Tank tank) {
         // Ensure the product exists
         if (tank.getProduct() != null && tank.getProduct().getId() != null) {
@@ -54,6 +65,7 @@ public class TankService {
         if (tank.getAvailableStock() == null) {
             tank.setAvailableStock(0.0);
         }
+        validateStockLimits(tank);
         return tankRepository.save(tank);
     }
 
@@ -65,6 +77,7 @@ public class TankService {
             tank.setAvailableStock(tankDetails.getAvailableStock());
         }
         tank.setThresholdStock(tankDetails.getThresholdStock());
+        validateStockLimits(tank);
         if (tankDetails.getProduct() != null && tankDetails.getProduct().getId() != null) {
             Product product = productRepository.findById(tankDetails.getProduct().getId())
                     .orElseThrow(() -> new RuntimeException("Product not found with id: " + tankDetails.getProduct().getId()));
