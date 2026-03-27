@@ -46,6 +46,7 @@ import {
     Tag,
     Layers,
     LogOut,
+    Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -136,6 +137,7 @@ const analyticsNav = [
 
 const systemNav = [
     { name: "Configurations", href: "/settings", icon: Settings },
+    { name: "Notifications", href: "/settings/notifications", icon: Bell },
 ];
 
 type NavSection = {

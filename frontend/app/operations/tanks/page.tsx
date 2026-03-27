@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
-import { getTanks, getFuelProducts, createTank, updateTank, deleteTank, Tank, Product } from "@/lib/api/station";
+import { getTanks, getFuelProducts, createTank, updateTank, deleteTank, Tank, Product, checkStockAlerts } from "@/lib/api/station";
 import { Droplets, Plus, Edit2, Trash2, Search, Gauge, AlertTriangle } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required, min } from "@/lib/validation";
@@ -23,6 +23,7 @@ export default function TanksPage() {
     const [name, setName] = useState("");
     const [capacity, setCapacity] = useState("");
     const [availableStock, setAvailableStock] = useState("");
+    const [thresholdStock, setThresholdStock] = useState("");
     const [productId, setProductId] = useState("");
     const [active, setActive] = useState(true);
     const [apiError, setApiError] = useState("");
@@ -57,6 +58,7 @@ export default function TanksPage() {
             setName(tank.name);
             setCapacity(tank.capacity.toString());
             setAvailableStock((tank.availableStock ?? 0).toString());
+            setThresholdStock(tank.thresholdStock ? tank.thresholdStock.toString() : "");
             setProductId(tank.product.id.toString());
             setActive(tank.active);
         } else {
@@ -64,6 +66,7 @@ export default function TanksPage() {
             setName("");
             setCapacity("");
             setAvailableStock("");
+            setThresholdStock("");
             setProductId("");
             setActive(true);
         }
@@ -81,6 +84,7 @@ export default function TanksPage() {
                 name,
                 capacity: Number(capacity),
                 availableStock: availableStock ? Number(availableStock) : 0,
+                thresholdStock: thresholdStock ? Number(thresholdStock) : null,
                 product: { id: Number(productId) },
                 active
             };
@@ -92,6 +96,8 @@ export default function TanksPage() {
             }
             setIsModalOpen(false);
             loadData();
+            // Trigger stock alert check after tank update
+            checkStockAlerts().catch(() => {});
         } catch (err) {
             console.error("Failed to save tank", err);
             setApiError("Error saving tank details");
@@ -182,10 +188,19 @@ export default function TanksPage() {
                                 {(() => {
                                     const stock = tank.availableStock ?? 0;
                                     const pct = tank.capacity > 0 ? Math.min((stock / tank.capacity) * 100, 100) : 0;
-                                    const barColor = pct <= 20 ? 'bg-red-500' : pct <= 50 ? 'bg-amber-500' : 'bg-green-500';
-                                    const badgeColor = pct <= 20 ? 'text-red-600 bg-red-500/10' : pct <= 50 ? 'text-amber-600 bg-amber-500/10' : 'text-green-600 bg-green-500/10';
+                                    const isBelowThreshold = tank.thresholdStock != null && tank.thresholdStock > 0 && stock <= tank.thresholdStock;
+                                    const barColor = isBelowThreshold ? 'bg-red-500' : pct <= 20 ? 'bg-red-500' : pct <= 50 ? 'bg-amber-500' : 'bg-green-500';
+                                    const badgeColor = isBelowThreshold ? 'text-red-600 bg-red-500/10' : pct <= 20 ? 'text-red-600 bg-red-500/10' : pct <= 50 ? 'text-amber-600 bg-amber-500/10' : 'text-green-600 bg-green-500/10';
                                     return (
                                         <div className="mb-4">
+                                            {isBelowThreshold && (
+                                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg mb-2">
+                                                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                                    <span className="text-xs font-semibold text-red-500">
+                                                        Below threshold ({tank.thresholdStock?.toLocaleString()} L)
+                                                    </span>
+                                                </div>
+                                            )}
                                             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${badgeColor} mb-2`}>
                                                 <Gauge className="w-3.5 h-3.5" />
                                                 Available: {stock.toLocaleString()} L ({pct.toFixed(0)}%)
@@ -193,6 +208,15 @@ export default function TanksPage() {
                                             <div className="w-full h-2 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
                                             </div>
+                                            {tank.thresholdStock != null && tank.thresholdStock > 0 && (
+                                                <div className="relative w-full mt-0.5">
+                                                    <div
+                                                        className="absolute top-0 w-px h-2 bg-amber-500"
+                                                        style={{ left: `${Math.min((tank.thresholdStock / tank.capacity) * 100, 100)}%` }}
+                                                        title={`Threshold: ${tank.thresholdStock.toLocaleString()} L`}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })()}
@@ -256,6 +280,19 @@ export default function TanksPage() {
                             className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                             placeholder="e.g. 5000"
                         />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Threshold Stock (Liters)</label>
+                        <input
+                            type="number"
+                            value={thresholdStock}
+                            onChange={(e) => setThresholdStock(e.target.value)}
+                            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="e.g. 2000 — alerts when stock falls below this"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            You will be notified when available stock drops to or below this level.
+                        </p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Fuel Product</label>
