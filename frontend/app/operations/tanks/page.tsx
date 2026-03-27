@@ -79,12 +79,19 @@ export default function TanksPage() {
         e.preventDefault();
         setApiError("");
         if (!validate({ name, capacity, productId })) return;
+        const cap = Number(capacity);
+        const stock = availableStock ? Number(availableStock) : 0;
+        const threshold = thresholdStock ? Number(thresholdStock) : null;
+        if (stock < 0) { setApiError("Available stock cannot be negative"); return; }
+        if (stock > cap) { setApiError("Available stock cannot exceed capacity"); return; }
+        if (threshold != null && threshold < 0) { setApiError("Threshold cannot be negative"); return; }
+        if (threshold != null && threshold > cap) { setApiError("Threshold cannot exceed capacity"); return; }
         try {
             const payload = {
                 name,
-                capacity: Number(capacity),
-                availableStock: availableStock ? Number(availableStock) : 0,
-                thresholdStock: thresholdStock ? Number(thresholdStock) : null,
+                capacity: cap,
+                availableStock: stock,
+                thresholdStock: threshold,
                 product: { id: Number(productId) },
                 active
             };
