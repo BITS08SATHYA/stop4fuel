@@ -5,6 +5,7 @@ import { Users, Truck, ArrowRight, Check, X, AlertCircle, Link2, Unlink } from "
 import { GlassCard } from "@/components/ui/glass-card";
 import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
+import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
@@ -439,16 +440,12 @@ function VehicleCustomerMapping() {
 
                 <div className="h-8 w-px bg-border" />
 
-                <select
+                <CustomerAutocomplete
                     value={targetCustomerId}
-                    onChange={(e) => setTargetCustomerId(e.target.value)}
-                    className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                >
-                    <option value="">Select customer...</option>
-                    {customers.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                </select>
+                    onChange={(id) => setTargetCustomerId(String(id))}
+                    customers={customers}
+                    placeholder="Search customer..."
+                />
 
                 <PermissionGate permission="VEHICLE_MANAGE">
                     <button
