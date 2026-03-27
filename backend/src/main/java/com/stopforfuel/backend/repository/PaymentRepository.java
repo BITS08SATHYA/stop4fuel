@@ -30,8 +30,49 @@ public interface PaymentRepository extends ScidRepository<Payment> {
     // Paginated versions
     Page<Payment> findAllBy(Pageable pageable);
 
-    @Query("SELECT p FROM Payment p JOIN p.customer c LEFT JOIN c.customerCategory cc WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType)")
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c JOIN FETCH p.paymentMode " +
+           "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
+           "LEFT JOIN c.customerCategory cc " +
+           "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType)")
     Page<Payment> findWithCategoryFilter(@Param("categoryType") String categoryType, Pageable pageable);
+
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c JOIN FETCH p.paymentMode " +
+           "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
+           "LEFT JOIN c.customerCategory cc " +
+           "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType) " +
+           "AND (:paidAgainst IS NULL OR " +
+           "  (:paidAgainst = 'BILL' AND p.invoiceBill IS NOT NULL) OR " +
+           "  (:paidAgainst = 'STATEMENT' AND p.statement IS NOT NULL)) " +
+           "AND (:fromDate IS NULL OR p.paymentDate >= :fromDate) " +
+           "AND (:toDate IS NULL OR p.paymentDate <= :toDate)")
+    Page<Payment> findWithFilters(
+            @Param("categoryType") String categoryType,
+            @Param("paidAgainst") String paidAgainst,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate,
+            Pageable pageable);
+
+    // Fetch all payments eagerly (for the default no-filter case)
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer JOIN FETCH p.paymentMode " +
+           "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy")
+    Page<Payment> findAllEager(Pageable pageable);
+
+    // For export (no pagination)
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c JOIN FETCH p.paymentMode " +
+           "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
+           "LEFT JOIN c.customerCategory cc " +
+           "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType) " +
+           "AND (:paidAgainst IS NULL OR " +
+           "  (:paidAgainst = 'BILL' AND p.invoiceBill IS NOT NULL) OR " +
+           "  (:paidAgainst = 'STATEMENT' AND p.statement IS NOT NULL)) " +
+           "AND (:fromDate IS NULL OR p.paymentDate >= :fromDate) " +
+           "AND (:toDate IS NULL OR p.paymentDate <= :toDate) " +
+           "ORDER BY p.paymentDate DESC")
+    List<Payment> findAllForExport(
+            @Param("categoryType") String categoryType,
+            @Param("paidAgainst") String paidAgainst,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
 
     Page<Payment> findByCustomerId(Long customerId, Pageable pageable);
 

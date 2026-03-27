@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="payment_report" pageWidth="842" pageHeight="595" orientation="Landscape"
+              columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+
+    <parameter name="companyName" class="java.lang.String"/>
+    <parameter name="companyAddress" class="java.lang.String"/>
+    <parameter name="companyPhone" class="java.lang.String"/>
+    <parameter name="reportTitle" class="java.lang.String"/>
+    <parameter name="dateRange" class="java.lang.String"/>
+    <parameter name="generatedDate" class="java.lang.String"/>
+    <parameter name="totalPayments" class="java.lang.Integer"/>
+    <parameter name="totalAmount" class="java.lang.String"/>
+
+    <field name="slNo" class="java.lang.Integer"/>
+    <field name="date" class="java.lang.String"/>
+    <field name="customerName" class="java.lang.String"/>
+    <field name="paidAgainst" class="java.lang.String"/>
+    <field name="amount" class="java.lang.String"/>
+    <field name="mode" class="java.lang.String"/>
+    <field name="reference" class="java.lang.String"/>
+    <field name="employeeName" class="java.lang.String"/>
+    <field name="status" class="java.lang.String"/>
+    <field name="remarks" class="java.lang.String"/>
+
+    <title>
+        <band height="90">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="24"/>
+                <textElement textAlignment="Center">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{companyName}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="24" width="802" height="16"/>
+                <textElement textAlignment="Center">
+                    <font size="9"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{companyAddress} + " | " + $P{companyPhone}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="46" width="802" height="20"/>
+                <textElement textAlignment="Center">
+                    <font size="13" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{reportTitle}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="66" width="500" height="16"/>
+                <textElement>
+                    <font size="9"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Period: " + $P{dateRange}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="500" y="66" width="302" height="16"/>
+                <textElement textAlignment="Right">
+                    <font size="9"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Total: " + $P{totalPayments} + " payments | " + $P{totalAmount}]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="22">
+            <staticText><reportElement x="0" y="0" width="30" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[#]]></text></staticText>
+            <staticText><reportElement x="30" y="0" width="80" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[Date]]></text></staticText>
+            <staticText><reportElement x="110" y="0" width="120" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[ Customer]]></text></staticText>
+            <staticText><reportElement x="230" y="0" width="90" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[Paid Against]]></text></staticText>
+            <staticText><reportElement x="320" y="0" width="80" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement textAlignment="Right" verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[Amount  ]]></text></staticText>
+            <staticText><reportElement x="400" y="0" width="70" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[Mode]]></text></staticText>
+            <staticText><reportElement x="470" y="0" width="80" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[Reference]]></text></staticText>
+            <staticText><reportElement x="550" y="0" width="80" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[Employee]]></text></staticText>
+            <staticText><reportElement x="630" y="0" width="60" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[Status]]></text></staticText>
+            <staticText><reportElement x="690" y="0" width="112" height="22" mode="Opaque" backcolor="#E8E8E8"/><textElement verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[ Remarks]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="18">
+            <textField><reportElement x="0" y="0" width="30" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{slNo}]]></textFieldExpression></textField>
+            <textField><reportElement x="30" y="0" width="80" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{date}]]></textFieldExpression></textField>
+            <textField isStretchWithOverflow="true"><reportElement x="110" y="0" width="120" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[" " + $F{customerName}]]></textFieldExpression></textField>
+            <textField><reportElement x="230" y="0" width="90" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{paidAgainst}]]></textFieldExpression></textField>
+            <textField><reportElement x="320" y="0" width="80" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><textFieldExpression><![CDATA[$F{amount} + "  "]]></textFieldExpression></textField>
+            <textField><reportElement x="400" y="0" width="70" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{mode}]]></textFieldExpression></textField>
+            <textField><reportElement x="470" y="0" width="80" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{reference}]]></textFieldExpression></textField>
+            <textField><reportElement x="550" y="0" width="80" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{employeeName}]]></textFieldExpression></textField>
+            <textField><reportElement x="630" y="0" width="60" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{status}]]></textFieldExpression></textField>
+            <textField isStretchWithOverflow="true"><reportElement x="690" y="0" width="112" height="18"/><box><bottomPen lineWidth="0.25" lineColor="#CCCCCC"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[" " + $F{remarks}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+    <pageFooter>
+        <band height="20">
+            <textField>
+                <reportElement x="0" y="0" width="400" height="16"/>
+                <textElement><font size="7" isItalic="true"/></textElement>
+                <textFieldExpression><![CDATA["Generated: " + $P{generatedDate}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="400" y="0" width="402" height="16"/>
+                <textElement textAlignment="Right"><font size="7"/></textElement>
+                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+        </band>
+    </pageFooter>
+
+</jasperReport>
