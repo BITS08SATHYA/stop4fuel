@@ -55,6 +55,12 @@ public class OperationalAdvanceService {
         return repository.findByAdvanceTypeOrderByAdvanceDateDesc(advanceType);
     }
 
+    public List<OperationalAdvance> getByDateRange(java.time.LocalDate fromDate, java.time.LocalDate toDate) {
+        java.time.LocalDateTime from = fromDate.atStartOfDay();
+        java.time.LocalDateTime to = toDate.atTime(java.time.LocalTime.MAX);
+        return repository.findByDateRange(SecurityUtils.getScid(), from, to);
+    }
+
     public List<OperationalAdvance> getOutstanding() {
         return repository.findByStatusInOrderByAdvanceDateDesc(List.of("GIVEN", "PARTIALLY_RETURNED"));
     }

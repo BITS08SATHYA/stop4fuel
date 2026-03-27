@@ -4,11 +4,13 @@ import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.IncentivePayment;
 import com.stopforfuel.backend.service.IncentivePaymentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -46,6 +48,14 @@ public class IncentivePaymentController {
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
     public BigDecimal getShiftTotal(@PathVariable Long shiftId) {
         return service.sumByShift(shiftId);
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public List<IncentivePayment> search(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return service.getByDateRange(fromDate, toDate);
     }
 
     @PostMapping
