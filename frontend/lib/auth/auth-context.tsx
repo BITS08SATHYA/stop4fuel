@@ -143,9 +143,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             setUser(null);
             setAccessToken(null);
-            window.location.href = '/login';
+            window.location.href = process.env.NEXT_PUBLIC_LANDING_URL || '/login';
         } catch {
-            window.location.href = '/login';
+            window.location.href = process.env.NEXT_PUBLIC_LANDING_URL || '/login';
         }
     }, []);
 
