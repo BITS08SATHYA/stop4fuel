@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
+import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import {
     getActiveShift,
     openShift,
@@ -138,6 +139,8 @@ export default function ShiftsPage() {
     const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([]);
     const [selectedExpenseTypeId, setSelectedExpenseTypeId] = useState("");
     const [newExpenseTypeName, setNewExpenseTypeName] = useState("");
+    // Invoice linking
+    const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
 
     // Filter
     const [typeFilter, setTypeFilter] = useState("ALL");
@@ -253,6 +256,7 @@ export default function ShiftsPage() {
         setBankName("");
         setCcmsNumber("");
         setExpenseDescription(""); setSelectedExpenseTypeId(""); setNewExpenseTypeName("");
+        setLinkedInvoice(null);
     };
 
     const handleOpenAddModal = async () => {
@@ -315,6 +319,10 @@ export default function ShiftsPage() {
                     payload.bankName = bankName || undefined;
                 } else if (txnType === "CCMS") {
                     payload.ccmsNumber = ccmsNumber || undefined;
+                }
+
+                if (linkedInvoice) {
+                    payload.invoiceBill = { id: linkedInvoice.id };
                 }
 
                 await createEAdvance(payload);
@@ -734,6 +742,18 @@ export default function ShiftsPage() {
                                     />
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {/* Link to Invoice (only for E-Advances, not Expenses) */}
+                    {txnType !== "EXPENSE" && (
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">Link to Invoice (Optional)</label>
+                            <InvoiceAutocomplete
+                                value={linkedInvoice}
+                                onChange={setLinkedInvoice}
+                                placeholder="Search by bill #..."
+                            />
                         </div>
                     )}
 

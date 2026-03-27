@@ -28,6 +28,7 @@ import {
     createUpiCompany,
 } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import { PermissionGate } from "@/components/permission-gate";
 
 // --- Constants ---
@@ -119,6 +120,8 @@ export default function EAdvancesPage() {
     const [bankName, setBankName] = useState("");
     // CCMS
     const [ccmsNumber, setCcmsNumber] = useState("");
+    // Invoice linking
+    const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -177,6 +180,7 @@ export default function EAdvancesPage() {
         setChequeBankName(""); setChequeNo(""); setChequeInFavorOf(""); setChequeDate("");
         setBankName("");
         setCcmsNumber("");
+        setLinkedInvoice(null);
     };
 
     const handleOpenAdd = async () => {
@@ -219,6 +223,7 @@ export default function EAdvancesPage() {
         if (entry.advanceType === "CCMS") {
             setCcmsNumber(entry.ccmsNumber || "");
         }
+        setLinkedInvoice(entry.invoiceBill || null);
         setIsModalOpen(true);
     };
 
@@ -254,6 +259,10 @@ export default function EAdvancesPage() {
                 payload.bankName = bankName || undefined;
             } else if (txnType === "CCMS") {
                 payload.ccmsNumber = ccmsNumber || undefined;
+            }
+
+            if (linkedInvoice) {
+                payload.invoiceBill = { id: linkedInvoice.id };
             }
 
             if (editingId) {
@@ -548,6 +557,16 @@ export default function EAdvancesPage() {
                     {txnType === "CCMS" && (
                         <InputField label="CCMS Number" value={ccmsNumber} onChange={setCcmsNumber} placeholder="CCMS ref number" />
                     )}
+
+                    {/* Link to Invoice */}
+                    <div>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">Link to Invoice (Optional)</label>
+                        <InvoiceAutocomplete
+                            value={linkedInvoice}
+                            onChange={setLinkedInvoice}
+                            placeholder="Search by bill #..."
+                        />
+                    </div>
 
                     {/* Remarks */}
                     <div>

@@ -36,6 +36,7 @@ public class InvoiceBillService {
     private final IncentiveService incentiveService;
     private final ShiftService shiftService;
     private final EAdvanceService eAdvanceService;
+    private final IncentivePaymentService incentivePaymentService;
     private final BillSequenceService billSequenceService;
 
     public List<InvoiceBill> getAllInvoices() {
@@ -303,6 +304,9 @@ public class InvoiceBillService {
         // --- Auto-create shift transaction for CASH invoices ---
         autoCreateShiftTransaction(saved);
 
+        // --- Auto-create incentive payment for CASH invoices with discount ---
+        autoCreateIncentivePayment(saved);
+
         return saved;
     }
 
@@ -357,6 +361,36 @@ public class InvoiceBillService {
                 // CASH — no separate record needed, InvoiceBill is the source of truth
                 break;
         }
+    }
+
+    /**
+     * Auto-creates an IncentivePayment entry when a CASH invoice has a discount applied.
+     */
+    private void autoCreateIncentivePayment(InvoiceBill invoice) {
+        if (!"CASH".equals(invoice.getBillType())) {
+            return;
+        }
+
+        BigDecimal discount = invoice.getTotalDiscount();
+        if (discount == null || discount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        Shift activeShift = shiftService.getActiveShift();
+        if (activeShift == null) {
+            return;
+        }
+
+        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : "Walk-in";
+        IncentivePayment incentivePayment = new IncentivePayment();
+        incentivePayment.setAmount(discount);
+        incentivePayment.setDescription("Auto: Discount on Invoice #" + invoice.getBillNo() + " - " + customerName);
+        incentivePayment.setCustomer(invoice.getCustomer());
+        incentivePayment.setInvoiceBill(invoice);
+        incentivePayment.setShiftId(activeShift.getId());
+        incentivePayment.setScid(invoice.getScid());
+        incentivePayment.setPaymentDate(LocalDateTime.now());
+        incentivePaymentService.create(incentivePayment);
     }
 
     /**
