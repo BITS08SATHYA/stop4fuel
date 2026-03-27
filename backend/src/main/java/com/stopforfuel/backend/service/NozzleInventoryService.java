@@ -57,6 +57,7 @@ public class NozzleInventoryService {
         existing.setNozzle(details.getNozzle());
         existing.setOpenMeterReading(details.getOpenMeterReading());
         existing.setCloseMeterReading(details.getCloseMeterReading());
+        existing.setTestQuantity(details.getTestQuantity());
         calculateFields(existing);
         return repository.save(existing);
     }
@@ -86,7 +87,9 @@ public class NozzleInventoryService {
             Double rate = getProductRate(inventory);
             if (rate != null) {
                 inventory.setRate(rate);
-                inventory.setAmount(sales * rate);
+                double testQty = inventory.getTestQuantity() != null ? inventory.getTestQuantity() : 0.0;
+                double billableSales = sales - testQty;
+                inventory.setAmount(billableSales * rate);
             }
         }
     }

@@ -35,4 +35,7 @@ public class NozzleInventory extends BaseEntity {
     private Double rate;
 
     private Double amount;
+
+    @Column(name = "test_quantity")
+    private Double testQuantity;
 }
