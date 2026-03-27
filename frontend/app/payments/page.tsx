@@ -6,12 +6,14 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import {
-    CreditCard, Receipt, FileText, Search, Check, IndianRupee, Clock, ImageIcon, Paperclip, ExternalLink
+    CreditCard, Receipt, FileText, Search, Check, IndianRupee, Clock, ImageIcon, Paperclip,
+    Download, FileSpreadsheet, Calendar
 } from "lucide-react";
 import {
     getPayments, getPaymentModes, getOutstandingStatements,
     getCustomers, recordStatementPayment, recordBillPayment,
     getOutstandingBills, uploadPaymentProof, getPaymentProofUrl,
+    exportPaymentsPdf, exportPaymentsExcel, downloadPaymentReceipt,
     type Payment, type PaymentMode, type Statement, type InvoiceBill, type Customer, type PageResponse
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
@@ -23,6 +25,20 @@ const fmt = (n: number) =>
 
 const fmtCurrency = (n: number) =>
     Number(n).toLocaleString("en-IN", { style: "currency", currency: "INR" });
+
+const statusBadge = (status?: string) => {
+    if (!status) return <span className="text-muted-foreground/50">—</span>;
+    switch (status) {
+        case "PAID":
+            return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px]">Paid</Badge>;
+        case "PARTIAL":
+            return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">Partial</Badge>;
+        case "NOT_PAID":
+            return <Badge className="bg-rose-500/20 text-rose-400 border-rose-500/30 text-[10px]">Unpaid</Badge>;
+        default:
+            return <span className="text-muted-foreground text-xs">{status}</span>;
+    }
+};
 
 export default function PaymentsPage() {
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -64,6 +80,13 @@ export default function PaymentsPage() {
     const [tableSearch, setTableSearch] = useState("");
     const [modeFilter, setModeFilter] = useState<string>("ALL");
     const [categoryFilter, setCategoryFilter] = useState<string>("");
+    const [paidAgainstFilter, setPaidAgainstFilter] = useState<string>("");
+    const [fromDate, setFromDate] = useState<string>("");
+    const [toDate, setToDate] = useState<string>("");
+
+    // Export loading
+    const [exportingPdf, setExportingPdf] = useState(false);
+    const [exportingExcel, setExportingExcel] = useState(false);
 
     useEffect(() => {
         loadInitialData();
@@ -71,7 +94,7 @@ export default function PaymentsPage() {
 
     useEffect(() => {
         loadPayments();
-    }, [page, categoryFilter]);
+    }, [page, categoryFilter, paidAgainstFilter, fromDate, toDate]);
 
     const loadInitialData = async () => {
         try {
@@ -85,7 +108,13 @@ export default function PaymentsPage() {
     const loadPayments = async () => {
         setLoading(true);
         try {
-            const result: PageResponse<Payment> = await getPayments(page, pageSize, categoryFilter || undefined);
+            const result: PageResponse<Payment> = await getPayments(
+                page, pageSize,
+                categoryFilter || undefined,
+                paidAgainstFilter || undefined,
+                fromDate || undefined,
+                toDate || undefined
+            );
             setPayments(result.content);
             setTotalPages(result.totalPages);
             setTotalElements(result.totalElements);
@@ -183,7 +212,6 @@ export default function PaymentsPage() {
                 try {
                     await uploadPaymentProof(saved.id, proofFile);
                 } catch {
-                    // Payment saved but proof upload failed — non-blocking
                     console.error("Proof upload failed");
                 }
             }
@@ -215,6 +243,60 @@ export default function PaymentsPage() {
         setPayTarget("statement");
     };
 
+    const handleExportPdf = async () => {
+        setExportingPdf(true);
+        try {
+            const blob = await exportPaymentsPdf(
+                categoryFilter || undefined, paidAgainstFilter || undefined,
+                fromDate || undefined, toDate || undefined
+            );
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "payment_report.pdf";
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error("PDF export failed", e);
+        } finally {
+            setExportingPdf(false);
+        }
+    };
+
+    const handleExportExcel = async () => {
+        setExportingExcel(true);
+        try {
+            const blob = await exportPaymentsExcel(
+                categoryFilter || undefined, paidAgainstFilter || undefined,
+                fromDate || undefined, toDate || undefined
+            );
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "payment_report.xlsx";
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error("Excel export failed", e);
+        } finally {
+            setExportingExcel(false);
+        }
+    };
+
+    const handleDownloadReceipt = async (paymentId: number) => {
+        try {
+            const blob = await downloadPaymentReceipt(paymentId);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `payment_receipt_${paymentId}.pdf`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error("Receipt download failed", e);
+        }
+    };
+
     // Filter outstanding items by search
     const filteredStatements = outstandingStatements.filter(s => {
         if (!billSearch) return true;
@@ -232,7 +314,19 @@ export default function PaymentsPage() {
             (b.driverName || "").toLowerCase().includes(q);
     });
 
-    if (loading) {
+    // Client-side filters (search + mode)
+    const filteredPayments = payments.filter((p) => {
+        const q = tableSearch.toLowerCase();
+        const matchesSearch = !tableSearch ||
+            p.customer?.name?.toLowerCase().includes(q) ||
+            p.referenceNo?.toLowerCase().includes(q) ||
+            p.remarks?.toLowerCase().includes(q) ||
+            p.receivedBy?.name?.toLowerCase().includes(q);
+        const matchesMode = modeFilter === "ALL" || p.paymentMode?.modeName === modeFilter;
+        return matchesSearch && matchesMode;
+    });
+
+    if (loading && payments.length === 0) {
         return (
             <div className="p-8 flex items-center justify-center h-screen">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -242,7 +336,7 @@ export default function PaymentsPage() {
 
     return (
         <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-[1400px] mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -253,15 +347,36 @@ export default function PaymentsPage() {
                             Record and track credit payments from customers.
                         </p>
                     </div>
-                    <PermissionGate permission="PAYMENT_MANAGE">
+                    <div className="flex items-center gap-3">
+                        {/* Export buttons */}
                         <button
-                            onClick={() => setShowPayModal(true)}
-                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                            onClick={handleExportPdf}
+                            disabled={exportingPdf}
+                            className="px-4 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+                            title="Export as PDF"
                         >
-                            <CreditCard className="w-5 h-5" />
-                            Record Payment
+                            <FileText className="w-4 h-4 text-rose-400" />
+                            {exportingPdf ? "Exporting..." : "PDF"}
                         </button>
-                    </PermissionGate>
+                        <button
+                            onClick={handleExportExcel}
+                            disabled={exportingExcel}
+                            className="px-4 py-2.5 rounded-xl border border-border text-foreground hover:bg-muted transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+                            title="Export as Excel"
+                        >
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                            {exportingExcel ? "Exporting..." : "Excel"}
+                        </button>
+                        <PermissionGate permission="PAYMENT_MANAGE">
+                            <button
+                                onClick={() => setShowPayModal(true)}
+                                className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                            >
+                                <CreditCard className="w-5 h-5" />
+                                Record Payment
+                            </button>
+                        </PermissionGate>
+                    </div>
                 </div>
 
                 {/* Stats */}
@@ -284,7 +399,7 @@ export default function PaymentsPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="text"
-                                placeholder="Search by customer, reference..."
+                                placeholder="Search by customer, reference, employee..."
                                 value={tableSearch}
                                 onChange={(e) => setTableSearch(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -300,6 +415,15 @@ export default function PaymentsPage() {
                             <option value="NON_GOVERNMENT">Non-Government</option>
                         </select>
                         <select
+                            value={paidAgainstFilter}
+                            onChange={(e) => { setPaidAgainstFilter(e.target.value); setPage(0); }}
+                            className="px-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                            <option value="">Bills & Statements</option>
+                            <option value="BILL">Bills Only</option>
+                            <option value="STATEMENT">Statements Only</option>
+                        </select>
+                        <select
                             value={modeFilter}
                             onChange={(e) => setModeFilter(e.target.value)}
                             className="px-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -311,42 +435,71 @@ export default function PaymentsPage() {
                         </select>
                     </div>
 
+                    {/* Date Range Filter */}
+                    <div className="flex flex-wrap gap-3 items-center mb-4">
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">From</span>
+                            <input
+                                type="date"
+                                value={fromDate}
+                                onChange={(e) => { setFromDate(e.target.value); setPage(0); }}
+                                className="px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">To</span>
+                            <input
+                                type="date"
+                                value={toDate}
+                                onChange={(e) => { setToDate(e.target.value); setPage(0); }}
+                                className="px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
+                        {(fromDate || toDate) && (
+                            <button
+                                onClick={() => { setFromDate(""); setToDate(""); setPage(0); }}
+                                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 border border-border rounded-lg"
+                            >
+                                Clear dates
+                            </button>
+                        )}
+                    </div>
+
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border text-muted-foreground">
-                                    <th className="text-left py-3 px-4">Date</th>
-                                    <th className="text-left py-3 px-4">Customer</th>
-                                    <th className="text-left py-3 px-4">Paid Against</th>
-                                    <th className="text-right py-3 px-4">Amount</th>
-                                    <th className="text-left py-3 px-4">Mode</th>
-                                    <th className="text-left py-3 px-4">Reference</th>
-                                    <th className="text-left py-3 px-4">Remarks</th>
-                                    <th className="text-center py-3 px-4">Proof</th>
+                                    <th className="text-left py-3 px-3">Date</th>
+                                    <th className="text-left py-3 px-3">Customer</th>
+                                    <th className="text-left py-3 px-3">Paid Against</th>
+                                    <th className="text-right py-3 px-3">Amount</th>
+                                    <th className="text-left py-3 px-3">Mode</th>
+                                    <th className="text-left py-3 px-3">Reference</th>
+                                    <th className="text-left py-3 px-3">Employee</th>
+                                    <th className="text-center py-3 px-3">Status</th>
+                                    <th className="text-left py-3 px-3">Remarks</th>
+                                    <th className="text-center py-3 px-3">Proof</th>
+                                    <th className="text-center py-3 px-3">Receipt</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {payments.length === 0 ? (
+                                {filteredPayments.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="text-center py-8 text-muted-foreground">
+                                        <td colSpan={11} className="text-center py-8 text-muted-foreground">
                                             No payments recorded yet
                                         </td>
                                     </tr>
                                 ) : (
-                                    payments.filter((p) => {
-                                        const q = tableSearch.toLowerCase();
-                                        const matchesSearch = !tableSearch || p.customer?.name?.toLowerCase().includes(q) || p.referenceNo?.toLowerCase().includes(q) || p.remarks?.toLowerCase().includes(q);
-                                        const matchesMode = modeFilter === "ALL" || p.paymentMode?.modeName === modeFilter;
-                                        return matchesSearch && matchesMode;
-                                    }).map((p) => (
+                                    filteredPayments.map((p) => (
                                         <tr key={p.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                                            <td className="py-3 px-4 text-muted-foreground">
+                                            <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">
                                                 {p.paymentDate ? new Date(p.paymentDate).toLocaleString("en-IN", {
                                                     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
                                                 }) : "-"}
                                             </td>
-                                            <td className="py-3 px-4 font-medium">{p.customer?.name || "-"}</td>
-                                            <td className="py-3 px-4">
+                                            <td className="py-3 px-3 font-medium">{p.customer?.name || "-"}</td>
+                                            <td className="py-3 px-3">
                                                 {p.statement ? (
                                                     <Badge variant="default">
                                                         <Receipt className="w-3 h-3 inline mr-1" />
@@ -359,13 +512,15 @@ export default function PaymentsPage() {
                                                     </Badge>
                                                 ) : "-"}
                                             </td>
-                                            <td className="py-3 px-4 text-right font-semibold text-emerald-400">
+                                            <td className="py-3 px-3 text-right font-semibold text-emerald-400 whitespace-nowrap">
                                                 {fmtCurrency(p.amount)}
                                             </td>
-                                            <td className="py-3 px-4">{p.paymentMode?.modeName || "-"}</td>
-                                            <td className="py-3 px-4 text-muted-foreground">{p.referenceNo || "-"}</td>
-                                            <td className="py-3 px-4 text-muted-foreground">{p.remarks || "-"}</td>
-                                            <td className="py-3 px-4 text-center">
+                                            <td className="py-3 px-3">{p.paymentMode?.modeName || "-"}</td>
+                                            <td className="py-3 px-3 text-muted-foreground">{p.referenceNo || "-"}</td>
+                                            <td className="py-3 px-3 text-muted-foreground">{p.receivedBy?.name || "-"}</td>
+                                            <td className="py-3 px-3 text-center">{statusBadge(p.targetPaymentStatus)}</td>
+                                            <td className="py-3 px-3 text-muted-foreground max-w-[120px] truncate">{p.remarks || "-"}</td>
+                                            <td className="py-3 px-3 text-center">
                                                 {p.proofImageKey ? (
                                                     <button
                                                         onClick={async () => {
@@ -384,6 +539,15 @@ export default function PaymentsPage() {
                                                 ) : (
                                                     <span className="text-muted-foreground/30">-</span>
                                                 )}
+                                            </td>
+                                            <td className="py-3 px-3 text-center">
+                                                <button
+                                                    onClick={() => handleDownloadReceipt(p.id!)}
+                                                    className="text-primary hover:text-primary/80 transition-colors"
+                                                    title="Download receipt"
+                                                >
+                                                    <Download className="w-4 h-4 inline" />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))

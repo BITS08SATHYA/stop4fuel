@@ -59,6 +59,32 @@ public class Payment extends BaseEntity {
     @Column(name = "proof_image_key")
     private String proofImageKey;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "received_by_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private User receivedBy; // Employee who collected this payment
+
+    /**
+     * Computed field: payment status of the linked bill/statement.
+     * Returns PAID, PARTIAL, or NOT_PAID.
+     */
+    @Transient
+    public String getTargetPaymentStatus() {
+        if (statement != null) {
+            if ("PAID".equals(statement.getStatus())) return "PAID";
+            if (statement.getReceivedAmount() != null
+                    && statement.getReceivedAmount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                return "PARTIAL";
+            }
+            return "NOT_PAID";
+        }
+        if (invoiceBill != null) {
+            if ("PAID".equals(invoiceBill.getPaymentStatus())) return "PAID";
+            return "NOT_PAID";
+        }
+        return null;
+    }
+
     @PrePersist
     @Override
     protected void onCreate() {
