@@ -10,6 +10,9 @@ import {
     getNozzleInventories,
     getProductInventories,
     getActiveShift,
+    checkStockAlerts,
+    acknowledgeStockAlert,
+    acknowledgeAllStockAlerts,
     Tank,
     Pump,
     Nozzle,
@@ -17,8 +20,9 @@ import {
     NozzleInventory,
     ProductInventory,
     Shift,
+    StockAlert,
 } from "@/lib/api/station";
-import { Droplets, Activity, Fuel, Clock } from "lucide-react";
+import { Droplets, Activity, Fuel, Clock, AlertTriangle, X, CheckCheck } from "lucide-react";
 
 function formatNumber(val?: number | null) {
     if (val == null) return "0";
@@ -37,8 +41,13 @@ export default function OperationalDashboardPage() {
     const [nozzleInventories, setNozzleInventories] = useState<NozzleInventory[]>([]);
     const [productInventories, setProductInventories] = useState<ProductInventory[]>([]);
     const [activeShift, setActiveShift] = useState<Shift | null>(null);
+    const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const loadAlerts = () => {
+        checkStockAlerts().then(setStockAlerts).catch(() => {});
+    };
 
     useEffect(() => {
         Promise.all([
@@ -49,8 +58,9 @@ export default function OperationalDashboardPage() {
             getNozzleInventories(),
             getProductInventories(),
             getActiveShift(),
+            checkStockAlerts().catch(() => []),
         ])
-            .then(([t, p, n, ti, ni, pi, shift]) => {
+            .then(([t, p, n, ti, ni, pi, shift, alerts]) => {
                 setTanks(t);
                 setPumps(p);
                 setNozzles(n);
@@ -58,10 +68,21 @@ export default function OperationalDashboardPage() {
                 setNozzleInventories(ni);
                 setProductInventories(pi);
                 setActiveShift(shift);
+                setStockAlerts(alerts as StockAlert[]);
             })
             .catch((err) => setError(err.message || "Failed to load data"))
             .finally(() => setIsLoading(false));
     }, []);
+
+    const handleAcknowledge = async (alertId: number) => {
+        await acknowledgeStockAlert(alertId);
+        loadAlerts();
+    };
+
+    const handleAcknowledgeAll = async () => {
+        await acknowledgeAllStockAlerts();
+        setStockAlerts([]);
+    };
 
     if (isLoading) {
         return (
@@ -122,6 +143,52 @@ export default function OperationalDashboardPage() {
                         Real-time view of station equipment, inventory levels, and meter readings.
                     </p>
                 </div>
+
+                {/* Low Stock Alert Banner */}
+                {stockAlerts.length > 0 && (
+                    <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-red-500" />
+                                <h3 className="font-semibold text-red-500">
+                                    Low Stock Alert — {stockAlerts.length} tank{stockAlerts.length > 1 ? 's' : ''} below threshold
+                                </h3>
+                            </div>
+                            <button
+                                onClick={handleAcknowledgeAll}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-colors"
+                            >
+                                <CheckCheck className="w-3.5 h-3.5" />
+                                Acknowledge All
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {stockAlerts.map((alert) => (
+                                <div key={alert.id} className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2">
+                                    <div className="flex items-center gap-3">
+                                        <Droplets className="w-4 h-4 text-red-500" />
+                                        <div>
+                                            <span className="text-sm font-medium text-foreground">{alert.tank.name}</span>
+                                            <span className="text-xs text-muted-foreground ml-2">
+                                                {alert.tank.product?.name}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs text-red-500 font-semibold">
+                                            {alert.availableStock.toLocaleString()} L / {alert.thresholdStock.toLocaleString()} L threshold
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleAcknowledge(alert.id)}
+                                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                                        title="Acknowledge alert"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Station Overview Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -205,10 +272,15 @@ export default function OperationalDashboardPage() {
                                 const pct = tank.capacity > 0 ? (currentStock / tank.capacity) * 100 : 0;
                                 const clampedPct = Math.min(100, Math.max(0, pct));
 
+                                const isBelowThreshold = tank.thresholdStock != null && tank.thresholdStock > 0 && (tank.availableStock ?? 0) <= tank.thresholdStock;
                                 let barColor = "bg-green-500";
                                 let statusColor = "text-green-500";
                                 let statusLabel = "Good";
-                                if (pct < 20) {
+                                if (isBelowThreshold) {
+                                    barColor = "bg-red-500";
+                                    statusColor = "text-red-500";
+                                    statusLabel = "Below Threshold";
+                                } else if (pct < 20) {
                                     barColor = "bg-red-500";
                                     statusColor = "text-red-500";
                                     statusLabel = "Critical";
