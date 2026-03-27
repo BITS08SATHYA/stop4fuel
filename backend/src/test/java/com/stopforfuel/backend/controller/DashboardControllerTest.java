@@ -3,8 +3,9 @@ package com.stopforfuel.backend.controller;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.backend.service.CreditManagementService;
+import com.stopforfuel.backend.service.EAdvanceService;
+import com.stopforfuel.backend.service.ExpenseService;
 import com.stopforfuel.backend.service.ShiftService;
-import com.stopforfuel.backend.service.ShiftTransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +57,10 @@ class DashboardControllerTest {
     private ShiftService shiftService;
 
     @MockBean
-    private ShiftTransactionService shiftTransactionService;
+    private EAdvanceService eAdvanceService;
+
+    @MockBean
+    private ExpenseService expenseService;
 
     @MockBean
     private CreditManagementService creditManagementService;
@@ -132,14 +136,17 @@ class DashboardControllerTest {
         activeShift.setStartTime(LocalDateTime.now());
         when(shiftService.getActiveShift()).thenReturn(activeShift);
 
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("cash", new BigDecimal("3000"));
-        summary.put("upi", new BigDecimal("2000"));
-        summary.put("card", new BigDecimal("1000"));
-        summary.put("expense", new BigDecimal("500"));
-        summary.put("total", new BigDecimal("6000"));
-        summary.put("net", new BigDecimal("5500"));
-        when(shiftTransactionService.getShiftSummary(10L)).thenReturn(summary);
+        when(invoiceBillRepository.sumCashBillsByShift(10L)).thenReturn(new BigDecimal("3000"));
+        Map<String, BigDecimal> eAdvSummary = Map.of(
+            "card", new BigDecimal("1000"),
+            "upi", new BigDecimal("2000"),
+            "cheque", BigDecimal.ZERO,
+            "ccms", BigDecimal.ZERO,
+            "bank_transfer", BigDecimal.ZERO,
+            "total", new BigDecimal("3000")
+        );
+        when(eAdvanceService.getShiftSummary(10L)).thenReturn(eAdvSummary);
+        when(expenseService.sumByShift(10L)).thenReturn(new BigDecimal("500"));
 
         when(invoiceBillRepository.findAll()).thenReturn(List.of());
         when(tankRepository.count()).thenReturn(0L);

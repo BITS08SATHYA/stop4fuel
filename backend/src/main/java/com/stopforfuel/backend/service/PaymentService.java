@@ -1,7 +1,6 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
-import com.stopforfuel.backend.entity.transaction.*;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
@@ -27,7 +26,7 @@ public class PaymentService {
     private final CustomerRepository customerRepository;
     private final PaymentModeRepository paymentModeRepository;
     private final ShiftService shiftService;
-    private final ShiftTransactionService shiftTransactionService;
+    private final EAdvanceService eAdvanceService;
     private final S3StorageService s3StorageService;
 
     public Page<Payment> getPayments(String categoryType, Pageable pageable) {
@@ -220,8 +219,8 @@ public class PaymentService {
     }
 
     /**
-     * Auto-creates a shift transaction when a credit payment is recorded.
-     * Maps the PaymentMode name to the appropriate transaction type.
+     * Auto-creates an EAdvance entry when a credit payment is made via electronic mode.
+     * Cash payments need no separate record — the Payment itself is the source of truth.
      */
     private void autoCreateShiftTransaction(Payment payment) {
         Shift activeShift = shiftService.getActiveShift();
@@ -235,55 +234,36 @@ public class PaymentService {
         }
 
         String modeName = payment.getPaymentMode() != null ? payment.getPaymentMode().getModeName() : "CASH";
-        String customerName = payment.getCustomer() != null ? payment.getCustomer().getName() : null;
-        String remark = "Auto: Payment #" + payment.getId()
-                + (customerName != null ? " - " + customerName : "");
+        String upperMode = modeName.toUpperCase();
 
-        ShiftTransaction txn;
-        switch (modeName.toUpperCase()) {
+        // Only create EAdvance for electronic payment modes
+        switch (upperMode) {
             case "UPI":
-                UpiTransaction upiTxn = new UpiTransaction();
-                upiTxn.setReceivedAmount(amount);
-                upiTxn.setRemarks(remark);
-                txn = upiTxn;
-                break;
             case "CARD":
-                CardTransaction cardTxn = new CardTransaction();
-                cardTxn.setReceivedAmount(amount);
-                cardTxn.setRemarks(remark);
-                if (customerName != null) cardTxn.setCustomerName(customerName);
-                txn = cardTxn;
-                break;
             case "CHEQUE":
-                ChequeTransaction chequeTxn = new ChequeTransaction();
-                chequeTxn.setReceivedAmount(amount);
-                chequeTxn.setRemarks(remark);
-                txn = chequeTxn;
-                break;
             case "BANK TRANSFER":
             case "BANK":
-                BankTransaction bankTxn = new BankTransaction();
-                bankTxn.setReceivedAmount(amount);
-                bankTxn.setRemarks(remark);
-                txn = bankTxn;
-                break;
             case "CCMS":
-                CcmsTransaction ccmsTxn = new CcmsTransaction();
-                ccmsTxn.setReceivedAmount(amount);
-                ccmsTxn.setRemarks(remark);
-                txn = ccmsTxn;
+                String customerName = payment.getCustomer() != null ? payment.getCustomer().getName() : null;
+                String remark = "Auto: Payment #" + payment.getId()
+                        + (customerName != null ? " - " + customerName : "");
+                EAdvance eAdv = new EAdvance();
+                eAdv.setAmount(amount);
+                eAdv.setRemarks(remark);
+                eAdv.setShiftId(activeShift.getId());
+                eAdv.setScid(payment.getScid());
+                String type = "BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode;
+                eAdv.setAdvanceType(type);
+                eAdv.setPayment(payment);
+                if ("CARD".equals(upperMode) && customerName != null) {
+                    eAdv.setCustomerName(customerName);
+                }
+                eAdvanceService.create(eAdv);
                 break;
             default:
-                CashTransaction cashTxn = new CashTransaction();
-                cashTxn.setReceivedAmount(amount);
-                cashTxn.setRemarks(remark);
-                txn = cashTxn;
+                // CASH — no separate record needed, Payment is the source of truth
                 break;
         }
-
-        txn.setShiftId(activeShift.getId());
-        txn.setScid(payment.getScid());
-        shiftTransactionService.create(txn);
     }
 
     /**

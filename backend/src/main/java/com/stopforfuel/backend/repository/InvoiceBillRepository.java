@@ -18,6 +18,9 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     List<InvoiceBill> findByScid(Long scid);
     List<InvoiceBill> findByShiftId(Long shiftId);
     List<InvoiceBill> findByBillType(String billType);
+
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CASH'")
+    BigDecimal sumCashBillsByShift(@Param("shiftId") Long shiftId);
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     List<InvoiceBill> findByStatementId(Long statementId);
 
@@ -262,9 +265,9 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     // Count unpaid bills for a vehicle under a specific customer
     long countByVehicleIdAndCustomerIdAndPaymentStatus(Long vehicleId, Long customerId, String paymentStatus);
 
-    // Cash advance linked invoices
-    List<InvoiceBill> findByCashAdvanceId(Long cashAdvanceId);
+    // Operational advance linked invoices
+    List<InvoiceBill> findByOperationalAdvanceId(Long operationalAdvanceId);
 
     // Unassigned invoices in a shift (available for advance assignment)
-    List<InvoiceBill> findByShiftIdAndCashAdvanceIsNull(Long shiftId);
+    List<InvoiceBill> findByShiftIdAndOperationalAdvanceIsNull(Long shiftId);
 }

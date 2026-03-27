@@ -2,7 +2,6 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
-import com.stopforfuel.backend.entity.transaction.ShiftTransaction;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
@@ -28,13 +27,13 @@ public class ShiftClosingReportService {
     private final ShiftRepository shiftRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final PaymentRepository paymentRepository;
-    private final ShiftTransactionRepository shiftTransactionRepository;
-    private final CashAdvanceRepository cashAdvanceRepository;
+    private final OperationalAdvanceRepository operationalAdvanceRepository;
     private final ExternalCashInflowRepository inflowRepository;
     private final CashInflowRepaymentRepository repaymentRepository;
-    private final EmployeeAdvanceRepository employeeAdvanceRepository;
+    private final EAdvanceRepository eAdvanceRepository;
+    private final ExpenseRepository expenseRepository;
+    private final IncentivePaymentRepository incentivePaymentRepository;
     private final StatementRepository statementRepository;
-    private final ShiftTransactionService shiftTransactionService;
     private final NozzleInventoryRepository nozzleInventoryRepository;
     private final TankInventoryRepository tankInventoryRepository;
     private final ProductInventoryRepository productInventoryRepository;
@@ -419,91 +418,54 @@ public class ShiftClosingReportService {
             lineItems.add(item);
         }
 
-        // 6-10. Electronic payment advances (from ShiftTransactions)
+        // 6-10. Electronic payment advances (from e_advance table)
         addTransactionLineItem(lineItems, report, shiftId, "CARD",
-                shiftTransactionRepository.sumCardByShift(shiftId), "Card Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, "CARD"), "Card Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "CCMS",
-                shiftTransactionRepository.sumCcmsByShift(shiftId), "CCMS Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, "CCMS"), "CCMS Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "UPI",
-                shiftTransactionRepository.sumUpiByShift(shiftId), "UPI Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, "UPI"), "UPI Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "BANK",
-                shiftTransactionRepository.sumBankByShift(shiftId), "Bank Transfer Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, "BANK_TRANSFER"), "Bank Transfer Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "CHEQUE",
-                shiftTransactionRepository.sumChequeByShift(shiftId), "Cheque Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, "CHEQUE"), "Cheque Advance", ++sortOrder);
 
-        // 11. Cash Advance & Salary Advance
-        List<CashAdvance> cashAdvances = cashAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
-        BigDecimal cashAdvanceTotal = BigDecimal.ZERO;
-        BigDecimal salaryAdvanceTotal = BigDecimal.ZERO;
-        for (CashAdvance ca : cashAdvances) {
-            if ("CANCELLED".equals(ca.getStatus())) continue;
-            if ("SALARY_ADVANCE".equals(ca.getAdvanceType())) {
-                salaryAdvanceTotal = salaryAdvanceTotal.add(ca.getAmount());
-            } else {
-                cashAdvanceTotal = cashAdvanceTotal.add(ca.getAmount());
+        // 11. Operational Advances (Cash, Salary, Management)
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        Map<String, BigDecimal> opAdvanceTotals = new HashMap<>();
+        for (OperationalAdvance oa : opAdvances) {
+            if ("CANCELLED".equals(oa.getStatus())) continue;
+            String type = oa.getAdvanceType() != null ? oa.getAdvanceType() : "CASH";
+            opAdvanceTotals.merge(type, oa.getAmount(), BigDecimal::add);
+        }
+        for (Map.Entry<String, BigDecimal> entry : opAdvanceTotals.entrySet()) {
+            if (entry.getValue().compareTo(BigDecimal.ZERO) > 0) {
+                ReportLineItem item = new ReportLineItem();
+                item.setReport(report);
+                item.setSection("ADVANCE");
+                item.setCategory(entry.getKey() + "_ADVANCE");
+                item.setLabel(entry.getKey().substring(0, 1) + entry.getKey().substring(1).toLowerCase() + " Advance");
+                item.setAmount(entry.getValue());
+                item.setSortOrder(++sortOrder);
+                lineItems.add(item);
             }
         }
 
-        if (cashAdvanceTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("ADVANCE");
-            item.setCategory("CASH_ADVANCE");
-            item.setLabel("Cash Advance");
-            item.setAmount(cashAdvanceTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        if (salaryAdvanceTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("ADVANCE");
-            item.setCategory("SALARY_ADVANCE");
-            item.setLabel("Salary Advance");
-            item.setAmount(salaryAdvanceTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        // 12. Expenses (sum of ExpenseTransactions, minus auto-created ones for advances/repayments)
-        BigDecimal expenseTotal = shiftTransactionRepository.sumExpenseByShift(shiftId);
-        // Subtract auto-created expense transactions for cash advances and inflow repayments
-        // to avoid double counting (they're already in Cash Advance / Inflow Repayment lines)
-        BigDecimal autoAdvanceExpenses = BigDecimal.ZERO;
-        for (CashAdvance ca : cashAdvances) {
-            if (!"CANCELLED".equals(ca.getStatus())) {
-                autoAdvanceExpenses = autoAdvanceExpenses.add(ca.getAmount());
-            }
-        }
-        List<CashInflowRepayment> repayments = repaymentRepository.findByShiftIdOrderByRepaymentDateDesc(shiftId);
-        BigDecimal autoRepaymentExpenses = BigDecimal.ZERO;
-        for (CashInflowRepayment r : repayments) {
-            autoRepaymentExpenses = autoRepaymentExpenses.add(r.getAmount());
-        }
-        BigDecimal pureExpenses = expenseTotal.subtract(autoAdvanceExpenses).subtract(autoRepaymentExpenses);
-        if (pureExpenses.compareTo(BigDecimal.ZERO) < 0) {
-            pureExpenses = BigDecimal.ZERO;
-        }
-
-        if (pureExpenses.compareTo(BigDecimal.ZERO) > 0) {
+        // 12. Expenses (from expense table)
+        BigDecimal expenseTotal = expenseRepository.sumByShift(shiftId);
+        if (expenseTotal.compareTo(BigDecimal.ZERO) > 0) {
             ReportLineItem item = new ReportLineItem();
             item.setReport(report);
             item.setSection("ADVANCE");
             item.setCategory("EXPENSES");
             item.setLabel("Expenses");
-            item.setAmount(pureExpenses);
+            item.setAmount(expenseTotal);
             item.setSortOrder(++sortOrder);
             lineItems.add(item);
         }
 
-        // 13. Incentive (total discount from invoices)
-        BigDecimal incentiveTotal = BigDecimal.ZERO;
-        for (InvoiceBill inv : allInvoices) {
-            if (inv.getTotalDiscount() != null && inv.getTotalDiscount().compareTo(BigDecimal.ZERO) > 0) {
-                incentiveTotal = incentiveTotal.add(inv.getTotalDiscount());
-            }
-        }
+        // 13. Incentive (from incentive_payment table)
+        BigDecimal incentiveTotal = incentivePaymentRepository.sumByShift(shiftId);
         if (incentiveTotal.compareTo(BigDecimal.ZERO) > 0) {
             ReportLineItem item = new ReportLineItem();
             item.setReport(report);
@@ -515,30 +477,8 @@ public class ShiftClosingReportService {
             lineItems.add(item);
         }
 
-        // 14. Employee Salary Advance (legacy EmployeeAdvance records during shift's date)
-        if (shift.getStartTime() != null) {
-            java.time.LocalDate shiftDate = shift.getStartTime().toLocalDate();
-            List<EmployeeAdvance> empAdvances = employeeAdvanceRepository
-                    .findByAdvanceDateBetween(shiftDate, shiftDate);
-            BigDecimal empSalaryAdvanceTotal = BigDecimal.ZERO;
-            for (EmployeeAdvance ea : empAdvances) {
-                if (ea.getAmount() != null) {
-                    empSalaryAdvanceTotal = empSalaryAdvanceTotal.add(BigDecimal.valueOf(ea.getAmount()));
-                }
-            }
-            if (empSalaryAdvanceTotal.compareTo(BigDecimal.ZERO) > 0) {
-                ReportLineItem item = new ReportLineItem();
-                item.setReport(report);
-                item.setSection("ADVANCE");
-                item.setCategory("SALARY_ADVANCE");
-                item.setLabel("Salary Advance (Employee)");
-                item.setAmount(empSalaryAdvanceTotal);
-                item.setSortOrder(++sortOrder);
-                lineItems.add(item);
-            }
-        }
-
-        // 15. Inflow Repayments
+        // 14. Inflow Repayments
+        List<CashInflowRepayment> repayments = repaymentRepository.findByShiftIdOrderByRepaymentDateDesc(shiftId);
         BigDecimal repaymentTotal = BigDecimal.ZERO;
         for (CashInflowRepayment r : repayments) {
             repaymentTotal = repaymentTotal.add(r.getAmount());
@@ -579,7 +519,7 @@ public class ShiftClosingReportService {
             item.setCategory(category);
             item.setLabel(label);
             item.setAmount(amount);
-            item.setSourceEntityType("ShiftTransaction");
+            item.setSourceEntityType("EAdvance");
             item.setSortOrder(sortOrder);
             items.add(item);
         }
@@ -660,15 +600,15 @@ public class ShiftClosingReportService {
             return;
         }
 
-        if ("ShiftTransaction".equals(lineItem.getSourceEntityType())) {
-            ShiftTransaction txn = shiftTransactionRepository.findById(lineItem.getSourceEntityId()).orElse(null);
-            if (txn != null) {
-                txn.setReceivedAmount(newAmount);
-                shiftTransactionRepository.save(txn);
+        if ("EAdvance".equals(lineItem.getSourceEntityType())) {
+            EAdvance eAdv = eAdvanceRepository.findById(lineItem.getSourceEntityId()).orElse(null);
+            if (eAdv != null) {
+                eAdv.setAmount(newAmount);
+                eAdvanceRepository.save(eAdv);
 
                 // Check if this was auto-created from a Payment
-                if (txn.getRemarks() != null && txn.getRemarks().startsWith("Auto: Payment #")) {
-                    String paymentIdStr = txn.getRemarks().replace("Auto: Payment #", "").split(" ")[0];
+                if (eAdv.getRemarks() != null && eAdv.getRemarks().startsWith("Auto: Payment #")) {
+                    String paymentIdStr = eAdv.getRemarks().replace("Auto: Payment #", "").split(" ")[0];
                     try {
                         Long paymentId = Long.parseLong(paymentIdStr);
                         Payment payment = paymentRepository.findById(paymentId).orElse(null);
@@ -714,11 +654,11 @@ public class ShiftClosingReportService {
     }
 
     private void transferSourceEntityShift(ReportLineItem lineItem, Long targetShiftId) {
-        if ("ShiftTransaction".equals(lineItem.getSourceEntityType())) {
-            ShiftTransaction txn = shiftTransactionRepository.findById(lineItem.getSourceEntityId()).orElse(null);
-            if (txn != null) {
-                txn.setShiftId(targetShiftId);
-                shiftTransactionRepository.save(txn);
+        if ("EAdvance".equals(lineItem.getSourceEntityType())) {
+            EAdvance eAdv = eAdvanceRepository.findById(lineItem.getSourceEntityId()).orElse(null);
+            if (eAdv != null) {
+                eAdv.setShiftId(targetShiftId);
+                eAdvanceRepository.save(eAdv);
             }
         }
     }
@@ -953,56 +893,44 @@ public class ShiftClosingReportService {
             data.getStockPosition().add(posRow);
         }
 
-        // Advance Entry Details (individual transactions)
-        List<ShiftTransaction> allTxns = shiftTransactionRepository.findByShiftId(shiftId);
-        for (ShiftTransaction txn : allTxns) {
-            String txnType = txn.getClass().getSimpleName().replace("Transaction", "").toUpperCase();
-            if ("CASH".equals(txnType) || "NIGHTCASH".equals(txnType)) continue; // skip cash-in transactions
-            if ("EXPENSE".equals(txnType)) {
-                // Check if it's an auto-created expense for advance/repayment — skip those
-                if (txn.getRemarks() != null && (txn.getRemarks().startsWith("Auto: Advance #")
-                        || txn.getRemarks().startsWith("Auto: Inflow Repayment"))) {
-                    continue;
-                }
-            }
-
+        // Advance Entry Details — EAdvance entries (Card, UPI, Cheque, CCMS, Bank)
+        List<EAdvance> eAdvances = eAdvanceRepository.findByShiftIdOrderByTransactionDateDesc(shiftId);
+        for (EAdvance eAdv : eAdvances) {
             ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            entry.setType(txnType);
-            entry.setDescription(txn.getRemarks() != null ? txn.getRemarks() : "-");
-            entry.setAmount(txn.getReceivedAmount());
+            entry.setType(eAdv.getAdvanceType() != null ? eAdv.getAdvanceType() : "OTHER");
+            entry.setDescription(eAdv.getRemarks() != null ? eAdv.getRemarks() : "-");
+            entry.setAmount(eAdv.getAmount());
             data.getAdvanceEntries().add(entry);
         }
 
-        // Add cash advances as advance entries
-        List<CashAdvance> cashAdvances = cashAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
-        for (CashAdvance ca : cashAdvances) {
-            if ("CANCELLED".equals(ca.getStatus())) continue;
+        // Add operational advances as advance entries
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        for (OperationalAdvance oa : opAdvances) {
+            if ("CANCELLED".equals(oa.getStatus())) continue;
             ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            String type = "SALARY_ADVANCE".equals(ca.getAdvanceType()) ? "SAL_ADV" : "CASH_ADV";
-            entry.setType(type);
-            String desc = ca.getRecipientName() != null ? ca.getRecipientName() : "-";
-            // Show linked invoices and statement info
+            entry.setType(oa.getAdvanceType() != null ? oa.getAdvanceType() : "CASH");
+            String desc = oa.getRecipientName() != null ? oa.getRecipientName() : "-";
             StringBuilder linkInfo = new StringBuilder();
-            if (ca.getInvoiceBills() != null && !ca.getInvoiceBills().isEmpty()) {
-                for (InvoiceBill ib : ca.getInvoiceBills()) {
+            if (oa.getInvoiceBills() != null && !oa.getInvoiceBills().isEmpty()) {
+                for (InvoiceBill ib : oa.getInvoiceBills()) {
                     if (linkInfo.length() > 0) linkInfo.append(", ");
                     linkInfo.append(ib.getBillNo() != null ? ib.getBillNo() : "#" + ib.getId());
                     linkInfo.append("(").append(ib.getBillType()).append(")");
                 }
             }
-            if (ca.getStatement() != null) {
+            if (oa.getStatement() != null) {
                 if (linkInfo.length() > 0) linkInfo.append(", ");
-                linkInfo.append("Stmt#").append(ca.getStatement().getStatementNo());
+                linkInfo.append("Stmt#").append(oa.getStatement().getStatementNo());
             }
             if (linkInfo.length() > 0) {
                 desc += " [" + linkInfo + "]";
             }
-            if (ca.getUtilizedAmount() != null && ca.getUtilizedAmount().compareTo(BigDecimal.ZERO) > 0) {
-                desc += " Util:" + ca.getUtilizedAmount().setScale(2, RoundingMode.HALF_UP);
+            if (oa.getUtilizedAmount() != null && oa.getUtilizedAmount().compareTo(BigDecimal.ZERO) > 0) {
+                desc += " Util:" + oa.getUtilizedAmount().setScale(2, RoundingMode.HALF_UP);
             }
             entry.setDescription(desc);
-            entry.setAmount(ca.getAmount());
-            entry.setReference(ca.getPurpose());
+            entry.setAmount(oa.getAmount());
+            entry.setReference(oa.getPurpose());
             data.getAdvanceEntries().add(entry);
         }
 
@@ -1031,18 +959,7 @@ public class ShiftClosingReportService {
             data.getAdvanceEntries().add(entry);
         }
 
-        // Add salary advances
-        if (shift.getStartTime() != null) {
-            java.time.LocalDate shiftDate = shift.getStartTime().toLocalDate();
-            List<EmployeeAdvance> empAdvances = employeeAdvanceRepository.findByAdvanceDateBetween(shiftDate, shiftDate);
-            for (EmployeeAdvance ea : empAdvances) {
-                ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-                entry.setType("SAL_ADV");
-                entry.setDescription(ea.getEmployee() != null ? ea.getEmployee().getName() : "-");
-                entry.setAmount(ea.getAmount() != null ? BigDecimal.valueOf(ea.getAmount()) : BigDecimal.ZERO);
-                data.getAdvanceEntries().add(entry);
-            }
-        }
+        // (Employee advances are now covered by Operational Advances above)
 
         // Payment Entries (bill and statement payments)
         List<Payment> shiftPayments = paymentRepository.findByShiftId(shiftId);

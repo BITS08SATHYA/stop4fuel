@@ -46,7 +46,7 @@ interface StatementRef {
     status: string;
 }
 
-interface CashAdvance {
+interface OperationalAdvance {
     id: number;
     advanceDate: string;
     amount: number;
@@ -76,7 +76,7 @@ interface InvoiceBill {
     vehicle: { id: number; vehicleNumber: string } | null;
     paymentMode: string;
     billDesc: string;
-    cashAdvance: { id: number } | null;
+    operationalAdvance: { id: number } | null;
 }
 
 // --- Constants ---
@@ -84,6 +84,7 @@ interface InvoiceBill {
 const ADVANCE_TYPES = [
     { value: "CASH_ADVANCE", label: "Cash Advance", icon: Banknote, color: "text-blue-500 bg-blue-500/10" },
     { value: "SALARY_ADVANCE", label: "Salary Advance", icon: Wallet, color: "text-emerald-500 bg-emerald-500/10" },
+    { value: "MANAGEMENT", label: "Management", icon: Receipt, color: "text-purple-500 bg-purple-500/10" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -116,14 +117,14 @@ function formatCurrency(val?: number) {
 
 // --- API helpers ---
 
-async function fetchAdvances(): Promise<CashAdvance[]> {
-    const res = await fetch(`${API_BASE_URL}/advances`);
+async function fetchAdvances(): Promise<OperationalAdvance[]> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances`);
     if (!res.ok) throw new Error("Failed to fetch advances");
     return res.json();
 }
 
-async function fetchAdvanceById(id: number): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE_URL}/advances/${id}`);
+async function fetchAdvanceById(id: number): Promise<OperationalAdvance> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${id}`);
     if (!res.ok) throw new Error("Failed to fetch advance");
     return res.json();
 }
@@ -132,7 +133,9 @@ async function fetchActiveShift(): Promise<{ id: number } | null> {
     try {
         const res = await fetch(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
-        return res.json();
+        const text = await res.text();
+        if (!text) return null;
+        return JSON.parse(text);
     } catch {
         return null;
     }
@@ -166,8 +169,8 @@ async function createAdvance(data: {
     purpose: string;
     remarks: string;
     employee?: { id: number } | null;
-}): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE_URL}/advances`, {
+}): Promise<OperationalAdvance> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -179,8 +182,8 @@ async function createAdvance(data: {
     return res.json();
 }
 
-async function returnAdvance(id: number, data: { returnedAmount: number; returnRemarks: string }): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE_URL}/advances/${id}/return`, {
+async function returnAdvance(id: number, data: { returnedAmount: number; returnRemarks: string }): Promise<OperationalAdvance> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${id}/return`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -193,7 +196,7 @@ async function returnAdvance(id: number, data: { returnedAmount: number; returnR
 }
 
 async function cancelAdvance(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/advances/${id}/cancel`, { method: "PATCH" });
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${id}/cancel`, { method: "PATCH" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to cancel advance");
@@ -201,15 +204,15 @@ async function cancelAdvance(id: number): Promise<void> {
 }
 
 async function deleteAdvance(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/advances/${id}`, { method: "DELETE" });
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${id}`, { method: "DELETE" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to delete advance");
     }
 }
 
-async function assignInvoice(advanceId: number, invoiceId: number): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/invoices/${invoiceId}`, { method: "POST" });
+async function assignInvoice(advanceId: number, invoiceId: number): Promise<OperationalAdvance> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/invoices/${invoiceId}`, { method: "POST" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to assign invoice");
@@ -217,8 +220,8 @@ async function assignInvoice(advanceId: number, invoiceId: number): Promise<Cash
     return res.json();
 }
 
-async function unassignInvoice(advanceId: number, invoiceId: number): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/invoices/${invoiceId}`, { method: "DELETE" });
+async function unassignInvoice(advanceId: number, invoiceId: number): Promise<OperationalAdvance> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/invoices/${invoiceId}`, { method: "DELETE" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to unassign invoice");
@@ -227,13 +230,13 @@ async function unassignInvoice(advanceId: number, invoiceId: number): Promise<Ca
 }
 
 async function fetchAssignedInvoices(advanceId: number): Promise<InvoiceBill[]> {
-    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/invoices`);
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/invoices`);
     if (!res.ok) return [];
     return res.json();
 }
 
-async function assignStatement(advanceId: number, statementId: number): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/statement/${statementId}`, { method: "POST" });
+async function assignStatement(advanceId: number, statementId: number): Promise<OperationalAdvance> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/statement/${statementId}`, { method: "POST" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to assign statement");
@@ -241,8 +244,8 @@ async function assignStatement(advanceId: number, statementId: number): Promise<
     return res.json();
 }
 
-async function unassignStatement(advanceId: number): Promise<CashAdvance> {
-    const res = await fetch(`${API_BASE_URL}/advances/${advanceId}/statement`, { method: "DELETE" });
+async function unassignStatement(advanceId: number): Promise<OperationalAdvance> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/statement`, { method: "DELETE" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to unassign statement");
@@ -258,8 +261,8 @@ async function fetchOutstandingStatements(): Promise<StatementRef[]> {
 
 // --- Page Component ---
 
-export default function CashAdvancesPage() {
-    const [advances, setAdvances] = useState<CashAdvance[]>([]);
+export default function OperationalAdvancesPage() {
+    const [advances, setAdvances] = useState<OperationalAdvance[]>([]);
     const [activeShift, setActiveShift] = useState<{ id: number } | null>(null);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -282,7 +285,7 @@ export default function CashAdvancesPage() {
 
     // Return Modal
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
-    const [returnTarget, setReturnTarget] = useState<CashAdvance | null>(null);
+    const [returnTarget, setReturnTarget] = useState<OperationalAdvance | null>(null);
     const [returnAmount, setReturnAmount] = useState("");
     const [returnRemarks, setReturnRemarks] = useState("");
 
@@ -299,7 +302,7 @@ export default function CashAdvancesPage() {
 
     // Detail / Invoice & Statement Assignment Modal
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [detailAdvance, setDetailAdvance] = useState<CashAdvance | null>(null);
+    const [detailAdvance, setDetailAdvance] = useState<OperationalAdvance | null>(null);
     const [assignedInvoices, setAssignedInvoices] = useState<InvoiceBill[]>([]);
     const [availableInvoices, setAvailableInvoices] = useState<InvoiceBill[]>([]);
     const [showAssignPanel, setShowAssignPanel] = useState(false);
@@ -419,7 +422,7 @@ export default function CashAdvancesPage() {
         }
     };
 
-    const handleOpenReturnModal = (adv: CashAdvance) => {
+    const handleOpenReturnModal = (adv: OperationalAdvance) => {
         setReturnTarget(adv);
         setReturnAmount("");
         setReturnRemarks("");
@@ -449,7 +452,7 @@ export default function CashAdvancesPage() {
         }
     };
 
-    const handleCancel = async (adv: CashAdvance) => {
+    const handleCancel = async (adv: OperationalAdvance) => {
         if (!confirm(`Cancel advance of Rs.${formatCurrency(adv.amount)} to ${adv.recipientName}?`)) return;
         try {
             await cancelAdvance(adv.id);
@@ -459,7 +462,7 @@ export default function CashAdvancesPage() {
         }
     };
 
-    const handleDelete = async (adv: CashAdvance) => {
+    const handleDelete = async (adv: OperationalAdvance) => {
         if (!confirm(`Delete this advance record permanently?`)) return;
         try {
             await deleteAdvance(adv.id);
@@ -470,7 +473,7 @@ export default function CashAdvancesPage() {
     };
 
     // --- Detail / Invoice Assignment ---
-    const handleOpenDetail = async (adv: CashAdvance) => {
+    const handleOpenDetail = async (adv: OperationalAdvance) => {
         setDetailAdvance(adv);
         setShowAssignPanel(false);
         setInvoiceSearch("");
@@ -490,7 +493,7 @@ export default function CashAdvancesPage() {
                 const all = await fetchShiftInvoices(detailAdvance.shiftId);
                 // Filter out already assigned invoices
                 const assignedIds = new Set(assignedInvoices.map((inv) => inv.id));
-                setAvailableInvoices(all.filter((inv) => !assignedIds.has(inv.id) && !inv.cashAdvance));
+                setAvailableInvoices(all.filter((inv) => !assignedIds.has(inv.id) && !inv.operationalAdvance));
             } catch {
                 setAvailableInvoices([]);
             }
@@ -579,10 +582,10 @@ export default function CashAdvancesPage() {
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-4xl font-bold text-foreground tracking-tight">
-                            Cash <span className="text-gradient">Advances</span>
+                            Operational <span className="text-gradient">Advances</span>
                         </h1>
                         <p className="text-muted-foreground mt-2">
-                            Track cash advances, salary advances, and their settlements with invoices.
+                            Track operational advances (cash, salary, management) and their settlements.
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -595,13 +598,8 @@ export default function CashAdvancesPage() {
                         <PermissionGate permission="FINANCE_MANAGE">
                             <button
                                 onClick={handleOpenAddModal}
-                                disabled={!activeShift}
-                                title={!activeShift ? "Open a shift first to record advances" : "Record a new cash advance"}
-                                className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg transition-all ${
-                                    activeShift
-                                        ? "btn-gradient hover:shadow-xl"
-                                        : "bg-gray-500/10 text-gray-500 border border-gray-500/20 cursor-not-allowed shadow-none"
-                                }`}
+                                title="Record a new advance"
+                                className="btn-gradient px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
                             >
                                 <Plus className="w-4 h-4" />
                                 Record Advance
@@ -843,7 +841,7 @@ export default function CashAdvancesPage() {
             <Modal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
-                title="Record Cash Advance"
+                title="Record Advance"
             >
                 <form onSubmit={handleCreateAdvance} className="space-y-4">
                     <FormErrorBanner message={advApiError} onDismiss={() => setAdvApiError("")} />

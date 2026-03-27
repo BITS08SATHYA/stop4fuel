@@ -2,7 +2,6 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.*;
-import com.stopforfuel.backend.entity.transaction.*;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
@@ -36,7 +35,7 @@ public class InvoiceBillService {
     private final CustomerService customerService;
     private final IncentiveService incentiveService;
     private final ShiftService shiftService;
-    private final ShiftTransactionService shiftTransactionService;
+    private final EAdvanceService eAdvanceService;
     private final BillSequenceService billSequenceService;
 
     public List<InvoiceBill> getAllInvoices() {
@@ -308,17 +307,17 @@ public class InvoiceBillService {
     }
 
     /**
-     * Auto-creates a shift transaction entry when a CASH invoice is created.
-     * Maps the invoice payment mode to the appropriate transaction type.
+     * Auto-creates an EAdvance entry when a CASH invoice is paid via electronic mode.
+     * Cash payments need no separate record — the InvoiceBill itself is the source of truth.
      */
     private void autoCreateShiftTransaction(InvoiceBill invoice) {
         if (!"CASH".equals(invoice.getBillType())) {
-            return; // Only auto-create for cash invoices
+            return;
         }
 
         Shift activeShift = shiftService.getActiveShift();
         if (activeShift == null) {
-            return; // No open shift, skip auto-creation
+            return;
         }
 
         BigDecimal amount = invoice.getNetAmount();
@@ -329,55 +328,35 @@ public class InvoiceBillService {
         String paymentMode = invoice.getPaymentMode();
         if (paymentMode == null) paymentMode = "CASH";
 
-        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : null;
-        String remark = "Auto: Invoice #" + invoice.getId()
-                + (customerName != null ? " - " + customerName : "");
-
-        ShiftTransaction txn;
-        switch (paymentMode.toUpperCase()) {
+        String upperMode = paymentMode.toUpperCase();
+        // Only create EAdvance for electronic payment modes
+        switch (upperMode) {
             case "UPI":
-                UpiTransaction upiTxn = new UpiTransaction();
-                upiTxn.setReceivedAmount(amount);
-                upiTxn.setRemarks(remark);
-                txn = upiTxn;
-                break;
             case "CARD":
-                CardTransaction cardTxn = new CardTransaction();
-                cardTxn.setReceivedAmount(amount);
-                cardTxn.setRemarks(remark);
-                if (customerName != null) cardTxn.setCustomerName(customerName);
-                txn = cardTxn;
-                break;
             case "CHEQUE":
-                ChequeTransaction chequeTxn = new ChequeTransaction();
-                chequeTxn.setReceivedAmount(amount);
-                chequeTxn.setRemarks(remark);
-                txn = chequeTxn;
-                break;
             case "BANK TRANSFER":
             case "BANK":
-                BankTransaction bankTxn = new BankTransaction();
-                bankTxn.setReceivedAmount(amount);
-                bankTxn.setRemarks(remark);
-                txn = bankTxn;
-                break;
             case "CCMS":
-                CcmsTransaction ccmsTxn = new CcmsTransaction();
-                ccmsTxn.setReceivedAmount(amount);
-                ccmsTxn.setRemarks(remark);
-                txn = ccmsTxn;
+                String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : null;
+                String remark = "Auto: Invoice #" + invoice.getId()
+                        + (customerName != null ? " - " + customerName : "");
+                EAdvance eAdv = new EAdvance();
+                eAdv.setAmount(amount);
+                eAdv.setRemarks(remark);
+                eAdv.setShiftId(activeShift.getId());
+                eAdv.setScid(invoice.getScid());
+                String type = "BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode;
+                eAdv.setAdvanceType(type);
+                eAdv.setInvoiceBill(invoice);
+                if ("CARD".equals(upperMode) && customerName != null) {
+                    eAdv.setCustomerName(customerName);
+                }
+                eAdvanceService.create(eAdv);
                 break;
             default:
-                CashTransaction cashTxn = new CashTransaction();
-                cashTxn.setReceivedAmount(amount);
-                cashTxn.setRemarks(remark);
-                txn = cashTxn;
+                // CASH — no separate record needed, InvoiceBill is the source of truth
                 break;
         }
-
-        txn.setShiftId(activeShift.getId());
-        txn.setScid(invoice.getScid());
-        shiftTransactionService.create(txn);
     }
 
     /**

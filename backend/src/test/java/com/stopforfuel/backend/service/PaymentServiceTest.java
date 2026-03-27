@@ -36,7 +36,7 @@ class PaymentServiceTest {
     @Mock
     private ShiftService shiftService;
     @Mock
-    private ShiftTransactionService shiftTransactionService;
+    private EAdvanceService eAdvanceService;
 
     @InjectMocks
     private PaymentService paymentService;
