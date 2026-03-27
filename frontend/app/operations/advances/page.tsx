@@ -20,6 +20,7 @@ import {
     Unlink,
     Receipt,
     ChevronRight,
+    Calendar,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
@@ -259,6 +260,18 @@ async function fetchOutstandingStatements(): Promise<StatementRef[]> {
     return res.json();
 }
 
+async function fetchAdvancesByShift(shiftId: number): Promise<OperationalAdvance[]> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances/shift/${shiftId}`);
+    if (!res.ok) throw new Error("Failed to fetch advances");
+    return res.json();
+}
+
+async function fetchAdvancesByDateRange(fromDate: string, toDate: string): Promise<OperationalAdvance[]> {
+    const res = await fetch(`${API_BASE_URL}/operational-advances/search?fromDate=${fromDate}&toDate=${toDate}`);
+    if (!res.ok) throw new Error("Failed to fetch advances");
+    return res.json();
+}
+
 // --- Page Component ---
 
 export default function OperationalAdvancesPage() {
@@ -271,6 +284,9 @@ export default function OperationalAdvancesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [typeFilter, setTypeFilter] = useState("ALL");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [viewMode, setViewMode] = useState<"shift" | "dates">("shift");
 
     // Record Advance Modal
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -310,17 +326,38 @@ export default function OperationalAdvancesPage() {
     const [availableStatements, setAvailableStatements] = useState<StatementRef[]>([]);
     const [showStatementPanel, setShowStatementPanel] = useState(false);
 
+    const loadAdvances = useCallback(async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
+        setIsLoading(true);
+        try {
+            let data: OperationalAdvance[];
+            if (mode === "dates" && from && to) {
+                data = await fetchAdvancesByDateRange(from, to);
+            } else if (mode === "shift" && shiftId) {
+                data = await fetchAdvancesByShift(shiftId);
+            } else {
+                data = [];
+            }
+            setAdvances(data);
+        } catch (err) {
+            console.error("Failed to load advances", err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [advs, shift, emps] = await Promise.all([
-                fetchAdvances(),
+            const [shift, emps] = await Promise.all([
                 fetchActiveShift(),
                 fetchEmployees(),
             ]);
-            setAdvances(advs);
             setActiveShift(shift);
             setEmployees(emps);
+            if (shift?.id) {
+                const advs = await fetchAdvancesByShift(shift.id);
+                setAdvances(advs);
+            }
         } catch (err) {
             console.error("Failed to load data", err);
         } finally {
@@ -331,6 +368,32 @@ export default function OperationalAdvancesPage() {
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    const handleDateSearch = () => {
+        if (fromDate && toDate) {
+            setViewMode("dates");
+            loadAdvances("dates", null, fromDate, toDate);
+        }
+    };
+
+    const handleShowCurrentShift = () => {
+        setViewMode("shift");
+        setFromDate("");
+        setToDate("");
+        if (activeShift?.id) {
+            loadAdvances("shift", activeShift.id);
+        } else {
+            setAdvances([]);
+        }
+    };
+
+    const reloadCurrentView = async () => {
+        if (viewMode === "dates" && fromDate && toDate) {
+            loadAdvances("dates", null, fromDate, toDate);
+        } else if (activeShift?.id) {
+            loadAdvances("shift", activeShift.id);
+        }
+    };
 
     // --- Summary calculations ---
     const summary = useMemo(() => {
@@ -414,7 +477,7 @@ export default function OperationalAdvancesPage() {
                 employee: addEmployeeId ? { id: addEmployeeId } : null,
             });
             setIsAddModalOpen(false);
-            await loadData();
+            await reloadCurrentView();
         } catch (err: any) {
             setAdvApiError(err.message || "Failed to create advance");
         } finally {
@@ -444,7 +507,7 @@ export default function OperationalAdvancesPage() {
             });
             setIsReturnModalOpen(false);
             setReturnTarget(null);
-            await loadData();
+            await reloadCurrentView();
         } catch (err: any) {
             setAdvApiError(err.message || "Failed to record return");
         } finally {
@@ -456,7 +519,7 @@ export default function OperationalAdvancesPage() {
         if (!confirm(`Cancel advance of Rs.${formatCurrency(adv.amount)} to ${adv.recipientName}?`)) return;
         try {
             await cancelAdvance(adv.id);
-            await loadData();
+            await reloadCurrentView();
         } catch (err: any) {
             alert(err.message || "Failed to cancel advance");
         }
@@ -466,7 +529,7 @@ export default function OperationalAdvancesPage() {
         if (!confirm(`Delete this advance record permanently?`)) return;
         try {
             await deleteAdvance(adv.id);
-            await loadData();
+            await reloadCurrentView();
         } catch (err: any) {
             alert(err.message || "Failed to delete advance");
         }
@@ -508,7 +571,7 @@ export default function OperationalAdvancesPage() {
             const invoices = await fetchAssignedInvoices(detailAdvance.id);
             setAssignedInvoices(invoices);
             setAvailableInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
-            await loadData();
+            await reloadCurrentView();
         } catch (err: any) {
             alert(err.message || "Failed to assign invoice");
         }
@@ -521,7 +584,7 @@ export default function OperationalAdvancesPage() {
             setDetailAdvance(updated);
             const invoices = await fetchAssignedInvoices(detailAdvance.id);
             setAssignedInvoices(invoices);
-            await loadData();
+            await reloadCurrentView();
         } catch (err: any) {
             alert(err.message || "Failed to unassign invoice");
         }
@@ -543,7 +606,7 @@ export default function OperationalAdvancesPage() {
             const updated = await assignStatement(detailAdvance.id, statementId);
             setDetailAdvance(updated);
             setShowStatementPanel(false);
-            await loadData();
+            await reloadCurrentView();
         } catch (err: any) {
             alert(err.message || "Failed to assign statement");
         }
@@ -554,7 +617,7 @@ export default function OperationalAdvancesPage() {
         try {
             const updated = await unassignStatement(detailAdvance.id);
             setDetailAdvance(updated);
-            await loadData();
+            await reloadCurrentView();
         } catch (err: any) {
             alert(err.message || "Failed to unassign statement");
         }
@@ -697,6 +760,51 @@ export default function OperationalAdvancesPage() {
                                 <option value="CASH_ADVANCE">Cash Advance</option>
                                 <option value="SALARY_ADVANCE">Salary Advance</option>
                             </select>
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                                    <input
+                                        type="date"
+                                        value={fromDate}
+                                        onChange={(e) => setFromDate(e.target.value)}
+                                        className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    />
+                                </div>
+                                <span className="text-muted-foreground text-sm">to</span>
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                                <button
+                                    onClick={handleDateSearch}
+                                    disabled={!fromDate || !toDate}
+                                    className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Search
+                                </button>
+                            </div>
+                            {viewMode === "dates" && (
+                                <button
+                                    onClick={handleShowCurrentShift}
+                                    className="px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
+                                >
+                                    Current Shift
+                                </button>
+                            )}
+                        </div>
+
+                        {/* View indicator */}
+                        <div className="mb-3">
+                            <span className="text-xs text-muted-foreground">
+                                {viewMode === "shift"
+                                    ? activeShift
+                                        ? `Showing current shift #${activeShift.id} entries`
+                                        : "No active shift"
+                                    : `Showing entries from ${fromDate} to ${toDate}`
+                                }
+                            </span>
                         </div>
 
                         {/* Advances Table */}

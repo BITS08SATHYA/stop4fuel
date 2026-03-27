@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +37,16 @@ public class EAdvanceService {
 
     public List<EAdvance> getByType(String advanceType) {
         return repository.findByAdvanceTypeOrderByTransactionDateDesc(advanceType);
+    }
+
+    public List<EAdvance> getByDateRange(LocalDate fromDate, LocalDate toDate, String type) {
+        LocalDateTime from = fromDate.atStartOfDay();
+        LocalDateTime to = toDate.atTime(LocalTime.MAX);
+        Long scid = SecurityUtils.getScid();
+        if (type != null && !type.isBlank()) {
+            return repository.findByDateRangeAndType(scid, from, to, type);
+        }
+        return repository.findByDateRange(scid, from, to);
     }
 
     @Transactional
