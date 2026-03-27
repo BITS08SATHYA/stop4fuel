@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
-import { getDashboardStats, DashboardStats } from "@/lib/api/station";
+import { getDashboardStats, DashboardStats, checkStockAlerts, StockAlert } from "@/lib/api/station";
 import {
     IndianRupee,
     Fuel,
@@ -18,6 +18,7 @@ import {
     BarChart3,
     ArrowUpRight,
     ArrowDownRight,
+    AlertTriangle,
 } from "lucide-react";
 import {
     AreaChart,
@@ -70,6 +71,7 @@ const PRODUCT_COLORS = ["#f97316", "#06b6d4", "#8b5cf6", "#10b981", "#ef4444", "
 
 export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +80,7 @@ export default function DashboardPage() {
             .then(setStats)
             .catch((err) => setError(err.message || "Failed to load dashboard"))
             .finally(() => setIsLoading(false));
+        checkStockAlerts().then(setStockAlerts).catch(() => {});
     }, []);
 
     if (isLoading) {
@@ -136,6 +139,26 @@ export default function DashboardPage() {
                         Real-time overview of your fuel station operations.
                     </p>
                 </div>
+
+                {/* Low Stock Alert Banner */}
+                {stockAlerts.length > 0 && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center gap-3">
+                        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                        <div className="flex-1">
+                            <span className="font-semibold text-red-500">Low Stock Alert:</span>
+                            <span className="text-sm text-foreground ml-2">
+                                {stockAlerts.map(a => `${a.tank.name} (${a.availableStock.toLocaleString()} L)`).join(", ")}
+                                {" "}&mdash; below threshold level
+                            </span>
+                        </div>
+                        <a
+                            href="/operations/dashboard"
+                            className="text-xs font-medium text-red-500 hover:text-red-400 underline whitespace-nowrap"
+                        >
+                            View Details
+                        </a>
+                    </div>
+                )}
 
                 {/* Active Shift Banner */}
                 {stats.activeShiftId && (

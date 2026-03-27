@@ -72,6 +72,7 @@ export interface Tank {
     name: string;
     capacity: number;
     availableStock: number;
+    thresholdStock?: number;
     product: Product;
     active: boolean;
 }
@@ -440,6 +441,73 @@ export const updateTank = (id: number, tank: Partial<Tank>): Promise<Tank> =>
 
 export const deleteTank = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/tanks/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const getLowStockTanks = (): Promise<Tank[]> =>
+    fetchWithAuth(`${API_BASE_URL}/tanks/low-stock`).then(handleResponse);
+
+// Stock Alerts
+export interface StockAlert {
+    id: number;
+    tank: Tank;
+    availableStock: number;
+    thresholdStock: number;
+    message: string;
+    active: boolean;
+    acknowledgedAt?: string;
+    acknowledgedBy?: string;
+    notifiedVia?: string;
+    createdAt: string;
+}
+
+export const getActiveStockAlerts = (): Promise<StockAlert[]> =>
+    fetchWithAuth(`${API_BASE_URL}/stock-alerts`).then(handleResponse);
+
+export const checkStockAlerts = (): Promise<StockAlert[]> =>
+    fetchWithAuth(`${API_BASE_URL}/stock-alerts/check`, { method: 'POST' }).then(handleResponse);
+
+export const acknowledgeStockAlert = (id: number): Promise<StockAlert> =>
+    fetchWithAuth(`${API_BASE_URL}/stock-alerts/${id}/acknowledge`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+    }).then(handleResponse);
+
+export const acknowledgeAllStockAlerts = (): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/stock-alerts/acknowledge-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+    }).then(handleResponse);
+
+// Notification Config
+export interface NotificationConfig {
+    id?: number;
+    alertType: string;
+    enabled: boolean;
+    notifyRoles: string[];
+    channels: string[];
+}
+
+export interface RoleOption {
+    id: number;
+    roleType: string;
+}
+
+export const getNotificationConfigs = (): Promise<NotificationConfig[]> =>
+    fetchWithAuth(`${API_BASE_URL}/notification-config`).then(handleResponse);
+
+export const getNotificationConfigByType = (alertType: string): Promise<NotificationConfig> =>
+    fetchWithAuth(`${API_BASE_URL}/notification-config/${alertType}`).then(handleResponse);
+
+export const saveNotificationConfig = (config: NotificationConfig): Promise<NotificationConfig> =>
+    fetchWithAuth(`${API_BASE_URL}/notification-config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+    }).then(handleResponse);
+
+export const getAvailableRoles = (): Promise<RoleOption[]> =>
+    fetchWithAuth(`${API_BASE_URL}/notification-config/roles`).then(handleResponse);
 
 // Pumps
 export const getPumps = (): Promise<Pump[]> =>

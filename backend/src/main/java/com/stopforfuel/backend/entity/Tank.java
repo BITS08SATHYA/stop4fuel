@@ -33,6 +33,14 @@ public class Tank extends BaseEntity {
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product product;
 
+    @PositiveOrZero(message = "Threshold stock must be zero or positive")
+    @Column(name = "threshold_stock")
+    private Double thresholdStock;
+
     @Column(nullable = false)
     private boolean active = true;
+
+    public boolean isBelowThreshold() {
+        return thresholdStock != null && thresholdStock > 0 && availableStock <= thresholdStock;
+    }
 }

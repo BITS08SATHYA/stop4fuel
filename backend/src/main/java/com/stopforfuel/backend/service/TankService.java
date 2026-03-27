@@ -64,6 +64,7 @@ public class TankService {
         if (tankDetails.getAvailableStock() != null) {
             tank.setAvailableStock(tankDetails.getAvailableStock());
         }
+        tank.setThresholdStock(tankDetails.getThresholdStock());
         if (tankDetails.getProduct() != null && tankDetails.getProduct().getId() != null) {
             Product product = productRepository.findById(tankDetails.getProduct().getId())
                     .orElseThrow(() -> new RuntimeException("Product not found with id: " + tankDetails.getProduct().getId()));
@@ -98,6 +99,12 @@ public class TankService {
         }
         tank.setActive(newStatus);
         return tankRepository.save(tank);
+    }
+
+    public List<Tank> getLowStockTanks() {
+        return tankRepository.findByActiveAndScid(true, SecurityUtils.getScid()).stream()
+                .filter(Tank::isBelowThreshold)
+                .toList();
     }
 
     public void deleteTank(Long id) {
