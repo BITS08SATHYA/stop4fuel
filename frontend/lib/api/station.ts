@@ -1046,7 +1046,7 @@ export interface Shift {
     id: number;
     startTime: string;
     endTime?: string;
-    status: string; // OPEN, CLOSED, RECONCILED
+    status: string; // OPEN, REVIEW, CLOSED
     attendant?: User;
     scid?: number;
 }
@@ -2142,3 +2142,82 @@ export const recordCashInflowRepayment = (inflowId: number, repayment: Partial<C
 
 export const getCashInflowRepayments = (inflowId: number): Promise<CashInflowRepayment[]> =>
     fetchWithAuth(`${API_BASE_URL}/cash-inflows/${inflowId}/repayments`).then(handleResponse);
+
+// --- Shift Closing Workspace ---
+
+export interface NozzleReadingRow {
+    nozzleId: number;
+    nozzleName: string;
+    pumpName?: string;
+    productName?: string;
+    productPrice?: number;
+    openMeterReading: number;
+}
+
+export interface TankDipRow {
+    tankId: number;
+    tankName: string;
+    productName?: string;
+    capacity?: number;
+    openDip?: string;
+    openStock: number;
+}
+
+export interface ShiftClosingData {
+    shiftId: number;
+    shiftStatus: string;
+    startTime: string;
+    attendantName?: string;
+    nozzleReadings: NozzleReadingRow[];
+    tankDips: TankDipRow[];
+    billPaymentTotal?: number;
+    statementPaymentTotal?: number;
+    externalInflowTotal?: number;
+    creditBillTotal?: number;
+    eAdvanceTotals?: Record<string, number>;
+    opAdvanceTotals?: Record<string, number>;
+    expenseTotal?: number;
+    incentiveTotal?: number;
+    inflowRepaymentTotal?: number;
+}
+
+export interface NozzleReadingInput {
+    nozzleId: number;
+    openMeterReading?: number;
+    closeMeterReading: number;
+    testQuantity?: number;
+}
+
+export interface TankDipInput {
+    tankId: number;
+    openDip?: string;
+    openStock?: number;
+    incomeStock?: number;
+    closeDip: string;
+    closeStock: number;
+}
+
+export interface ShiftClosingSubmit {
+    nozzleReadings: NozzleReadingInput[];
+    tankDips: TankDipInput[];
+}
+
+export const getShiftClosingData = (shiftId: number): Promise<ShiftClosingData> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/closing-data`).then(handleResponse);
+
+export const submitShiftForReview = (shiftId: number, data: ShiftClosingSubmit): Promise<Shift> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/submit-for-review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    }).then(handleResponse);
+
+export const approveShift = (shiftId: number): Promise<Shift> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/approve`, {
+        method: 'POST',
+    }).then(handleResponse);
+
+export const reopenShift = (shiftId: number): Promise<Shift> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/reopen`, {
+        method: 'POST',
+    }).then(handleResponse);

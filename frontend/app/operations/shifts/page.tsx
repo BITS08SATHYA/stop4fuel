@@ -8,7 +8,7 @@ import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import {
     getActiveShift,
     openShift,
-    closeShift,
+
     getEAdvancesByShift,
     getEAdvanceSummary,
     createEAdvance,
@@ -231,18 +231,9 @@ export default function ShiftsPage() {
         }
     };
 
-    const handleCloseShift = async () => {
+    const handleCloseShift = () => {
         if (!activeShift) return;
-        if (!confirm("Close this shift? This will generate the closing report.")) return;
-        try {
-            const closedShiftId = activeShift.id;
-            await closeShift(activeShift.id);
-            setActiveShift(null);
-
-            router.push(`/operations/shifts/report/${closedShiftId}`);
-        } catch (err: any) {
-            alert(err.message || "Failed to close shift");
-        }
+        router.push(`/operations/shifts/close/${activeShift.id}`);
     };
 
     const resetForm = () => {

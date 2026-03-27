@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
+import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.service.ShiftService;
 import lombok.RequiredArgsConstructor;
@@ -38,5 +40,31 @@ public class ShiftController {
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
     public Shift close(@PathVariable Long id) {
         return service.closeShift(id);
+    }
+
+    // ========== Shift Closing Workspace ==========
+
+    @GetMapping("/{id}/closing-data")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public ShiftClosingDataDTO getClosingData(@PathVariable Long id) {
+        return service.getShiftClosingData(id);
+    }
+
+    @PostMapping("/{id}/submit-for-review")
+    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    public Shift submitForReview(@PathVariable Long id, @Valid @RequestBody ShiftClosingSubmitDTO dto) {
+        return service.submitForReview(id, dto);
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    public Shift approve(@PathVariable Long id) {
+        return service.approveAndClose(id);
+    }
+
+    @PostMapping("/{id}/reopen")
+    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    public Shift reopen(@PathVariable Long id) {
+        return service.reopenForReview(id);
     }
 }

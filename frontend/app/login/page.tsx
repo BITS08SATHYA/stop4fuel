@@ -46,6 +46,12 @@ export default function LoginPage() {
                     <p className="text-center text-sm text-muted-foreground">
                         Contact your station admin for an account
                     </p>
+                    <a
+                        href={process.env.NEXT_PUBLIC_LANDING_URL || '/'}
+                        className="text-center text-sm text-muted-foreground hover:text-foreground transition-colors block"
+                    >
+                        &larr; Back to website
+                    </a>
                 </div>
             </div>
         </div>
