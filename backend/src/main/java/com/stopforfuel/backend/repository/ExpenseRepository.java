@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -15,4 +16,7 @@ public interface ExpenseRepository extends ScidRepository<Expense> {
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.shiftId = :shiftId")
     BigDecimal sumByShift(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT e FROM Expense e WHERE e.scid = :scid AND e.expenseDate BETWEEN :from AND :to ORDER BY e.expenseDate DESC")
+    List<Expense> findByDateRange(@Param("scid") Long scid, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }
