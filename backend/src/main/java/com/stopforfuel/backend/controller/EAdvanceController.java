@@ -4,11 +4,13 @@ import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.EAdvance;
 import com.stopforfuel.backend.service.EAdvanceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -47,6 +49,15 @@ public class EAdvanceController {
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
     public List<EAdvance> getByType(@PathVariable String advanceType) {
         return service.getByType(advanceType);
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public List<EAdvance> search(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String type) {
+        return service.getByDateRange(fromDate, toDate, type);
     }
 
     @PostMapping

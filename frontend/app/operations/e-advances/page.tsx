@@ -13,7 +13,7 @@ import {
     Plus,
     Pencil,
     Trash2,
-    AlertCircle,
+    Calendar,
 } from "lucide-react";
 import {
     API_BASE_URL,
@@ -42,7 +42,8 @@ const ADVANCE_TYPES = [
 ];
 
 function getTypeMeta(type: string) {
-    return ADVANCE_TYPES.find((t) => t.value === type) || ADVANCE_TYPES[0];
+    const upper = type?.toUpperCase();
+    return ADVANCE_TYPES.find((t) => t.value === upper) || ADVANCE_TYPES[0];
 }
 
 function formatDateTime(dt?: string | null) {
@@ -60,8 +61,26 @@ function formatCurrency(val?: number) {
 
 // --- API helpers ---
 
-async function fetchAllEAdvances(): Promise<EAdvance[]> {
-    const res = await fetch(`${API_BASE_URL}/e-advances`);
+async function fetchActiveShift(): Promise<{ id: number } | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/shifts/active`);
+        if (!res.ok) return null;
+        const text = await res.text();
+        if (!text) return null;
+        return JSON.parse(text);
+    } catch {
+        return null;
+    }
+}
+
+async function fetchEAdvancesByShift(shiftId: number): Promise<EAdvance[]> {
+    const res = await fetch(`${API_BASE_URL}/e-advances/shift/${shiftId}`);
+    if (!res.ok) throw new Error("Failed to fetch e-advances");
+    return res.json();
+}
+
+async function fetchEAdvancesByDateRange(fromDate: string, toDate: string): Promise<EAdvance[]> {
+    const res = await fetch(`${API_BASE_URL}/e-advances/search?fromDate=${fromDate}&toDate=${toDate}`);
     if (!res.ok) throw new Error("Failed to fetch e-advances");
     return res.json();
 }
@@ -89,10 +108,14 @@ async function deleteEAdvanceById(id: number): Promise<void> {
 export default function EAdvancesPage() {
     const [entries, setEntries] = useState<EAdvance[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeShiftId, setActiveShiftId] = useState<number | null>(null);
 
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
     const [typeFilter, setTypeFilter] = useState("ALL");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [viewMode, setViewMode] = useState<"shift" | "dates">("shift");
 
     // Add/Edit modal
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -123,10 +146,17 @@ export default function EAdvancesPage() {
     // Invoice linking
     const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
 
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);
         try {
-            const data = await fetchAllEAdvances();
+            let data: EAdvance[];
+            if (mode === "dates" && from && to) {
+                data = await fetchEAdvancesByDateRange(from, to);
+            } else if (mode === "shift" && shiftId) {
+                data = await fetchEAdvancesByShift(shiftId);
+            } else {
+                data = [];
+            }
             setEntries(data);
         } catch (err) {
             console.error("Failed to load e-advances", err);
@@ -135,19 +165,48 @@ export default function EAdvancesPage() {
         }
     }, []);
 
-    useEffect(() => { loadData(); }, [loadData]);
+    useEffect(() => {
+        (async () => {
+            const shift = await fetchActiveShift();
+            setActiveShiftId(shift?.id ?? null);
+            if (shift?.id) {
+                loadData("shift", shift.id);
+            } else {
+                setIsLoading(false);
+            }
+        })();
+    }, [loadData]);
 
-    // Summary
+    const handleDateSearch = () => {
+        if (fromDate && toDate) {
+            setViewMode("dates");
+            loadData("dates", null, fromDate, toDate);
+        }
+    };
+
+    const handleShowCurrentShift = () => {
+        setViewMode("shift");
+        setFromDate("");
+        setToDate("");
+        if (activeShiftId) {
+            loadData("shift", activeShiftId);
+        } else {
+            setEntries([]);
+        }
+    };
+
+    // Summary - computed from loaded entries
     const summary = useMemo(() => {
         const s = { upi: 0, card: 0, cheque: 0, ccms: 0, bankTransfer: 0, total: 0 };
         for (const e of entries) {
             const amt = e.amount || 0;
             s.total += amt;
-            if (e.advanceType === "UPI") s.upi += amt;
-            else if (e.advanceType === "CARD") s.card += amt;
-            else if (e.advanceType === "CHEQUE") s.cheque += amt;
-            else if (e.advanceType === "CCMS") s.ccms += amt;
-            else if (e.advanceType === "BANK_TRANSFER") s.bankTransfer += amt;
+            const upper = e.advanceType?.toUpperCase();
+            if (upper === "UPI") s.upi += amt;
+            else if (upper === "CARD") s.card += amt;
+            else if (upper === "CHEQUE") s.cheque += amt;
+            else if (upper === "CCMS") s.ccms += amt;
+            else if (upper === "BANK_TRANSFER") s.bankTransfer += amt;
         }
         return s;
     }, [entries]);
@@ -155,7 +214,7 @@ export default function EAdvancesPage() {
     // Filter
     const filtered = useMemo(() => {
         return entries.filter((e) => {
-            const matchType = typeFilter === "ALL" || e.advanceType === typeFilter;
+            const matchType = typeFilter === "ALL" || e.advanceType?.toUpperCase() === typeFilter;
             const q = searchQuery.toLowerCase();
             const matchSearch = !searchQuery ||
                 e.remarks?.toLowerCase().includes(q) ||
@@ -200,10 +259,10 @@ export default function EAdvancesPage() {
         setTxnAmount(String(entry.amount));
         setTxnRemarks(entry.remarks || "");
         // Populate type-specific fields
-        if (entry.advanceType === "UPI" && entry.upiCompany) {
+        if (entry.advanceType?.toUpperCase() === "UPI" && entry.upiCompany) {
             setSelectedUpiCompanyId(String(entry.upiCompany.id));
         }
-        if (entry.advanceType === "CARD") {
+        if (entry.advanceType?.toUpperCase() === "CARD") {
             setCardBankName(entry.bankName || "");
             setCardLast4(entry.cardLast4Digit || "");
             setCardBatchId(entry.batchId || "");
@@ -211,16 +270,16 @@ export default function EAdvancesPage() {
             setCardCustomerName(entry.customerName || "");
             setCardCustomerPhone(entry.customerPhone || "");
         }
-        if (entry.advanceType === "CHEQUE") {
+        if (entry.advanceType?.toUpperCase() === "CHEQUE") {
             setChequeBankName(entry.bankName || "");
             setChequeNo(entry.chequeNo || "");
             setChequeInFavorOf(entry.inFavorOf || "");
             setChequeDate(entry.chequeDate || "");
         }
-        if (entry.advanceType === "BANK_TRANSFER") {
+        if (entry.advanceType?.toUpperCase() === "BANK_TRANSFER") {
             setBankName(entry.bankName || "");
         }
-        if (entry.advanceType === "CCMS") {
+        if (entry.advanceType?.toUpperCase() === "CCMS") {
             setCcmsNumber(entry.ccmsNumber || "");
         }
         setLinkedInvoice(entry.invoiceBill || null);
@@ -272,7 +331,12 @@ export default function EAdvancesPage() {
             }
 
             setIsModalOpen(false);
-            await loadData();
+            // Reload with current view mode
+            if (viewMode === "dates" && fromDate && toDate) {
+                loadData("dates", null, fromDate, toDate);
+            } else if (activeShiftId) {
+                loadData("shift", activeShiftId);
+            }
         } catch (err: any) {
             alert(err.message || "Failed to save e-advance");
         }
@@ -282,7 +346,11 @@ export default function EAdvancesPage() {
         if (!confirm("Delete this entry?")) return;
         try {
             await deleteEAdvanceById(id);
-            await loadData();
+            if (viewMode === "dates" && fromDate && toDate) {
+                loadData("dates", null, fromDate, toDate);
+            } else if (activeShiftId) {
+                loadData("shift", activeShiftId);
+            }
         } catch (err) {
             alert("Failed to delete");
         }
@@ -331,7 +399,7 @@ export default function EAdvancesPage() {
                 </div>
 
                 {/* Filter Bar */}
-                <div className="mb-4 flex flex-wrap gap-3 items-center">
+                <div className="mb-4 flex flex-wrap gap-3 items-end">
                     <div className="relative flex-1 min-w-[200px] max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
@@ -352,6 +420,51 @@ export default function EAdvancesPage() {
                             <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
                     </select>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            <input
+                                type="date"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                                className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
+                        <span className="text-muted-foreground text-sm">to</span>
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                        <button
+                            onClick={handleDateSearch}
+                            disabled={!fromDate || !toDate}
+                            className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Search
+                        </button>
+                    </div>
+                    {viewMode === "dates" && (
+                        <button
+                            onClick={handleShowCurrentShift}
+                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
+                        >
+                            Current Shift
+                        </button>
+                    )}
+                </div>
+
+                {/* View indicator */}
+                <div className="mb-3">
+                    <span className="text-xs text-muted-foreground">
+                        {viewMode === "shift"
+                            ? activeShiftId
+                                ? `Showing current shift #${activeShiftId} entries`
+                                : "No active shift"
+                            : `Showing entries from ${fromDate} to ${toDate}`
+                        }
+                    </span>
                 </div>
 
                 {/* Table */}
