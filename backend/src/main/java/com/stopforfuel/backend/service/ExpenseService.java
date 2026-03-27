@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -47,5 +50,11 @@ public class ExpenseService {
 
     public BigDecimal sumByShift(Long shiftId) {
         return repository.sumByShift(shiftId);
+    }
+
+    public List<Expense> getByDateRange(LocalDate fromDate, LocalDate toDate) {
+        LocalDateTime from = fromDate.atStartOfDay();
+        LocalDateTime to = toDate.atTime(LocalTime.MAX);
+        return repository.findByDateRange(SecurityUtils.getScid(), from, to);
     }
 }

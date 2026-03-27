@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -40,6 +41,14 @@ public class ExpenseController {
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
     public BigDecimal getShiftTotal(@PathVariable Long shiftId) {
         return service.sumByShift(shiftId);
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public List<Expense> searchByDateRange(
+            @RequestParam LocalDate fromDate,
+            @RequestParam LocalDate toDate) {
+        return service.getByDateRange(fromDate, toDate);
     }
 
     @PostMapping
