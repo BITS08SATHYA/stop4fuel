@@ -10,10 +10,11 @@ import {
     Download, FileSpreadsheet, Calendar
 } from "lucide-react";
 import {
-    getPayments, getPaymentModes, getOutstandingStatements,
+    getPayments, getPaymentsByShift, getPaymentModes, getOutstandingStatements,
     getCustomers, recordStatementPayment, recordBillPayment,
     getOutstandingBills, uploadPaymentProof, getPaymentProofUrl,
     exportPaymentsPdf, exportPaymentsExcel, downloadPaymentReceipt,
+    API_BASE_URL,
     type Payment, type PaymentMode, type Statement, type InvoiceBill, type Customer, type PageResponse
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
@@ -45,7 +46,11 @@ export default function PaymentsPage() {
     const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Pagination
+    // Shift-scoping
+    const [activeShiftId, setActiveShiftId] = useState<number | null>(null);
+    const [viewMode, setViewMode] = useState<"shift" | "dates">("shift");
+
+    // Pagination (used in dates mode)
     const [page, setPage] = useState(0);
     const [pageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
@@ -93,19 +98,50 @@ export default function PaymentsPage() {
     }, []);
 
     useEffect(() => {
-        loadPayments();
-    }, [page, categoryFilter, paidAgainstFilter, fromDate, toDate]);
+        if (viewMode === "dates") {
+            loadPaymentsByDate();
+        }
+    }, [page, categoryFilter, paidAgainstFilter, fromDate, toDate, viewMode]);
 
     const loadInitialData = async () => {
         try {
             const modes = await getPaymentModes();
             setPaymentModes(modes);
+            // Fetch active shift
+            const shiftRes = await fetch(`${API_BASE_URL}/shifts/active`);
+            if (shiftRes.ok) {
+                const text = await shiftRes.text();
+                if (text) {
+                    const shift = JSON.parse(text);
+                    setActiveShiftId(shift.id);
+                    await loadPaymentsByShift(shift.id);
+                    return;
+                }
+            }
+            // No active shift — fall back to dates mode
+            setViewMode("dates");
+            await loadPaymentsByDate();
         } catch (e) {
             console.error("Failed to load data", e);
+            setLoading(false);
         }
     };
 
-    const loadPayments = async () => {
+    const loadPaymentsByShift = async (shiftId: number) => {
+        setLoading(true);
+        try {
+            const data = await getPaymentsByShift(shiftId);
+            setPayments(data);
+            setTotalElements(data.length);
+            setTotalPages(1);
+        } catch (e) {
+            console.error("Failed to load shift payments", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadPaymentsByDate = async () => {
         setLoading(true);
         try {
             const result: PageResponse<Payment> = await getPayments(
@@ -218,7 +254,11 @@ export default function PaymentsPage() {
 
             setShowPayModal(false);
             resetPayForm();
-            loadPayments();
+            if (viewMode === "shift" && activeShiftId) {
+                loadPaymentsByShift(activeShiftId);
+            } else {
+                loadPaymentsByDate();
+            }
         } catch (e: any) {
             setError(e.message || "Failed to record payment");
         } finally {
@@ -379,16 +419,50 @@ export default function PaymentsPage() {
                     </div>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                    <GlassCard>
-                        <div className="text-muted-foreground text-sm">Total Payments</div>
-                        <div className="text-2xl font-bold text-foreground mt-1">{totalElements}</div>
-                    </GlassCard>
-                    <GlassCard>
-                        <div className="text-muted-foreground text-sm">Page</div>
-                        <div className="text-2xl font-bold text-foreground mt-1">{page + 1} of {totalPages || 1}</div>
-                    </GlassCard>
+                {/* View Toggle + Stats */}
+                <div className="flex flex-wrap items-center gap-3 mb-6">
+                    {/* View indicator */}
+                    {viewMode === "shift" ? (
+                        <span className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold">
+                            Shift #{activeShiftId || "—"}
+                        </span>
+                    ) : (
+                        <span className="px-3 py-1.5 bg-amber-500/10 text-amber-500 rounded-lg text-xs font-bold">
+                            {fromDate && toDate ? `${fromDate} → ${toDate}` : "All Payments"}
+                        </span>
+                    )}
+                    {viewMode === "dates" && activeShiftId && (
+                        <button
+                            onClick={() => {
+                                setViewMode("shift");
+                                setFromDate("");
+                                setToDate("");
+                                setPage(0);
+                                loadPaymentsByShift(activeShiftId);
+                            }}
+                            className="px-3 py-1.5 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors"
+                        >
+                            Current Shift
+                        </button>
+                    )}
+                    {viewMode === "shift" && (
+                        <button
+                            onClick={() => {
+                                setViewMode("dates");
+                                setPage(0);
+                            }}
+                            className="px-3 py-1.5 text-xs font-bold bg-muted text-muted-foreground border border-border rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-1.5"
+                        >
+                            <Calendar className="w-3.5 h-3.5" />
+                            Search by Date
+                        </button>
+                    )}
+                    <span className="text-sm text-muted-foreground ml-auto">{totalElements} payment{totalElements !== 1 ? "s" : ""}</span>
+                    {payments.length > 0 && (
+                        <span className="text-sm font-bold text-emerald-400">
+                            Total: {fmtCurrency(payments.reduce((s, p) => s + (p.amount || 0), 0))}
+                        </span>
+                    )}
                 </div>
 
                 {/* Payment History Table */}
@@ -435,36 +509,38 @@ export default function PaymentsPage() {
                         </select>
                     </div>
 
-                    {/* Date Range Filter */}
-                    <div className="flex flex-wrap gap-3 items-center mb-4">
-                        <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">From</span>
-                            <input
-                                type="date"
-                                value={fromDate}
-                                onChange={(e) => { setFromDate(e.target.value); setPage(0); }}
-                                className="px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
+                    {/* Date Range Filter — only in dates mode */}
+                    {viewMode === "dates" && (
+                        <div className="flex flex-wrap gap-3 items-center mb-4">
+                            <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">From</span>
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => { setFromDate(e.target.value); setPage(0); }}
+                                    className="px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">To</span>
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => { setToDate(e.target.value); setPage(0); }}
+                                    className="px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                            </div>
+                            {(fromDate || toDate) && (
+                                <button
+                                    onClick={() => { setFromDate(""); setToDate(""); setPage(0); }}
+                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 border border-border rounded-lg"
+                                >
+                                    Clear dates
+                                </button>
+                            )}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">To</span>
-                            <input
-                                type="date"
-                                value={toDate}
-                                onChange={(e) => { setToDate(e.target.value); setPage(0); }}
-                                className="px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
-                        </div>
-                        {(fromDate || toDate) && (
-                            <button
-                                onClick={() => { setFromDate(""); setToDate(""); setPage(0); }}
-                                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 border border-border rounded-lg"
-                            >
-                                Clear dates
-                            </button>
-                        )}
-                    </div>
+                    )}
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -487,7 +563,9 @@ export default function PaymentsPage() {
                                 {filteredPayments.length === 0 ? (
                                     <tr>
                                         <td colSpan={11} className="text-center py-8 text-muted-foreground">
-                                            No payments recorded yet
+                                            {viewMode === "shift"
+                                                ? (activeShiftId ? "No payments in the current shift." : "No active shift found.")
+                                                : "No payments found for the selected filters."}
                                         </td>
                                     </tr>
                                 ) : (
@@ -556,7 +634,9 @@ export default function PaymentsPage() {
                         </table>
                     </div>
 
-                    <TablePagination page={page} totalPages={totalPages} totalElements={totalElements} pageSize={pageSize} onPageChange={setPage} />
+                    {viewMode === "dates" && (
+                        <TablePagination page={page} totalPages={totalPages} totalElements={totalElements} pageSize={pageSize} onPageChange={setPage} />
+                    )}
                 </GlassCard>
             </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import {
     getInvoices,
+    getInvoicesByShift,
     createInvoice,
     getActiveProducts,
     getNozzles,
@@ -56,6 +57,12 @@ export default function InvoicesPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [error, setError] = useState("");
 
+    // Shift-scoping
+    const [activeShiftId, setActiveShiftId] = useState<number | null>(null);
+    const [viewMode, setViewMode] = useState<"shift" | "dates">("shift");
+    const [historyFromDate, setHistoryFromDate] = useState("");
+    const [historyToDate, setHistoryToDate] = useState("");
+
     // Customer & Vehicle
     const [customerSearch, setCustomerSearch] = useState("");
     const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
@@ -86,17 +93,57 @@ export default function InvoicesPage() {
     const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
     const [lastCreatedInvoice, setLastCreatedInvoice] = useState<InvoiceBill | null>(null);
 
+    const loadInvoices = async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
+        setIsLoading(true);
+        try {
+            let invData: InvoiceBill[];
+            if (mode === "shift" && shiftId) {
+                invData = await getInvoicesByShift(shiftId);
+            } else if (mode === "dates" && from && to) {
+                // Use getInvoices with date filtering — falls back to all if no backend search
+                invData = await getInvoices();
+                const fromTs = new Date(from).getTime();
+                const toTs = new Date(to + "T23:59:59").getTime();
+                invData = invData.filter((inv: any) => {
+                    const t = new Date(inv.date).getTime();
+                    return t >= fromTs && t <= toTs;
+                });
+            } else {
+                invData = [];
+            }
+            setInvoices(invData.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        } catch (err) {
+            console.error("Failed to load invoices", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const [invData, prodData, nozData] = await Promise.all([
-                getInvoices(),
+            const [prodData, nozData] = await Promise.all([
                 getActiveProducts(),
                 getNozzles()
             ]);
-            setInvoices(invData.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
             setProducts(prodData);
             setNozzles(nozData.filter((n: Nozzle) => n.active));
+
+            // Fetch active shift and load shift invoices
+            const shiftRes = await fetch(`${API_BASE_URL}/shifts/active`);
+            if (shiftRes.ok) {
+                const text = await shiftRes.text();
+                if (text) {
+                    const shift = JSON.parse(text);
+                    setActiveShiftId(shift.id);
+                    const invData = await getInvoicesByShift(shift.id);
+                    setInvoices(invData.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+                } else {
+                    setIsLoading(false);
+                }
+            } else {
+                setIsLoading(false);
+            }
         } catch (err) {
             console.error("Failed to load data", err);
         } finally {
@@ -355,7 +402,7 @@ export default function InvoicesPage() {
             const saved = await createInvoice(payload);
             setLastCreatedInvoice(saved);
             setCurrentStep(6);
-            loadData();
+            loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
         } catch (err: any) {
             console.error("Failed to save invoice", err);
             setError(err.message || "Error saving invoice");
@@ -1217,7 +1264,7 @@ export default function InvoicesPage() {
                                     resetForm();
                                     setLastCreatedInvoice(null);
                                     setActiveTab('history');
-                                    loadData();
+                                    loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
                                 }}
                                 className="px-10 py-4 btn-gradient text-white rounded-2xl font-bold transition-all shadow-xl flex items-center gap-3"
                             >
@@ -1267,19 +1314,102 @@ export default function InvoicesPage() {
                     renderCreateTab()
                 ) : (
                     <GlassCard className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-foreground">Recent Invoices</h3>
-                            <Link href="/operations/invoices/history" className="text-sm text-primary hover:underline font-medium flex items-center gap-1">
-                                View Full History <ArrowRight className="w-4 h-4" />
-                            </Link>
+                        <div className="flex flex-col gap-4 mb-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-foreground">
+                                    {viewMode === "shift" ? "Current Shift Invoices" : "Invoices by Date Range"}
+                                </h3>
+                                <Link href="/operations/invoices/history" className="text-sm text-primary hover:underline font-medium flex items-center gap-1">
+                                    View Full History <ArrowRight className="w-4 h-4" />
+                                </Link>
+                            </div>
+
+                            {/* View indicator */}
+                            <div className="flex items-center gap-2 text-xs">
+                                {viewMode === "shift" ? (
+                                    <span className="px-2 py-1 bg-primary/10 text-primary rounded-lg font-medium">
+                                        Shift #{activeShiftId || "—"}
+                                    </span>
+                                ) : (
+                                    <span className="px-2 py-1 bg-amber-500/10 text-amber-500 rounded-lg font-medium">
+                                        {historyFromDate} → {historyToDate}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Shift / Date toggle */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                {viewMode === "dates" && activeShiftId && (
+                                    <button
+                                        onClick={() => {
+                                            setViewMode("shift");
+                                            setHistoryFromDate("");
+                                            setHistoryToDate("");
+                                            loadInvoices("shift", activeShiftId);
+                                        }}
+                                        className="px-3 py-1.5 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors"
+                                    >
+                                        Current Shift
+                                    </button>
+                                )}
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <input
+                                        type="date"
+                                        value={historyFromDate}
+                                        onChange={(e) => setHistoryFromDate(e.target.value)}
+                                        className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground"
+                                    />
+                                    <span className="text-xs text-muted-foreground">to</span>
+                                    <input
+                                        type="date"
+                                        value={historyToDate}
+                                        onChange={(e) => setHistoryToDate(e.target.value)}
+                                        className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (historyFromDate && historyToDate) {
+                                                setViewMode("dates");
+                                                loadInvoices("dates", null, historyFromDate, historyToDate);
+                                            }
+                                        }}
+                                        disabled={!historyFromDate || !historyToDate}
+                                        className="px-3 py-1.5 text-xs font-bold bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
+                                    >
+                                        <Search className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Summary cards */}
+                        {invoices.length > 0 && (
+                            <div className="grid grid-cols-3 gap-3 mb-4">
+                                <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 text-center">
+                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</div>
+                                    <div className="text-lg font-bold text-foreground">{invoices.length}</div>
+                                </div>
+                                <div className="bg-green-500/5 border border-green-500/10 rounded-xl p-3 text-center">
+                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Cash</div>
+                                    <div className="text-lg font-bold text-green-500">₹{invoices.filter(i => i.billType === 'CASH').reduce((s, i) => s + (i.netAmount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
+                                </div>
+                                <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-3 text-center">
+                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Credit</div>
+                                    <div className="text-lg font-bold text-blue-500">₹{invoices.filter(i => i.billType === 'CREDIT').reduce((s, i) => s + (i.netAmount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
+                        )}
+
                         {invoices.length === 0 ? (
                             <div className="text-center text-muted-foreground py-8">
-                                No invoices found. Create your first invoice using the &quot;New Bill&quot; tab.
+                                {viewMode === "shift"
+                                    ? (activeShiftId ? "No invoices in the current shift yet." : "No active shift found.")
+                                    : "No invoices found for the selected date range."}
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {invoices.slice(0, 5).map((inv: any) => (
+                                {invoices.slice(0, 10).map((inv: any) => (
                                     <div key={inv.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
                                         <div className="flex items-center gap-3">
                                             <span className="font-mono font-bold text-sm text-foreground">{inv.billNo || "—"}</span>
@@ -1294,6 +1424,13 @@ export default function InvoicesPage() {
                                         </div>
                                     </div>
                                 ))}
+                                {invoices.length > 10 && (
+                                    <div className="text-center pt-2">
+                                        <Link href="/operations/invoices/history" className="text-xs text-primary hover:underline">
+                                            + {invoices.length - 10} more — View Full History
+                                        </Link>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </GlassCard>
