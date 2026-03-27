@@ -2,13 +2,13 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Designation;
 import com.stopforfuel.backend.entity.Employee;
-import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.SalaryHistory;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.DesignationRepository;
-import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
+import com.stopforfuel.backend.repository.OperationalAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
@@ -40,7 +40,7 @@ public class EmployeeService {
     private SalaryHistoryRepository salaryHistoryRepository;
 
     @Autowired
-    private EmployeeAdvanceRepository employeeAdvanceRepository;
+    private OperationalAdvanceRepository operationalAdvanceRepository;
 
     @Autowired
     private S3StorageService s3StorageService;
@@ -194,23 +194,23 @@ public class EmployeeService {
     }
 
     // Advances
-    public List<EmployeeAdvance> getAdvances(Long employeeId) {
-        return employeeAdvanceRepository.findByEmployeeIdOrderByAdvanceDateDesc(employeeId);
+    public List<OperationalAdvance> getAdvances(Long employeeId) {
+        return operationalAdvanceRepository.findByEmployeeIdOrderByAdvanceDateDesc(employeeId);
     }
 
-    public List<EmployeeAdvance> getPendingAdvances(Long employeeId) {
-        return employeeAdvanceRepository.findByEmployeeIdAndStatus(employeeId, "PENDING");
+    public List<OperationalAdvance> getPendingAdvances(Long employeeId) {
+        return operationalAdvanceRepository.findByEmployeeIdAndStatus(employeeId, "PENDING");
     }
 
-    public EmployeeAdvance addAdvance(EmployeeAdvance advance) {
-        return employeeAdvanceRepository.save(advance);
+    public OperationalAdvance addAdvance(OperationalAdvance advance) {
+        return operationalAdvanceRepository.save(advance);
     }
 
-    public EmployeeAdvance updateAdvanceStatus(Long advanceId, String status) {
-        EmployeeAdvance advance = employeeAdvanceRepository.findById(advanceId)
+    public OperationalAdvance updateAdvanceStatus(Long advanceId, String status) {
+        OperationalAdvance advance = operationalAdvanceRepository.findById(advanceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Advance not found"));
         advance.setStatus(status);
-        return employeeAdvanceRepository.save(advance);
+        return operationalAdvanceRepository.save(advance);
     }
 
     // ── File Uploads ────────────────────────────────────────────────

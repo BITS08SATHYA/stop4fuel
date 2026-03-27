@@ -1,10 +1,10 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Employee;
-import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.entity.LeaveRequest;
 import com.stopforfuel.backend.entity.SalaryPayment;
-import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
+import com.stopforfuel.backend.repository.OperationalAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.LeaveRequestRepository;
 import com.stopforfuel.backend.repository.SalaryPaymentRepository;
@@ -28,7 +28,7 @@ public class SalaryPaymentService {
     private EmployeeRepository employeeRepository;
 
     @Autowired
-    private EmployeeAdvanceRepository employeeAdvanceRepository;
+    private OperationalAdvanceRepository operationalAdvanceRepository;
 
     @Autowired
     private LeaveRequestRepository leaveRequestRepository;
@@ -57,11 +57,13 @@ public class SalaryPaymentService {
             }
 
             // Calculate advance deductions
-            List<EmployeeAdvance> pendingAdvances = employeeAdvanceRepository
+            List<OperationalAdvance> pendingAdvances = operationalAdvanceRepository
                     .findByEmployeeIdAndStatus(emp.getId(), "PENDING");
             double advanceDeduction = pendingAdvances.stream()
-                    .mapToDouble(EmployeeAdvance::getAmount)
-                    .sum();
+                    .map(OperationalAdvance::getAmount)
+                    .filter(a -> a != null)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add)
+                    .doubleValue();
 
             // Calculate LOP (Loss of Pay) based on monthly leave threshold
             int lopDays = 0;
@@ -106,11 +108,11 @@ public class SalaryPaymentService {
         payment.setPaymentMode(paymentMode);
 
         // Mark pending advances as DEDUCTED
-        List<EmployeeAdvance> pendingAdvances = employeeAdvanceRepository
+        List<OperationalAdvance> pendingAdvances = operationalAdvanceRepository
                 .findByEmployeeIdAndStatus(payment.getEmployee().getId(), "PENDING");
-        for (EmployeeAdvance advance : pendingAdvances) {
+        for (OperationalAdvance advance : pendingAdvances) {
             advance.setStatus("DEDUCTED");
-            employeeAdvanceRepository.save(advance);
+            operationalAdvanceRepository.save(advance);
         }
 
         return salaryPaymentRepository.save(payment);

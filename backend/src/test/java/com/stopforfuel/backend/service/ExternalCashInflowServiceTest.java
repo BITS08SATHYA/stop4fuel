@@ -3,7 +3,6 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.CashInflowRepayment;
 import com.stopforfuel.backend.entity.ExternalCashInflow;
 import com.stopforfuel.backend.entity.Shift;
-import com.stopforfuel.backend.entity.transaction.CashTransaction;
 import com.stopforfuel.backend.repository.CashInflowRepaymentRepository;
 import com.stopforfuel.backend.repository.ExternalCashInflowRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +34,7 @@ class ExternalCashInflowServiceTest {
     private ShiftService shiftService;
 
     @Mock
-    private ShiftTransactionService shiftTransactionService;
+    private ExpenseService expenseService;
 
     @InjectMocks
     private ExternalCashInflowService externalCashInflowService;
@@ -101,7 +100,6 @@ class ExternalCashInflowServiceTest {
         ExternalCashInflow result = externalCashInflowService.create(testInflow);
 
         assertEquals(10L, result.getShiftId());
-        verify(shiftTransactionService).create(any(CashTransaction.class));
     }
 
     @Test
@@ -112,7 +110,6 @@ class ExternalCashInflowServiceTest {
         ExternalCashInflow result = externalCashInflowService.create(testInflow);
 
         assertNotNull(result);
-        verify(shiftTransactionService, never()).create(any());
     }
 
     @Test

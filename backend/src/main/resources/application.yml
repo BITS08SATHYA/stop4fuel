@@ -8,7 +8,7 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://172.17.0.2:5432/stopforfuel}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5434/stopforfuel}
     username: ${DATABASE_USER:postgres}
     password: ${DATABASE_PASSWORD:myPassword}
   jpa:

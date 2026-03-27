@@ -95,7 +95,7 @@ public class Employee extends User {
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"employee", "hibernateLazyInitializer", "handler"})
-    private List<EmployeeAdvance> advances;
+    private List<OperationalAdvance> advances;
 
     // Backward compatibility: single email/phone for API
     @Transient

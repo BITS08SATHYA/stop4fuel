@@ -1,25 +1,38 @@
 package com.stopforfuel.backend.controller;
 
+import jakarta.validation.Valid;
 import com.stopforfuel.backend.entity.Party;
 import com.stopforfuel.backend.repository.PartyRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/parties")
+@RequiredArgsConstructor
 public class PartyController {
 
-    @Autowired
-    private PartyRepository partyRepository;
+    private final PartyRepository repository;
 
     @GetMapping
-    @PreAuthorize("hasPermission(null, 'SETTINGS_VIEW')")
-    public List<Party> getAllParties() {
-        return partyRepository.findAll();
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
+    public List<Party> getAll() {
+        return repository.findAll();
+    }
+
+    @PostMapping
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    public Party create(@Valid @RequestBody Party party) {
+        return repository.save(party);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        repository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }

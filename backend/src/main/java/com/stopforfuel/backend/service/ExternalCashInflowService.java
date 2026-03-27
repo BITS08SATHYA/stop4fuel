@@ -3,8 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.CashInflowRepayment;
 import com.stopforfuel.backend.entity.ExternalCashInflow;
 import com.stopforfuel.backend.entity.Shift;
-import com.stopforfuel.backend.entity.transaction.CashTransaction;
-import com.stopforfuel.backend.entity.transaction.ExpenseTransaction;
+import com.stopforfuel.backend.entity.Expense;
 import com.stopforfuel.backend.repository.CashInflowRepaymentRepository;
 import com.stopforfuel.backend.repository.ExternalCashInflowRepository;
 import com.stopforfuel.config.SecurityUtils;
@@ -22,7 +21,7 @@ public class ExternalCashInflowService {
     private final ExternalCashInflowRepository inflowRepository;
     private final CashInflowRepaymentRepository repaymentRepository;
     private final ShiftService shiftService;
-    private final ShiftTransactionService shiftTransactionService;
+    private final ExpenseService expenseService;
 
     public List<ExternalCashInflow> getAll() {
         return inflowRepository.findAllByScid(SecurityUtils.getScid());
@@ -45,15 +44,7 @@ public class ExternalCashInflowService {
 
         ExternalCashInflow saved = inflowRepository.save(inflow);
 
-        // Auto-create CashTransaction (money coming IN to the register)
-        if (activeShift != null) {
-            CashTransaction cashTxn = new CashTransaction();
-            cashTxn.setReceivedAmount(inflow.getAmount());
-            cashTxn.setRemarks("Auto: External Cash Inflow #" + saved.getId() + " - " + inflow.getSource());
-            cashTxn.setShiftId(activeShift.getId());
-            cashTxn.setScid(inflow.getScid());
-            shiftTransactionService.create(cashTxn);
-        }
+        // No separate CashTransaction needed — ExternalCashInflow is the source of truth
 
         return saved;
     }
@@ -85,16 +76,15 @@ public class ExternalCashInflowService {
         }
         inflowRepository.save(inflow);
 
-        // Auto-create ExpenseTransaction (money going OUT of the register)
+        // Auto-create Expense (money going OUT of the register)
         if (activeShift != null) {
-            ExpenseTransaction expTxn = new ExpenseTransaction();
-            expTxn.setReceivedAmount(repayment.getAmount());
-            expTxn.setExpenseAmount(repayment.getAmount());
-            expTxn.setExpenseDescription("Cash Inflow Repayment - " + inflow.getSource());
-            expTxn.setRemarks("Auto: Inflow Repayment #" + saved.getId());
-            expTxn.setShiftId(activeShift.getId());
-            expTxn.setScid(inflow.getScid());
-            shiftTransactionService.create(expTxn);
+            Expense expense = new Expense();
+            expense.setAmount(repayment.getAmount());
+            expense.setDescription("Cash Inflow Repayment - " + inflow.getSource());
+            expense.setRemarks("Auto: Inflow Repayment #" + saved.getId());
+            expense.setShiftId(activeShift.getId());
+            expense.setScid(inflow.getScid());
+            expenseService.create(expense);
         }
 
         return saved;
