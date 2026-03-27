@@ -13,6 +13,7 @@ import {
     transferReportEntry,
     getAllShiftReports,
     getShiftReportPdfUrl,
+    downloadShiftReportPdf,
     ShiftClosingReport,
     ReportLineItem,
     ReportAuditLog,
@@ -165,9 +166,7 @@ export default function ShiftReportPage() {
                         <button onClick={() => setShowFinalizeConfirm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-green-500/10 text-green-600 hover:bg-green-500/20"><Lock className="w-4 h-4" />Finalize</button>
                     </>)}
                     <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-muted text-muted-foreground hover:bg-muted/80"><Printer className="w-4 h-4" />Print</button>
-                    {report.reportPdfUrl && (
-                        <button onClick={async () => { const url = await getShiftReportPdfUrl(shiftId); window.open(url, "_blank"); }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-primary/10 text-primary hover:bg-primary/20"><Download className="w-4 h-4" />Download PDF</button>
-                    )}
+                    <button onClick={async () => { try { await downloadShiftReportPdf(shiftId); } catch { alert("Failed to download PDF"); } }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-primary/10 text-primary hover:bg-primary/20"><Download className="w-4 h-4" />Download PDF</button>
                 </div>
             </div>
 
@@ -281,7 +280,22 @@ export default function ShiftReportPage() {
             </div></GlassCard>
             )}
 
-            {/* Credit Bills + Stock + Advance Details + Payment Details */}
+            {/* Cash Invoices Detail */}
+            {printData && printData.cashBillDetails && printData.cashBillDetails.length > 0 && (
+            <GlassCard><div className="p-4">
+                <h2 className="text-base font-semibold mb-3 text-green-500">Cash Invoices Detail ({printData.cashBillDetails.length})</h2>
+                <div className="overflow-x-auto">
+                <table className="w-full text-xs"><thead><tr className="border-b border-border text-muted-foreground">
+                    <th className="text-left py-1 px-1.5">Bill#</th><th className="text-left py-1 px-1.5">V.No</th><th className="text-left py-1 px-1.5">Driver</th><th className="text-left py-1 px-1.5">Products</th><th className="text-left py-1 px-1.5">Mode</th><th className="text-right py-1 px-1.5">Amount</th>
+                </tr></thead><tbody>
+                    {printData.cashBillDetails.map((b, i) => <tr key={i} className="border-b border-border/20"><td className="py-0.5 px-1.5">{b.billNo || "-"}</td><td className="py-0.5 px-1.5">{b.vehicleNo}</td><td className="py-0.5 px-1.5">{b.driverName || "-"}</td><td className="py-0.5 px-1.5">{b.products}</td><td className="py-0.5 px-1.5"><span className="px-1 py-0.5 rounded bg-muted text-[10px] font-semibold">{b.paymentMode}</span></td><td className="py-0.5 px-1.5 text-right">{fmtCur(b.amount)}</td></tr>)}
+                    <tr className="border-t-2 border-border font-bold"><td colSpan={5} className="py-1 px-1.5">Total</td><td className="py-1 px-1.5 text-right">{fmtCur(printData.cashBillDetails.reduce((s, b) => s + (b.amount || 0), 0))}</td></tr>
+                </tbody></table>
+                </div>
+            </div></GlassCard>
+            )}
+
+            {/* Credit Bills + Advance Details */}
             {printData && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Credit Bills Detail */}
@@ -461,8 +475,19 @@ export default function ShiftReportPage() {
                     {printData?.companyName} — Shift #{printData?.shiftId} — {fmtDate(printData?.shiftStart)} (continued)
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                    {/* Left: Credit Bills + Stock */}
+                    {/* Left: Cash Invoices + Credit Bills + Stock */}
                     <div className="space-y-2">
+                        {(printData?.cashBillDetails || []).length > 0 && (
+                        <div>
+                            <div className="font-bold text-[8pt] border-b border-black mb-0.5">CASH INVOICES ({printData?.cashBillDetails.length})</div>
+                            <table className="w-full border-collapse"><thead><tr className="bg-gray-100">
+                                <th className="border border-gray-400 px-0.5 py-0 text-left text-[7pt]">Bill#</th><th className="border border-gray-400 px-0.5 py-0 text-left text-[7pt]">V.No</th><th className="border border-gray-400 px-0.5 py-0 text-left text-[7pt]">Prod</th><th className="border border-gray-400 px-0.5 py-0 text-left text-[7pt]">Mode</th><th className="border border-gray-400 px-0.5 py-0 text-right text-[7pt]">Amt</th>
+                            </tr></thead><tbody>
+                                {(printData?.cashBillDetails || []).map((b, i) => <tr key={i}><td className="border border-gray-300 px-0.5 py-0 text-[7pt]">{b.billNo || "-"}</td><td className="border border-gray-300 px-0.5 py-0 text-[7pt]">{b.vehicleNo}</td><td className="border border-gray-300 px-0.5 py-0 text-[7pt]">{b.products}</td><td className="border border-gray-300 px-0.5 py-0 text-[7pt]">{b.paymentMode}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtCur(b.amount)}</td></tr>)}
+                                <tr className="bg-gray-200 font-bold"><td colSpan={4} className="border border-gray-400 px-0.5 py-0 text-[7pt]">TOTAL CASH</td><td className="border border-gray-400 px-0.5 py-0 text-right text-[7pt]">{fmtCur((printData?.cashBillDetails || []).reduce((s, b) => s + (b.amount || 0), 0))}</td></tr>
+                            </tbody></table>
+                        </div>
+                        )}
                         <div>
                             <div className="font-bold text-[8pt] border-b border-black mb-0.5">CREDIT BILLS DETAIL</div>
                             <table className="w-full border-collapse"><thead><tr className="bg-gray-100">
