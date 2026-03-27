@@ -80,7 +80,7 @@ export default function ShiftHistoryPage() {
         return true;
     });
 
-    const { page, setPage, pageSize, paginatedData, totalPages, totalElements } = useClientPagination(filtered, 20);
+    const { page, setPage, pageSize, paginatedData, totalPages, totalElements } = useClientPagination(filtered, 10);
 
     return (
         <div className="p-6 min-h-screen bg-background text-foreground">
