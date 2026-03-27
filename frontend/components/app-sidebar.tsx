@@ -32,6 +32,7 @@ import {
     PieChart,
     Wallet,
     Banknote,
+    Gift,
     History,
     CalendarDays,
     CalendarCheck,
@@ -99,7 +100,9 @@ const inventoryManagementNav = [
 
 const shiftManagementNav = [
     { name: "Shift Register", href: "/operations/shifts", icon: Clock },
-    { name: "Cash Advances", href: "/operations/advances", icon: Wallet },
+    { name: "Operational Advances", href: "/operations/advances", icon: Wallet },
+    { name: "E-Advances", href: "/operations/e-advances", icon: CreditCard },
+    { name: "Incentive Payments", href: "/operations/incentive-payments", icon: Gift },
     { name: "Cash Inflows", href: "/operations/cash-inflows", icon: Banknote },
 ];
 

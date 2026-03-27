@@ -11,8 +11,9 @@ import com.stopforfuel.backend.repository.PumpRepository;
 import com.stopforfuel.backend.repository.TankRepository;
 import com.stopforfuel.backend.repository.TankInventoryRepository;
 import com.stopforfuel.backend.service.CreditManagementService;
+import com.stopforfuel.backend.service.EAdvanceService;
+import com.stopforfuel.backend.service.ExpenseService;
 import com.stopforfuel.backend.service.ShiftService;
-import com.stopforfuel.backend.service.ShiftTransactionService;
 import com.stopforfuel.backend.entity.Shift;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -44,7 +45,8 @@ public class DashboardController {
     private final NozzleRepository nozzleRepository;
     private final TankInventoryRepository tankInventoryRepository;
     private final ShiftService shiftService;
-    private final ShiftTransactionService shiftTransactionService;
+    private final EAdvanceService eAdvanceService;
+    private final ExpenseService expenseService;
     private final CreditManagementService creditManagementService;
 
     @GetMapping("/stats")
@@ -87,13 +89,22 @@ public class DashboardController {
                     ? activeShift.getStartTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                     : null);
 
-            Map<String, Object> summary = shiftTransactionService.getShiftSummary(activeShift.getId());
-            stats.setShiftCash(toBigDecimal(summary.get("cash")));
-            stats.setShiftUpi(toBigDecimal(summary.get("upi")));
-            stats.setShiftCard(toBigDecimal(summary.get("card")));
-            stats.setShiftExpense(toBigDecimal(summary.get("expense")));
-            stats.setShiftTotal(toBigDecimal(summary.get("total")));
-            stats.setShiftNet(toBigDecimal(summary.get("net")));
+            // Derive shift stats from source entities
+            Long sid = activeShift.getId();
+            BigDecimal shiftCash = invoiceBillRepository.sumCashBillsByShift(sid);
+            Map<String, BigDecimal> eAdvSummary = eAdvanceService.getShiftSummary(sid);
+            BigDecimal shiftUpi = eAdvSummary.getOrDefault("upi", BigDecimal.ZERO);
+            BigDecimal shiftCard = eAdvSummary.getOrDefault("card", BigDecimal.ZERO);
+            BigDecimal shiftExpense = expenseService.sumByShift(sid);
+            BigDecimal shiftTotal = shiftCash.add(eAdvSummary.getOrDefault("total", BigDecimal.ZERO));
+            BigDecimal shiftNet = shiftTotal.subtract(shiftExpense);
+
+            stats.setShiftCash(shiftCash);
+            stats.setShiftUpi(shiftUpi);
+            stats.setShiftCard(shiftCard);
+            stats.setShiftExpense(shiftExpense);
+            stats.setShiftTotal(shiftTotal);
+            stats.setShiftNet(shiftNet);
         }
 
         // --- Station stats ---

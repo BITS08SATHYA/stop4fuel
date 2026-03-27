@@ -1,0 +1,63 @@
+package com.stopforfuel.backend.controller;
+
+import jakarta.validation.Valid;
+import com.stopforfuel.backend.entity.IncentivePayment;
+import com.stopforfuel.backend.service.IncentivePaymentService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/incentive-payments")
+@RequiredArgsConstructor
+public class IncentivePaymentController {
+
+    private final IncentivePaymentService service;
+
+    @GetMapping
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public List<IncentivePayment> getAll() {
+        return service.getAll();
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public IncentivePayment getById(@PathVariable Long id) {
+        return service.getById(id);
+    }
+
+    @GetMapping("/shift/{shiftId}")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public List<IncentivePayment> getByShift(@PathVariable Long shiftId) {
+        return service.getByShift(shiftId);
+    }
+
+    @GetMapping("/customer/{customerId}")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public List<IncentivePayment> getByCustomer(@PathVariable Long customerId) {
+        return service.getByCustomer(customerId);
+    }
+
+    @GetMapping("/shift/{shiftId}/total")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public BigDecimal getShiftTotal(@PathVariable Long shiftId) {
+        return service.sumByShift(shiftId);
+    }
+
+    @PostMapping
+    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    public IncentivePayment create(@Valid @RequestBody IncentivePayment payment) {
+        return service.create(payment);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+}

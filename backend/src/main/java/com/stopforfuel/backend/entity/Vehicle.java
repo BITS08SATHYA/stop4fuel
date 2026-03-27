@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 public class Vehicle extends SimpleBaseEntity {
 
     @NotBlank(message = "Vehicle number is required")
-    @Size(max = 20, message = "Vehicle number must not exceed 20 characters")
+    @Size(max = 100, message = "Vehicle number must not exceed 100 characters")
     @Column(name = "vehicle_number", nullable = false, unique = true)
     private String vehicleNumber;
 

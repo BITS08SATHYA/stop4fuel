@@ -52,7 +52,7 @@ class InvoiceBillServiceTest {
     @Mock
     private ShiftService shiftService;
     @Mock
-    private ShiftTransactionService shiftTransactionService;
+    private EAdvanceService eAdvanceService;
     @Mock
     private BillSequenceService billSequenceService;
     @Mock

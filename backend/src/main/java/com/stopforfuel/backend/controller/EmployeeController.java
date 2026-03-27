@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.EmployeeDetailDTO;
 import com.stopforfuel.backend.dto.EmployeeListDTO;
 import com.stopforfuel.backend.entity.Employee;
-import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.entity.SalaryHistory;
 import com.stopforfuel.backend.service.EmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,13 +96,13 @@ public class EmployeeController {
 
     @GetMapping("/{id}/advances")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<EmployeeAdvance> getAdvances(@PathVariable Long id) {
+    public List<OperationalAdvance> getAdvances(@PathVariable Long id) {
         return employeeService.getAdvances(id);
     }
 
     @PostMapping("/{id}/advances")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public EmployeeAdvance addAdvance(@PathVariable Long id, @Valid @RequestBody EmployeeAdvance advance) {
+    public OperationalAdvance addAdvance(@PathVariable Long id, @Valid @RequestBody OperationalAdvance advance) {
         Employee employee = new Employee();
         employee.setId(id);
         advance.setEmployee(employee);
@@ -111,7 +111,7 @@ public class EmployeeController {
 
     @PatchMapping("/advances/{advanceId}/status")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public ResponseEntity<EmployeeAdvance> updateAdvanceStatus(@PathVariable Long advanceId, @RequestParam String status) {
+    public ResponseEntity<OperationalAdvance> updateAdvanceStatus(@PathVariable Long advanceId, @RequestParam String status) {
         try {
             return ResponseEntity.ok(employeeService.updateAdvanceStatus(advanceId, status));
         } catch (RuntimeException e) {

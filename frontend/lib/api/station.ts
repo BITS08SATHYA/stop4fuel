@@ -1001,13 +1001,13 @@ export const closeShift = (id: number): Promise<Shift> =>
         method: 'POST',
     }).then(handleResponse);
 
-// Shift Transactions
-export interface ShiftTransaction {
+// EAdvance (electronic advance entries: Card, UPI, Cheque, CCMS, Bank Transfer)
+export interface EAdvance {
     id?: number;
-    txnType: string;
     shiftId?: number;
     transactionDate?: string;
-    receivedAmount: number;
+    amount: number;
+    advanceType: string; // CARD, UPI, CHEQUE, CCMS, BANK_TRANSFER
     remarks?: string;
     // UPI-specific
     upiCompany?: UpiCompany;
@@ -1016,18 +1016,18 @@ export interface ShiftTransaction {
     tid?: string;
     customerName?: string;
     customerPhone?: string;
-    bankName?: string;
     cardLast4Digit?: string;
+    // Shared: Card, Cheque, Bank
+    bankName?: string;
     // Cheque-specific
-    inFavorOf?: string;
     chequeNo?: string;
     chequeDate?: string;
+    inFavorOf?: string;
     // CCMS-specific
     ccmsNumber?: string;
-    // Expense-specific
-    expenseAmount?: number;
-    expenseDescription?: string;
-    expenseType?: ExpenseType;
+    // Source references
+    invoiceBill?: { id: number; billNo?: string; billType?: string; netAmount?: number; customer?: { id: number; name: string } | null } | null;
+    payment?: { id: number; amount?: number; customer?: { id: number; name: string } | null } | null;
 }
 
 export interface UpiCompany {
@@ -1040,30 +1040,88 @@ export interface ExpenseType {
     typeName: string;
 }
 
-export interface ShiftTransactionSummary {
-    cash: number;
-    upi: number;
-    card: number;
-    expense: number;
-    total: number;
-    net: number;
+// Expense (shift-level expenses)
+export interface ShiftExpense {
+    id?: number;
+    shiftId?: number;
+    expenseDate?: string;
+    amount: number;
+    description?: string;
+    remarks?: string;
+    expenseType?: ExpenseType;
 }
 
-export const getShiftTransactions = (shiftId: number): Promise<ShiftTransaction[]> =>
-    fetchWithAuth(`${API_BASE_URL}/shift-transactions/shift/${shiftId}`).then(handleResponse);
+export interface EAdvanceSummary {
+    card: number;
+    upi: number;
+    cheque: number;
+    ccms: number;
+    bank_transfer: number;
+    total: number;
+}
 
-export const getShiftTransactionSummary = (shiftId: number): Promise<ShiftTransactionSummary> =>
-    fetchWithAuth(`${API_BASE_URL}/shift-transactions/shift/${shiftId}/summary`).then(handleResponse);
+export const getEAdvancesByShift = (shiftId: number): Promise<EAdvance[]> =>
+    fetchWithAuth(`${API_BASE_URL}/e-advances/shift/${shiftId}`).then(handleResponse);
 
-export const createShiftTransaction = (transaction: Partial<ShiftTransaction>): Promise<ShiftTransaction> =>
-    fetchWithAuth(`${API_BASE_URL}/shift-transactions`, {
+export const getEAdvanceSummary = (shiftId: number): Promise<EAdvanceSummary> =>
+    fetchWithAuth(`${API_BASE_URL}/e-advances/shift/${shiftId}/summary`).then(handleResponse);
+
+export const createEAdvance = (eAdvance: Partial<EAdvance>): Promise<EAdvance> =>
+    fetchWithAuth(`${API_BASE_URL}/e-advances`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transaction),
+        body: JSON.stringify(eAdvance),
     }).then(handleResponse);
 
-export const deleteShiftTransaction = (id: number): Promise<void> =>
-    fetchWithAuth(`${API_BASE_URL}/shift-transactions/${id}`, { method: 'DELETE' }).then(handleResponse);
+export const deleteEAdvance = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/e-advances/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const getExpensesByShift = (shiftId: number): Promise<ShiftExpense[]> =>
+    fetchWithAuth(`${API_BASE_URL}/expenses/shift/${shiftId}`).then(handleResponse);
+
+export const getExpenseShiftTotal = (shiftId: number): Promise<number> =>
+    fetchWithAuth(`${API_BASE_URL}/expenses/shift/${shiftId}/total`).then(handleResponse);
+
+export const createExpense = (expense: Partial<ShiftExpense>): Promise<ShiftExpense> =>
+    fetchWithAuth(`${API_BASE_URL}/expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expense),
+    }).then(handleResponse);
+
+export const deleteExpense = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/expenses/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// Incentive Payments
+export interface IncentivePayment {
+    id?: number;
+    shiftId?: number;
+    paymentDate?: string;
+    amount: number;
+    description?: string;
+    customer?: { id: number; name?: string } | null;
+    invoiceBill?: { id: number; billNo?: string; billType?: string; netAmount?: number } | null;
+    statement?: { id: number; statementNo?: string } | null;
+}
+
+export const getIncentivePayments = (): Promise<IncentivePayment[]> =>
+    fetchWithAuth(`${API_BASE_URL}/incentive-payments`).then(handleResponse);
+
+export const getIncentivePaymentsByShift = (shiftId: number): Promise<IncentivePayment[]> =>
+    fetchWithAuth(`${API_BASE_URL}/incentive-payments/shift/${shiftId}`).then(handleResponse);
+
+export const getIncentivePaymentsByCustomer = (customerId: number): Promise<IncentivePayment[]> =>
+    fetchWithAuth(`${API_BASE_URL}/incentive-payments/customer/${customerId}`).then(handleResponse);
+
+export const createIncentivePayment = (payment: Partial<IncentivePayment>): Promise<IncentivePayment> =>
+    fetchWithAuth(`${API_BASE_URL}/incentive-payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payment),
+    }).then(handleResponse);
+
+export const deleteIncentivePayment = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/incentive-payments/${id}`, { method: 'DELETE' }).then(handleResponse);
 
 export const getUpiCompanies = (): Promise<UpiCompany[]> =>
     fetchWithAuth(`${API_BASE_URL}/upi-companies`).then(handleResponse);
