@@ -106,6 +106,12 @@ public class PaymentService {
         if (payment.getScid() == null) {
             payment.setScid(statement.getScid());
         }
+        if (payment.getShiftId() == null) {
+            Shift activeShift = shiftService.getActiveShift();
+            if (activeShift != null) {
+                payment.setShiftId(activeShift.getId());
+            }
+        }
 
         // Resolve payment mode and set employee
         resolvePaymentMode(payment);
@@ -174,6 +180,12 @@ public class PaymentService {
         payment.setCustomer(bill.getCustomer());
         if (payment.getScid() == null) {
             payment.setScid(bill.getScid());
+        }
+        if (payment.getShiftId() == null) {
+            Shift activeShift = shiftService.getActiveShift();
+            if (activeShift != null) {
+                payment.setShiftId(activeShift.getId());
+            }
         }
 
         // Resolve payment mode and set employee
