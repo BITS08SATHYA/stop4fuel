@@ -47,6 +47,7 @@ import {
     Layers,
     LogOut,
     Bell,
+    ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -127,6 +128,10 @@ const financeNav = [
     { name: "Expenses", href: "/operations/expenses", icon: Receipt },
 ];
 
+const reportsNav = [
+    { name: "Reports", href: "/operations/reports", icon: ClipboardList },
+];
+
 const analyticsNav = [
     { name: "Sales Forecast", href: "/analytics/sales", icon: TrendingUp },
     { name: "Purchase Planner", href: "/analytics/purchases", icon: ShoppingCart },
@@ -157,6 +162,7 @@ const sections: NavSection[] = [
     { label: "Invoice Management", permission: "INVOICE_VIEW", items: invoiceManagementNav },
     { label: "Payment Management", permission: "PAYMENT_VIEW", items: paymentManagementNav },
     { label: "Finance", permission: "FINANCE_VIEW", items: financeNav },
+    { label: "Reports", permission: "REPORT_VIEW", items: reportsNav },
     { label: "Analytics", permission: "DASHBOARD_VIEW", items: analyticsNav },
     { label: "System", permission: "SETTINGS_VIEW", items: systemNav },
 ];
