@@ -7,19 +7,17 @@ import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import { StatementAutocomplete } from "@/components/ui/statement-autocomplete";
 import {
-    Gift,
     Search,
     Plus,
     Trash2,
     Users,
-    Receipt,
     TrendingDown,
     Hash,
+    Calendar,
 } from "lucide-react";
 import {
     API_BASE_URL,
     IncentivePayment,
-    getIncentivePayments,
     createIncentivePayment,
     deleteIncentivePayment,
 } from "@/lib/api/station";
@@ -60,15 +58,43 @@ async function fetchCustomers(): Promise<Customer[]> {
     }
 }
 
+async function fetchActiveShift(): Promise<{ id: number } | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/shifts/active`);
+        if (!res.ok) return null;
+        const text = await res.text();
+        if (!text) return null;
+        return JSON.parse(text);
+    } catch {
+        return null;
+    }
+}
+
+async function fetchIncentivesByShift(shiftId: number): Promise<IncentivePayment[]> {
+    const res = await fetch(`${API_BASE_URL}/incentive-payments/shift/${shiftId}`);
+    if (!res.ok) throw new Error("Failed to fetch incentive payments");
+    return res.json();
+}
+
+async function fetchIncentivesByDateRange(fromDate: string, toDate: string): Promise<IncentivePayment[]> {
+    const res = await fetch(`${API_BASE_URL}/incentive-payments/search?fromDate=${fromDate}&toDate=${toDate}`);
+    if (!res.ok) throw new Error("Failed to fetch incentive payments");
+    return res.json();
+}
+
 // --- Page ---
 
 export default function IncentivePaymentsPage() {
     const [payments, setPayments] = useState<IncentivePayment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeShiftId, setActiveShiftId] = useState<number | null>(null);
 
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
     const [customerFilter, setCustomerFilter] = useState("ALL");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [viewMode, setViewMode] = useState<"shift" | "dates">("shift");
 
     // Add modal
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,10 +105,17 @@ export default function IncentivePaymentsPage() {
     const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
     const [linkedStatement, setLinkedStatement] = useState<any>(null);
 
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);
         try {
-            const data = await getIncentivePayments();
+            let data: IncentivePayment[];
+            if (mode === "dates" && from && to) {
+                data = await fetchIncentivesByDateRange(from, to);
+            } else if (mode === "shift" && shiftId) {
+                data = await fetchIncentivesByShift(shiftId);
+            } else {
+                data = [];
+            }
             setPayments(data);
         } catch (err) {
             console.error("Failed to load incentive payments", err);
@@ -91,7 +124,35 @@ export default function IncentivePaymentsPage() {
         }
     }, []);
 
-    useEffect(() => { loadData(); }, [loadData]);
+    useEffect(() => {
+        (async () => {
+            const shift = await fetchActiveShift();
+            setActiveShiftId(shift?.id ?? null);
+            if (shift?.id) {
+                loadData("shift", shift.id);
+            } else {
+                setIsLoading(false);
+            }
+        })();
+    }, [loadData]);
+
+    const handleDateSearch = () => {
+        if (fromDate && toDate) {
+            setViewMode("dates");
+            loadData("dates", null, fromDate, toDate);
+        }
+    };
+
+    const handleShowCurrentShift = () => {
+        setViewMode("shift");
+        setFromDate("");
+        setToDate("");
+        if (activeShiftId) {
+            loadData("shift", activeShiftId);
+        } else {
+            setPayments([]);
+        }
+    };
 
     // Summary
     const summary = useMemo(() => {
@@ -160,7 +221,11 @@ export default function IncentivePaymentsPage() {
             }
             await createIncentivePayment(payload);
             setIsModalOpen(false);
-            await loadData();
+            if (viewMode === "dates" && fromDate && toDate) {
+                loadData("dates", null, fromDate, toDate);
+            } else if (activeShiftId) {
+                loadData("shift", activeShiftId);
+            }
         } catch (err: any) {
             alert(err.message || "Failed to create incentive payment");
         }
@@ -170,7 +235,11 @@ export default function IncentivePaymentsPage() {
         if (!confirm("Delete this incentive payment?")) return;
         try {
             await deleteIncentivePayment(id);
-            await loadData();
+            if (viewMode === "dates" && fromDate && toDate) {
+                loadData("dates", null, fromDate, toDate);
+            } else if (activeShiftId) {
+                loadData("shift", activeShiftId);
+            }
         } catch (err) {
             alert("Failed to delete");
         }
@@ -232,7 +301,7 @@ export default function IncentivePaymentsPage() {
                 </div>
 
                 {/* Filter Bar */}
-                <div className="mb-4 flex flex-wrap gap-3 items-center">
+                <div className="mb-4 flex flex-wrap gap-3 items-end">
                     <div className="relative flex-1 min-w-[200px] max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
@@ -253,6 +322,51 @@ export default function IncentivePaymentsPage() {
                             <option key={id} value={id}>{name}</option>
                         ))}
                     </select>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            <input
+                                type="date"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                                className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
+                        <span className="text-muted-foreground text-sm">to</span>
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            className="px-3 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                        <button
+                            onClick={handleDateSearch}
+                            disabled={!fromDate || !toDate}
+                            className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Search
+                        </button>
+                    </div>
+                    {viewMode === "dates" && (
+                        <button
+                            onClick={handleShowCurrentShift}
+                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
+                        >
+                            Current Shift
+                        </button>
+                    )}
+                </div>
+
+                {/* View indicator */}
+                <div className="mb-3">
+                    <span className="text-xs text-muted-foreground">
+                        {viewMode === "shift"
+                            ? activeShiftId
+                                ? `Showing current shift #${activeShiftId} entries`
+                                : "No active shift"
+                            : `Showing entries from ${fromDate} to ${toDate}`
+                        }
+                    </span>
                 </div>
 
                 {/* Table */}
