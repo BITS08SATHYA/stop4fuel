@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
+import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
+import { StatementAutocomplete } from "@/components/ui/statement-autocomplete";
 import {
     Gift,
     Search,
@@ -74,6 +76,8 @@ export default function IncentivePaymentsPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState("");
     const [amount, setAmount] = useState("");
     const [description, setDescription] = useState("");
+    const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
+    const [linkedStatement, setLinkedStatement] = useState<any>(null);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -131,6 +135,8 @@ export default function IncentivePaymentsPage() {
         setSelectedCustomerId("");
         setAmount("");
         setDescription("");
+        setLinkedInvoice(null);
+        setLinkedStatement(null);
         const custs = await fetchCustomers();
         setCustomers(custs);
         setIsModalOpen(true);
@@ -145,6 +151,12 @@ export default function IncentivePaymentsPage() {
             };
             if (selectedCustomerId) {
                 payload.customer = { id: Number(selectedCustomerId) };
+            }
+            if (linkedInvoice) {
+                payload.invoiceBill = { id: linkedInvoice.id };
+            }
+            if (linkedStatement) {
+                payload.statement = { id: linkedStatement.id };
             }
             await createIncentivePayment(payload);
             setIsModalOpen(false);
@@ -379,6 +391,24 @@ export default function IncentivePaymentsPage() {
                             onChange={(e) => setDescription(e.target.value)}
                             className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                             placeholder="e.g. Monthly volume discount"
+                        />
+                    </div>
+
+                    {/* Link to Invoice or Statement (mutually exclusive) */}
+                    <div>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">Link to Invoice Bill (Optional)</label>
+                        <InvoiceAutocomplete
+                            value={linkedInvoice}
+                            onChange={(inv) => { setLinkedInvoice(inv); if (inv) setLinkedStatement(null); }}
+                            placeholder="Search by bill #..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">Link to Statement (Optional)</label>
+                        <StatementAutocomplete
+                            value={linkedStatement}
+                            onChange={(stmt) => { setLinkedStatement(stmt); if (stmt) setLinkedInvoice(null); }}
+                            placeholder="Search by statement # or customer..."
                         />
                     </div>
 
