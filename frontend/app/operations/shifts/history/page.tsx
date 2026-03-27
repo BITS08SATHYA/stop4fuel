@@ -49,7 +49,7 @@ export default function ShiftHistoryPage() {
     const loadShifts = async () => {
         try {
             const data = await getShifts();
-            setShifts(data);
+            setShifts(data.sort((a: Shift, b: Shift) => b.id - a.id));
         } catch (err) {
             console.error("Failed to load shifts", err);
         } finally {
