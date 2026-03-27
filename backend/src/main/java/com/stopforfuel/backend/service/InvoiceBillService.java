@@ -277,6 +277,14 @@ public class InvoiceBillService {
             invoice.setScid(SecurityUtils.getScid());
         }
 
+        // --- Assign active shift ---
+        if (invoice.getShiftId() == null) {
+            Shift activeShift = shiftService.getActiveShift();
+            if (activeShift != null) {
+                invoice.setShiftId(activeShift.getId());
+            }
+        }
+
         // --- Generate bill number ---
         String billNo = billSequenceService.getNextBillNo(invoice.getBillType());
         invoice.setBillNo(billNo);
