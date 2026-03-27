@@ -606,12 +606,12 @@ export default function ShiftsPage() {
                     {showPastShifts && pastShifts.length > 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {pastShifts.slice(0, 12).map((shift) => (
-                                <button
+                                <div
                                     key={shift.id}
                                     onClick={() => {
                                         setSelectedPastShift(shift.id === selectedPastShift?.id ? null : shift);
                                     }}
-                                    className={`text-left p-4 rounded-xl border transition-all ${
+                                    className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
                                         selectedPastShift?.id === shift.id
                                             ? 'border-primary bg-primary/5'
                                             : 'border-border bg-card hover:border-primary/30'
@@ -637,7 +637,7 @@ export default function ShiftsPage() {
                                             View Report
                                         </button>
                                     )}
-                                </button>
+                                </div>
                             ))}
                         </div>
                     )}
