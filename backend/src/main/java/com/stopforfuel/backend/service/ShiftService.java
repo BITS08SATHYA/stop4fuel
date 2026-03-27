@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
 import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
+import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
@@ -36,6 +37,9 @@ public class ShiftService {
     private final IncentivePaymentRepository incentivePaymentRepository;
     private final ExternalCashInflowRepository inflowRepository;
     private final CashInflowRepaymentRepository repaymentRepository;
+    private final ShiftReportPdfGenerator pdfGenerator;
+    private final S3StorageService s3StorageService;
+    private final ShiftClosingReportRepository shiftClosingReportRepository;
 
     public ShiftService(ShiftRepository repository,
                         @Lazy ShiftClosingReportService shiftClosingReportService,
@@ -53,7 +57,10 @@ public class ShiftService {
                         ExpenseRepository expenseRepository,
                         IncentivePaymentRepository incentivePaymentRepository,
                         ExternalCashInflowRepository inflowRepository,
-                        CashInflowRepaymentRepository repaymentRepository) {
+                        CashInflowRepaymentRepository repaymentRepository,
+                        ShiftReportPdfGenerator pdfGenerator,
+                        S3StorageService s3StorageService,
+                        ShiftClosingReportRepository shiftClosingReportRepository) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
         this.productInventoryService = productInventoryService;
@@ -71,6 +78,9 @@ public class ShiftService {
         this.incentivePaymentRepository = incentivePaymentRepository;
         this.inflowRepository = inflowRepository;
         this.repaymentRepository = repaymentRepository;
+        this.pdfGenerator = pdfGenerator;
+        this.s3StorageService = s3StorageService;
+        this.shiftClosingReportRepository = shiftClosingReportRepository;
     }
 
     public List<Shift> getAllShifts() {
@@ -251,12 +261,32 @@ public class ShiftService {
         shift.setStatus("CLOSED");
         Shift saved = repository.save(shift);
 
-        // Finalize the report (generate PDF, store to S3)
+        // Finalize report and generate PDF → upload to S3
         try {
             var report = shiftClosingReportService.getReport(shiftId);
-            shiftClosingReportService.finalizeReport(report.getId(), "ADMIN");
+            report.setStatus("FINALIZED");
+            report.setFinalizedBy("ADMIN");
+            report.setFinalizedAt(LocalDateTime.now());
+
+            // Generate PDF
+            ShiftReportPrintData printData = shiftClosingReportService.getPrintData(shiftId);
+            byte[] pdfBytes = pdfGenerator.generate(printData, report);
+
+            // Upload to S3
+            // TODO: Configure proper S3 bucket hierarchy per deployment
+            LocalDateTime shiftStart = shift.getStartTime() != null ? shift.getStartTime() : LocalDateTime.now();
+            String key = String.format("reports/shifts/%d/%d/%02d/shift-%d-report.pdf",
+                    shift.getScid(),
+                    shiftStart.getYear(),
+                    shiftStart.getMonthValue(),
+                    shiftId);
+
+            s3StorageService.upload(key, pdfBytes, "application/pdf");
+            report.setReportPdfUrl(key);
+            shiftClosingReportRepository.save(report);
         } catch (Exception e) {
-            // Report finalization is best-effort; shift is still closed
+            // PDF generation/upload is best-effort; shift is still closed
+            System.err.println("Failed to generate/upload shift report PDF: " + e.getMessage());
         }
 
         return saved;
