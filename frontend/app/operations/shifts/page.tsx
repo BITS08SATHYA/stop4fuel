@@ -6,7 +6,6 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import {
     getActiveShift,
-    getShifts,
     openShift,
     closeShift,
     getEAdvancesByShift,
@@ -42,8 +41,6 @@ import {
     Receipt,
     Wallet,
     Search,
-    ChevronDown,
-    ChevronUp,
 } from "lucide-react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { PermissionGate } from "@/components/permission-gate";
@@ -107,12 +104,9 @@ interface ShiftSummary {
 export default function ShiftsPage() {
     const router = useRouter();
     const [activeShift, setActiveShift] = useState<Shift | null>(null);
-    const [pastShifts, setPastShifts] = useState<Shift[]>([]);
     const [transactions, setTransactions] = useState<ShiftTxnRow[]>([]);
     const [summary, setSummary] = useState<ShiftSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [showPastShifts, setShowPastShifts] = useState(false);
-    const [selectedPastShift, setSelectedPastShift] = useState<Shift | null>(null);
 
     // Add transaction modal
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -149,7 +143,7 @@ export default function ShiftsPage() {
     const [typeFilter, setTypeFilter] = useState("ALL");
     const [searchQuery, setSearchQuery] = useState("");
 
-    const viewingShift = selectedPastShift || activeShift;
+    const viewingShift = activeShift;
 
     const loadTransactions = async (shiftId: number) => {
         const [eAdvances, expenses, eAdvSummary, expenseTotal] = await Promise.all([
@@ -202,11 +196,10 @@ export default function ShiftsPage() {
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [active, allShifts] = await Promise.all([getActiveShift(), getShifts()]);
+            const active = await getActiveShift();
             setActiveShift(active);
-            setPastShifts(allShifts.filter((s) => s.status !== "OPEN").sort((a, b) => b.id - a.id));
 
-            const shiftToView = selectedPastShift || active;
+            const shiftToView = active;
             if (shiftToView) {
                 await loadTransactions(shiftToView.id);
             } else {
@@ -218,7 +211,7 @@ export default function ShiftsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedPastShift]);
+    }, []);
 
     useEffect(() => {
         loadData();
@@ -228,7 +221,7 @@ export default function ShiftsPage() {
         try {
             const shift = await openShift({});
             setActiveShift(shift);
-            setSelectedPastShift(null);
+
             await loadTransactions(shift.id);
         } catch (err: any) {
             alert(err.message || "Failed to open shift");
@@ -242,7 +235,7 @@ export default function ShiftsPage() {
             const closedShiftId = activeShift.id;
             await closeShift(activeShift.id);
             setActiveShift(null);
-            setSelectedPastShift(null);
+
             router.push(`/operations/shifts/report/${closedShiftId}`);
         } catch (err: any) {
             alert(err.message || "Failed to close shift");
@@ -594,53 +587,14 @@ export default function ShiftsPage() {
                     </>
                 )}
 
-                {/* Past Shifts Accordion */}
-                <div className="mt-6">
+                {/* Link to Shift History */}
+                <div className="mt-6 text-center">
                     <button
-                        onClick={() => setShowPastShifts(!showPastShifts)}
-                        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
+                        onClick={() => router.push("/operations/shifts/history")}
+                        className="text-sm text-primary hover:text-primary/80 transition-colors font-medium"
                     >
-                        {showPastShifts ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        Past Shifts ({pastShifts.length})
+                        View All Past Shifts →
                     </button>
-                    {showPastShifts && pastShifts.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {pastShifts.slice(0, 12).map((shift) => (
-                                <div
-                                    key={shift.id}
-                                    onClick={() => {
-                                        setSelectedPastShift(shift.id === selectedPastShift?.id ? null : shift);
-                                    }}
-                                    className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
-                                        selectedPastShift?.id === shift.id
-                                            ? 'border-primary bg-primary/5'
-                                            : 'border-border bg-card hover:border-primary/30'
-                                    }`}
-                                >
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-sm font-bold text-foreground">Shift #{shift.id}</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                            shift.status === 'CLOSED' ? 'bg-gray-500/10 text-gray-500' : 'bg-yellow-500/10 text-yellow-500'
-                                        }`}>
-                                            {shift.status}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">{formatDateTime(shift.startTime)}</p>
-                                    {shift.endTime && (
-                                        <p className="text-xs text-muted-foreground">to {formatDateTime(shift.endTime)}</p>
-                                    )}
-                                    {(shift.status === "CLOSED" || shift.status === "RECONCILED") && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); router.push(`/operations/shifts/report/${shift.id}`); }}
-                                            className="mt-2 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                                        >
-                                            View Report
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
 

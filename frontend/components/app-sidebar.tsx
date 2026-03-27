@@ -100,6 +100,7 @@ const inventoryManagementNav = [
 
 const shiftManagementNav = [
     { name: "Shift Register", href: "/operations/shifts", icon: Clock },
+    { name: "Shift History", href: "/operations/shifts/history", icon: History },
     { name: "Operational Advances", href: "/operations/advances", icon: Wallet },
     { name: "E-Advances", href: "/operations/e-advances", icon: CreditCard },
     { name: "Incentive Payments", href: "/operations/incentive-payments", icon: Gift },
