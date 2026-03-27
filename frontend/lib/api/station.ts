@@ -803,6 +803,9 @@ export const getPaymentsByStatement = (statementId: number): Promise<Payment[]> 
 export const getPaymentsByBill = (invoiceBillId: number): Promise<Payment[]> =>
     fetchWithAuth(`${API_BASE_URL}/payments/bill/${invoiceBillId}`).then(handleResponse);
 
+export const getPaymentsByShift = (shiftId: number): Promise<Payment[]> =>
+    fetchWithAuth(`${API_BASE_URL}/payments/shift/${shiftId}`).then(handleResponse);
+
 export const recordStatementPayment = (statementId: number, payment: Partial<Payment>): Promise<Payment> =>
     fetchWithAuth(`${API_BASE_URL}/payments/statement/${statementId}`, {
         method: 'POST',
@@ -2119,6 +2122,7 @@ export interface ShiftReportPrintData {
     meterReadings: { pumpName: string; nozzleName: string; productName: string; openReading: number; closeReading: number; sales: number }[];
     tankReadings: { tankName: string; productName: string; openDip: string; openStock: number; incomeStock: number; totalStock: number; closeDip: string; closeStock: number; saleStock: number }[];
     salesDifferences: { productName: string; tankSale: number; meterSale: number; difference: number }[];
+    cashBillDetails: { billNo: string; vehicleNo: string; driverName: string; products: string; paymentMode: string; amount: number }[];
     creditBillDetails: { customerName: string; billNo: string; vehicleNo: string; products: string; amount: number }[];
     stockSummary: { productName: string; openStock: number; receipt: number; totalStock: number; sales: number; rate: number; amount: number }[];
     stockPosition: { productName: string; godownStock: number; cashierStock: number; totalStock: number; lowStock: boolean }[];
@@ -2221,3 +2225,17 @@ export const reopenShift = (shiftId: number): Promise<Shift> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/reopen`, {
         method: 'POST',
     }).then(handleResponse);
+
+export const downloadShiftReportPdf = async (shiftId: number): Promise<void> => {
+    const res = await fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}/download-pdf`);
+    if (!res.ok) throw new Error('Failed to download PDF');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `shift-report-${shiftId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+};

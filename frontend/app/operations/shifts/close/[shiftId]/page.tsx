@@ -6,9 +6,13 @@ import { GlassCard } from "@/components/ui/glass-card";
 import {
     getShiftClosingData,
     submitShiftForReview,
+    getInvoicesByShift,
+    getPaymentsByShift,
     ShiftClosingData,
     NozzleReadingInput,
     TankDipInput,
+    InvoiceBill,
+    Payment,
 } from "@/lib/api/station";
 import {
     ArrowLeft,
@@ -27,6 +31,9 @@ import {
     Wallet,
     Info,
     FlaskConical,
+    ChevronDown,
+    ChevronUp,
+    List,
 } from "lucide-react";
 
 function fmtCur(v?: number | null) {
@@ -71,6 +78,14 @@ export default function ShiftClosingWorkspace() {
     const [tankCloseDip, setTankCloseDip] = useState<Record<number, string>>({});
     const [tankCloseStock, setTankCloseStock] = useState<Record<number, string>>({});
 
+    // Collapsible invoice/payment sections
+    const [showInvoices, setShowInvoices] = useState(false);
+    const [showPayments, setShowPayments] = useState(false);
+    const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
+    const [payments, setPayments] = useState<Payment[]>([]);
+    const [invoicesLoading, setInvoicesLoading] = useState(false);
+    const [paymentsLoading, setPaymentsLoading] = useState(false);
+
     const loadData = useCallback(async () => {
         try {
             setIsLoading(true);
@@ -85,6 +100,22 @@ export default function ShiftClosingWorkspace() {
     }, [shiftId]);
 
     useEffect(() => { loadData(); }, [loadData]);
+
+    // Lazy-load invoices when section is expanded
+    useEffect(() => {
+        if (showInvoices && invoices.length === 0 && !invoicesLoading) {
+            setInvoicesLoading(true);
+            getInvoicesByShift(shiftId).then(setInvoices).catch(() => {}).finally(() => setInvoicesLoading(false));
+        }
+    }, [showInvoices, shiftId, invoices.length, invoicesLoading]);
+
+    // Lazy-load payments when section is expanded
+    useEffect(() => {
+        if (showPayments && payments.length === 0 && !paymentsLoading) {
+            setPaymentsLoading(true);
+            getPaymentsByShift(shiftId).then(setPayments).catch(() => {}).finally(() => setPaymentsLoading(false));
+        }
+    }, [showPayments, shiftId, payments.length, paymentsLoading]);
 
     // Compute sales per nozzle
     const getNozzleSales = (nozzleId: number, openReading: number) => {
@@ -489,6 +520,181 @@ export default function ShiftClosingWorkspace() {
                         Fuel Sales - Credit Bills + Bill Payments + Statement Payments + Inflows - E-Advances - Op. Advances - Expenses - Incentives - Repayments
                     </p>
                 </div>
+            </GlassCard>
+
+            {/* Shift Invoices (collapsible) */}
+            <GlassCard className="p-5">
+                <button
+                    onClick={() => setShowInvoices(!showInvoices)}
+                    className="flex items-center gap-2 w-full text-left"
+                >
+                    <List className="h-5 w-5 text-primary" />
+                    <h2 className="text-lg font-semibold flex-1">Shift Invoices</h2>
+                    <span className="text-xs text-muted-foreground mr-2">
+                        {invoices.length > 0 ? `${invoices.length} invoices` : "Click to load"}
+                    </span>
+                    {showInvoices ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {showInvoices && (
+                    <div className="mt-4">
+                        {invoicesLoading ? (
+                            <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                        ) : invoices.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">No invoices in this shift</p>
+                        ) : (
+                            <>
+                                {/* Cash Invoices */}
+                                {invoices.filter(i => i.billType === "CASH").length > 0 && (
+                                    <div className="mb-4">
+                                        <h3 className="text-sm font-semibold text-green-500 mb-2">
+                                            Cash Invoices ({invoices.filter(i => i.billType === "CASH").length})
+                                        </h3>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b text-muted-foreground">
+                                                        <th className="text-left py-1.5 px-2">Bill#</th>
+                                                        <th className="text-left py-1.5 px-2">Vehicle</th>
+                                                        <th className="text-left py-1.5 px-2">Driver</th>
+                                                        <th className="text-left py-1.5 px-2">Products</th>
+                                                        <th className="text-left py-1.5 px-2">Mode</th>
+                                                        <th className="text-right py-1.5 px-2">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {invoices.filter(i => i.billType === "CASH").map(inv => (
+                                                        <tr key={inv.id} className="border-b border-border/30">
+                                                            <td className="py-1 px-2">{inv.billNo || "-"}</td>
+                                                            <td className="py-1 px-2">{inv.vehicle?.vehicleNumber || "-"}</td>
+                                                            <td className="py-1 px-2">{inv.driverName || "-"}</td>
+                                                            <td className="py-1 px-2">
+                                                                {inv.products?.map(p => `${p.product?.name || "?"}: ${p.quantity}`).join(", ") || "-"}
+                                                            </td>
+                                                            <td className="py-1 px-2">
+                                                                <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-medium">{inv.paymentMode || "CASH"}</span>
+                                                            </td>
+                                                            <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCur(inv.netAmount)}</td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr className="border-t font-semibold">
+                                                        <td colSpan={5} className="py-1.5 px-2 text-right">Total Cash</td>
+                                                        <td className="py-1.5 px-2 text-right tabular-nums">
+                                                            {fmtCur(invoices.filter(i => i.billType === "CASH").reduce((s, i) => s + (i.netAmount || 0), 0))}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Credit Invoices */}
+                                {invoices.filter(i => i.billType === "CREDIT").length > 0 && (
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-amber-500 mb-2">
+                                            Credit Invoices ({invoices.filter(i => i.billType === "CREDIT").length})
+                                        </h3>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b text-muted-foreground">
+                                                        <th className="text-left py-1.5 px-2">Bill#</th>
+                                                        <th className="text-left py-1.5 px-2">Customer</th>
+                                                        <th className="text-left py-1.5 px-2">Vehicle</th>
+                                                        <th className="text-left py-1.5 px-2">Products</th>
+                                                        <th className="text-right py-1.5 px-2">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {invoices.filter(i => i.billType === "CREDIT").map(inv => (
+                                                        <tr key={inv.id} className="border-b border-border/30">
+                                                            <td className="py-1 px-2">{inv.billNo || "-"}</td>
+                                                            <td className="py-1 px-2">{inv.customer?.name || "-"}</td>
+                                                            <td className="py-1 px-2">{inv.vehicle?.vehicleNumber || "-"}</td>
+                                                            <td className="py-1 px-2">
+                                                                {inv.products?.map(p => `${p.product?.name || "?"}: ${p.quantity}`).join(", ") || "-"}
+                                                            </td>
+                                                            <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCur(inv.netAmount)}</td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr className="border-t font-semibold">
+                                                        <td colSpan={4} className="py-1.5 px-2 text-right">Total Credit</td>
+                                                        <td className="py-1.5 px-2 text-right tabular-nums">
+                                                            {fmtCur(invoices.filter(i => i.billType === "CREDIT").reduce((s, i) => s + (i.netAmount || 0), 0))}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+            </GlassCard>
+
+            {/* Shift Payments (collapsible) */}
+            <GlassCard className="p-5">
+                <button
+                    onClick={() => setShowPayments(!showPayments)}
+                    className="flex items-center gap-2 w-full text-left"
+                >
+                    <Banknote className="h-5 w-5 text-blue-500" />
+                    <h2 className="text-lg font-semibold flex-1">Shift Payments</h2>
+                    <span className="text-xs text-muted-foreground mr-2">
+                        {payments.length > 0 ? `${payments.length} payments` : "Click to load"}
+                    </span>
+                    {showPayments ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {showPayments && (
+                    <div className="mt-4">
+                        {paymentsLoading ? (
+                            <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                        ) : payments.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">No payments in this shift</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs">
+                                    <thead>
+                                        <tr className="border-b text-muted-foreground">
+                                            <th className="text-left py-1.5 px-2">Type</th>
+                                            <th className="text-left py-1.5 px-2">Customer</th>
+                                            <th className="text-left py-1.5 px-2">Reference</th>
+                                            <th className="text-left py-1.5 px-2">Mode</th>
+                                            <th className="text-left py-1.5 px-2">Remarks</th>
+                                            <th className="text-right py-1.5 px-2">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {payments.map(p => (
+                                            <tr key={p.id} className="border-b border-border/30">
+                                                <td className="py-1 px-2">
+                                                    <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-medium">
+                                                        {p.invoiceBill ? "BILL" : p.statement ? "STMT" : "OTHER"}
+                                                    </span>
+                                                </td>
+                                                <td className="py-1 px-2">{p.customer?.name || "-"}</td>
+                                                <td className="py-1 px-2">
+                                                    {p.invoiceBill?.billNo || p.statement?.statementNo || p.referenceNo || "-"}
+                                                </td>
+                                                <td className="py-1 px-2">{p.paymentMode?.modeName || "-"}</td>
+                                                <td className="py-1 px-2 text-muted-foreground">{p.remarks || "-"}</td>
+                                                <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCur(p.amount)}</td>
+                                            </tr>
+                                        ))}
+                                        <tr className="border-t font-semibold">
+                                            <td colSpan={5} className="py-1.5 px-2 text-right">Total</td>
+                                            <td className="py-1.5 px-2 text-right tabular-nums">
+                                                {fmtCur(payments.reduce((s, p) => s + (p.amount || 0), 0))}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
             </GlassCard>
 
             {/* Submit Button */}

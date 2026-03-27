@@ -674,7 +674,14 @@ public class ShiftClosingReportService {
 
         // Header
         List<Company> companies = companyRepository.findByScid(shift.getScid() != null ? shift.getScid() : SecurityUtils.getScid());
-        data.setCompanyName(!companies.isEmpty() ? companies.get(0).getName() : "StopForFuel");
+        if (!companies.isEmpty()) {
+            Company company = companies.get(0);
+            data.setCompanyName(company.getName() != null ? company.getName() : "StopForFuel");
+            data.setCompanyAddress(company.getAddress());
+            data.setCompanyGstNo(company.getGstNo());
+        } else {
+            data.setCompanyName("StopForFuel");
+        }
         data.setEmployeeName(shift.getAttendant() != null ? shift.getAttendant().getName() : "-");
         data.setShiftId(shift.getId());
         data.setShiftStart(shift.getStartTime());
@@ -692,6 +699,9 @@ public class ShiftClosingReportService {
             mr.setOpenReading(ni.getOpenMeterReading());
             mr.setCloseReading(ni.getCloseMeterReading());
             mr.setSales(ni.getSales());
+            mr.setTestQuantity(ni.getTestQuantity());
+            mr.setRate(ni.getRate());
+            mr.setAmount(ni.getAmount());
             data.getMeterReadings().add(mr);
         }
 
@@ -739,8 +749,34 @@ public class ShiftClosingReportService {
             data.getSalesDifferences().add(sd);
         }
 
-        // Credit Bill Details (grouped by customer)
+        // All invoices for this shift
         List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+
+        // Cash Bill Details
+        List<InvoiceBill> cashBills = invoices.stream()
+                .filter(inv -> "CASH".equals(inv.getBillType()))
+                .collect(Collectors.toList());
+        for (InvoiceBill bill : cashBills) {
+            ShiftReportPrintData.CashBillDetail cbd = new ShiftReportPrintData.CashBillDetail();
+            cbd.setBillNo(bill.getBillNo());
+            cbd.setVehicleNo(bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-");
+            cbd.setDriverName(bill.getDriverName());
+            cbd.setPaymentMode(bill.getPaymentMode() != null ? bill.getPaymentMode() : "CASH");
+            cbd.setAmount(bill.getNetAmount());
+            StringBuilder prodStr = new StringBuilder();
+            if (bill.getProducts() != null) {
+                for (InvoiceProduct ip : bill.getProducts()) {
+                    String pName = ip.getProduct() != null ? abbreviateProduct(ip.getProduct().getName()) : "?";
+                    double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
+                    if (prodStr.length() > 0) prodStr.append(" ");
+                    prodStr.append(pName).append(":").append(String.format("%.0f", qty));
+                }
+            }
+            cbd.setProducts(prodStr.toString());
+            data.getCashBillDetails().add(cbd);
+        }
+
+        // Credit Bill Details (grouped by customer)
         List<InvoiceBill> creditBills = invoices.stream()
                 .filter(inv -> "CREDIT".equals(inv.getBillType()))
                 .sorted(Comparator.comparing(inv -> inv.getCustomer() != null ? inv.getCustomer().getName() : ""))

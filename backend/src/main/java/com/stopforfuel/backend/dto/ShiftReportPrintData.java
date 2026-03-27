@@ -11,6 +11,8 @@ public class ShiftReportPrintData {
 
     // Header info
     private String companyName;
+    private String companyAddress;
+    private String companyGstNo;
     private String employeeName;
     private Long shiftId;
     private LocalDateTime shiftStart;
@@ -29,6 +31,7 @@ public class ShiftReportPrintData {
     // These come from the existing report entity
 
     // Back Page - Left Column
+    private List<CashBillDetail> cashBillDetails = new ArrayList<>();
     private List<CreditBillDetail> creditBillDetails = new ArrayList<>();
     private List<StockSummaryRow> stockSummary = new ArrayList<>();
 
@@ -50,6 +53,9 @@ public class ShiftReportPrintData {
         private Double openReading;
         private Double closeReading;
         private Double sales;
+        private Double testQuantity;
+        private Double rate;
+        private Double amount;
     }
 
     @Data
@@ -71,6 +77,16 @@ public class ShiftReportPrintData {
         private Double tankSale;
         private Double meterSale;
         private Double difference;
+    }
+
+    @Data
+    public static class CashBillDetail {
+        private String billNo;
+        private String vehicleNo;
+        private String driverName;
+        private String products; // compact format: "P:500 HSD:200"
+        private String paymentMode;
+        private BigDecimal amount;
     }
 
     @Data

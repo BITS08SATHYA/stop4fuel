@@ -4,7 +4,10 @@ import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.ReportAuditLog;
 import com.stopforfuel.backend.entity.ShiftClosingReport;
 import com.stopforfuel.backend.service.ShiftClosingReportService;
+import com.stopforfuel.backend.service.ShiftReportPdfGenerator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +23,7 @@ import java.util.Map;
 public class ShiftClosingReportController {
 
     private final ShiftClosingReportService reportService;
+    private final ShiftReportPdfGenerator pdfGenerator;
 
     @PostMapping("/{shiftId}/generate")
     @PreAuthorize("hasPermission(null, 'REPORT_GENERATE')")
@@ -90,5 +94,20 @@ public class ShiftClosingReportController {
     public ResponseEntity<Map<String, String>> getPdfUrl(@PathVariable Long shiftId) {
         String url = reportService.getReportPdfUrl(shiftId);
         return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    @GetMapping("/{shiftId}/download-pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long shiftId) {
+        ShiftClosingReport report = reportService.getReport(shiftId);
+        ShiftReportPrintData printData = reportService.getPrintData(shiftId);
+        byte[] pdfBytes = pdfGenerator.generate(printData, report);
+
+        String filename = "shift-report-" + shiftId + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(pdfBytes.length)
+                .body(pdfBytes);
     }
 }
