@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
 import { getTanks, getFuelProducts, createTank, updateTank, deleteTank, Tank, Product, checkStockAlerts } from "@/lib/api/station";
-import { Droplets, Plus, Edit2, Trash2, Search, Gauge, AlertTriangle } from "lucide-react";
+import { Droplets, Plus, Edit2, Trash2, Search, AlertTriangle } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
@@ -171,59 +171,154 @@ export default function TanksPage() {
                             const matchesSearch = !searchQuery || t.name?.toLowerCase().includes(q) || t.product.name?.toLowerCase().includes(q);
                             const matchesStatus = statusFilter === "ALL" || (t.active ? "ACTIVE" : "INACTIVE") === statusFilter;
                             return matchesSearch && matchesStatus;
-                        }).map(tank => (
+                        }).map(tank => {
+                            const stock = tank.availableStock ?? 0;
+                            const pct = tank.capacity > 0 ? Math.min((stock / tank.capacity) * 100, 100) : 0;
+                            const thresholdPct = (tank.thresholdStock != null && tank.thresholdStock > 0 && tank.capacity > 0)
+                                ? Math.min((tank.thresholdStock / tank.capacity) * 100, 100) : 0;
+                            const isBelowThreshold = tank.thresholdStock != null && tank.thresholdStock > 0 && stock <= tank.thresholdStock;
+                            const fillColor = isBelowThreshold ? '#ef4444' : pct <= 20 ? '#ef4444' : pct <= 50 ? '#f59e0b' : '#22c55e';
+                            const fillColorDim = isBelowThreshold ? '#ef444440' : pct <= 20 ? '#ef444440' : pct <= 50 ? '#f59e0b40' : '#22c55e40';
+                            const statusColor = isBelowThreshold ? 'text-red-500' : pct <= 20 ? 'text-red-500' : pct <= 50 ? 'text-amber-500' : 'text-green-500';
+
+                            return (
                             <GlassCard key={tank.id} className="relative group">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                                        <Droplets className="w-6 h-6" />
+                                {/* Header */}
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-foreground">{tank.name}</h3>
+                                        <p className="text-sm text-muted-foreground">{tank.product.name}</p>
                                     </div>
                                     <span className={`px-2 py-1 rounded text-xs font-medium ${tank.active ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
                                         {tank.active ? 'Active' : 'Inactive'}
                                     </span>
                                 </div>
-                                <h3 className="text-xl font-bold text-foreground mb-1">{tank.name}</h3>
-                                <p className="text-muted-foreground mb-3">Capacity: {tank.capacity.toLocaleString()} L</p>
 
-                                {/* Available Stock Widget */}
-                                {(() => {
-                                    const stock = tank.availableStock ?? 0;
-                                    const pct = tank.capacity > 0 ? Math.min((stock / tank.capacity) * 100, 100) : 0;
-                                    const isBelowThreshold = tank.thresholdStock != null && tank.thresholdStock > 0 && stock <= tank.thresholdStock;
-                                    const barColor = isBelowThreshold ? 'bg-red-500' : pct <= 20 ? 'bg-red-500' : pct <= 50 ? 'bg-amber-500' : 'bg-green-500';
-                                    const badgeColor = isBelowThreshold ? 'text-red-600 bg-red-500/10' : pct <= 20 ? 'text-red-600 bg-red-500/10' : pct <= 50 ? 'text-amber-600 bg-amber-500/10' : 'text-green-600 bg-green-500/10';
-                                    return (
-                                        <div className="mb-4">
-                                            {isBelowThreshold && (
-                                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg mb-2">
-                                                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                                    <span className="text-xs font-semibold text-red-500">
-                                                        Below threshold ({tank.thresholdStock?.toLocaleString()} L)
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${badgeColor} mb-2`}>
-                                                <Gauge className="w-3.5 h-3.5" />
-                                                Available: {stock.toLocaleString()} L ({pct.toFixed(0)}%)
-                                            </div>
-                                            <div className="w-full h-2 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-                                                <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-                                            </div>
-                                            {tank.thresholdStock != null && tank.thresholdStock > 0 && (
-                                                <div className="relative w-full mt-0.5">
-                                                    <div
-                                                        className="absolute top-0 w-px h-2 bg-amber-500"
-                                                        style={{ left: `${Math.min((tank.thresholdStock / tank.capacity) * 100, 100)}%` }}
-                                                        title={`Threshold: ${tank.thresholdStock.toLocaleString()} L`}
+                                {/* Tank Visualization */}
+                                <div className="flex items-center gap-5 my-4">
+                                    {/* SVG Tank */}
+                                    <div className="relative flex-shrink-0" style={{ width: 80, height: 140 }}>
+                                        <svg viewBox="0 0 80 140" width="80" height="140" className="drop-shadow-lg">
+                                            <defs>
+                                                <clipPath id={`tank-clip-${tank.id}`}>
+                                                    {/* Tank body shape: rounded rect with elliptical top/bottom */}
+                                                    <rect x="8" y="16" width="64" height="108" rx="8" />
+                                                    <ellipse cx="40" cy="16" rx="32" ry="10" />
+                                                    <ellipse cx="40" cy="124" rx="32" ry="10" />
+                                                </clipPath>
+                                                <linearGradient id={`liquid-grad-${tank.id}`} x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor={fillColor} stopOpacity="0.9" />
+                                                    <stop offset="100%" stopColor={fillColor} stopOpacity="0.6" />
+                                                </linearGradient>
+                                                <linearGradient id={`tank-body-${tank.id}`} x1="0" y1="0" x2="1" y2="0">
+                                                    <stop offset="0%" stopColor="currentColor" stopOpacity="0.08" />
+                                                    <stop offset="50%" stopColor="currentColor" stopOpacity="0.04" />
+                                                    <stop offset="100%" stopColor="currentColor" stopOpacity="0.08" />
+                                                </linearGradient>
+                                            </defs>
+
+                                            {/* Tank outline */}
+                                            <rect x="8" y="16" width="64" height="108" rx="8"
+                                                fill={`url(#tank-body-${tank.id})`}
+                                                stroke="currentColor" strokeOpacity="0.15" strokeWidth="1.5" className="text-foreground" />
+                                            <ellipse cx="40" cy="16" rx="32" ry="10"
+                                                fill={`url(#tank-body-${tank.id})`}
+                                                stroke="currentColor" strokeOpacity="0.15" strokeWidth="1.5" className="text-foreground" />
+                                            <ellipse cx="40" cy="124" rx="32" ry="10"
+                                                fill={`url(#tank-body-${tank.id})`}
+                                                stroke="currentColor" strokeOpacity="0.15" strokeWidth="1.5" className="text-foreground" />
+
+                                            {/* Liquid fill */}
+                                            <g clipPath={`url(#tank-clip-${tank.id})`}>
+                                                {/* Fill rect from bottom, animated */}
+                                                <rect
+                                                    x="8" width="64"
+                                                    y={134 - (pct / 100) * 118}
+                                                    height={(pct / 100) * 118}
+                                                    fill={`url(#liquid-grad-${tank.id})`}
+                                                >
+                                                    <animate attributeName="y"
+                                                        from="134" to={134 - (pct / 100) * 118}
+                                                        dur="1.2s" fill="freeze" calcMode="spline"
+                                                        keySplines="0.25 0.1 0.25 1" />
+                                                    <animate attributeName="height"
+                                                        from="0" to={(pct / 100) * 118}
+                                                        dur="1.2s" fill="freeze" calcMode="spline"
+                                                        keySplines="0.25 0.1 0.25 1" />
+                                                </rect>
+
+                                                {/* Wave effect on liquid surface */}
+                                                {pct > 0 && (
+                                                    <ellipse
+                                                        cx="40"
+                                                        cy={134 - (pct / 100) * 118}
+                                                        rx="32" ry="4"
+                                                        fill={fillColor} fillOpacity="0.3"
+                                                    >
+                                                        <animate attributeName="cy"
+                                                            from="134" to={134 - (pct / 100) * 118}
+                                                            dur="1.2s" fill="freeze" calcMode="spline"
+                                                            keySplines="0.25 0.1 0.25 1" />
+                                                        <animate attributeName="ry"
+                                                            values="4;6;4" dur="3s" repeatCount="indefinite" />
+                                                    </ellipse>
+                                                )}
+                                            </g>
+
+                                            {/* Threshold marker */}
+                                            {thresholdPct > 0 && (
+                                                <g>
+                                                    <line
+                                                        x1="6" y1={134 - (thresholdPct / 100) * 118}
+                                                        x2="74" y2={134 - (thresholdPct / 100) * 118}
+                                                        stroke="#f59e0b" strokeWidth="1.5"
+                                                        strokeDasharray="4 3" strokeOpacity="0.8"
                                                     />
-                                                </div>
+                                                    {/* Small triangle markers on edges */}
+                                                    <polygon
+                                                        points={`2,${134 - (thresholdPct / 100) * 118 - 3} 8,${134 - (thresholdPct / 100) * 118} 2,${134 - (thresholdPct / 100) * 118 + 3}`}
+                                                        fill="#f59e0b" fillOpacity="0.8"
+                                                    />
+                                                    <polygon
+                                                        points={`78,${134 - (thresholdPct / 100) * 118 - 3} 72,${134 - (thresholdPct / 100) * 118} 78,${134 - (thresholdPct / 100) * 118 + 3}`}
+                                                        fill="#f59e0b" fillOpacity="0.8"
+                                                    />
+                                                </g>
                                             )}
-                                        </div>
-                                    );
-                                })()}
 
-                                <div className="bg-black/5 dark:bg-white/5 rounded-lg p-3 mb-4">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">Attached Product</span>
-                                    <span className="font-medium text-foreground">{tank.product.name}</span>
+                                            {/* Percentage text in center */}
+                                            <text x="40" y="72" textAnchor="middle" dominantBaseline="middle"
+                                                className="fill-foreground" fontSize="16" fontWeight="bold" opacity="0.8">
+                                                {pct.toFixed(0)}%
+                                            </text>
+                                        </svg>
+                                    </div>
+
+                                    {/* Stats beside tank */}
+                                    <div className="flex-1 space-y-2.5">
+                                        <div>
+                                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Capacity</div>
+                                            <div className="text-sm font-semibold text-foreground">{tank.capacity.toLocaleString()} L</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Available</div>
+                                            <div className={`text-sm font-bold ${statusColor}`}>{stock.toLocaleString()} L</div>
+                                        </div>
+                                        {thresholdPct > 0 && (
+                                            <div>
+                                                <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                                                    <span className="inline-block w-2.5 h-0.5 bg-amber-500 rounded" /> Threshold
+                                                </div>
+                                                <div className="text-sm font-semibold text-amber-500">{tank.thresholdStock?.toLocaleString()} L</div>
+                                            </div>
+                                        )}
+                                        {isBelowThreshold && (
+                                            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                                <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+                                                <span className="text-[10px] font-semibold text-red-500">LOW STOCK</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <PermissionGate permission="STATION_MANAGE">
@@ -237,7 +332,8 @@ export default function TanksPage() {
                                     </div>
                                 </PermissionGate>
                             </GlassCard>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
