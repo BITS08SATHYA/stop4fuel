@@ -29,6 +29,12 @@ public class TankController {
         return tankService.getActiveTanks();
     }
 
+    @GetMapping("/low-stock")
+    @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
+    public List<Tank> getLowStockTanks() {
+        return tankService.getLowStockTanks();
+    }
+
     @GetMapping("/product/{productId}")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
     public List<Tank> getTanksByProduct(@PathVariable Long productId) {
