@@ -1267,6 +1267,8 @@ export interface DashboardTankStatus {
     productName: string | null;
     capacity: number;
     currentStock: number;
+    thresholdStock: number | null;
+    productPrice: number | null;
     active: boolean;
     lastReadingDate: string | null;
 }

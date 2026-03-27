@@ -190,6 +190,8 @@ public class DashboardController {
             ts.setTankName(tank.getName());
             ts.setProductName(tank.getProduct() != null ? tank.getProduct().getName() : null);
             ts.setCapacity(tank.getCapacity());
+            ts.setThresholdStock(tank.getThresholdStock());
+            ts.setProductPrice(tank.getProduct() != null ? tank.getProduct().getPrice() : null);
             ts.setActive(tank.isActive());
 
             TankInventory latestInv = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
@@ -307,6 +309,8 @@ public class DashboardController {
         private String productName;
         private double capacity;
         private double currentStock;
+        private Double thresholdStock;
+        private BigDecimal productPrice;
         private boolean active;
         private String lastReadingDate;
     }
