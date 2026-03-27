@@ -5,6 +5,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
+import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
@@ -611,16 +612,12 @@ export default function StatementsPage() {
                         <label className="block text-sm font-medium text-muted-foreground mb-1">
                             <User className="w-4 h-4 inline mr-1" />Customer
                         </label>
-                        <select
+                        <CustomerAutocomplete
                             value={selectedCustomerId}
-                            onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : "")}
-                            className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="">Select customer...</option>
-                            {customers.map((c: any) => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                        </select>
+                            onChange={(id) => setSelectedCustomerId(id ? Number(id) : "")}
+                            customers={customers}
+                            placeholder="Search customer..."
+                        />
                     </div>
 
                     {/* Date Range */}

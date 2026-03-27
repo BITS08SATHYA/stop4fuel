@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     BookOpen, Search, Calendar, ArrowUpRight, ArrowDownLeft
 } from "lucide-react";
+import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import {
     getCustomers, getCustomerLedger, getOpeningBalance,
     type CustomerLedger, type Customer
@@ -73,16 +74,12 @@ export default function LedgerPage() {
                     <div className="flex flex-wrap gap-4 items-end">
                         <div className="flex-1 min-w-[200px]">
                             <label className="block text-sm font-medium text-muted-foreground mb-1">Customer</label>
-                            <select
+                            <CustomerAutocomplete
                                 value={selectedCustomerId}
-                                onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : "")}
-                                className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="">Select customer...</option>
-                                {customers.map((c: any) => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
+                                onChange={(id) => setSelectedCustomerId(id ? Number(id) : "")}
+                                customers={customers}
+                                placeholder="Search customer..."
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-muted-foreground mb-1">
