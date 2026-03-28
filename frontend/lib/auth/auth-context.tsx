@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { fetchAuthSession, signOut } from "aws-amplify/auth";
+import { fetchAuthSession, signOut, signInWithRedirect } from "aws-amplify/auth";
 
 interface AuthUser {
     id?: number;
@@ -129,11 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const login = useCallback(() => {
         if (DEV_MODE) return;
-        // Redirect to Cognito Hosted UI
-        const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
-        const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-        const redirectUri = `${window.location.origin}/auth/callback`;
-        window.location.href = `https://${domain}/login?client_id=${clientId}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(redirectUri)}`;
+        signInWithRedirect();
     }, []);
 
     const logout = useCallback(async () => {
@@ -143,9 +139,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             setUser(null);
             setAccessToken(null);
-            window.location.href = process.env.NEXT_PUBLIC_LANDING_URL || '/login';
+            window.location.href = '/';
         } catch {
-            window.location.href = process.env.NEXT_PUBLIC_LANDING_URL || '/login';
+            window.location.href = '/';
         }
     }, []);
 
