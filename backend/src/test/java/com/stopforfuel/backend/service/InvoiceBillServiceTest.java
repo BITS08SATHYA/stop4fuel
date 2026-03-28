@@ -263,6 +263,9 @@ class InvoiceBillServiceTest {
     @Test
     void uploadFile_validBillPic_uploadsToS3AndSavesKey() throws Exception {
         testInvoice.setId(1L);
+        testInvoice.setScid(1L);
+        testInvoice.setShiftId(10L);
+        testInvoice.setBillNo("A26/51");
         testInvoice.setDate(LocalDateTime.of(2026, 3, 5, 10, 0));
         testInvoice.setBillPic(null);
         MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1, 2, 3});
@@ -282,8 +285,11 @@ class InvoiceBillServiceTest {
     @Test
     void uploadFile_replacesExistingFile_deletesOldKey() throws Exception {
         testInvoice.setId(1L);
+        testInvoice.setScid(1L);
+        testInvoice.setShiftId(10L);
+        testInvoice.setBillNo("A26/51");
         testInvoice.setDate(LocalDateTime.of(2026, 3, 5, 10, 0));
-        testInvoice.setBillPic("invoices/2026/03/05/1/bill-pic.jpg");
+        testInvoice.setBillPic("invoices/sales/1/2026/03/05/shift-10/A26-51/bill-pic.jpg");
         MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1, 2, 3});
 
         when(repository.findById(1L)).thenReturn(Optional.of(testInvoice));
@@ -292,12 +298,15 @@ class InvoiceBillServiceTest {
 
         invoiceBillService.uploadFile(1L, "bill-pic", file);
 
-        verify(s3StorageService).delete("invoices/2026/03/05/1/bill-pic.jpg");
+        verify(s3StorageService).delete("invoices/sales/1/2026/03/05/shift-10/A26-51/bill-pic.jpg");
     }
 
     @Test
     void uploadFile_invalidType_throwsException() throws Exception {
         testInvoice.setId(1L);
+        testInvoice.setScid(1L);
+        testInvoice.setShiftId(10L);
+        testInvoice.setBillNo("A26/51");
         testInvoice.setDate(LocalDateTime.of(2026, 3, 5, 10, 0));
         MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[]{1, 2, 3});
 

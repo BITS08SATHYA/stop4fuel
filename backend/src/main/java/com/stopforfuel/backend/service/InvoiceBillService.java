@@ -647,12 +647,16 @@ public class InvoiceBillService {
         InvoiceBill invoice = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
 
-        // Build S3 key using invoice date
+        // Build S3 key: invoices/sales/{scid}/{year}/{month}/{day}/shift-{shiftId}/{billNo}/{type}.{ext}
         LocalDateTime invoiceDate = invoice.getDate() != null ? invoice.getDate() : LocalDateTime.now();
+        Long scid = invoice.getScid() != null ? invoice.getScid() : SecurityUtils.getScid();
+        Long shiftId = invoice.getShiftId() != null ? invoice.getShiftId() : 0L;
+        String safeBillNo = invoice.getBillNo() != null
+                ? invoice.getBillNo().replace("/", "-") : String.valueOf(id);
         String ext = getExtension(file.getOriginalFilename());
-        String key = String.format("invoices/%d/%02d/%02d/%d/%s.%s",
-                invoiceDate.getYear(), invoiceDate.getMonthValue(), invoiceDate.getDayOfMonth(),
-                id, type, ext);
+        String key = String.format("invoices/sales/%d/%d/%02d/%02d/shift-%d/%s/%s.%s",
+                scid, invoiceDate.getYear(), invoiceDate.getMonthValue(), invoiceDate.getDayOfMonth(),
+                shiftId, safeBillNo, type, ext);
 
         // Delete old file if exists
         String oldKey = getFileKey(invoice, type);
