@@ -48,18 +48,20 @@ import {
     LogOut,
     Bell,
     ClipboardList,
+    MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth/auth-context";
 
 const mainNav = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Marketing", href: "/marketing", icon: Megaphone },
 ];
 
 const customerManagementNav = [
     { name: "Customers", href: "/customers", icon: Users },
+    { name: "Customer Map", href: "/customers/map", icon: MapPin },
     { name: "Groups", href: "/customers/groups", icon: Users },
     { name: "Categories", href: "/customers/categories", icon: Layers },
     { name: "Vehicles", href: "/customers/vehicles", icon: Truck },
@@ -172,7 +174,7 @@ export function AppSidebar() {
     const { user, hasPermission, logout } = useAuth();
 
     const isActive = (href: string) => {
-        if (href === "/") return pathname === "/";
+        if (href === "/dashboard") return pathname === "/dashboard";
         return pathname === href || pathname.startsWith(href + "/");
     };
 

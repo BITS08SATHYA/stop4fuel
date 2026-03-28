@@ -38,6 +38,10 @@ public interface CustomerRepository extends ScidRepository<Customer> {
             @org.springframework.data.repository.query.Param("categoryType") String categoryType,
             org.springframework.data.domain.Pageable pageable);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"group"})
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM Customer c WHERE c.scid = :scid AND c.latitude IS NOT NULL AND c.longitude IS NOT NULL")
+    java.util.List<Customer> findAllWithCoordinatesByScid(@org.springframework.data.repository.query.Param("scid") Long scid);
+
     java.util.List<Customer> findByGroupIsNull();
     java.util.List<Customer> findByIdIn(java.util.List<Long> ids);
 }
