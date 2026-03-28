@@ -1,7 +1,10 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.TankInventory;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -9,6 +12,10 @@ import java.util.List;
 
 @Repository
 public interface TankInventoryRepository extends ScidRepository<TankInventory> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT ti FROM TankInventory ti WHERE ti.tank.id = :tankId ORDER BY ti.date DESC, ti.id DESC LIMIT 1")
+    TankInventory findTopByTankIdForUpdate(@Param("tankId") Long tankId);
     @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.scid = :scid")
     List<TankInventory> findAllByScidWithTank(Long scid);
 

@@ -94,7 +94,7 @@ public class OperationalAdvanceService {
 
     @Transactional
     public OperationalAdvance recordReturn(Long id, BigDecimal returnedAmount, String returnRemarks) {
-        OperationalAdvance advance = repository.findById(id)
+        OperationalAdvance advance = repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + id));
 
         advance.setReturnedAmount(returnedAmount);
@@ -108,7 +108,7 @@ public class OperationalAdvanceService {
 
     @Transactional
     public OperationalAdvance assignInvoice(Long advanceId, Long invoiceId) {
-        OperationalAdvance advance = repository.findById(advanceId)
+        OperationalAdvance advance = repository.findByIdForUpdate(advanceId)
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
         if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
@@ -132,7 +132,7 @@ public class OperationalAdvanceService {
 
     @Transactional
     public OperationalAdvance unassignInvoice(Long advanceId, Long invoiceId) {
-        OperationalAdvance advance = repository.findById(advanceId)
+        OperationalAdvance advance = repository.findByIdForUpdate(advanceId)
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
         InvoiceBill invoice = invoiceBillRepository.findById(invoiceId)
@@ -156,7 +156,7 @@ public class OperationalAdvanceService {
 
     @Transactional
     public OperationalAdvance assignStatement(Long advanceId, Long statementId) {
-        OperationalAdvance advance = repository.findById(advanceId)
+        OperationalAdvance advance = repository.findByIdForUpdate(advanceId)
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
         if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
@@ -174,7 +174,7 @@ public class OperationalAdvanceService {
 
     @Transactional
     public OperationalAdvance unassignStatement(Long advanceId) {
-        OperationalAdvance advance = repository.findById(advanceId)
+        OperationalAdvance advance = repository.findByIdForUpdate(advanceId)
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
         advance.setStatement(null);
