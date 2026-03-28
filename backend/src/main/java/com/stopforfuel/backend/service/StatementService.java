@@ -255,8 +255,12 @@ public class StatementService {
         byte[] pdfBytes = pdfGenerator.generate(statement, bills, company);
 
         LocalDate date = statement.getStatementDate() != null ? statement.getStatementDate() : LocalDate.now();
-        String key = String.format("statements/%d/%02d/%d/statement.pdf",
-                date.getYear(), date.getMonthValue(), id);
+        Long scid = statement.getScid() != null ? statement.getScid() : SecurityUtils.getScid();
+        Long customerId = statement.getCustomer() != null ? statement.getCustomer().getId() : 0L;
+        String safeStatementNo = statement.getStatementNo() != null
+                ? statement.getStatementNo().replace("/", "-") : String.valueOf(id);
+        String key = String.format("statements/%d/%d/%d/%02d/S%s.pdf",
+                scid, customerId, date.getYear(), date.getMonthValue(), safeStatementNo);
 
         // Delete old PDF if exists
         if (statement.getStatementPdfUrl() != null && !statement.getStatementPdfUrl().isEmpty()) {

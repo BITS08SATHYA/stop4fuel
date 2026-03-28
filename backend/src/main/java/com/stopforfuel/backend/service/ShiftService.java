@@ -273,13 +273,11 @@ public class ShiftService {
             byte[] pdfBytes = pdfGenerator.generate(printData, report);
 
             // Upload to S3
-            // TODO: Configure proper S3 bucket hierarchy per deployment
             LocalDateTime shiftStart = shift.getStartTime() != null ? shift.getStartTime() : LocalDateTime.now();
-            String key = String.format("reports/shifts/%d/%d/%02d/shift-%d-report.pdf",
-                    shift.getScid(),
-                    shiftStart.getYear(),
-                    shiftStart.getMonthValue(),
-                    shiftId);
+            Long scid = shift.getScid() != null ? shift.getScid() : 1L;
+            String key = String.format("reports/shift-closing/%d/%d/%02d/%02d/shift-%d.pdf",
+                    scid, shiftStart.getYear(), shiftStart.getMonthValue(),
+                    shiftStart.getDayOfMonth(), shiftId);
 
             s3StorageService.upload(key, pdfBytes, "application/pdf");
             report.setReportPdfUrl(key);
