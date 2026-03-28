@@ -259,7 +259,7 @@ public class StatementService {
         Long customerId = statement.getCustomer() != null ? statement.getCustomer().getId() : 0L;
         String safeStatementNo = statement.getStatementNo() != null
                 ? statement.getStatementNo().replace("/", "-") : String.valueOf(id);
-        String key = String.format("statements/%d/%d/%d/%02d/S%s.pdf",
+        String key = String.format("statements/%d/%d/%d/%02d/%s.pdf",
                 scid, customerId, date.getYear(), date.getMonthValue(), safeStatementNo);
 
         // Delete old PDF if exists
