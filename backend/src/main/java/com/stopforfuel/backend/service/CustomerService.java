@@ -55,6 +55,10 @@ public class CustomerService {
         return customerRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    public List<Customer> getCustomersWithCoordinates() {
+        return customerRepository.findAllWithCoordinatesByScid(SecurityUtils.getScid());
+    }
+
     public Customer getCustomerById(Long id) {
         return customerRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
