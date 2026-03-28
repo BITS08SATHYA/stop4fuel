@@ -14,7 +14,7 @@ export default function NotFound() {
                     been moved.
                 </p>
                 <Link
-                    href="/"
+                    href="/dashboard"
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                     <Home className="h-4 w-4" />
