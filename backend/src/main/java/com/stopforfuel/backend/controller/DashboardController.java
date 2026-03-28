@@ -182,7 +182,7 @@ public class DashboardController {
                 .collect(Collectors.toList());
         stats.setProductSales(productSales);
 
-        // --- Tank status ---
+        // --- Tank status (use tank.availableStock as the authoritative source) ---
         List<Tank> tanks = tankRepository.findAll();
         List<TankStatus> tankStatuses = tanks.stream().map(tank -> {
             TankStatus ts = new TankStatus();
@@ -190,16 +190,14 @@ public class DashboardController {
             ts.setTankName(tank.getName());
             ts.setProductName(tank.getProduct() != null ? tank.getProduct().getName() : null);
             ts.setCapacity(tank.getCapacity());
+            ts.setCurrentStock(tank.getAvailableStock() != null ? tank.getAvailableStock() : 0.0);
             ts.setThresholdStock(tank.getThresholdStock());
             ts.setProductPrice(tank.getProduct() != null ? tank.getProduct().getPrice() : null);
             ts.setActive(tank.isActive());
 
             TankInventory latestInv = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
             if (latestInv != null) {
-                ts.setCurrentStock(latestInv.getCloseStock() != null ? latestInv.getCloseStock() : 0.0);
                 ts.setLastReadingDate(latestInv.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE));
-            } else {
-                ts.setCurrentStock(0.0);
             }
             return ts;
         }).collect(Collectors.toList());
