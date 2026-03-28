@@ -223,8 +223,9 @@ public class ShiftClosingReportService {
             byte[] pdfBytes = pdfGenerator.generate(printData, report);
 
             LocalDateTime shiftStart = shift.getStartTime() != null ? shift.getStartTime() : LocalDateTime.now();
-            String key = String.format("shift-reports/%d/%02d/%02d/%d/report.pdf",
-                    shiftStart.getYear(), shiftStart.getMonthValue(), shiftStart.getDayOfMonth(),
+            Long scid = report.getScid() != null ? report.getScid() : (shift.getScid() != null ? shift.getScid() : 1L);
+            String key = String.format("reports/shift-closing/%d/%d/%02d/%02d/shift-%d.pdf",
+                    scid, shiftStart.getYear(), shiftStart.getMonthValue(), shiftStart.getDayOfMonth(),
                     shift.getId());
 
             s3StorageService.upload(key, pdfBytes, "application/pdf");
