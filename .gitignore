@@ -46,3 +46,21 @@ deploy/
 
 # === Claude Code ===
 .claude/
+CLAUDE.md
+
+# === Mockups & Docs ===
+*-mockup.html
+*.drawio
+*.pdf
+*.sql
+
+# === Migration Scripts ===
+migration/
+
+# === Models ===
+models/
+
+# === Misc ===
+todos
+yet_to_do.txt
+landing_page/
