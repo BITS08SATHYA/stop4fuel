@@ -421,10 +421,16 @@ export default function DashboardPage() {
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground">/ {tank.capacity.toLocaleString("en-IN", { maximumFractionDigits: 0 })} L</span>
                                                 </div>
+                                                {threshPct > 0 && (
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        <span className="inline-block w-2 h-px bg-amber-500" />
+                                                        <span className="text-[10px] text-amber-500">Threshold: {tank.thresholdStock?.toLocaleString("en-IN", { maximumFractionDigits: 0 })} L</span>
+                                                    </div>
+                                                )}
                                                 {isBelowThreshold && (
-                                                    <div className="flex items-center gap-1 mt-1">
+                                                    <div className="flex items-center gap-1 mt-0.5">
                                                         <AlertTriangle className="w-3 h-3 text-red-500" />
-                                                        <span className="text-[10px] font-semibold text-red-500">LOW</span>
+                                                        <span className="text-[10px] font-semibold text-red-500">LOW STOCK</span>
                                                     </div>
                                                 )}
                                             </div>
