@@ -186,10 +186,10 @@ public class StatementService {
      */
     @Transactional
     public Statement removeBillFromStatement(Long statementId, Long invoiceBillId) {
-        Statement statement = statementRepository.findById(statementId)
+        Statement statement = statementRepository.findByIdForUpdate(statementId)
                 .orElseThrow(() -> new RuntimeException("Statement not found"));
 
-        InvoiceBill bill = invoiceBillRepository.findById(invoiceBillId)
+        InvoiceBill bill = invoiceBillRepository.findByIdForUpdate(invoiceBillId)
                 .orElseThrow(() -> new RuntimeException("Invoice bill not found"));
 
         if (bill.getStatement() == null || !bill.getStatement().getId().equals(statementId)) {

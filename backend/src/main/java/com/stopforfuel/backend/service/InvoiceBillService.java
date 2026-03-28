@@ -407,7 +407,7 @@ public class InvoiceBillService {
      */
     private void updateConsumedLiters(Vehicle vehicle, Customer customer, BigDecimal liters) {
         if (vehicle != null) {
-            Vehicle v = vehicleRepository.findById(vehicle.getId()).orElse(null);
+            Vehicle v = vehicleRepository.findByIdForUpdate(vehicle.getId()).orElse(null);
             if (v != null) {
                 BigDecimal newConsumed = (v.getConsumedLiters() != null ? v.getConsumedLiters() : BigDecimal.ZERO)
                         .add(liters);
@@ -423,7 +423,7 @@ public class InvoiceBillService {
         }
 
         if (customer != null) {
-            Customer c = customerRepository.findById(customer.getId()).orElse(null);
+            Customer c = customerRepository.findByIdForUpdate(customer.getId()).orElse(null);
             if (c != null) {
                 BigDecimal newConsumed = (c.getConsumedLiters() != null ? c.getConsumedLiters() : BigDecimal.ZERO)
                         .add(liters);
@@ -457,7 +457,7 @@ public class InvoiceBillService {
             Nozzle nozzle = nozzleRepository.findById(invoiceProduct.getNozzle().getId()).orElse(null);
             if (nozzle != null && nozzle.getTank() != null) {
                 Long tankId = nozzle.getTank().getId();
-                TankInventory tankInv = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tankId);
+                TankInventory tankInv = tankInventoryRepository.findTopByTankIdForUpdate(tankId);
                 if (tankInv != null) {
                     double currentClose = tankInv.getCloseStock() != null ? tankInv.getCloseStock() : 0.0;
                     tankInv.setCloseStock(currentClose - qty);
@@ -469,7 +469,7 @@ public class InvoiceBillService {
 
                 // --- 3. Nozzle meter reading update ---
                 NozzleInventory nozzleInv = nozzleInventoryRepository
-                        .findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
+                        .findTopByNozzleIdForUpdate(nozzle.getId());
                 if (nozzleInv != null) {
                     double currentReading = nozzleInv.getCloseMeterReading() != null
                             ? nozzleInv.getCloseMeterReading() : 0.0;
@@ -487,7 +487,7 @@ public class InvoiceBillService {
         if (invoiceProduct.getProduct() != null && invoiceProduct.getProduct().getId() != null) {
             Long productId = invoiceProduct.getProduct().getId();
             ProductInventory productInv = productInventoryRepository
-                    .findTopByProductIdOrderByDateDescIdDesc(productId);
+                    .findTopByProductIdForUpdate(productId);
             if (productInv != null) {
                 double currentClose = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
                 productInv.setCloseStock(currentClose - qty);
@@ -501,7 +501,7 @@ public class InvoiceBillService {
             if (invoiceProduct.getNozzle() == null || invoiceProduct.getNozzle().getId() == null) {
                 Long scid = invoiceProduct.getInvoiceBill() != null && invoiceProduct.getInvoiceBill().getScid() != null
                         ? invoiceProduct.getInvoiceBill().getScid() : SecurityUtils.getScid();
-                cashierStockRepository.findByProductIdAndScid(productId, scid).ifPresent(cashierStock -> {
+                cashierStockRepository.findByProductIdAndScidForUpdate(productId, scid).ifPresent(cashierStock -> {
                     double current = cashierStock.getCurrentStock() != null ? cashierStock.getCurrentStock() : 0.0;
                     cashierStock.setCurrentStock(Math.max(0, current - qty));
                     cashierStockRepository.save(cashierStock);

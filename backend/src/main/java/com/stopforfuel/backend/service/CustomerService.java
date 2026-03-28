@@ -254,7 +254,7 @@ public class CustomerService {
      */
     @Transactional
     public void checkAndAutoBlock(Long customerId) {
-        Customer customer = customerRepository.findById(customerId).orElse(null);
+        Customer customer = customerRepository.findByIdForUpdate(customerId).orElse(null);
         if (customer == null || !"ACTIVE".equals(customer.getStatus())) {
             return;
         }

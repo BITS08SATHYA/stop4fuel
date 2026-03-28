@@ -2,9 +2,11 @@ package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,9 +14,14 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.id = :id")
+    Optional<InvoiceBill> findByIdForUpdate(@Param("id") Long id);
     List<InvoiceBill> findByScid(Long scid);
     List<InvoiceBill> findByShiftId(Long shiftId);
     List<InvoiceBill> findByBillType(String billType);
