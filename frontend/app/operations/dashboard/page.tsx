@@ -22,7 +22,7 @@ import {
     Shift,
     StockAlert,
 } from "@/lib/api/station";
-import { Droplets, Activity, Fuel, Clock, AlertTriangle, X, CheckCheck } from "lucide-react";
+import { Droplets, Activity, Fuel, Clock, AlertTriangle, X, CheckCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
 function formatNumber(val?: number | null) {
     if (val == null) return "0";
@@ -44,6 +44,8 @@ export default function OperationalDashboardPage() {
     const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [productPage, setProductPage] = useState(0);
+    const productPageSize = 5;
 
     const loadAlerts = () => {
         checkStockAlerts().then(setStockAlerts).catch(() => {});
@@ -130,6 +132,11 @@ export default function OperationalDashboardPage() {
         }
     });
     const productInvEntries = Array.from(latestProductInventory.values());
+    const productTotalPages = Math.ceil(productInvEntries.length / productPageSize);
+    const paginatedProducts = productInvEntries.slice(
+        productPage * productPageSize,
+        (productPage + 1) * productPageSize
+    );
 
     return (
         <div className="min-h-screen bg-background p-8 transition-colors duration-300">
@@ -268,7 +275,7 @@ export default function OperationalDashboardPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {tanks.map((tank) => {
                                 const inv = latestTankInventory.get(tank.id);
-                                const currentStock = inv?.closeStock ?? 0;
+                                const currentStock = tank.availableStock ?? 0;
                                 const pct = tank.capacity > 0 ? (currentStock / tank.capacity) * 100 : 0;
                                 const clampedPct = Math.min(100, Math.max(0, pct));
 
@@ -408,6 +415,7 @@ export default function OperationalDashboardPage() {
                                 No product inventory data available.
                             </p>
                         ) : (
+                            <>
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-white/10">
@@ -429,7 +437,7 @@ export default function OperationalDashboardPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {productInvEntries.map((pi) => (
+                                    {paginatedProducts.map((pi) => (
                                         <tr key={pi.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                             <td className="py-3 px-3 text-foreground font-medium">
                                                 {pi.product?.name || "—"}
@@ -450,6 +458,33 @@ export default function OperationalDashboardPage() {
                                     ))}
                                 </tbody>
                             </table>
+                            {productTotalPages > 1 && (
+                                <div className="flex items-center justify-between pt-3 px-3 border-t border-white/10">
+                                    <p className="text-xs text-muted-foreground">
+                                        Showing {productPage * productPageSize + 1}–{Math.min((productPage + 1) * productPageSize, productInvEntries.length)} of {productInvEntries.length}
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setProductPage((p) => Math.max(0, p - 1))}
+                                            disabled={productPage === 0}
+                                            className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <ChevronLeft className="w-4 h-4" />
+                                        </button>
+                                        <span className="text-xs text-muted-foreground">
+                                            {productPage + 1} / {productTotalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setProductPage((p) => Math.min(productTotalPages - 1, p + 1))}
+                                            disabled={productPage >= productTotalPages - 1}
+                                            className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            </>
                         )}
                     </GlassCard>
                 </div>
