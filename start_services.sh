@@ -9,9 +9,15 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM
 
-echo "Starting Spring Boot Backend on port 8080..."
+# Dev mode: auth disabled, no Cognito dependency
+# For production auth testing, use: AUTH_ENABLED=true ./start_services.sh
+export AUTH_ENABLED=${AUTH_ENABLED:-false}
+export DATABASE_URL=${DATABASE_URL:-jdbc:postgresql://localhost:5432/stopforfuel}
+export DATABASE_PASSWORD=${DATABASE_PASSWORD:-password}
+
+echo "Starting Spring Boot Backend on port 8080 (AUTH_ENABLED=$AUTH_ENABLED)..."
 cd backend
-AUTH_ENABLED=false SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun &
+SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun &
 BACKEND_PID=$!
 cd ..
 

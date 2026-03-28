@@ -12,12 +12,13 @@ if (typeof window !== "undefined") {
 }
 
 const PUBLIC_PATHS = ["/login", "/auth/callback"];
+const ROOT_PATH = "/";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const { isLoading, isAuthenticated } = useAuth();
-    const isPublicPath = PUBLIC_PATHS.some(p => pathname.startsWith(p));
+    const isPublicPath = PUBLIC_PATHS.some(p => pathname.startsWith(p)) || pathname === ROOT_PATH;
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated && !isPublicPath) {
