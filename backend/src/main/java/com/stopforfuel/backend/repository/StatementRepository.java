@@ -1,7 +1,9 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Statement;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +17,10 @@ import java.util.Optional;
 
 @Repository
 public interface StatementRepository extends ScidRepository<Statement> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Statement s WHERE s.id = :id")
+    Optional<Statement> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
 
     List<Statement> findByScid(Long scid);
 

@@ -51,7 +51,7 @@ public class ExternalCashInflowService {
 
     @Transactional
     public CashInflowRepayment recordRepayment(Long inflowId, CashInflowRepayment repayment) {
-        ExternalCashInflow inflow = inflowRepository.findByIdAndScid(inflowId, SecurityUtils.getScid())
+        ExternalCashInflow inflow = inflowRepository.findByIdAndScidForUpdate(inflowId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("External cash inflow not found with id: " + inflowId));
 
         repayment.setCashInflow(inflow);

@@ -84,7 +84,7 @@ public class PaymentService {
      */
     @Transactional
     public Payment recordStatementPayment(Long statementId, Payment payment) {
-        Statement statement = statementRepository.findById(statementId)
+        Statement statement = statementRepository.findByIdForUpdate(statementId)
                 .orElseThrow(() -> new ResourceNotFoundException("Statement not found"));
 
         if ("PAID".equals(statement.getStatus())) {
@@ -151,7 +151,7 @@ public class PaymentService {
      */
     @Transactional
     public Payment recordBillPayment(Long invoiceBillId, Payment payment) {
-        InvoiceBill bill = invoiceBillRepository.findById(invoiceBillId)
+        InvoiceBill bill = invoiceBillRepository.findByIdForUpdate(invoiceBillId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
 
         if (!"CREDIT".equals(bill.getBillType())) {

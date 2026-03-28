@@ -1,10 +1,19 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Customer;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
 
 @Repository
 public interface CustomerRepository extends ScidRepository<Customer> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Customer c WHERE c.id = :id")
+    Optional<Customer> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
     org.springframework.data.domain.Page<Customer> findByNameContainingIgnoreCaseOrPhoneNumbersContaining(String name, String phone, org.springframework.data.domain.Pageable pageable);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"group", "party", "customerCategory", "phoneNumbers", "emails"})
