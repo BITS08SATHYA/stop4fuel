@@ -100,7 +100,7 @@ public class SalaryPaymentService {
 
     @Transactional
     public SalaryPayment markAsPaid(Long paymentId, String paymentMode) {
-        SalaryPayment payment = salaryPaymentRepository.findByIdAndScid(paymentId, SecurityUtils.getScid())
+        SalaryPayment payment = salaryPaymentRepository.findByIdAndScidForUpdate(paymentId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
 
         payment.setStatus("PAID");
