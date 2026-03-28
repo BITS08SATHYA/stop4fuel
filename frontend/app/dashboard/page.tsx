@@ -350,8 +350,96 @@ export default function DashboardPage() {
                         </div>
                     </GlassCard>
 
-                    {/* Product-wise Sales */}
+                    {/* Tank Status (compact, stacked vertically) */}
                     <GlassCard>
+                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                            <Droplets className="w-5 h-5 text-muted-foreground" />
+                            Tank Status
+                        </h3>
+                        {stats.tankStatuses.length === 0 ? (
+                            <p className="text-muted-foreground text-sm py-4 text-center">No tanks configured.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {stats.tankStatuses.map((tank) => {
+                                    const pct = tank.capacity > 0 ? Math.min((tank.currentStock / tank.capacity) * 100, 100) : 0;
+                                    const threshPct = (tank.thresholdStock != null && tank.thresholdStock > 0 && tank.capacity > 0)
+                                        ? Math.min((tank.thresholdStock / tank.capacity) * 100, 100) : 0;
+                                    const isBelowThreshold = tank.thresholdStock != null && tank.thresholdStock > 0 && tank.currentStock <= tank.thresholdStock;
+                                    const fillColor = isBelowThreshold ? '#ef4444' : pct <= 20 ? '#ef4444' : pct <= 50 ? '#f59e0b' : '#22c55e';
+                                    const statusColor = isBelowThreshold ? 'text-red-500' : pct <= 20 ? 'text-red-500' : pct <= 50 ? 'text-amber-500' : 'text-green-500';
+
+                                    return (
+                                        <div key={tank.tankId} className="p-2.5 rounded-xl border border-border/50 bg-card/50 flex items-center gap-3">
+                                            {/* Mini Tank SVG */}
+                                            <div className="flex-shrink-0" style={{ width: 40, height: 66 }}>
+                                                <svg viewBox="0 0 48 80" width="40" height="66">
+                                                    <defs>
+                                                        <clipPath id={`dtank-${tank.tankId}`}>
+                                                            <rect x="6" y="10" width="36" height="60" rx="5" />
+                                                            <ellipse cx="24" cy="10" rx="18" ry="6" />
+                                                            <ellipse cx="24" cy="70" rx="18" ry="6" />
+                                                        </clipPath>
+                                                        <linearGradient id={`dliq-${tank.tankId}`} x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="0%" stopColor={fillColor} stopOpacity="0.9" />
+                                                            <stop offset="100%" stopColor={fillColor} stopOpacity="0.5" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <rect x="6" y="10" width="36" height="60" rx="5"
+                                                        fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" className="text-foreground" />
+                                                    <ellipse cx="24" cy="10" rx="18" ry="6"
+                                                        fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" className="text-foreground" />
+                                                    <ellipse cx="24" cy="70" rx="18" ry="6"
+                                                        fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" className="text-foreground" />
+                                                    <g clipPath={`url(#dtank-${tank.tankId})`}>
+                                                        <rect x="6" width="36" y={76 - (pct / 100) * 66} height={(pct / 100) * 66} fill={`url(#dliq-${tank.tankId})`}>
+                                                            <animate attributeName="y" from="76" to={76 - (pct / 100) * 66} dur="1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1" />
+                                                            <animate attributeName="height" from="0" to={(pct / 100) * 66} dur="1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1" />
+                                                        </rect>
+                                                        {pct > 0 && (
+                                                            <ellipse cx="24" cy={76 - (pct / 100) * 66} rx="18" ry="3" fill={fillColor} fillOpacity="0.3">
+                                                                <animate attributeName="cy" from="76" to={76 - (pct / 100) * 66} dur="1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1" />
+                                                                <animate attributeName="ry" values="3;4;3" dur="3s" repeatCount="indefinite" />
+                                                            </ellipse>
+                                                        )}
+                                                    </g>
+                                                    {threshPct > 0 && (
+                                                        <line x1="4" y1={76 - (threshPct / 100) * 66} x2="44" y2={76 - (threshPct / 100) * 66}
+                                                            stroke="#f59e0b" strokeWidth="1" strokeDasharray="3 2" strokeOpacity="0.7" />
+                                                    )}
+                                                    <text x="24" y="42" textAnchor="middle" dominantBaseline="middle"
+                                                        className="fill-foreground" fontSize="11" fontWeight="bold" opacity="0.7">
+                                                        {pct.toFixed(0)}%
+                                                    </text>
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-foreground truncate">{tank.tankName}</p>
+                                                <p className="text-[10px] text-muted-foreground">{tank.productName || "—"}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className={`text-xs font-bold ${statusColor}`}>
+                                                        {tank.currentStock.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                                                    </span>
+                                                    <span className="text-[10px] text-muted-foreground">/ {tank.capacity.toLocaleString("en-IN", { maximumFractionDigits: 0 })} L</span>
+                                                </div>
+                                                {isBelowThreshold && (
+                                                    <div className="flex items-center gap-1 mt-1">
+                                                        <AlertTriangle className="w-3 h-3 text-red-500" />
+                                                        <span className="text-[10px] font-semibold text-red-500">LOW</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </GlassCard>
+                </div>
+
+                {/* Product Sales + Credit Aging Row */}
+                <div className="grid gap-6 lg:grid-cols-3">
+                    {/* Product-wise Sales */}
+                    <GlassCard className="lg:col-span-2">
                         <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
                             <BarChart3 className="w-5 h-5 text-muted-foreground" />
                             Product Sales
@@ -362,8 +450,8 @@ export default function DashboardPage() {
                                 No sales today
                             </div>
                         ) : (
-                            <>
-                                <div className="h-48">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+                                <div className="h-56">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
@@ -373,8 +461,8 @@ export default function DashboardPage() {
                                                 }))}
                                                 cx="50%"
                                                 cy="50%"
-                                                innerRadius={45}
-                                                outerRadius={75}
+                                                innerRadius={50}
+                                                outerRadius={85}
                                                 paddingAngle={3}
                                                 dataKey="value"
                                             >
@@ -394,7 +482,7 @@ export default function DashboardPage() {
                                         </PieChart>
                                     </ResponsiveContainer>
                                 </div>
-                                <div className="space-y-2 mt-2">
+                                <div className="space-y-3">
                                     {stats.productSales.map((p, i) => (
                                         <div key={p.productName} className="flex items-center justify-between text-sm">
                                             <div className="flex items-center gap-2">
@@ -411,125 +499,6 @@ export default function DashboardPage() {
                                         </div>
                                     ))}
                                 </div>
-                            </>
-                        )}
-                    </GlassCard>
-                </div>
-
-                {/* Tank Status + Credit Aging Row */}
-                <div className="grid gap-6 lg:grid-cols-3">
-                    {/* Tank Status with Mini Tank Viz */}
-                    <GlassCard className="lg:col-span-2">
-                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-                            <Droplets className="w-5 h-5 text-muted-foreground" />
-                            Tank Status
-                        </h3>
-                        {stats.tankStatuses.length === 0 ? (
-                            <p className="text-muted-foreground text-sm py-4 text-center">No tanks configured.</p>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {stats.tankStatuses.map((tank) => {
-                                    const pct = tank.capacity > 0 ? Math.min((tank.currentStock / tank.capacity) * 100, 100) : 0;
-                                    const threshPct = (tank.thresholdStock != null && tank.thresholdStock > 0 && tank.capacity > 0)
-                                        ? Math.min((tank.thresholdStock / tank.capacity) * 100, 100) : 0;
-                                    const isBelowThreshold = tank.thresholdStock != null && tank.thresholdStock > 0 && tank.currentStock <= tank.thresholdStock;
-                                    const fillColor = isBelowThreshold ? '#ef4444' : pct <= 20 ? '#ef4444' : pct <= 50 ? '#f59e0b' : '#22c55e';
-                                    const statusColor = isBelowThreshold ? 'text-red-500' : pct <= 20 ? 'text-red-500' : pct <= 50 ? 'text-amber-500' : 'text-green-500';
-
-                                    return (
-                                        <div key={tank.tankId} className="p-3 rounded-xl border border-border/50 bg-card/50 flex items-center gap-3">
-                                            {/* Mini Tank SVG */}
-                                            <div className="flex-shrink-0" style={{ width: 48, height: 80 }}>
-                                                <svg viewBox="0 0 48 80" width="48" height="80">
-                                                    <defs>
-                                                        <clipPath id={`dtank-${tank.tankId}`}>
-                                                            <rect x="6" y="10" width="36" height="60" rx="5" />
-                                                            <ellipse cx="24" cy="10" rx="18" ry="6" />
-                                                            <ellipse cx="24" cy="70" rx="18" ry="6" />
-                                                        </clipPath>
-                                                        <linearGradient id={`dliq-${tank.tankId}`} x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="0%" stopColor={fillColor} stopOpacity="0.9" />
-                                                            <stop offset="100%" stopColor={fillColor} stopOpacity="0.5" />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    {/* Tank outline */}
-                                                    <rect x="6" y="10" width="36" height="60" rx="5"
-                                                        fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" className="text-foreground" />
-                                                    <ellipse cx="24" cy="10" rx="18" ry="6"
-                                                        fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" className="text-foreground" />
-                                                    <ellipse cx="24" cy="70" rx="18" ry="6"
-                                                        fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" className="text-foreground" />
-                                                    {/* Liquid fill */}
-                                                    <g clipPath={`url(#dtank-${tank.tankId})`}>
-                                                        <rect x="6" width="36"
-                                                            y={76 - (pct / 100) * 66}
-                                                            height={(pct / 100) * 66}
-                                                            fill={`url(#dliq-${tank.tankId})`}
-                                                        >
-                                                            <animate attributeName="y" from="76" to={76 - (pct / 100) * 66}
-                                                                dur="1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1" />
-                                                            <animate attributeName="height" from="0" to={(pct / 100) * 66}
-                                                                dur="1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1" />
-                                                        </rect>
-                                                        {pct > 0 && (
-                                                            <ellipse cx="24" cy={76 - (pct / 100) * 66} rx="18" ry="3"
-                                                                fill={fillColor} fillOpacity="0.3">
-                                                                <animate attributeName="cy" from="76" to={76 - (pct / 100) * 66}
-                                                                    dur="1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1" />
-                                                                <animate attributeName="ry" values="3;4;3" dur="3s" repeatCount="indefinite" />
-                                                            </ellipse>
-                                                        )}
-                                                    </g>
-                                                    {/* Threshold marker */}
-                                                    {threshPct > 0 && (
-                                                        <line x1="4" y1={76 - (threshPct / 100) * 66}
-                                                            x2="44" y2={76 - (threshPct / 100) * 66}
-                                                            stroke="#f59e0b" strokeWidth="1" strokeDasharray="3 2" strokeOpacity="0.7" />
-                                                    )}
-                                                    {/* Percentage */}
-                                                    <text x="24" y="42" textAnchor="middle" dominantBaseline="middle"
-                                                        className="fill-foreground" fontSize="10" fontWeight="bold" opacity="0.7">
-                                                        {pct.toFixed(0)}%
-                                                    </text>
-                                                </svg>
-                                            </div>
-                                            {/* Stats */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <p className="text-sm font-semibold text-foreground truncate">{tank.tankName}</p>
-                                                    {!tank.active && <span className="text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded">Off</span>}
-                                                </div>
-                                                <p className="text-[10px] text-muted-foreground mb-1.5">{tank.productName || "—"}</p>
-                                                <div className="space-y-0.5">
-                                                    <div className="flex justify-between text-[10px]">
-                                                        <span className="text-muted-foreground">Available</span>
-                                                        <span className={`font-bold ${statusColor}`}>
-                                                            {tank.currentStock.toLocaleString("en-IN", { maximumFractionDigits: 0 })} L
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between text-[10px]">
-                                                        <span className="text-muted-foreground">Capacity</span>
-                                                        <span className="text-foreground">{tank.capacity.toLocaleString("en-IN", { maximumFractionDigits: 0 })} L</span>
-                                                    </div>
-                                                    {threshPct > 0 && (
-                                                        <div className="flex justify-between text-[10px]">
-                                                            <span className="text-muted-foreground flex items-center gap-1">
-                                                                <span className="inline-block w-2 h-px bg-amber-500" /> Threshold
-                                                            </span>
-                                                            <span className="text-amber-500">{tank.thresholdStock?.toLocaleString("en-IN", { maximumFractionDigits: 0 })} L</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {isBelowThreshold && (
-                                                    <div className="flex items-center gap-1 mt-1.5">
-                                                        <AlertTriangle className="w-3 h-3 text-red-500" />
-                                                        <span className="text-[10px] font-semibold text-red-500">LOW STOCK</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
                             </div>
                         )}
                     </GlassCard>
