@@ -3,6 +3,7 @@ package com.stopforfuel.backend.controller;
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.CustomerDetailDTO;
 import com.stopforfuel.backend.dto.CustomerListDTO;
+import com.stopforfuel.backend.dto.CustomerMapDTO;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.service.CustomerService;
@@ -70,6 +71,14 @@ public class CustomerController {
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
     public void deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);
+    }
+
+    @GetMapping("/map-locations")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
+    public List<CustomerMapDTO> getMapLocations() {
+        return customerService.getCustomersWithCoordinates().stream()
+                .map(CustomerMapDTO::from)
+                .toList();
     }
 
     @GetMapping("/stats")
