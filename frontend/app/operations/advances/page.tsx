@@ -23,6 +23,7 @@ import {
     Calendar,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { useFormValidation, required, min, indianMobile } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
@@ -119,20 +120,20 @@ function formatCurrency(val?: number) {
 // --- API helpers ---
 
 async function fetchAdvances(): Promise<OperationalAdvance[]> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances`);
     if (!res.ok) throw new Error("Failed to fetch advances");
     return res.json();
 }
 
 async function fetchAdvanceById(id: number): Promise<OperationalAdvance> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${id}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${id}`);
     if (!res.ok) throw new Error("Failed to fetch advance");
     return res.json();
 }
 
 async function fetchActiveShift(): Promise<{ id: number } | null> {
     try {
-        const res = await fetch(`${API_BASE_URL}/shifts/active`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
         const text = await res.text();
         if (!text) return null;
@@ -144,7 +145,7 @@ async function fetchActiveShift(): Promise<{ id: number } | null> {
 
 async function fetchEmployees(): Promise<Employee[]> {
     try {
-        const res = await fetch(`${API_BASE_URL}/employees`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/employees`);
         if (!res.ok) return [];
         return res.json();
     } catch {
@@ -154,7 +155,7 @@ async function fetchEmployees(): Promise<Employee[]> {
 
 async function fetchShiftInvoices(shiftId: number): Promise<InvoiceBill[]> {
     try {
-        const res = await fetch(`${API_BASE_URL}/invoices/shift/${shiftId}`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/invoices/shift/${shiftId}`);
         if (!res.ok) return [];
         return res.json();
     } catch {
@@ -171,7 +172,7 @@ async function createAdvance(data: {
     remarks: string;
     employee?: { id: number } | null;
 }): Promise<OperationalAdvance> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -184,7 +185,7 @@ async function createAdvance(data: {
 }
 
 async function returnAdvance(id: number, data: { returnedAmount: number; returnRemarks: string }): Promise<OperationalAdvance> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${id}/return`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${id}/return`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -197,7 +198,7 @@ async function returnAdvance(id: number, data: { returnedAmount: number; returnR
 }
 
 async function cancelAdvance(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${id}/cancel`, { method: "PATCH" });
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${id}/cancel`, { method: "PATCH" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to cancel advance");
@@ -205,7 +206,7 @@ async function cancelAdvance(id: number): Promise<void> {
 }
 
 async function deleteAdvance(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${id}`, { method: "DELETE" });
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${id}`, { method: "DELETE" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to delete advance");
@@ -213,7 +214,7 @@ async function deleteAdvance(id: number): Promise<void> {
 }
 
 async function assignInvoice(advanceId: number, invoiceId: number): Promise<OperationalAdvance> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/invoices/${invoiceId}`, { method: "POST" });
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${advanceId}/invoices/${invoiceId}`, { method: "POST" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to assign invoice");
@@ -222,7 +223,7 @@ async function assignInvoice(advanceId: number, invoiceId: number): Promise<Oper
 }
 
 async function unassignInvoice(advanceId: number, invoiceId: number): Promise<OperationalAdvance> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/invoices/${invoiceId}`, { method: "DELETE" });
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${advanceId}/invoices/${invoiceId}`, { method: "DELETE" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to unassign invoice");
@@ -231,13 +232,13 @@ async function unassignInvoice(advanceId: number, invoiceId: number): Promise<Op
 }
 
 async function fetchAssignedInvoices(advanceId: number): Promise<InvoiceBill[]> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/invoices`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${advanceId}/invoices`);
     if (!res.ok) return [];
     return res.json();
 }
 
 async function assignStatement(advanceId: number, statementId: number): Promise<OperationalAdvance> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/statement/${statementId}`, { method: "POST" });
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${advanceId}/statement/${statementId}`, { method: "POST" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to assign statement");
@@ -246,7 +247,7 @@ async function assignStatement(advanceId: number, statementId: number): Promise<
 }
 
 async function unassignStatement(advanceId: number): Promise<OperationalAdvance> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/${advanceId}/statement`, { method: "DELETE" });
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/${advanceId}/statement`, { method: "DELETE" });
     if (!res.ok) {
         const err = await res.text();
         throw new Error(err || "Failed to unassign statement");
@@ -255,19 +256,19 @@ async function unassignStatement(advanceId: number): Promise<OperationalAdvance>
 }
 
 async function fetchOutstandingStatements(): Promise<StatementRef[]> {
-    const res = await fetch(`${API_BASE_URL}/statements/outstanding`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/statements/outstanding`);
     if (!res.ok) return [];
     return res.json();
 }
 
 async function fetchAdvancesByShift(shiftId: number): Promise<OperationalAdvance[]> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/shift/${shiftId}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/shift/${shiftId}`);
     if (!res.ok) throw new Error("Failed to fetch advances");
     return res.json();
 }
 
 async function fetchAdvancesByDateRange(fromDate: string, toDate: string): Promise<OperationalAdvance[]> {
-    const res = await fetch(`${API_BASE_URL}/operational-advances/search?fromDate=${fromDate}&toDate=${toDate}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/operational-advances/search?fromDate=${fromDate}&toDate=${toDate}`);
     if (!res.ok) throw new Error("Failed to fetch advances");
     return res.json();
 }

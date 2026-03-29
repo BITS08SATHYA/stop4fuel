@@ -159,7 +159,13 @@ public class ShiftService {
 
             // Get last close reading as the open reading
             NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
-            row.setOpenMeterReading(lastReading != null ? lastReading.getCloseMeterReading() : 0.0);
+            if (lastReading != null && lastReading.getCloseMeterReading() != null) {
+                row.setOpenMeterReading(lastReading.getCloseMeterReading());
+            } else if (lastReading != null && lastReading.getOpenMeterReading() != null) {
+                row.setOpenMeterReading(lastReading.getOpenMeterReading());
+            } else {
+                row.setOpenMeterReading(0.0);
+            }
             nozzleRows.add(row);
         }
         dto.setNozzleReadings(nozzleRows);
@@ -175,8 +181,18 @@ public class ShiftService {
             row.setCapacity(tank.getCapacity());
 
             TankInventory lastReading = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
-            row.setOpenDip(lastReading != null ? lastReading.getCloseDip() : null);
-            row.setOpenStock(lastReading != null && lastReading.getCloseStock() != null ? lastReading.getCloseStock() : 0.0);
+            if (lastReading != null && lastReading.getCloseDip() != null) {
+                row.setOpenDip(lastReading.getCloseDip());
+            } else if (lastReading != null && lastReading.getOpenDip() != null) {
+                row.setOpenDip(lastReading.getOpenDip());
+            }
+            if (lastReading != null && lastReading.getCloseStock() != null) {
+                row.setOpenStock(lastReading.getCloseStock());
+            } else if (lastReading != null && lastReading.getOpenStock() != null) {
+                row.setOpenStock(lastReading.getOpenStock());
+            } else {
+                row.setOpenStock(0.0);
+            }
             tankRows.add(row);
         }
         dto.setTankDips(tankRows);
@@ -273,13 +289,11 @@ public class ShiftService {
             byte[] pdfBytes = pdfGenerator.generate(printData, report);
 
             // Upload to S3
-            // TODO: Configure proper S3 bucket hierarchy per deployment
             LocalDateTime shiftStart = shift.getStartTime() != null ? shift.getStartTime() : LocalDateTime.now();
-            String key = String.format("reports/shifts/%d/%d/%02d/shift-%d-report.pdf",
-                    shift.getScid(),
-                    shiftStart.getYear(),
-                    shiftStart.getMonthValue(),
-                    shiftId);
+            Long scid = shift.getScid() != null ? shift.getScid() : 1L;
+            String key = String.format("reports/shift-closing/%d/%d/%02d/%02d/shift-%d.pdf",
+                    scid, shiftStart.getYear(), shiftStart.getMonthValue(),
+                    shiftStart.getDayOfMonth(), shiftId);
 
             s3StorageService.upload(key, pdfBytes, "application/pdf");
             report.setReportPdfUrl(key);
@@ -319,28 +333,11 @@ public class ShiftService {
 
     private void computeShiftTotals(ShiftClosingDataDTO dto, Long shiftId) {
         // Credit bill total
-        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
-        BigDecimal creditBillTotal = BigDecimal.ZERO;
-        for (InvoiceBill inv : invoices) {
-            if ("CREDIT".equals(inv.getBillType()) && inv.getNetAmount() != null) {
-                creditBillTotal = creditBillTotal.add(inv.getNetAmount());
-            }
-        }
-        dto.setCreditBillTotal(creditBillTotal);
+        dto.setCreditBillTotal(invoiceBillRepository.sumCreditBillsByShift(shiftId));
 
         // Payment totals
-        List<Payment> payments = paymentRepository.findByShiftId(shiftId);
-        BigDecimal billPaymentTotal = BigDecimal.ZERO;
-        BigDecimal statementPaymentTotal = BigDecimal.ZERO;
-        for (Payment p : payments) {
-            if (p.getInvoiceBill() != null) {
-                billPaymentTotal = billPaymentTotal.add(p.getAmount());
-            } else if (p.getStatement() != null) {
-                statementPaymentTotal = statementPaymentTotal.add(p.getAmount());
-            }
-        }
-        dto.setBillPaymentTotal(billPaymentTotal);
-        dto.setStatementPaymentTotal(statementPaymentTotal);
+        dto.setBillPaymentTotal(paymentRepository.sumBillPaymentsByShift(shiftId));
+        dto.setStatementPaymentTotal(paymentRepository.sumStatementPaymentsByShift(shiftId));
 
         // E-Advance totals by type
         Map<String, BigDecimal> eAdvTotals = new LinkedHashMap<>();

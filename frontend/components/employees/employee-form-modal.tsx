@@ -12,6 +12,7 @@ import {
 import { DocumentUploadField } from "./document-upload-field";
 import type { Employee } from "./types";
 import { inputClass, API_BASE } from "./types";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 interface EmployeeFormModalProps {
     employee: any;
@@ -112,7 +113,7 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                 terminationDate: currentEmployee.terminationDate || null,
             };
             if (isEditing) payload.id = currentEmployee.id;
-            const res = await fetch(url, {
+            const res = await fetchWithAuth(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),

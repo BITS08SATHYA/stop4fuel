@@ -6,6 +6,7 @@ import {
     AlertTriangle, Calendar, X, ExternalLink, CheckCircle2
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 
 const DOCUMENT_TYPES = [
@@ -66,7 +67,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
     const fetchDocuments = async () => {
         try {
             setLoading(true);
-            const res = await fetch(`${API_BASE_URL}/companies/${companyId}/documents`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/companies/${companyId}/documents`);
             if (!res.ok) throw new Error("Failed to fetch documents");
             setDocuments(await res.json());
         } catch (err) {
@@ -88,7 +89,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
                 : `${API_BASE_URL}/companies/${companyId}/documents`;
             const method = editingDoc ? "PUT" : "POST";
 
-            const res = await fetch(url, {
+            const res = await fetchWithAuth(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(form),
@@ -111,7 +112,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const res = await fetch(`${API_BASE_URL}/companies/${companyId}/documents/${docId}/upload`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/companies/${companyId}/documents/${docId}/upload`, {
                 method: "POST",
                 body: formData,
             });
@@ -130,7 +131,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
 
     const handleView = async (docId: number) => {
         try {
-            const res = await fetch(`${API_BASE_URL}/companies/${companyId}/documents/${docId}/file-url`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/companies/${companyId}/documents/${docId}/file-url`);
             if (!res.ok) throw new Error("Failed to get file URL");
             const { url } = await res.json();
             window.open(url, "_blank");
@@ -143,7 +144,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
     const handleDelete = async (id: number) => {
         setDeleting(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/companies/${companyId}/documents/${id}`, { method: "DELETE" });
+            const res = await fetchWithAuth(`${API_BASE_URL}/companies/${companyId}/documents/${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Failed to delete");
             setDocuments((prev) => prev.filter((d) => d.id !== id));
             setDeleteId(null);

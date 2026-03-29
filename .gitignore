@@ -27,6 +27,7 @@ Thumbs.db
 
 # === Environment / Secrets ===
 .env
+.env.*
 .env.local
 .env.*.local
 *.log

@@ -35,11 +35,24 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push Docker Image
+      - name: Build Docker Image
         working-directory: backend
         run: |
           IMAGE_TAG=${GITHUB_SHA::8}
           docker build -t $ECR_REGISTRY/stopforfuel-backend:$IMAGE_TAG -t $ECR_REGISTRY/stopforfuel-backend:latest .
+
+      - name: Scan Backend Image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "${{ env.ECR_REGISTRY }}/stopforfuel-backend:latest"
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL"
+          ignore-unfixed: true
+
+      - name: Push Docker Image
+        run: |
+          IMAGE_TAG=${GITHUB_SHA::8}
           docker push $ECR_REGISTRY/stopforfuel-backend:$IMAGE_TAG
           docker push $ECR_REGISTRY/stopforfuel-backend:latest
 
@@ -78,7 +91,7 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push Docker Image
+      - name: Build Docker Image
         working-directory: frontend
         run: |
           IMAGE_TAG=${GITHUB_SHA::8}
@@ -91,6 +104,19 @@ jobs:
             --build-arg NEXT_PUBLIC_LANDING_URL=https://stopforfuel.com \
             -t $ECR_REGISTRY/stopforfuel-frontend:$IMAGE_TAG \
             -t $ECR_REGISTRY/stopforfuel-frontend:latest .
+
+      - name: Scan Frontend Image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "${{ env.ECR_REGISTRY }}/stopforfuel-frontend:latest"
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL"
+          ignore-unfixed: true
+
+      - name: Push Docker Image
+        run: |
+          IMAGE_TAG=${GITHUB_SHA::8}
           docker push $ECR_REGISTRY/stopforfuel-frontend:$IMAGE_TAG
           docker push $ECR_REGISTRY/stopforfuel-frontend:latest
 

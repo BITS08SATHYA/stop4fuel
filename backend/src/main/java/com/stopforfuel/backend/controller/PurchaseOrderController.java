@@ -47,7 +47,7 @@ public class PurchaseOrderController {
 
     @PostMapping("/{id}/receive")
     @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
-    public PurchaseOrder receiveDelivery(@PathVariable Long id, @RequestBody List<ReceiveItemDTO> items) {
+    public PurchaseOrder receiveDelivery(@PathVariable Long id, @Valid @RequestBody List<ReceiveItemDTO> items) {
         return service.receiveDelivery(id, items);
     }
 

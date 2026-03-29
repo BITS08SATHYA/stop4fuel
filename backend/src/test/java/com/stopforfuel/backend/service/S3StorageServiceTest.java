@@ -59,11 +59,11 @@ class S3StorageServiceTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
 
-        String result = s3StorageService.upload("statements/1/statement.pdf", new byte[]{1, 2, 3}, "application/pdf");
+        String result = s3StorageService.upload("statements/1/1/2026/03/S26-100.pdf", new byte[]{1, 2, 3}, "application/pdf");
 
-        assertEquals("statements/1/statement.pdf", result);
+        assertEquals("statements/1/1/2026/03/S26-100.pdf", result);
         verify(s3Client).putObject(argThat((PutObjectRequest req) ->
-                "test-bucket".equals(req.bucket()) && "statements/1/statement.pdf".equals(req.key())
+                "test-bucket".equals(req.bucket()) && "statements/1/1/2026/03/S26-100.pdf".equals(req.key())
         ), any(RequestBody.class));
     }
 
