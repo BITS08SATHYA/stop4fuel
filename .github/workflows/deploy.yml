@@ -96,12 +96,12 @@ jobs:
         run: |
           IMAGE_TAG=${GITHUB_SHA::8}
           docker build \
-            --build-arg NEXT_PUBLIC_API_URL=https://api.stopforfuel.com/api \
-            --build-arg NEXT_PUBLIC_COGNITO_USER_POOL_ID=ap-south-1_1jBWQOLC2 \
-            --build-arg NEXT_PUBLIC_COGNITO_CLIENT_ID=4mgdk5ld0hfc5hglc3tvklr5li \
-            --build-arg NEXT_PUBLIC_COGNITO_DOMAIN=stopforfuel-prod.auth.ap-south-1.amazoncognito.com \
-            --build-arg NEXT_PUBLIC_AWS_REGION=ap-south-1 \
-            --build-arg NEXT_PUBLIC_LANDING_URL=https://stopforfuel.com \
+            --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+            --build-arg NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }} \
+            --build-arg NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }} \
+            --build-arg NEXT_PUBLIC_COGNITO_DOMAIN=${{ secrets.NEXT_PUBLIC_COGNITO_DOMAIN }} \
+            --build-arg NEXT_PUBLIC_AWS_REGION=${{ secrets.NEXT_PUBLIC_AWS_REGION }} \
+            --build-arg NEXT_PUBLIC_LANDING_URL=${{ secrets.NEXT_PUBLIC_LANDING_URL }} \
             -t $ECR_REGISTRY/stopforfuel-frontend:$IMAGE_TAG \
             -t $ECR_REGISTRY/stopforfuel-frontend:latest .
 
