@@ -1,4 +1,5 @@
 FROM eclipse-temurin:21-jre
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
 
 COPY build/libs/*.jar app.jar
@@ -11,4 +12,5 @@ ENV SPRING_PROFILES_ACTIVE=dev \
 
 EXPOSE 8080
 
+USER appuser
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/modal";
 import { PermissionGate } from "@/components/permission-gate";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 export default function CustomersPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,7 +21,7 @@ export default function CustomersPage() {
 
     const handleSaveCustomer = async (formData: any) => {
         try {
-            const res = await fetch(`${API_BASE_URL}/customers`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/customers`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
