@@ -4,6 +4,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Users, Truck, Fuel, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 interface Stats {
     totalCustomers: number;
@@ -30,7 +31,7 @@ export function CustomerStats({ refreshTrigger }: { refreshTrigger?: number }) {
 
     const fetchStats = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/customers/stats`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/customers/stats`);
             if (res.ok) {
                 setStats(await res.json());
             }

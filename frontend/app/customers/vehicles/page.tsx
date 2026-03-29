@@ -7,6 +7,7 @@ import { PermissionGate } from "@/components/permission-gate";
 import { VehicleStep } from "@/components/steps/vehicle-step";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 function CustomerAutocomplete({
@@ -161,7 +162,7 @@ export default function VehiclesPage() {
 
     const handleToggleVehicleStatus = async (id: number) => {
         try {
-            const res = await fetch(`${API_BASE_URL}/vehicles/${id}/toggle-status`, { method: "PATCH" });
+            const res = await fetchWithAuth(`${API_BASE_URL}/vehicles/${id}/toggle-status`, { method: "PATCH" });
             if (res.ok) fetchVehicles();
         } catch (error) {
             console.error("Failed to toggle vehicle status", error);
@@ -175,7 +176,7 @@ export default function VehiclesPage() {
 
     const fetchVehicles = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/vehicles`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/vehicles`);
             if (res.ok) {
                 const data = await res.json();
                 setVehicles(Array.isArray(data) ? data : data.content || []);
@@ -187,7 +188,7 @@ export default function VehiclesPage() {
 
     const fetchCustomers = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/customers?size=1000`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/customers?size=1000`);
             if (res.ok) {
                 const data = await res.json();
                 setCustomers(Array.isArray(data) ? data : data.content || []);
@@ -213,7 +214,7 @@ export default function VehiclesPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this vehicle?")) return;
         try {
-            const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/vehicles/${id}`, {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -284,7 +285,7 @@ export default function VehiclesPage() {
                 payload.preferredProduct = { id: formData.fuelType };
             }
 
-            const res = await fetch(url, {
+            const res = await fetchWithAuth(url, {
                 method: method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),

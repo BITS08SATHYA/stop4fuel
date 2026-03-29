@@ -8,6 +8,7 @@ import { EmployeeProfileModal } from "@/components/employees/employee-profile-mo
 import type { Employee } from "@/components/employees/types";
 import { emptyEmployee, formatRupees, API_BASE } from "@/components/employees/types";
 import { PermissionGate } from "@/components/permission-gate";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 export function EmployeeList() {
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -30,7 +31,7 @@ export function EmployeeList() {
             });
             if (searchQuery) params.set("search", searchQuery);
             if (statusFilter) params.set("status", statusFilter);
-            const res = await fetch(`${API_BASE}?${params}`);
+            const res = await fetchWithAuth(`${API_BASE}?${params}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.content && Array.isArray(data.content)) {
@@ -61,7 +62,7 @@ export function EmployeeList() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this employee?")) return;
         try {
-            await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+            await fetchWithAuth(`${API_BASE}/${id}`, { method: "DELETE" });
             fetchEmployees();
         } catch (error) { console.error("Failed to delete employee", error); }
     };
@@ -69,7 +70,7 @@ export function EmployeeList() {
     const openAdd = () => { setFormEmployee({ ...emptyEmployee }); setFormIsEditing(false); };
     const openEdit = async (emp: Employee) => {
         try {
-            const res = await fetch(`${API_BASE}/${emp.id}`);
+            const res = await fetchWithAuth(`${API_BASE}/${emp.id}`);
             if (res.ok) {
                 const full = await res.json();
                 // Ensure no null values for form inputs

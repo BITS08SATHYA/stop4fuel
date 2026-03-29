@@ -7,6 +7,7 @@ import { PermissionGate } from "@/components/permission-gate";
 import { GroupStep } from "@/components/steps/group-step";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 export default function GroupsPage() {
@@ -34,7 +35,7 @@ export default function GroupsPage() {
 
     const fetchGroups = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/groups`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/groups`);
             if (res.ok) {
                 const data = await res.json();
                 setGroups(Array.isArray(data) ? data : data.content || []);
@@ -53,7 +54,7 @@ export default function GroupsPage() {
         if (!groupCustomers[groupId]) {
             setLoadingCustomers(groupId);
             try {
-                const res = await fetch(`${API_BASE_URL}/groups/${groupId}/customers?size=100`);
+                const res = await fetchWithAuth(`${API_BASE_URL}/groups/${groupId}/customers?size=100`);
                 if (res.ok) {
                     const data = await res.json();
                     setGroupCustomers(prev => ({ ...prev, [groupId]: data.content || [] }));
@@ -78,7 +79,7 @@ export default function GroupsPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this group?")) return;
         try {
-            const res = await fetch(`${API_BASE_URL}/groups/${id}`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/groups/${id}`, {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -97,7 +98,7 @@ export default function GroupsPage() {
                 : `${API_BASE_URL}/groups`;
             const method = formData.id ? "PUT" : "POST";
 
-            const res = await fetch(url, {
+            const res = await fetchWithAuth(url, {
                 method: method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

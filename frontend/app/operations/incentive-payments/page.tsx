@@ -21,6 +21,7 @@ import {
     createIncentivePayment,
     deleteIncentivePayment,
 } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { PermissionGate } from "@/components/permission-gate";
 
@@ -50,7 +51,7 @@ function formatCurrency(val?: number) {
 
 async function fetchCustomers(): Promise<Customer[]> {
     try {
-        const res = await fetch(`${API_BASE_URL}/customers`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/customers`);
         if (!res.ok) return [];
         return res.json();
     } catch {
@@ -60,7 +61,7 @@ async function fetchCustomers(): Promise<Customer[]> {
 
 async function fetchActiveShift(): Promise<{ id: number } | null> {
     try {
-        const res = await fetch(`${API_BASE_URL}/shifts/active`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
         const text = await res.text();
         if (!text) return null;
@@ -71,13 +72,13 @@ async function fetchActiveShift(): Promise<{ id: number } | null> {
 }
 
 async function fetchIncentivesByShift(shiftId: number): Promise<IncentivePayment[]> {
-    const res = await fetch(`${API_BASE_URL}/incentive-payments/shift/${shiftId}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/incentive-payments/shift/${shiftId}`);
     if (!res.ok) throw new Error("Failed to fetch incentive payments");
     return res.json();
 }
 
 async function fetchIncentivesByDateRange(fromDate: string, toDate: string): Promise<IncentivePayment[]> {
-    const res = await fetch(`${API_BASE_URL}/incentive-payments/search?fromDate=${fromDate}&toDate=${toDate}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/incentive-payments/search?fromDate=${fromDate}&toDate=${toDate}`);
     if (!res.ok) throw new Error("Failed to fetch incentive payments");
     return res.json();
 }
