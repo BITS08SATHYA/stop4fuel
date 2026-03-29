@@ -186,49 +186,43 @@ public class ShiftReportPdfGenerator {
             pHeader.setSpacingBefore(2);
             container.addElement(pHeader);
 
-            // Nozzle readings table
-            PdfPTable table = new PdfPTable(new float[]{2.5f, 1.5f, 1.5f, 1.5f});
-            table.setWidthPercentage(100);
-            table.setSpacingAfter(2);
+            // Split into chunks of 3 nozzles per row
+            int chunkSize = 3;
+            for (int start = 0; start < readings.size(); start += chunkSize) {
+                int end = Math.min(start + chunkSize, readings.size());
+                List<MeterReading> chunk = readings.subList(start, end);
+                int cols = chunk.size() + 1;
 
-            // Column headers (nozzle names)
-            addHeaderCell(table, "");
-            for (MeterReading mr : readings) {
-                addHeaderCell(table, mr.getNozzleName());
-            }
-            // Pad remaining cols if fewer than 3 nozzles
-            for (int i = readings.size(); i < 3; i++) {
-                addHeaderCell(table, "");
-            }
-
-            // Open row
-            if (readings.size() <= 3) {
-                table = new PdfPTable(readings.size() + 1);
+                PdfPTable table = new PdfPTable(cols);
                 table.setWidthPercentage(100);
                 table.setSpacingAfter(2);
 
+                // Header row (nozzle names)
                 addHeaderCell(table, "");
-                for (MeterReading mr : readings) {
+                for (MeterReading mr : chunk) {
                     addHeaderCell(table, mr.getNozzleName());
                 }
 
+                // Open row
                 addCellLeft(table, "Open", SMALL_FONT);
-                for (MeterReading mr : readings) {
+                for (MeterReading mr : chunk) {
                     addCellRight(table, fmt0(mr.getOpenReading()), SMALL_FONT);
                 }
 
+                // Close row
                 addCellLeft(table, "Close", SMALL_FONT);
-                for (MeterReading mr : readings) {
+                for (MeterReading mr : chunk) {
                     addCellRight(table, fmt0(mr.getCloseReading()), SMALL_FONT);
                 }
 
+                // Sales row
                 addCellLeft(table, "Sales", SMALL_BOLD);
-                for (MeterReading mr : readings) {
+                for (MeterReading mr : chunk) {
                     addCellRight(table, fmt0(mr.getSales()), SMALL_BOLD);
                 }
-            }
 
-            container.addElement(table);
+                container.addElement(table);
+            }
         }
     }
 
