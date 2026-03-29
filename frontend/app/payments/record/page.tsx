@@ -98,10 +98,10 @@ export default function RecordPaymentPage() {
         const td = (to ?? outToDate) || undefined;
         try {
             if (target === "statement") {
-                const stmts = await getOutstandingByCustomer(customerId, fd, td);
+                const stmts = await getOutstandingByCustomer(customerId);
                 setOutstandingStatements(stmts);
             } else {
-                const bills = await getOutstandingBills(customerId, fd, td);
+                const bills = await getOutstandingBills(customerId);
                 setOutstandingBills(bills);
             }
         } catch (e) {
