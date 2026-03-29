@@ -73,7 +73,7 @@ jobs:
         run: docker build -t stopforfuel-backend:scan .
 
       - name: Scan Backend Image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: "stopforfuel-backend:scan"
           format: "table"
@@ -97,7 +97,7 @@ jobs:
 
       - name: Scan Frontend Image
         if: always()
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: "stopforfuel-frontend:scan"
           format: "table"
