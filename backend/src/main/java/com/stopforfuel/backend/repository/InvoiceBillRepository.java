@@ -23,11 +23,15 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.id = :id")
     Optional<InvoiceBill> findByIdForUpdate(@Param("id") Long id);
     List<InvoiceBill> findByScid(Long scid);
+    @EntityGraph(attributePaths = {"customer", "products", "products.product", "products.nozzle"})
     List<InvoiceBill> findByShiftId(Long shiftId);
     List<InvoiceBill> findByBillType(String billType);
 
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CASH'")
     BigDecimal sumCashBillsByShift(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CREDIT'")
+    BigDecimal sumCreditBillsByShift(@Param("shiftId") Long shiftId);
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     List<InvoiceBill> findByStatementId(Long statementId);
 

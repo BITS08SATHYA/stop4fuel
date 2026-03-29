@@ -49,19 +49,18 @@ public class ShiftClosingReportService {
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Shift not found"));
 
-        if (!"CLOSED".equals(shift.getStatus()) && !"RECONCILED".equals(shift.getStatus())) {
-            throw new BusinessException("Shift must be CLOSED before generating a report");
+        if (!"REVIEW".equals(shift.getStatus()) && !"CLOSED".equals(shift.getStatus()) && !"RECONCILED".equals(shift.getStatus())) {
+            throw new BusinessException("Shift must be in REVIEW or CLOSED state before generating a report");
         }
 
         // If report already exists, recompute it
-        Optional<ShiftClosingReport> existing = reportRepository.findByShiftId(shiftId);
+        Optional<ShiftClosingReport> existing = reportRepository.findByShift_Id(shiftId);
         if (existing.isPresent()) {
             return recomputeReport(existing.get().getId());
         }
 
         ShiftClosingReport report = new ShiftClosingReport();
         report.setShift(shift);
-        report.setShiftId(shift.getShiftId());
         report.setScid(shift.getScid());
         report.setStatus("DRAFT");
         report.setReportDate(LocalDateTime.now());
@@ -71,9 +70,14 @@ public class ShiftClosingReportService {
         return reportRepository.save(saved);
     }
 
+    @Transactional(readOnly = true)
     public ShiftClosingReport getReport(Long shiftId) {
-        return reportRepository.findByShiftId(shiftId)
+        ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
                 .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
+        // Initialize lazy collections within transaction
+        report.getCashBillBreakdowns().size();
+        report.getAuditLogs().size();
+        return report;
     }
 
     public ShiftClosingReport getReportById(Long reportId) {
@@ -278,7 +282,7 @@ public class ShiftClosingReportService {
     }
 
     public String getReportPdfUrl(Long shiftId) {
-        ShiftClosingReport report = reportRepository.findByShiftId(shiftId)
+        ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
                 .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
         if (report.getReportPdfUrl() == null || report.getReportPdfUrl().isEmpty()) {
             throw new ResourceNotFoundException("No PDF generated for this report");
@@ -353,7 +357,7 @@ public class ShiftClosingReportService {
         }
 
         // 2. Bill Payments (payments against individual invoices in this shift)
-        List<Payment> shiftPayments = paymentRepository.findByShiftId(shiftId);
+        List<Payment> shiftPayments = paymentRepository.findByShiftIdEager(shiftId);
         BigDecimal billPaymentTotal = BigDecimal.ZERO;
         BigDecimal statementPaymentTotal = BigDecimal.ZERO;
 
@@ -667,7 +671,7 @@ public class ShiftClosingReportService {
     // === PRINT DATA ===
 
     public ShiftReportPrintData getPrintData(Long shiftId) {
-        ShiftClosingReport report = reportRepository.findByShiftId(shiftId)
+        ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
                 .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
         Shift shift = report.getShift();
 
@@ -999,7 +1003,7 @@ public class ShiftClosingReportService {
         // (Employee advances are now covered by Operational Advances above)
 
         // Payment Entries (bill and statement payments)
-        List<Payment> shiftPayments = paymentRepository.findByShiftId(shiftId);
+        List<Payment> shiftPayments = paymentRepository.findByShiftIdEager(shiftId);
         for (Payment p : shiftPayments) {
             ShiftReportPrintData.PaymentEntryDetail pe = new ShiftReportPrintData.PaymentEntryDetail();
             pe.setCustomerName(p.getCustomer() != null ? p.getCustomer().getName() : "-");

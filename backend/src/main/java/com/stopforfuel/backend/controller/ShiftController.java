@@ -5,18 +5,28 @@ import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
 import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.service.ShiftService;
-import lombok.RequiredArgsConstructor;
+import com.stopforfuel.backend.service.ShiftTestDataSeeder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/shifts")
-@RequiredArgsConstructor
 public class ShiftController {
 
     private final ShiftService service;
+    private final ShiftTestDataSeeder testDataSeeder;
+
+    public ShiftController(ShiftService service,
+                           @Autowired(required = false) ShiftTestDataSeeder testDataSeeder) {
+        this.service = service;
+        this.testDataSeeder = testDataSeeder;
+    }
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
@@ -66,5 +76,14 @@ public class ShiftController {
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
     public Shift reopen(@PathVariable Long id) {
         return service.reopenForReview(id);
+    }
+
+    @PostMapping("/{id}/seed-test-data")
+    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    public Map<String, Object> seedTestData(@PathVariable Long id) {
+        if (testDataSeeder == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Test data seeding is not available in this environment");
+        }
+        return testDataSeeder.seedTestData(id);
     }
 }
