@@ -11,24 +11,24 @@ export function configureAmplify() {
         return;
     }
 
-    const redirectUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/callback`
-        : 'http://localhost:3000/auth/callback';
-
     Amplify.configure({
         Auth: {
             Cognito: {
                 userPoolId,
                 userPoolClientId,
-                loginWith: {
-                    oauth: {
-                        domain: domain || '',
-                        scopes: ['openid', 'email', 'profile'],
-                        redirectSignIn: [redirectUrl],
-                        redirectSignOut: [`${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/login`],
-                        responseType: 'code',
+                ...(domain ? {
+                    loginWith: {
+                        oauth: {
+                            domain,
+                            scopes: ['openid', 'email', 'profile'],
+                            redirectSignIn: [typeof window !== 'undefined'
+                                ? `${window.location.origin}/auth/callback`
+                                : 'http://localhost:3000/auth/callback'],
+                            redirectSignOut: [`${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/login`],
+                            responseType: 'code',
+                        },
                     },
-                },
+                } : {}),
             },
         },
     });

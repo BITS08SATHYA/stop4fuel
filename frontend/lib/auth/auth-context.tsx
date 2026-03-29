@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { fetchAuthSession, signOut, signInWithRedirect } from "aws-amplify/auth";
+import { fetchAuthSession, signOut, signIn } from "aws-amplify/auth";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 interface AuthUser {
@@ -19,7 +19,7 @@ interface AuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     accessToken: string | null;
-    login: () => void;
+    login: (email: string, password: string) => Promise<{ success: boolean; error?: string; challengeName?: string }>;
     logout: () => Promise<void>;
     hasPermission: (code: string) => boolean;
 }
@@ -29,7 +29,7 @@ const AuthContext = createContext<AuthContextType>({
     isLoading: true,
     isAuthenticated: false,
     accessToken: null,
-    login: () => {},
+    login: async () => ({ success: false }),
     logout: async () => {},
     hasPermission: () => false,
 });
@@ -126,10 +126,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loadUser();
     }, [loadUser]);
 
-    const login = useCallback(() => {
-        if (DEV_MODE) return;
-        signInWithRedirect();
-    }, []);
+    const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string; challengeName?: string }> => {
+        if (DEV_MODE) return { success: true };
+        try {
+            const result = await signIn({ username: email, password });
+            if (result.isSignedIn) {
+                await loadUser();
+                return { success: true };
+            }
+            // Handle challenges like NEW_PASSWORD_REQUIRED
+            if (result.nextStep?.signInStep) {
+                return { success: false, challengeName: result.nextStep.signInStep };
+            }
+            return { success: false, error: 'Sign in incomplete' };
+        } catch (err: unknown) {
+            const error = err as Error;
+            return { success: false, error: error.message || 'Sign in failed' };
+        }
+    }, [loadUser]);
 
     const logout = useCallback(async () => {
         try {
