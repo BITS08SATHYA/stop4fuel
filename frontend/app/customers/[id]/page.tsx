@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/station";
 
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 
 const API = API_BASE_URL;
@@ -66,8 +67,8 @@ export default function CustomerProfilePage() {
     const fetchData = async () => {
         try {
             const [customerRes, vehiclesRes] = await Promise.all([
-                fetch(`${API}/customers/${params.id}`),
-                fetch(`${API}/customers/${params.id}/vehicles`)
+                fetchWithAuth(`${API}/customers/${params.id}`),
+                fetchWithAuth(`${API}/customers/${params.id}/vehicles`)
             ]);
             if (customerRes.ok) setCustomer(await customerRes.json());
             if (vehiclesRes.ok) setVehicles(await vehiclesRes.json());
@@ -81,11 +82,11 @@ export default function CustomerProfilePage() {
     const fetchDropdowns = async () => {
         try {
             const [groupsRes, partiesRes, vtRes, prodRes, catRes] = await Promise.all([
-                fetch(`${API}/groups`),
-                fetch(`${API}/parties`),
-                fetch(`${API}/vehicle-types`),
-                fetch(`${API}/products`),
-                fetch(`${API}/customer-categories`),
+                fetchWithAuth(`${API}/groups`),
+                fetchWithAuth(`${API}/parties`),
+                fetchWithAuth(`${API}/vehicle-types`),
+                fetchWithAuth(`${API}/products`),
+                fetchWithAuth(`${API}/customer-categories`),
             ]);
             if (groupsRes.ok) setGroups(await groupsRes.json());
             if (partiesRes.ok) setParties(await partiesRes.json());
@@ -123,7 +124,7 @@ export default function CustomerProfilePage() {
                 emails: Array.isArray(customer.emails) ? customer.emails : customer.emails.split(',').map((s: string) => s.trim()),
                 phoneNumbers: Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers : customer.phoneNumbers.split(',').map((s: string) => s.trim()),
             };
-            const res = await fetch(`${API}/customers/${params.id}`, {
+            const res = await fetchWithAuth(`${API}/customers/${params.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updatedCustomer),
@@ -143,7 +144,7 @@ export default function CustomerProfilePage() {
     const handleDelete = async () => {
         if (confirm("Are you sure you want to delete this customer?")) {
             try {
-                const res = await fetch(`${API}/customers/${params.id}`, { method: "DELETE" });
+                const res = await fetchWithAuth(`${API}/customers/${params.id}`, { method: "DELETE" });
                 if (res.ok) router.push("/customers");
             } catch (error) {
                 console.error("Failed to delete customer", error);
@@ -153,7 +154,7 @@ export default function CustomerProfilePage() {
 
     const handleToggleStatus = async () => {
         try {
-            const res = await fetch(`${API}/customers/${params.id}/toggle-status`, { method: "PATCH" });
+            const res = await fetchWithAuth(`${API}/customers/${params.id}/toggle-status`, { method: "PATCH" });
             if (res.ok) {
                 setCustomer(await res.json());
             }
@@ -164,7 +165,7 @@ export default function CustomerProfilePage() {
 
     const handleToggleVehicleStatus = async (vehicleId: number) => {
         try {
-            const res = await fetch(`${API}/vehicles/${vehicleId}/toggle-status`, { method: "PATCH" });
+            const res = await fetchWithAuth(`${API}/vehicles/${vehicleId}/toggle-status`, { method: "PATCH" });
             if (res.ok) {
                 fetchData();
             }
@@ -185,7 +186,7 @@ export default function CustomerProfilePage() {
             if (newVehicle.fuelType) payload.preferredProduct = { id: parseInt(newVehicle.fuelType) };
             if (newVehicle.maxLitersPerMonth) payload.maxLitersPerMonth = parseFloat(newVehicle.maxLitersPerMonth);
 
-            const res = await fetch(`${API}/vehicles`, {
+            const res = await fetchWithAuth(`${API}/vehicles`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -208,7 +209,7 @@ export default function CustomerProfilePage() {
     const handleDeleteVehicle = async (vehicleId: number) => {
         if (confirm("Are you sure you want to remove this vehicle?")) {
             try {
-                const res = await fetch(`${API}/vehicles/${vehicleId}`, { method: "DELETE" });
+                const res = await fetchWithAuth(`${API}/vehicles/${vehicleId}`, { method: "DELETE" });
                 if (res.ok) fetchData();
                 else alert("Failed to delete vehicle");
             } catch (error) {

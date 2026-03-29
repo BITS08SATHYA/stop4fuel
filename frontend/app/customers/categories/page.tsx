@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 export default function CategoriesPage() {
@@ -30,7 +31,7 @@ export default function CategoriesPage() {
 
     const fetchCategories = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/customer-categories`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/customer-categories`);
             if (res.ok) {
                 const data = await res.json();
                 setCategories(Array.isArray(data) ? data : []);
@@ -54,7 +55,7 @@ export default function CategoriesPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this category? Customers assigned to it will be unlinked.")) return;
         try {
-            const res = await fetch(`${API_BASE_URL}/customer-categories/${id}`, { method: "DELETE" });
+            const res = await fetchWithAuth(`${API_BASE_URL}/customer-categories/${id}`, { method: "DELETE" });
             if (res.ok) {
                 fetchCategories();
             }
@@ -74,7 +75,7 @@ export default function CategoriesPage() {
                 : `${API_BASE_URL}/customer-categories`;
             const method = formData.id ? "PUT" : "POST";
 
-            const res = await fetch(url, {
+            const res = await fetchWithAuth(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

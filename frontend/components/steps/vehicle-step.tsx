@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 interface VehicleStepProps {
     data: any;
@@ -20,7 +21,7 @@ export function VehicleStep({ data, updateData, errors = {} }: VehicleStepProps)
 
     const fetchVehicleTypes = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/vehicle-types`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/vehicle-types`);
             if (res.ok) {
                 const data = await res.json();
                 setVehicleTypes(Array.isArray(data) ? data : data.content || []);
@@ -32,7 +33,7 @@ export function VehicleStep({ data, updateData, errors = {} }: VehicleStepProps)
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/products`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/products`);
             if (res.ok) {
                 const data = await res.json();
                 setProducts(Array.isArray(data) ? data : data.content || []);
