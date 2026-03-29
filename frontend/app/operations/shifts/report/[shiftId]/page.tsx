@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import {
@@ -305,10 +305,10 @@ export default function ShiftReportPage() {
                         <th className="text-left py-1 px-1.5">Bill#</th><th className="text-left py-1 px-1.5">V.No</th><th className="text-left py-1 px-1.5">Products</th><th className="text-right py-1 px-1.5">Amount</th>
                     </tr></thead><tbody>
                         {Object.entries(creditBillsByCustomer).map(([customer, bills]) => (
-                            <>{/* Customer header */}
+                            <React.Fragment key={`cust-${customer}`}>{/* Customer header */}
                             <tr key={`h-${customer}`} className="bg-muted/40"><td colSpan={4} className="py-1 px-1.5 font-semibold text-xs">{customer} ({bills.length})</td></tr>
                             {bills.map((b, i) => <tr key={`${customer}-${i}`} className="border-b border-border/20"><td className="py-0.5 px-1.5 pl-3">{b.billNo}</td><td className="py-0.5 px-1.5">{b.vehicleNo}</td><td className="py-0.5 px-1.5">{b.products}</td><td className="py-0.5 px-1.5 text-right">{fmtCur(b.amount)}</td></tr>)}
-                            </>
+                            </React.Fragment>
                         ))}
                         <tr className="border-t-2 border-border font-bold"><td colSpan={3} className="py-1 px-1.5">Total</td><td className="py-1 px-1.5 text-right">{fmtCur(report.creditBillAmount)}</td></tr>
                     </tbody></table>
@@ -493,10 +493,10 @@ export default function ShiftReportPage() {
                             <table className="w-full border-collapse"><thead><tr className="bg-gray-100">
                                 <th className="border border-gray-400 px-0.5 py-0 text-left text-[7pt]">Bill#</th><th className="border border-gray-400 px-0.5 py-0 text-left text-[7pt]">V.No</th><th className="border border-gray-400 px-0.5 py-0 text-left text-[7pt]">Products</th><th className="border border-gray-400 px-0.5 py-0 text-right text-[7pt]">Amount</th>
                             </tr></thead><tbody>
-                                {Object.entries(creditBillsByCustomer).map(([customer, bills]) => (<>
+                                {Object.entries(creditBillsByCustomer).map(([customer, bills]) => (<React.Fragment key={`pcust-${customer}`}>
                                     <tr key={`ph-${customer}`} className="bg-gray-100"><td colSpan={4} className="border border-gray-400 px-0.5 py-0 text-[7pt] font-bold">{customer} ({bills.length})</td></tr>
                                     {bills.map((b, i) => <tr key={`pb-${customer}-${i}`}><td className="border border-gray-300 px-0.5 py-0 text-[7pt] pl-1">{b.billNo}</td><td className="border border-gray-300 px-0.5 py-0 text-[7pt]">{b.vehicleNo}</td><td className="border border-gray-300 px-0.5 py-0 text-[7pt]">{b.products}</td><td className="border border-gray-300 px-0.5 py-0 text-right text-[7pt]">{fmtCur(b.amount)}</td></tr>)}
-                                </>))}
+                                </React.Fragment>))}
                                 <tr className="bg-gray-200 font-bold"><td colSpan={3} className="border border-gray-400 px-0.5 py-0 text-[7pt]">TOTAL CREDIT</td><td className="border border-gray-400 px-0.5 py-0 text-right text-[7pt]">{fmtCur(report.creditBillAmount)}</td></tr>
                             </tbody></table>
                         </div>
