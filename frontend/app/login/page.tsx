@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Fuel } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 
-export default function LoginPage() {
+function LoginContent() {
     const { isAuthenticated, isLoading, login } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
 
     useEffect(() => {
-        // Store returnTo so we can redirect after OAuth callback
         const returnTo = searchParams.get("returnTo");
         if (returnTo) {
             sessionStorage.setItem("sff-return-to", returnTo);
@@ -66,5 +65,17 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-background">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     );
 }
