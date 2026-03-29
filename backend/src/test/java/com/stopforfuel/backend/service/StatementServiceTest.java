@@ -321,7 +321,7 @@ class StatementServiceTest {
     void generateAndStorePdf_replacesExistingPdf_deletesOld() {
         testStatement.setScid(1L);
         testStatement.setStatementDate(LocalDate.of(2026, 3, 15));
-        testStatement.setStatementPdfUrl("statements/2026/03/1/statement.pdf");
+        testStatement.setStatementPdfUrl("statements/1/1/2026/03/S26-100.pdf");
 
         Company company = new Company();
         company.setName("Test Station");
@@ -336,7 +336,7 @@ class StatementServiceTest {
 
         statementService.generateAndStorePdf(1L);
 
-        verify(s3StorageService).delete("statements/2026/03/1/statement.pdf");
+        verify(s3StorageService).delete("statements/1/1/2026/03/S26-100.pdf");
     }
 
     @Test
@@ -349,15 +349,15 @@ class StatementServiceTest {
 
     @Test
     void getStatementPdfUrl_exists_returnsPresignedUrl() {
-        testStatement.setStatementPdfUrl("statements/2026/03/1/statement.pdf");
+        testStatement.setStatementPdfUrl("statements/1/1/2026/03/S26-100.pdf");
         when(statementRepository.findById(1L)).thenReturn(Optional.of(testStatement));
-        when(s3StorageService.getPresignedUrl("statements/2026/03/1/statement.pdf"))
+        when(s3StorageService.getPresignedUrl("statements/1/1/2026/03/S26-100.pdf"))
                 .thenReturn("https://s3.example.com/presigned-url");
 
         String url = statementService.getStatementPdfUrl(1L);
 
         assertEquals("https://s3.example.com/presigned-url", url);
-        verify(s3StorageService).getPresignedUrl("statements/2026/03/1/statement.pdf");
+        verify(s3StorageService).getPresignedUrl("statements/1/1/2026/03/S26-100.pdf");
     }
 
     @Test

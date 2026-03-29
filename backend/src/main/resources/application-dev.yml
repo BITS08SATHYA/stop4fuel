@@ -1,6 +1,8 @@
 app:
   auth:
     enabled: false
+  seed-test-data:
+    enabled: true
 
 spring:
   autoconfigure:

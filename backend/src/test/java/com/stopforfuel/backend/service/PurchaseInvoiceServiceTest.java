@@ -214,7 +214,7 @@ class PurchaseInvoiceServiceTest {
         PurchaseInvoice result = purchaseInvoiceService.uploadPdf(1L, file);
 
         assertNotNull(result.getPdfFilePath());
-        assertTrue(result.getPdfFilePath().contains("purchase-invoices"));
+        assertTrue(result.getPdfFilePath().contains("invoices/purchase"));
         verify(s3StorageService).upload(anyString(), eq(file));
     }
 

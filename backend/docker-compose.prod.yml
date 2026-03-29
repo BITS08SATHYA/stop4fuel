@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: stopforfuel-postgres
+    environment:
+      POSTGRES_DB: stopforfuel
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+    volumes:
+      - stopforfuel_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: REDACTED.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-backend:latest
+    container_name: stopforfuel-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:postgresql://postgres:5432/stopforfuel
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      SERVER_PORT: 8080
+      CORS_ALLOWED_ORIGINS: "https://stopforfuel.com,https://www.stopforfuel.com"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  stopforfuel_pgdata:

@@ -7,6 +7,7 @@ import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 
 const API = API_BASE_URL;
@@ -80,9 +81,9 @@ function CustomerGroupMapping() {
     const fetchData = useCallback(async () => {
         try {
             const [custRes, groupRes, unassignedRes] = await Promise.all([
-                fetch(`${API}/customers?page=0&size=1000`),
-                fetch(`${API}/groups`),
-                fetch(`${API}/mappings/unassigned-customers`),
+                fetchWithAuth(`${API}/customers?page=0&size=1000`),
+                fetchWithAuth(`${API}/groups`),
+                fetchWithAuth(`${API}/mappings/unassigned-customers`),
             ]);
             const custData = await custRes.json();
             const groupData = await groupRes.json();
@@ -134,7 +135,7 @@ function CustomerGroupMapping() {
         if (selectedIds.size === 0 || !targetGroupId) return;
         setLoading(true);
         try {
-            const res = await fetch(`${API}/mappings/assign-customers-to-group`, {
+            const res = await fetchWithAuth(`${API}/mappings/assign-customers-to-group`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ customerIds: [...selectedIds], groupId: Number(targetGroupId) }),
@@ -155,7 +156,7 @@ function CustomerGroupMapping() {
         if (selectedIds.size === 0) return;
         setLoading(true);
         try {
-            const res = await fetch(`${API}/mappings/unassign-customers-from-group`, {
+            const res = await fetchWithAuth(`${API}/mappings/unassign-customers-from-group`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ customerIds: [...selectedIds] }),
@@ -327,9 +328,9 @@ function VehicleCustomerMapping() {
     const fetchData = useCallback(async () => {
         try {
             const [vehRes, custRes, unassignedRes] = await Promise.all([
-                fetch(`${API}/vehicles`),
-                fetch(`${API}/customers?page=0&size=1000`),
-                fetch(`${API}/mappings/unassigned-vehicles`),
+                fetchWithAuth(`${API}/vehicles`),
+                fetchWithAuth(`${API}/customers?page=0&size=1000`),
+                fetchWithAuth(`${API}/mappings/unassigned-vehicles`),
             ]);
             const vehData = await vehRes.json();
             const custData = await custRes.json();
@@ -381,7 +382,7 @@ function VehicleCustomerMapping() {
         if (selectedIds.size === 0 || !targetCustomerId) return;
         setLoading(true);
         try {
-            const res = await fetch(`${API}/mappings/assign-vehicles-to-customer`, {
+            const res = await fetchWithAuth(`${API}/mappings/assign-vehicles-to-customer`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ vehicleIds: [...selectedIds], customerId: Number(targetCustomerId) }),
@@ -403,7 +404,7 @@ function VehicleCustomerMapping() {
         if (selectedIds.size === 0) return;
         setLoading(true);
         try {
-            const res = await fetch(`${API}/mappings/unassign-vehicles-from-customer`, {
+            const res = await fetchWithAuth(`${API}/mappings/unassign-vehicles-from-customer`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ vehicleIds: [...selectedIds] }),
