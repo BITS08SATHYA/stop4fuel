@@ -17,6 +17,7 @@ import {
     API_BASE_URL,
     type Payment, type PaymentMode, type Statement, type InvoiceBill, type Customer, type PageResponse
 } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 
 type PayTarget = "statement" | "bill";
@@ -108,7 +109,7 @@ export default function PaymentsPage() {
             const modes = await getPaymentModes();
             setPaymentModes(modes);
             // Fetch active shift
-            const shiftRes = await fetch(`${API_BASE_URL}/shifts/active`);
+            const shiftRes = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
             if (shiftRes.ok) {
                 const text = await shiftRes.text();
                 if (text) {

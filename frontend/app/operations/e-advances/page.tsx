@@ -27,6 +27,7 @@ import {
     getUpiCompanies,
     createUpiCompany,
 } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import { PermissionGate } from "@/components/permission-gate";
@@ -63,7 +64,7 @@ function formatCurrency(val?: number) {
 
 async function fetchActiveShift(): Promise<{ id: number } | null> {
     try {
-        const res = await fetch(`${API_BASE_URL}/shifts/active`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
         const text = await res.text();
         if (!text) return null;
@@ -74,19 +75,19 @@ async function fetchActiveShift(): Promise<{ id: number } | null> {
 }
 
 async function fetchEAdvancesByShift(shiftId: number): Promise<EAdvance[]> {
-    const res = await fetch(`${API_BASE_URL}/e-advances/shift/${shiftId}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/e-advances/shift/${shiftId}`);
     if (!res.ok) throw new Error("Failed to fetch e-advances");
     return res.json();
 }
 
 async function fetchEAdvancesByDateRange(fromDate: string, toDate: string): Promise<EAdvance[]> {
-    const res = await fetch(`${API_BASE_URL}/e-advances/search?fromDate=${fromDate}&toDate=${toDate}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/e-advances/search?fromDate=${fromDate}&toDate=${toDate}`);
     if (!res.ok) throw new Error("Failed to fetch e-advances");
     return res.json();
 }
 
 async function updateEAdvance(id: number, data: Partial<EAdvance>): Promise<EAdvance> {
-    const res = await fetch(`${API_BASE_URL}/e-advances/${id}`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/e-advances/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -99,7 +100,7 @@ async function updateEAdvance(id: number, data: Partial<EAdvance>): Promise<EAdv
 }
 
 async function deleteEAdvanceById(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/e-advances/${id}`, { method: "DELETE" });
+    const res = await fetchWithAuth(`${API_BASE_URL}/e-advances/${id}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Failed to delete e-advance");
 }
 

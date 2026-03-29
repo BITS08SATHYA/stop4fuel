@@ -16,6 +16,7 @@ import {
     Clock,
 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { PermissionGate } from "@/components/permission-gate";
 
@@ -49,21 +50,21 @@ interface CashInflowRepayment {
 // --- API helpers ---
 
 async function fetchInflows(): Promise<ExternalCashInflow[]> {
-    const res = await fetch(`${API_BASE_URL}/cash-inflows`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/cash-inflows`);
     if (!res.ok) throw new Error("Failed to fetch cash inflows");
     return res.json();
 }
 
 async function fetchActiveShift(): Promise<Shift | null> {
     try {
-        const res = await fetch(`${API_BASE_URL}/shifts/active`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
         return res.json();
     } catch { return null; }
 }
 
 async function createInflow(data: Partial<ExternalCashInflow>): Promise<ExternalCashInflow> {
-    const res = await fetch(`${API_BASE_URL}/cash-inflows`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/cash-inflows`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -73,7 +74,7 @@ async function createInflow(data: Partial<ExternalCashInflow>): Promise<External
 }
 
 async function recordRepayment(inflowId: number, data: { amount: number; remarks?: string }): Promise<CashInflowRepayment> {
-    const res = await fetch(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -83,7 +84,7 @@ async function recordRepayment(inflowId: number, data: { amount: number; remarks
 }
 
 async function fetchRepayments(inflowId: number): Promise<CashInflowRepayment[]> {
-    const res = await fetch(`${API_BASE_URL}/cash-inflows/${inflowId}/repayments`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/cash-inflows/${inflowId}/repayments`);
     if (!res.ok) return [];
     return res.json();
 }

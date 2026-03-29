@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { fetchAuthSession, signOut, signInWithRedirect } from "aws-amplify/auth";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 interface AuthUser {
     id?: number;
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             if (DEV_MODE) {
                 // Dev mode: no Cognito, fetch user from backend (which uses DevAuthFilter)
-                const res = await fetch(`${getApiBaseUrl()}/auth/me`);
+                const res = await fetchWithAuth(`${getApiBaseUrl()}/auth/me`);
                 if (res.ok) {
                     const data = await res.json();
                     setUser({
@@ -89,9 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const role = (idToken?.payload?.['custom:role'] as string) || 'EMPLOYEE';
 
             // Fetch full user profile + permissions from backend
-            const res = await fetch(`${getApiBaseUrl()}/auth/me`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetchWithAuth(`${getApiBaseUrl()}/auth/me`);
 
             if (res.ok) {
                 const data = await res.json();
