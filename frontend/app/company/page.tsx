@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Plus, Eye, Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 
 interface Company {
@@ -32,7 +33,7 @@ export default function CompanyListPage() {
     const fetchCompanies = async () => {
         try {
             setLoading(true);
-            const res = await fetch(`${API_BASE_URL}/companies`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/companies`);
             if (!res.ok) throw new Error("Failed to fetch companies");
             const data = await res.json();
             setCompanies(data);
@@ -47,7 +48,7 @@ export default function CompanyListPage() {
     const handleDelete = async (id: number) => {
         setDeleting(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/companies/${id}`, { method: "DELETE" });
+            const res = await fetchWithAuth(`${API_BASE_URL}/companies/${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Failed to delete");
             setCompanies((prev) => prev.filter((c) => c.id !== id));
             setDeleteId(null);

@@ -99,9 +99,10 @@ public class PurchaseInvoiceService {
     public PurchaseInvoice uploadPdf(Long id, MultipartFile file) throws IOException {
         PurchaseInvoice invoice = getById(id);
         LocalDate date = invoice.getInvoiceDate() != null ? invoice.getInvoiceDate() : LocalDate.now();
+        Long scid = invoice.getScid() != null ? invoice.getScid() : SecurityUtils.getScid();
         String ext = getExtension(file.getOriginalFilename());
-        String key = String.format("purchase-invoices/%d/%02d/%d/invoice.%s",
-                date.getYear(), date.getMonthValue(), id, ext);
+        String key = String.format("invoices/purchase/%d/%d/%02d/%d.%s",
+                scid, date.getYear(), date.getMonthValue(), id, ext);
 
         // Delete old file if exists
         if (invoice.getPdfFilePath() != null && !invoice.getPdfFilePath().isEmpty()) {

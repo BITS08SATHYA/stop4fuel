@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 // Mock Data (Updated to match schema)
 export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?: number; onDataChange?: () => void }) {
@@ -29,7 +30,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
 
     const fetchGroups = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/groups`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/groups`);
             if (res.ok) {
                 const data = await res.json();
                 setGroups(Array.isArray(data) ? data : data.content || []);
@@ -49,7 +50,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
             if (selectedGroupId) queryParams.set("groupId", selectedGroupId);
             if (statusFilter) queryParams.set("status", statusFilter);
             if (categoryFilter) queryParams.set("categoryType", categoryFilter);
-            const res = await fetch(`${API_BASE_URL}/customers?${queryParams}`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/customers?${queryParams}`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
 
@@ -74,7 +75,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
         if (!confirm("Are you sure you want to delete this customer?")) return;
 
         try {
-            const res = await fetch(`${API_BASE_URL}/customers/${id}`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/customers/${id}`, {
                 method: "DELETE",
             });
             if (res.ok) {
@@ -111,7 +112,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
             } else {
                 url = `${API_BASE_URL}/customers/${customerId}/toggle-status`;
             }
-            const res = await fetch(url, { method });
+            const res = await fetchWithAuth(url, { method });
             if (res.ok) {
                 fetchCustomers();
                 onDataChange?.();

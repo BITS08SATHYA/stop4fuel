@@ -23,6 +23,7 @@ import {
     API_BASE_URL,
     getCustomerCreditInfo
 } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { FileUploadField } from "@/components/ui/file-upload-field";
 import {
     Receipt,
@@ -130,7 +131,7 @@ export default function InvoicesPage() {
             setNozzles(nozData.filter((n: Nozzle) => n.active));
 
             // Fetch active shift and load shift invoices
-            const shiftRes = await fetch(`${API_BASE_URL}/shifts/active`);
+            const shiftRes = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
             if (shiftRes.ok) {
                 const text = await shiftRes.text();
                 if (text) {

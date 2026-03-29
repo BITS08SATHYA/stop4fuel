@@ -25,7 +25,18 @@ public interface PaymentRepository extends ScidRepository<Payment> {
 
     List<Payment> findByCustomerIdAndPaymentDateBetween(Long customerId, LocalDateTime from, LocalDateTime to);
 
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer JOIN FETCH p.paymentMode " +
+           "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
+           "WHERE p.shiftId = :shiftId ORDER BY p.paymentDate DESC")
+    List<Payment> findByShiftIdEager(@Param("shiftId") Long shiftId);
+
     List<Payment> findByShiftId(Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.shiftId = :shiftId AND p.invoiceBill IS NOT NULL")
+    BigDecimal sumBillPaymentsByShift(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.shiftId = :shiftId AND p.statement IS NOT NULL")
+    BigDecimal sumStatementPaymentsByShift(@Param("shiftId") Long shiftId);
 
     // Paginated versions
     Page<Payment> findAllBy(Pageable pageable);
