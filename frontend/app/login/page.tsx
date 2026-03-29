@@ -1,14 +1,19 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Fuel } from "lucide-react";
+import { Fuel, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 
 function LoginContent() {
     const { isAuthenticated, isLoading, login } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         const returnTo = searchParams.get("returnTo");
@@ -24,6 +29,27 @@ function LoginContent() {
             router.push(returnTo || "/dashboard");
         }
     }, [isAuthenticated, isLoading, router]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
+        setIsSubmitting(true);
+
+        try {
+            const result = await login(email, password);
+            if (!result.success) {
+                if (result.challengeName === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
+                    setError("You need to set a new password. Please contact your admin.");
+                } else {
+                    setError(result.error || "Sign in failed. Please check your credentials.");
+                }
+            }
+        } catch {
+            setError("An unexpected error occurred. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -46,13 +72,63 @@ function LoginContent() {
                     </p>
                 </div>
 
-                <div className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {error && (
+                        <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="space-y-2">
+                        <label htmlFor="email" className="text-sm font-medium text-foreground">
+                            Email
+                        </label>
+                        <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="name@host.com"
+                            required
+                            autoComplete="email"
+                            className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label htmlFor="password" className="text-sm font-medium text-foreground">
+                            Password
+                        </label>
+                        <div className="relative">
+                            <input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Password"
+                                required
+                                autoComplete="current-password"
+                                className="w-full px-3 py-2 pr-10 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                tabIndex={-1}
+                            >
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
+                    </div>
+
                     <button
-                        onClick={login}
-                        className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Sign In
+                        {isSubmitting ? "Signing in..." : "Sign In"}
                     </button>
+
                     <p className="text-center text-sm text-muted-foreground">
                         Contact your station admin for an account
                     </p>
@@ -62,7 +138,7 @@ function LoginContent() {
                     >
                         &larr; Back to website
                     </a>
-                </div>
+                </form>
             </div>
         </div>
     );
