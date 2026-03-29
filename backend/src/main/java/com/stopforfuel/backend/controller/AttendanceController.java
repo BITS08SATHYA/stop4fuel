@@ -46,7 +46,7 @@ public class AttendanceController {
 
     @PostMapping("/attendance/bulk")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public List<Attendance> markBulkAttendance(@RequestBody List<Attendance> attendances) {
+    public List<Attendance> markBulkAttendance(@Valid @RequestBody List<Attendance> attendances) {
         return attendanceService.markBulkAttendance(attendances);
     }
 

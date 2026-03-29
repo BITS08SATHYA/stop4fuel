@@ -1,17 +1,28 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Fuel } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 
 export default function LoginPage() {
     const { isAuthenticated, isLoading, login } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        // Store returnTo so we can redirect after OAuth callback
+        const returnTo = searchParams.get("returnTo");
+        if (returnTo) {
+            sessionStorage.setItem("sff-return-to", returnTo);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         if (!isLoading && isAuthenticated) {
-            router.push("/dashboard");
+            const returnTo = sessionStorage.getItem("sff-return-to");
+            sessionStorage.removeItem("sff-return-to");
+            router.push(returnTo || "/dashboard");
         }
     }, [isAuthenticated, isLoading, router]);
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { FieldError, inputErrorClass } from "@/components/ui/field-error";
 
 interface CustomerStepProps {
@@ -21,9 +22,9 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
         const fetchOptions = async () => {
             try {
                 const [partiesRes, groupsRes, catRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/parties`),
-                    fetch(`${API_BASE_URL}/groups`),
-                    fetch(`${API_BASE_URL}/customer-categories`),
+                    fetchWithAuth(`${API_BASE_URL}/parties`),
+                    fetchWithAuth(`${API_BASE_URL}/groups`),
+                    fetchWithAuth(`${API_BASE_URL}/customer-categories`),
                 ]);
                 const partiesData = await partiesRes.json();
                 setParties(Array.isArray(partiesData) ? partiesData : partiesData.content || []);

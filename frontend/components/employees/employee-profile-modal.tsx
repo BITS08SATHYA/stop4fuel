@@ -16,6 +16,7 @@ import {
     inputClass, formatRupees, advanceTypeBadge, advanceStatusBadge,
     formatLabel, API_BASE,
 } from "./types";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 interface EmployeeProfileModalProps {
     employee: Employee;
@@ -45,7 +46,7 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
     // Re-fetch employee to get fresh data (including doc URLs)
     const fetchEmployee = async () => {
         try {
-            const res = await fetch(`${API_BASE}/${initialEmployee.id}`);
+            const res = await fetchWithAuth(`${API_BASE}/${initialEmployee.id}`);
             if (res.ok) setEmployee(await res.json());
         } catch (error) { console.error("Failed to fetch employee", error); }
     };
@@ -58,14 +59,14 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
 
     const fetchSalaryHistory = async () => {
         try {
-            const res = await fetch(`${API_BASE}/${employee.id}/salary-history`);
+            const res = await fetchWithAuth(`${API_BASE}/${employee.id}/salary-history`);
             if (res.ok) setSalaryHistory(await res.json());
         } catch (error) { console.error("Failed to fetch salary history", error); }
     };
 
     const fetchAdvances = async () => {
         try {
-            const res = await fetch(`${API_BASE}/${employee.id}/advances`);
+            const res = await fetchWithAuth(`${API_BASE}/${employee.id}/advances`);
             if (res.ok) setAdvances(await res.json());
         } catch (error) { console.error("Failed to fetch advances", error); }
     };
@@ -74,7 +75,7 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
         e.preventDefault();
         if (!validateSalary(salaryRevision)) return;
         try {
-            const res = await fetch(`${API_BASE}/${employee.id}/salary-revision`, {
+            const res = await fetchWithAuth(`${API_BASE}/${employee.id}/salary-revision`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ newSalary: Number(salaryRevision.newSalary), effectiveDate: salaryRevision.effectiveDate, reason: salaryRevision.reason }),
@@ -91,7 +92,7 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
         e.preventDefault();
         if (!validateAdvance(newAdvance)) return;
         try {
-            const res = await fetch(`${API_BASE}/${employee.id}/advances`, {
+            const res = await fetchWithAuth(`${API_BASE}/${employee.id}/advances`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ amount: Number(newAdvance.amount), advanceDate: newAdvance.advanceDate, advanceType: newAdvance.advanceType, remarks: newAdvance.remarks }),
@@ -106,7 +107,7 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
 
     const handleAdvanceStatusChange = async (advanceId: number, status: string) => {
         try {
-            await fetch(`${API_BASE}/advances/${advanceId}/status?status=${status}`, { method: "PATCH" });
+            await fetchWithAuth(`${API_BASE}/advances/${advanceId}/status?status=${status}`, { method: "PATCH" });
             fetchAdvances();
         } catch (error) { console.error("Failed to update advance status", error); }
     };
@@ -364,7 +365,7 @@ function DocumentCard({ label, hasFile, employeeId, fileType, onUploaded }: { la
             const formData = new FormData();
             formData.append("file", file);
             const uploadType = fileType === "aadhar-doc" ? "upload-aadhar-doc" : "upload-pan-doc";
-            const res = await fetch(`${API_BASE}/${employeeId}/${uploadType}`, { method: "POST", body: formData });
+            const res = await fetchWithAuth(`${API_BASE}/${employeeId}/${uploadType}`, { method: "POST", body: formData });
             if (res.ok) onUploaded?.();
             else console.error("Upload failed");
         } catch (error) { console.error("Failed to upload", error); }

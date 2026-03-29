@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Save, ArrowLeft, Pencil, Loader2 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { CompanyDocuments } from "./company-documents";
 import { PermissionGate } from "@/components/permission-gate";
 
@@ -51,7 +52,7 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
     const fetchCompany = async (id: number) => {
         try {
             setLoading(true);
-            const res = await fetch(`${API_BASE_URL}/companies/${id}`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/companies/${id}`);
             if (!res.ok) throw new Error("Failed to fetch company");
             const data = await res.json();
             setCompany(data);
@@ -74,7 +75,7 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
                 : `${API_BASE_URL}/companies`;
             const method = company.id ? "PUT" : "POST";
 
-            const res = await fetch(url, {
+            const res = await fetchWithAuth(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(company),

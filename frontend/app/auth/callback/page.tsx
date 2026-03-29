@@ -13,11 +13,17 @@ export default function AuthCallbackPage() {
     useEffect(() => {
         let cancelled = false;
 
+        const getReturnPath = () => {
+            const returnTo = sessionStorage.getItem("sff-return-to");
+            sessionStorage.removeItem("sff-return-to");
+            return returnTo || "/dashboard";
+        };
+
         // Listen for Amplify auth events
         const unsubscribe = Hub.listen("auth", ({ payload }) => {
             if (cancelled) return;
             if (payload.event === "signInWithRedirect") {
-                router.push("/dashboard");
+                router.push(getReturnPath());
             } else if (payload.event === "signInWithRedirect_failure") {
                 console.error("Sign-in redirect failed:", payload.data);
                 setError("Authentication failed. Redirecting to login...");
@@ -29,7 +35,7 @@ export default function AuthCallbackPage() {
         const checkExisting = async () => {
             try {
                 await getCurrentUser();
-                if (!cancelled) router.push("/dashboard");
+                if (!cancelled) router.push(getReturnPath());
             } catch {
                 // Not yet authenticated — Hub listener will handle it
             }
