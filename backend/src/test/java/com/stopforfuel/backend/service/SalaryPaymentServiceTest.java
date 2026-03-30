@@ -1,9 +1,9 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Employee;
-import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.entity.SalaryPayment;
-import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
+import com.stopforfuel.backend.repository.OperationalAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.SalaryPaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +32,7 @@ class SalaryPaymentServiceTest {
     private EmployeeRepository employeeRepository;
 
     @Mock
-    private EmployeeAdvanceRepository employeeAdvanceRepository;
+    private OperationalAdvanceRepository operationalAdvanceRepository;
 
     @InjectMocks
     private SalaryPaymentService salaryPaymentService;
@@ -39,7 +40,7 @@ class SalaryPaymentServiceTest {
     private Employee emp1;
     private Employee emp2;
     private SalaryPayment testPayment;
-    private EmployeeAdvance pendingAdvance;
+    private OperationalAdvance pendingAdvance;
 
     @BeforeEach
     void setUp() {
@@ -67,11 +68,11 @@ class SalaryPaymentServiceTest {
         testPayment.setNetPayable(19500.0);
         testPayment.setStatus("DRAFT");
 
-        pendingAdvance = new EmployeeAdvance();
+        pendingAdvance = new OperationalAdvance();
         pendingAdvance.setId(1L);
         pendingAdvance.setEmployee(emp1);
-        pendingAdvance.setAmount(500.0);
-        pendingAdvance.setAdvanceDate(LocalDate.of(2026, 3, 10));
+        pendingAdvance.setAmount(new BigDecimal("500"));
+        pendingAdvance.setAdvanceDate(LocalDate.of(2026, 3, 10).atStartOfDay());
         pendingAdvance.setAdvanceType("SALARY");
         pendingAdvance.setStatus("PENDING");
     }
@@ -107,13 +108,13 @@ class SalaryPaymentServiceTest {
         // emp1 not yet processed, has pending advance of 500.0
         when(salaryPaymentRepository.findByEmployeeIdAndMonthAndYear(1L, 3, 2026))
                 .thenReturn(Optional.empty());
-        when(employeeAdvanceRepository.findByEmployeeIdAndStatus(1L, "PENDING"))
+        when(operationalAdvanceRepository.findByEmployeeIdAndStatus(1L, "PENDING"))
                 .thenReturn(List.of(pendingAdvance));
 
         // emp2 not yet processed, no pending advances
         when(salaryPaymentRepository.findByEmployeeIdAndMonthAndYear(2L, 3, 2026))
                 .thenReturn(Optional.empty());
-        when(employeeAdvanceRepository.findByEmployeeIdAndStatus(2L, "PENDING"))
+        when(operationalAdvanceRepository.findByEmployeeIdAndStatus(2L, "PENDING"))
                 .thenReturn(List.of());
 
         when(salaryPaymentRepository.save(any(SalaryPayment.class))).thenAnswer(i -> i.getArgument(0));
@@ -155,9 +156,9 @@ class SalaryPaymentServiceTest {
     @Test
     void markAsPaid_setsStatusAndDeductsAdvances() {
         when(salaryPaymentRepository.findById(1L)).thenReturn(Optional.of(testPayment));
-        when(employeeAdvanceRepository.findByEmployeeIdAndStatus(1L, "PENDING"))
+        when(operationalAdvanceRepository.findByEmployeeIdAndStatus(1L, "PENDING"))
                 .thenReturn(List.of(pendingAdvance));
-        when(employeeAdvanceRepository.save(any(EmployeeAdvance.class))).thenAnswer(i -> i.getArgument(0));
+        when(operationalAdvanceRepository.save(any(OperationalAdvance.class))).thenAnswer(i -> i.getArgument(0));
         when(salaryPaymentRepository.save(any(SalaryPayment.class))).thenAnswer(i -> i.getArgument(0));
 
         SalaryPayment result = salaryPaymentService.markAsPaid(1L, "BANK_TRANSFER");
@@ -166,7 +167,7 @@ class SalaryPaymentServiceTest {
         assertNotNull(result.getPaymentDate());
         assertEquals("BANK_TRANSFER", result.getPaymentMode());
         assertEquals("DEDUCTED", pendingAdvance.getStatus());
-        verify(employeeAdvanceRepository).save(pendingAdvance);
+        verify(operationalAdvanceRepository).save(pendingAdvance);
         verify(salaryPaymentRepository).save(testPayment);
     }
 
