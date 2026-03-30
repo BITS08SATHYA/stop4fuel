@@ -109,7 +109,7 @@ export default function ShiftReportPage() {
     };
     const handleFinalize = async () => {
         if (!report) return;
-        try { const u = await finalizeShiftReport(report.id, "manager"); setReport(u); setShowFinalizeConfirm(false); } catch (e: unknown) { alert(e instanceof Error ? e.message : "Failed"); }
+        try { await finalizeShiftReport(report.id, "manager"); setShowFinalizeConfirm(false); router.push("/operations/shifts"); } catch (e: unknown) { alert(e instanceof Error ? e.message : "Failed"); }
     };
     const handleEditSave = async () => {
         if (!report || editingItemId == null) return;
