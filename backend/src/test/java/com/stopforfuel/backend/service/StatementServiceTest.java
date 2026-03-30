@@ -87,10 +87,10 @@ class StatementServiceTest {
     @Test
     void getStatements_returnsPage() {
         Page<Statement> page = new PageImpl<>(List.of(testStatement));
-        when(statementRepository.findWithFilters(eq(1L), eq("NOT_PAID"), any()))
+        when(statementRepository.findWithFilters(eq(1L), eq("NOT_PAID"), isNull(), isNull(), isNull(), any()))
                 .thenReturn(page);
 
-        assertEquals(1, statementService.getStatements(1L, "NOT_PAID", PageRequest.of(0, 10))
+        assertEquals(1, statementService.getStatements(1L, "NOT_PAID", null, null, null, null, PageRequest.of(0, 10))
                 .getTotalElements());
     }
 
