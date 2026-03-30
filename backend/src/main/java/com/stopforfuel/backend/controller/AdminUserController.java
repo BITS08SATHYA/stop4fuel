@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.UserListDTO;
 import com.stopforfuel.backend.entity.User;
 import com.stopforfuel.backend.service.AdminUserService;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,8 +21,14 @@ public class AdminUserController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'USER_VIEW')")
-    public List<User> getAllUsers() {
-        return adminUserService.getAllUsers();
+    public List<UserListDTO> getAllUsers(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search) {
+        return adminUserService.getAllUsersFiltered(type, role, status, search).stream()
+                .map(UserListDTO::from)
+                .toList();
     }
 
     @GetMapping("/{id}")
@@ -31,15 +39,41 @@ public class AdminUserController {
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
-    public ResponseEntity<User> createUser(@RequestBody Map<String, String> request) {
-        User user = adminUserService.createUser(
-                request.get("username"),
-                request.get("email"),
-                request.get("name"),
-                request.get("roleType"),
-                request.get("tempPassword")
-        );
-        return ResponseEntity.ok(user);
+    public ResponseEntity<Map<String, Object>> createUser(@RequestBody Map<String, String> request) {
+        String name = request.get("name");
+        String phone = request.get("phone");
+        String roleType = request.get("roleType");
+        String designation = request.get("designation");
+        String userType = request.get("userType");
+
+        if (phone != null && !phone.isBlank()) {
+            // Mobile-first user creation
+            Map<String, Object> result = adminUserService.createUserWithPhone(
+                    name, phone, roleType, designation, userType);
+            Map<String, Object> response = new HashMap<>();
+            response.put("user", UserListDTO.from((User) result.get("user")));
+            response.put("passcode", result.get("passcode"));
+            return ResponseEntity.ok(response);
+        } else {
+            // Legacy email-based creation
+            User user = adminUserService.createUser(
+                    request.get("username"),
+                    request.get("email"),
+                    name,
+                    roleType,
+                    request.get("tempPassword")
+            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("user", UserListDTO.from(user));
+            return ResponseEntity.ok(response);
+        }
+    }
+
+    @PostMapping("/{id}/reset-passcode")
+    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    public ResponseEntity<Map<String, String>> resetPasscode(@PathVariable Long id) {
+        String newPasscode = adminUserService.resetPasscode(id);
+        return ResponseEntity.ok(Map.of("passcode", newPasscode));
     }
 
     @PutMapping("/{id}/role")

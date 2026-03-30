@@ -1,20 +1,20 @@
 package com.stopforfuel.backend.service;
 
-import com.stopforfuel.backend.entity.Roles;
-import com.stopforfuel.backend.entity.User;
+import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.repository.DesignationRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.UserRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +22,11 @@ public class AdminUserService {
 
     private final UserRepository userRepository;
     private final RolesRepository rolesRepository;
+    private final DesignationRepository designationRepository;
     private final CognitoIdentityProviderClient cognitoClient;
+
+    private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private static final Random random = new Random();
 
     @Value("${app.cognito.user-pool-id:}")
     private String userPoolId;
@@ -34,9 +38,109 @@ public class AdminUserService {
         return userRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    public List<User> getAllUsersFiltered(String type, String role, String status, String search) {
+        List<User> users = userRepository.findAllByScid(SecurityUtils.getScid());
+
+        return users.stream()
+                .filter(u -> {
+                    if (type != null && !type.isBlank()) {
+                        if ("EMPLOYEE".equalsIgnoreCase(type) && !(u instanceof Employee)) return false;
+                        if ("CUSTOMER".equalsIgnoreCase(type) && !(u instanceof Customer)) return false;
+                    }
+                    return true;
+                })
+                .filter(u -> {
+                    if (role != null && !role.isBlank() && u.getRole() != null) {
+                        return role.equalsIgnoreCase(u.getRole().getRoleType());
+                    }
+                    return true;
+                })
+                .filter(u -> {
+                    if (status != null && !status.isBlank()) {
+                        return status.equalsIgnoreCase(u.getStatus());
+                    }
+                    return true;
+                })
+                .filter(u -> {
+                    if (search != null && !search.isBlank()) {
+                        String q = search.toLowerCase();
+                        boolean nameMatch = u.getName() != null && u.getName().toLowerCase().contains(q);
+                        boolean phoneMatch = u.getPhoneNumbers() != null && u.getPhoneNumbers().stream()
+                                .anyMatch(p -> p.contains(q));
+                        boolean usernameMatch = u.getUsername() != null && u.getUsername().toLowerCase().contains(q);
+                        return nameMatch || phoneMatch || usernameMatch;
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+    }
+
     public User getUserById(Long id) {
         return userRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+    }
+
+    /**
+     * Create a user with phone number and auto-generated 4-digit passcode.
+     * Returns a map with "user" and "passcode" (plain text, shown once).
+     */
+    public Map<String, Object> createUserWithPhone(String name, String phoneNumber, String roleType,
+                                                    String designationName, String userType) {
+        Roles role = rolesRepository.findByRoleType(roleType)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleType));
+
+        // Generate 4-digit passcode
+        String plainPasscode = String.format("%04d", random.nextInt(10000));
+        String hashedPasscode = passwordEncoder.encode(plainPasscode);
+
+        User user;
+        if ("EMPLOYEE".equalsIgnoreCase(userType)) {
+            Employee employee = new Employee();
+            if (designationName != null && !designationName.isBlank()) {
+                Designation designation = designationRepository.findByName(designationName)
+                        .orElseThrow(() -> new RuntimeException("Designation not found: " + designationName));
+                employee.setDesignationEntity(designation);
+            }
+            employee.setPersonType("Employee");
+            user = employee;
+        } else {
+            Customer customer = new Customer();
+            customer.setPersonType("Individual");
+            user = customer;
+        }
+
+        user.setName(name);
+        user.setUsername(phoneNumber); // Use phone as username
+        user.setRole(role);
+        user.setPasscode(hashedPasscode);
+        user.setJoinDate(LocalDate.now());
+        user.setStatus("ACTIVE");
+        user.setScid(SecurityUtils.getScid());
+
+        Set<String> phones = new HashSet<>();
+        phones.add(phoneNumber);
+        user.setPhoneNumbers(phones);
+
+        User savedUser = userRepository.save(user);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("user", savedUser);
+        result.put("passcode", plainPasscode);
+        return result;
+    }
+
+    /**
+     * Reset passcode for a user. Returns the new plain-text passcode.
+     */
+    public String resetPasscode(Long userId) {
+        User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String plainPasscode = String.format("%04d", random.nextInt(10000));
+        user.setPasscode(passwordEncoder.encode(plainPasscode));
+        userRepository.save(user);
+
+        return plainPasscode;
     }
 
     public User createUser(String username, String email, String name, String roleType, String tempPassword) {
