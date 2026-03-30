@@ -550,7 +550,10 @@ export default function PaymentsPage() {
                                     <th className="text-left py-3 px-3">Date</th>
                                     <th className="text-left py-3 px-3">Customer</th>
                                     <th className="text-left py-3 px-3">Paid Against</th>
-                                    <th className="text-right py-3 px-3">Amount</th>
+                                    <th className="text-right py-3 px-3">Net Amount</th>
+                                    <th className="text-right py-3 px-3">Paid</th>
+                                    <th className="text-right py-3 px-3">Received</th>
+                                    <th className="text-right py-3 px-3">Balance</th>
                                     <th className="text-left py-3 px-3">Mode</th>
                                     <th className="text-left py-3 px-3">Reference</th>
                                     <th className="text-left py-3 px-3">Employee</th>
@@ -563,7 +566,7 @@ export default function PaymentsPage() {
                             <tbody>
                                 {filteredPayments.length === 0 ? (
                                     <tr>
-                                        <td colSpan={11} className="text-center py-8 text-muted-foreground">
+                                        <td colSpan={14} className="text-center py-8 text-muted-foreground">
                                             {viewMode === "shift"
                                                 ? (activeShiftId ? "No payments in the current shift." : "No active shift found.")
                                                 : "No payments found for the selected filters."}
@@ -591,8 +594,17 @@ export default function PaymentsPage() {
                                                     </Badge>
                                                 ) : "-"}
                                             </td>
+                                            <td className="py-3 px-3 text-right whitespace-nowrap">
+                                                {fmtCurrency(p.statement?.netAmount ?? p.invoiceBill?.netAmount ?? 0)}
+                                            </td>
                                             <td className="py-3 px-3 text-right font-semibold text-emerald-400 whitespace-nowrap">
                                                 {fmtCurrency(p.amount)}
+                                            </td>
+                                            <td className="py-3 px-3 text-right whitespace-nowrap">
+                                                {p.statement ? fmtCurrency(p.statement.receivedAmount) : "-"}
+                                            </td>
+                                            <td className="py-3 px-3 text-right font-semibold text-amber-400 whitespace-nowrap">
+                                                {p.statement ? fmtCurrency(p.statement.balanceAmount) : "-"}
                                             </td>
                                             <td className="py-3 px-3">{p.paymentMode?.name || "-"}</td>
                                             <td className="py-3 px-3 text-muted-foreground">{p.referenceNo || "-"}</td>
