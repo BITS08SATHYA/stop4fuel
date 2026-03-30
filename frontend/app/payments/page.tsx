@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import {
     CreditCard, Receipt, FileText, Search, Check, IndianRupee, Clock, ImageIcon, Paperclip,
-    Download, FileSpreadsheet, Calendar
+    Download, FileSpreadsheet, Calendar, Eye, Pencil
 } from "lucide-react";
 import {
     getPayments, getPaymentsByShift, getPaymentModes, getOutstandingStatements,
@@ -53,7 +53,7 @@ export default function PaymentsPage() {
 
     // Pagination (used in dates mode)
     const [page, setPage] = useState(0);
-    const [pageSize] = useState(10);
+    const [pageSize] = useState(5);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
@@ -89,6 +89,9 @@ export default function PaymentsPage() {
     const [paidAgainstFilter, setPaidAgainstFilter] = useState<string>("");
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
+
+    // Detail view modal
+    const [viewPayment, setViewPayment] = useState<Payment | null>(null);
 
     // Export loading
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -551,22 +554,16 @@ export default function PaymentsPage() {
                                     <th className="text-left py-3 px-3">Customer</th>
                                     <th className="text-left py-3 px-3">Paid Against</th>
                                     <th className="text-right py-3 px-3">Net Amount</th>
-                                    <th className="text-right py-3 px-3">Paid</th>
                                     <th className="text-right py-3 px-3">Received</th>
                                     <th className="text-right py-3 px-3">Balance</th>
                                     <th className="text-left py-3 px-3">Mode</th>
-                                    <th className="text-left py-3 px-3">Reference</th>
-                                    <th className="text-left py-3 px-3">Employee</th>
-                                    <th className="text-center py-3 px-3">Status</th>
-                                    <th className="text-left py-3 px-3">Remarks</th>
-                                    <th className="text-center py-3 px-3">Proof</th>
-                                    <th className="text-center py-3 px-3">Receipt</th>
+                                    <th className="text-center py-3 px-3">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredPayments.length === 0 ? (
                                     <tr>
-                                        <td colSpan={14} className="text-center py-8 text-muted-foreground">
+                                        <td colSpan={8} className="text-center py-8 text-muted-foreground">
                                             {viewMode === "shift"
                                                 ? (activeShiftId ? "No payments in the current shift." : "No active shift found.")
                                                 : "No payments found for the selected filters."}
@@ -595,50 +592,31 @@ export default function PaymentsPage() {
                                                 ) : "-"}
                                             </td>
                                             <td className="py-3 px-3 text-right whitespace-nowrap">
-                                                {fmtCurrency(p.statement?.netAmount ?? p.invoiceBill?.netAmount ?? 0)}
+                                                {(p.statement?.netAmount || p.invoiceBill?.netAmount)
+                                                    ? fmtCurrency(p.statement?.netAmount ?? p.invoiceBill?.netAmount ?? 0)
+                                                    : "-"}
                                             </td>
                                             <td className="py-3 px-3 text-right font-semibold text-emerald-400 whitespace-nowrap">
                                                 {fmtCurrency(p.amount)}
                                             </td>
-                                            <td className="py-3 px-3 text-right whitespace-nowrap">
-                                                {p.statement ? fmtCurrency(p.statement.receivedAmount) : "-"}
-                                            </td>
-                                            <td className="py-3 px-3 text-right font-semibold text-amber-400 whitespace-nowrap">
-                                                {p.statement ? fmtCurrency(p.statement.balanceAmount) : "-"}
+                                            <td className="py-3 px-3 text-right font-semibold whitespace-nowrap">
+                                                {p.statement
+                                                    ? <span className={p.statement.balanceAmount > 0 ? "text-amber-400" : "text-emerald-400"}>
+                                                        {fmtCurrency(p.statement.balanceAmount)}
+                                                      </span>
+                                                    : "-"}
                                             </td>
                                             <td className="py-3 px-3">{p.paymentMode?.name || "-"}</td>
-                                            <td className="py-3 px-3 text-muted-foreground">{p.referenceNo || "-"}</td>
-                                            <td className="py-3 px-3 text-muted-foreground">{p.receivedBy?.name || "-"}</td>
-                                            <td className="py-3 px-3 text-center">{statusBadge(p.targetPaymentStatus)}</td>
-                                            <td className="py-3 px-3 text-muted-foreground max-w-[120px] truncate">{p.remarks || "-"}</td>
                                             <td className="py-3 px-3 text-center">
-                                                {p.proofImageKey ? (
+                                                <div className="flex items-center justify-center gap-2">
                                                     <button
-                                                        onClick={async () => {
-                                                            try {
-                                                                const data = await getPaymentProofUrl(p.id!);
-                                                                window.open(data.url, '_blank');
-                                                            } catch {
-                                                                alert("Failed to load proof image");
-                                                            }
-                                                        }}
+                                                        onClick={() => setViewPayment(p)}
                                                         className="text-primary hover:text-primary/80 transition-colors"
-                                                        title="View proof"
+                                                        title="View details"
                                                     >
-                                                        <ImageIcon className="w-4 h-4 inline" />
+                                                        <Eye className="w-4 h-4" />
                                                     </button>
-                                                ) : (
-                                                    <span className="text-muted-foreground/30">-</span>
-                                                )}
-                                            </td>
-                                            <td className="py-3 px-3 text-center">
-                                                <button
-                                                    onClick={() => handleDownloadReceipt(p.id!)}
-                                                    className="text-primary hover:text-primary/80 transition-colors"
-                                                    title="Download receipt"
-                                                >
-                                                    <Download className="w-4 h-4 inline" />
-                                                </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -988,6 +966,132 @@ export default function PaymentsPage() {
                         </button>
                     </div>
                 </div>
+            </Modal>
+
+            {/* Payment Detail View Modal */}
+            <Modal
+                isOpen={!!viewPayment}
+                onClose={() => setViewPayment(null)}
+                title="Payment Details"
+            >
+                {viewPayment && (
+                    <div className="space-y-4">
+                        {/* Amount & Status */}
+                        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-3">
+                            <div>
+                                <div className="text-2xl font-bold text-emerald-400">{fmtCurrency(viewPayment.amount)}</div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    {viewPayment.paymentDate ? new Date(viewPayment.paymentDate).toLocaleString("en-IN", {
+                                        day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+                                    }) : "-"}
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                {statusBadge(viewPayment.targetPaymentStatus)}
+                            </div>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <span className="text-muted-foreground text-xs">Customer</span>
+                                <div className="font-medium">{viewPayment.customer?.name || "-"}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground text-xs">Payment Mode</span>
+                                <div className="font-medium">{viewPayment.paymentMode?.name || "-"}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground text-xs">Paid Against</span>
+                                <div className="font-medium">
+                                    {viewPayment.statement
+                                        ? `Statement #${viewPayment.statement.statementNo}`
+                                        : viewPayment.invoiceBill
+                                            ? `Bill #${viewPayment.invoiceBill.id}`
+                                            : "-"}
+                                </div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground text-xs">Reference No</span>
+                                <div className="font-medium">{viewPayment.referenceNo || "-"}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground text-xs">Received By</span>
+                                <div className="font-medium">{viewPayment.receivedBy?.name || "-"}</div>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground text-xs">Remarks</span>
+                                <div className="font-medium">{viewPayment.remarks || "-"}</div>
+                            </div>
+                        </div>
+
+                        {/* Invoice/Statement Amounts */}
+                        {(viewPayment.statement || viewPayment.invoiceBill) && (
+                            <div className="border border-border rounded-lg p-3">
+                                <div className="text-xs text-muted-foreground mb-2 font-medium">
+                                    {viewPayment.statement ? "Statement" : "Bill"} Summary
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 text-sm">
+                                    <div>
+                                        <span className="text-muted-foreground text-xs">Net Amount</span>
+                                        <div className="font-bold">
+                                            {fmtCurrency(viewPayment.statement?.netAmount ?? viewPayment.invoiceBill?.netAmount ?? 0)}
+                                        </div>
+                                    </div>
+                                    {viewPayment.statement && (
+                                        <>
+                                            <div>
+                                                <span className="text-muted-foreground text-xs">Total Received</span>
+                                                <div className="font-bold text-emerald-400">
+                                                    {fmtCurrency(viewPayment.statement.receivedAmount)}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className="text-muted-foreground text-xs">Balance</span>
+                                                <div className={`font-bold ${viewPayment.statement.balanceAmount > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                                                    {fmtCurrency(viewPayment.statement.balanceAmount)}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-3 pt-2 border-t border-border">
+                            {viewPayment.proofImageKey && (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const data = await getPaymentProofUrl(viewPayment.id!);
+                                            window.open(data.url, '_blank');
+                                        } catch {
+                                            alert("Failed to load proof image");
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm text-foreground hover:bg-muted transition-colors"
+                                >
+                                    <ImageIcon className="w-4 h-4 text-primary" />
+                                    View Proof
+                                </button>
+                            )}
+                            <button
+                                onClick={() => handleDownloadReceipt(viewPayment.id!)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm text-foreground hover:bg-muted transition-colors"
+                            >
+                                <Download className="w-4 h-4 text-primary" />
+                                Download Receipt
+                            </button>
+                            <button
+                                onClick={() => setViewPayment(null)}
+                                className="ml-auto px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors text-sm"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </div>
     );
