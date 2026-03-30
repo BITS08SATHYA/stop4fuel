@@ -108,7 +108,7 @@ class DashboardControllerTest {
         overview.setTotalAging31to60(new BigDecimal("8000"));
         overview.setTotalAging61to90(new BigDecimal("5000"));
         overview.setTotalAging90Plus(new BigDecimal("2000"));
-        when(creditManagementService.getCreditOverview()).thenReturn(overview);
+        when(creditManagementService.getCreditOverview(isNull())).thenReturn(overview);
 
         mockMvc.perform(get("/api/dashboard/stats"))
                 .andExpect(status().isOk())
@@ -156,7 +156,7 @@ class DashboardControllerTest {
         when(nozzleRepository.count()).thenReturn(0L);
         when(nozzleRepository.findByActive(true)).thenReturn(List.of());
         when(tankRepository.findAll()).thenReturn(List.of());
-        when(creditManagementService.getCreditOverview()).thenThrow(new RuntimeException("error"));
+        when(creditManagementService.getCreditOverview(isNull())).thenThrow(new RuntimeException("error"));
 
         mockMvc.perform(get("/api/dashboard/stats"))
                 .andExpect(status().isOk())
@@ -180,7 +180,7 @@ class DashboardControllerTest {
         when(nozzleRepository.findByActive(true)).thenReturn(List.of());
         when(shiftService.getActiveShift()).thenReturn(null);
         when(tankRepository.findAll()).thenReturn(List.of());
-        when(creditManagementService.getCreditOverview()).thenThrow(new RuntimeException("error"));
+        when(creditManagementService.getCreditOverview(isNull())).thenThrow(new RuntimeException("error"));
 
         mockMvc.perform(get("/api/dashboard/stats"))
                 .andExpect(status().isOk())
@@ -203,7 +203,7 @@ class DashboardControllerTest {
         when(nozzleRepository.findByActive(true)).thenReturn(List.of());
         when(shiftService.getActiveShift()).thenReturn(null);
         when(tankRepository.findAll()).thenReturn(List.of());
-        when(creditManagementService.getCreditOverview()).thenThrow(new RuntimeException("DB down"));
+        when(creditManagementService.getCreditOverview(isNull())).thenThrow(new RuntimeException("DB down"));
 
         mockMvc.perform(get("/api/dashboard/stats"))
                 .andExpect(status().isOk())
@@ -232,7 +232,7 @@ class DashboardControllerTest {
         when(nozzleRepository.findByActive(true)).thenReturn(List.of());
         when(shiftService.getActiveShift()).thenReturn(null);
         when(tankRepository.findAll()).thenReturn(List.of());
-        when(creditManagementService.getCreditOverview()).thenThrow(new RuntimeException("error"));
+        when(creditManagementService.getCreditOverview(isNull())).thenThrow(new RuntimeException("error"));
 
         mockMvc.perform(get("/api/dashboard/stats"))
                 .andExpect(status().isOk())
@@ -258,7 +258,7 @@ class DashboardControllerTest {
         List<Object[]> custRows = new ArrayList<>();
         custRows.add(new Object[]{"Customer A", 2L, new BigDecimal("10000")});
         when(invoiceBillRepository.getTopCustomersByRevenue(any(), any())).thenReturn(custRows);
-        when(invoiceBillRepository.getProductSalesSummary(isNull(), isNull(), any(), any())).thenReturn(new ArrayList<>());
+        when(invoiceBillRepository.getProductSalesSummary(isNull(), isNull(), isNull(), any(), any())).thenReturn(new ArrayList<>());
         List<Object[]> hourlyRows = new ArrayList<>();
         hourlyRows.add(new Object[]{10, 5L});
         when(invoiceBillRepository.getHourlyDistribution(any(), any())).thenReturn(hourlyRows);
@@ -285,7 +285,7 @@ class DashboardControllerTest {
         when(invoiceBillRepository.getDailyInvoiceStats(any(), any())).thenReturn(new ArrayList<>());
         when(invoiceBillRepository.getPaymentModeDistribution(any(), any())).thenReturn(new ArrayList<>());
         when(invoiceBillRepository.getTopCustomersByRevenue(any(), any())).thenReturn(new ArrayList<>());
-        when(invoiceBillRepository.getProductSalesSummary(isNull(), isNull(), any(), any())).thenReturn(new ArrayList<>());
+        when(invoiceBillRepository.getProductSalesSummary(isNull(), isNull(), isNull(), any(), any())).thenReturn(new ArrayList<>());
         when(invoiceBillRepository.getHourlyDistribution(any(), any())).thenReturn(new ArrayList<>());
 
         mockMvc.perform(get("/api/dashboard/invoice-analytics")
@@ -308,7 +308,7 @@ class DashboardControllerTest {
         when(invoiceBillRepository.getDailyInvoiceStats(any(), any())).thenReturn(new ArrayList<>());
         when(invoiceBillRepository.getPaymentModeDistribution(any(), any())).thenReturn(new ArrayList<>());
         when(invoiceBillRepository.getTopCustomersByRevenue(any(), any())).thenReturn(new ArrayList<>());
-        when(invoiceBillRepository.getProductSalesSummary(isNull(), isNull(), any(), any())).thenReturn(new ArrayList<>());
+        when(invoiceBillRepository.getProductSalesSummary(isNull(), isNull(), isNull(), any(), any())).thenReturn(new ArrayList<>());
         when(invoiceBillRepository.getHourlyDistribution(any(), any())).thenReturn(new ArrayList<>());
 
         mockMvc.perform(get("/api/dashboard/invoice-analytics"))
@@ -347,7 +347,7 @@ class DashboardControllerTest {
         overview.setTotalAging31to60(new BigDecimal("15000"));
         overview.setTotalAging61to90(new BigDecimal("10000"));
         overview.setTotalAging90Plus(new BigDecimal("5000"));
-        when(creditManagementService.getCreditOverview()).thenReturn(overview);
+        when(creditManagementService.getCreditOverview(isNull())).thenReturn(overview);
 
         mockMvc.perform(get("/api/dashboard/payment-analytics"))
                 .andExpect(status().isOk())
@@ -372,7 +372,7 @@ class DashboardControllerTest {
         when(paymentRepository.getDailyPaymentStats(any(), any())).thenReturn(new ArrayList<>());
         when(paymentRepository.getPaymentModeBreakdown(any(), any())).thenReturn(new ArrayList<>());
         when(paymentRepository.getTopPayingCustomers(any(), any())).thenReturn(new ArrayList<>());
-        when(creditManagementService.getCreditOverview()).thenThrow(new RuntimeException("error"));
+        when(creditManagementService.getCreditOverview(isNull())).thenThrow(new RuntimeException("error"));
 
         mockMvc.perform(get("/api/dashboard/payment-analytics")
                         .param("from", "2026-02-01")
@@ -401,7 +401,7 @@ class DashboardControllerTest {
         overview.setTotalAging31to60(BigDecimal.ZERO);
         overview.setTotalAging61to90(BigDecimal.ZERO);
         overview.setTotalAging90Plus(BigDecimal.ZERO);
-        when(creditManagementService.getCreditOverview()).thenReturn(overview);
+        when(creditManagementService.getCreditOverview(isNull())).thenReturn(overview);
 
         mockMvc.perform(get("/api/dashboard/payment-analytics"))
                 .andExpect(status().isOk())
@@ -417,7 +417,7 @@ class DashboardControllerTest {
         when(paymentRepository.getDailyPaymentStats(any(), any())).thenReturn(new ArrayList<>());
         when(paymentRepository.getPaymentModeBreakdown(any(), any())).thenReturn(new ArrayList<>());
         when(paymentRepository.getTopPayingCustomers(any(), any())).thenReturn(new ArrayList<>());
-        when(creditManagementService.getCreditOverview()).thenThrow(new RuntimeException("error"));
+        when(creditManagementService.getCreditOverview(isNull())).thenThrow(new RuntimeException("error"));
 
         mockMvc.perform(get("/api/dashboard/payment-analytics"))
                 .andExpect(status().isOk())

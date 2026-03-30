@@ -57,7 +57,7 @@ class PaymentControllerTest {
 
     @Test
     void getAll_returnsPage() throws Exception {
-        when(paymentService.getPayments(any(PageRequest.class)))
+        when(paymentService.getPayments(isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(testPayment)));
 
         mockMvc.perform(get("/api/payments"))

@@ -1,11 +1,11 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Employee;
-import com.stopforfuel.backend.entity.EmployeeAdvance;
+import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.SalaryHistory;
 import com.stopforfuel.backend.repository.DesignationRepository;
-import com.stopforfuel.backend.repository.EmployeeAdvanceRepository;
+import com.stopforfuel.backend.repository.OperationalAdvanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
@@ -16,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +34,7 @@ class EmployeeServiceTest {
     private SalaryHistoryRepository salaryHistoryRepository;
 
     @Mock
-    private EmployeeAdvanceRepository employeeAdvanceRepository;
+    private OperationalAdvanceRepository operationalAdvanceRepository;
 
     @Mock
     private S3StorageService s3StorageService;
@@ -228,75 +229,75 @@ class EmployeeServiceTest {
 
     @Test
     void getAdvances_returnsList() {
-        EmployeeAdvance a1 = new EmployeeAdvance();
-        a1.setAmount(5000.0);
-        EmployeeAdvance a2 = new EmployeeAdvance();
-        a2.setAmount(3000.0);
+        OperationalAdvance a1 = new OperationalAdvance();
+        a1.setAmount(new BigDecimal("5000"));
+        OperationalAdvance a2 = new OperationalAdvance();
+        a2.setAmount(new BigDecimal("3000"));
 
-        when(employeeAdvanceRepository.findByEmployeeIdOrderByAdvanceDateDesc(1L))
+        when(operationalAdvanceRepository.findByEmployeeIdOrderByAdvanceDateDesc(1L))
                 .thenReturn(List.of(a1, a2));
 
-        List<EmployeeAdvance> result = employeeService.getAdvances(1L);
+        List<OperationalAdvance> result = employeeService.getAdvances(1L);
 
         assertEquals(2, result.size());
-        verify(employeeAdvanceRepository).findByEmployeeIdOrderByAdvanceDateDesc(1L);
+        verify(operationalAdvanceRepository).findByEmployeeIdOrderByAdvanceDateDesc(1L);
     }
 
     // --- getPendingAdvances ---
 
     @Test
     void getPendingAdvances_returnsPendingOnly() {
-        EmployeeAdvance pending = new EmployeeAdvance();
+        OperationalAdvance pending = new OperationalAdvance();
         pending.setStatus("PENDING");
-        pending.setAmount(5000.0);
+        pending.setAmount(new BigDecimal("5000"));
 
-        when(employeeAdvanceRepository.findByEmployeeIdAndStatus(1L, "PENDING"))
+        when(operationalAdvanceRepository.findByEmployeeIdAndStatus(1L, "PENDING"))
                 .thenReturn(List.of(pending));
 
-        List<EmployeeAdvance> result = employeeService.getPendingAdvances(1L);
+        List<OperationalAdvance> result = employeeService.getPendingAdvances(1L);
 
         assertEquals(1, result.size());
         assertEquals("PENDING", result.get(0).getStatus());
-        verify(employeeAdvanceRepository).findByEmployeeIdAndStatus(1L, "PENDING");
+        verify(operationalAdvanceRepository).findByEmployeeIdAndStatus(1L, "PENDING");
     }
 
     // --- addAdvance ---
 
     @Test
     void addAdvance_saves() {
-        EmployeeAdvance advance = new EmployeeAdvance();
-        advance.setAmount(5000.0);
+        OperationalAdvance advance = new OperationalAdvance();
+        advance.setAmount(new BigDecimal("5000"));
         advance.setStatus("PENDING");
 
-        when(employeeAdvanceRepository.save(any(EmployeeAdvance.class))).thenReturn(advance);
+        when(operationalAdvanceRepository.save(any(OperationalAdvance.class))).thenReturn(advance);
 
-        EmployeeAdvance result = employeeService.addAdvance(advance);
+        OperationalAdvance result = employeeService.addAdvance(advance);
 
         assertNotNull(result);
-        assertEquals(5000.0, result.getAmount());
-        verify(employeeAdvanceRepository).save(advance);
+        assertEquals(new BigDecimal("5000"), result.getAmount());
+        verify(operationalAdvanceRepository).save(advance);
     }
 
     // --- updateAdvanceStatus ---
 
     @Test
     void updateAdvanceStatus_updatesStatus() {
-        EmployeeAdvance advance = new EmployeeAdvance();
+        OperationalAdvance advance = new OperationalAdvance();
         advance.setId(1L);
         advance.setStatus("PENDING");
 
-        when(employeeAdvanceRepository.findById(1L)).thenReturn(Optional.of(advance));
-        when(employeeAdvanceRepository.save(any(EmployeeAdvance.class))).thenAnswer(i -> i.getArgument(0));
+        when(operationalAdvanceRepository.findById(1L)).thenReturn(Optional.of(advance));
+        when(operationalAdvanceRepository.save(any(OperationalAdvance.class))).thenAnswer(i -> i.getArgument(0));
 
-        EmployeeAdvance result = employeeService.updateAdvanceStatus(1L, "DEDUCTED");
+        OperationalAdvance result = employeeService.updateAdvanceStatus(1L, "DEDUCTED");
 
         assertEquals("DEDUCTED", result.getStatus());
-        verify(employeeAdvanceRepository).save(advance);
+        verify(operationalAdvanceRepository).save(advance);
     }
 
     @Test
     void updateAdvanceStatus_notFound_throws() {
-        when(employeeAdvanceRepository.findById(99L)).thenReturn(Optional.empty());
+        when(operationalAdvanceRepository.findById(99L)).thenReturn(Optional.empty());
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> employeeService.updateAdvanceStatus(99L, "DEDUCTED"));
