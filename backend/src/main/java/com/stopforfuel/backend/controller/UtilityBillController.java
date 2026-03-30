@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.UtilityBillDTO;
 import com.stopforfuel.backend.entity.UtilityBill;
 import com.stopforfuel.backend.service.UtilityBillService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,30 +21,33 @@ public class UtilityBillController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
-    public List<UtilityBill> getAllBills(@RequestParam(required = false) String type) {
+    public List<UtilityBillDTO> getAllBills(@RequestParam(required = false) String type) {
+        List<UtilityBill> result;
         if (type != null && !type.isEmpty()) {
-            return utilityBillService.getBillsByType(type);
+            result = utilityBillService.getBillsByType(type);
+        } else {
+            result = utilityBillService.getAllBills();
         }
-        return utilityBillService.getAllBills();
+        return result.stream().map(UtilityBillDTO::from).toList();
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
-    public List<UtilityBill> getPendingBills() {
-        return utilityBillService.getPendingBills();
+    public List<UtilityBillDTO> getPendingBills() {
+        return utilityBillService.getPendingBills().stream().map(UtilityBillDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
-    public UtilityBill createBill(@Valid @RequestBody UtilityBill bill) {
-        return utilityBillService.createBill(bill);
+    public UtilityBillDTO createBill(@Valid @RequestBody UtilityBill bill) {
+        return UtilityBillDTO.from(utilityBillService.createBill(bill));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
-    public ResponseEntity<UtilityBill> updateBill(@PathVariable Long id, @Valid @RequestBody UtilityBill bill) {
+    public ResponseEntity<UtilityBillDTO> updateBill(@PathVariable Long id, @Valid @RequestBody UtilityBill bill) {
         try {
-            return ResponseEntity.ok(utilityBillService.updateBill(id, bill));
+            return ResponseEntity.ok(UtilityBillDTO.from(utilityBillService.updateBill(id, bill)));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -58,10 +62,10 @@ public class UtilityBillController {
 
     @PostMapping("/upload-pdf")
     @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
-    public ResponseEntity<UtilityBill> uploadPdf(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<UtilityBillDTO> uploadPdf(@RequestParam("file") MultipartFile file) {
         try {
             UtilityBill parsed = utilityBillService.parseTnebPdf(file);
-            return ResponseEntity.ok(parsed);
+            return ResponseEntity.ok(UtilityBillDTO.from(parsed));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -69,8 +73,8 @@ public class UtilityBillController {
 
     @PostMapping("/upload-bulk")
     @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
-    public ResponseEntity<List<UtilityBill>> uploadBulkPdfs(@RequestParam("files") List<MultipartFile> files) {
-        List<UtilityBill> parsed = utilityBillService.parseBulkPdfs(files);
+    public ResponseEntity<List<UtilityBillDTO>> uploadBulkPdfs(@RequestParam("files") List<MultipartFile> files) {
+        List<UtilityBillDTO> parsed = utilityBillService.parseBulkPdfs(files).stream().map(UtilityBillDTO::from).toList();
         return ResponseEntity.ok(parsed);
     }
 }

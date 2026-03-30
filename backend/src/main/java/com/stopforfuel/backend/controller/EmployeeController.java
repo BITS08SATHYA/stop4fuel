@@ -3,6 +3,8 @@ package com.stopforfuel.backend.controller;
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.EmployeeDetailDTO;
 import com.stopforfuel.backend.dto.EmployeeListDTO;
+import com.stopforfuel.backend.dto.OperationalAdvanceDTO;
+import com.stopforfuel.backend.dto.SalaryHistoryDTO;
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.entity.SalaryHistory;
