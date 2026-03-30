@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.CompanyDTO;
 import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.service.CompanyService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,27 +19,27 @@ public class CompanyController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'SETTINGS_VIEW')")
-    public List<Company> getAllCompanies() {
-        return companyService.getAllCompanies();
+    public List<CompanyDTO> getAllCompanies() {
+        return companyService.getAllCompanies().stream().map(CompanyDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'SETTINGS_VIEW')")
-    public Company getCompanyById(@PathVariable Long id) {
-        return companyService.getCompanyById(id).orElse(null);
+    public CompanyDTO getCompanyById(@PathVariable Long id) {
+        return companyService.getCompanyById(id).map(CompanyDTO::from).orElse(null);
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
-    public Company createCompany(@Valid @RequestBody Company company) {
-        return companyService.saveCompany(company);
+    public CompanyDTO createCompany(@Valid @RequestBody Company company) {
+        return CompanyDTO.from(companyService.saveCompany(company));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
-    public Company updateCompany(@PathVariable Long id, @Valid @RequestBody Company company) {
+    public CompanyDTO updateCompany(@PathVariable Long id, @Valid @RequestBody Company company) {
         company.setId(id);
-        return companyService.saveCompany(company);
+        return CompanyDTO.from(companyService.saveCompany(company));
     }
 
     @DeleteMapping("/{id}")
