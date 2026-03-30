@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.EAdvance;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.repository.EAdvanceRepository;
 import com.stopforfuel.config.SecurityUtils;
@@ -52,9 +53,10 @@ public class EAdvanceService {
     @Transactional
     public EAdvance create(EAdvance eAdvance) {
         Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null) {
-            eAdvance.setShiftId(activeShift.getId());
+        if (activeShift == null) {
+            throw new BusinessException("No active shift. Open a shift before creating entries.");
         }
+        eAdvance.setShiftId(activeShift.getId());
         return repository.save(eAdvance);
     }
 

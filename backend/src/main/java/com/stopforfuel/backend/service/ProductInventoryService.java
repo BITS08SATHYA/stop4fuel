@@ -4,6 +4,7 @@ import com.stopforfuel.backend.entity.CashierStock;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.ProductInventory;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.CashierStockRepository;
 import com.stopforfuel.backend.repository.ProductInventoryRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
@@ -59,9 +60,10 @@ public class ProductInventoryService {
         }
         if (inventory.getShiftId() == null) {
             Shift activeShift = shiftService.getActiveShift();
-            if (activeShift != null) {
-                inventory.setShiftId(activeShift.getId());
+            if (activeShift == null) {
+                throw new BusinessException("No active shift. Please open a shift before saving product inventory.");
             }
+            inventory.setShiftId(activeShift.getId());
         }
         calculateFields(inventory);
         return repository.save(inventory);

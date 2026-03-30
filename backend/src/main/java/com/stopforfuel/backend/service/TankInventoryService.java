@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.TankInventory;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.TankInventoryRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +41,10 @@ public class TankInventoryService {
         }
         if (inventory.getShiftId() == null) {
             Shift activeShift = shiftService.getActiveShift();
-            if (activeShift != null) {
-                inventory.setShiftId(activeShift.getId());
+            if (activeShift == null) {
+                throw new BusinessException("No active shift. Please open a shift before saving tank inventory.");
             }
+            inventory.setShiftId(activeShift.getId());
         }
         calculateFields(inventory);
         return repository.save(inventory);

@@ -4,6 +4,7 @@ import com.stopforfuel.backend.entity.CashInflowRepayment;
 import com.stopforfuel.backend.entity.ExternalCashInflow;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.Expense;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.CashInflowRepaymentRepository;
 import com.stopforfuel.backend.repository.ExternalCashInflowRepository;
 import com.stopforfuel.config.SecurityUtils;
@@ -38,9 +39,10 @@ public class ExternalCashInflowService {
     @Transactional
     public ExternalCashInflow create(ExternalCashInflow inflow) {
         Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null) {
-            inflow.setShiftId(activeShift.getId());
+        if (activeShift == null) {
+            throw new BusinessException("No active shift. Please open a shift before recording an external cash inflow.");
         }
+        inflow.setShiftId(activeShift.getId());
 
         ExternalCashInflow saved = inflowRepository.save(inflow);
 
@@ -60,9 +62,10 @@ public class ExternalCashInflowService {
         }
 
         Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null) {
-            repayment.setShiftId(activeShift.getId());
+        if (activeShift == null) {
+            throw new BusinessException("No active shift. Please open a shift before recording a repayment.");
         }
+        repayment.setShiftId(activeShift.getId());
 
         CashInflowRepayment saved = repaymentRepository.save(repayment);
 
@@ -77,15 +80,13 @@ public class ExternalCashInflowService {
         inflowRepository.save(inflow);
 
         // Auto-create Expense (money going OUT of the register)
-        if (activeShift != null) {
-            Expense expense = new Expense();
-            expense.setAmount(repayment.getAmount());
-            expense.setDescription("Cash Inflow Repayment - " + inflow.getSource());
-            expense.setRemarks("Auto: Inflow Repayment #" + saved.getId());
-            expense.setShiftId(activeShift.getId());
-            expense.setScid(inflow.getScid());
-            expenseService.create(expense);
-        }
+        Expense expense = new Expense();
+        expense.setAmount(repayment.getAmount());
+        expense.setDescription("Cash Inflow Repayment - " + inflow.getSource());
+        expense.setRemarks("Auto: Inflow Repayment #" + saved.getId());
+        expense.setShiftId(activeShift.getId());
+        expense.setScid(inflow.getScid());
+        expenseService.create(expense);
 
         return saved;
     }
