@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.GradeTypeDTO;
 import com.stopforfuel.backend.entity.GradeType;
 import com.stopforfuel.backend.service.GradeTypeService;
 import lombok.RequiredArgsConstructor;
@@ -18,44 +19,44 @@ public class GradeTypeController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<GradeType> getAll() {
-        return service.getAllGrades();
+    public List<GradeTypeDTO> getAll() {
+        return service.getAllGrades().stream().map(GradeTypeDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<GradeType> getActive() {
-        return service.getActiveGrades();
+    public List<GradeTypeDTO> getActive() {
+        return service.getActiveGrades().stream().map(GradeTypeDTO::from).toList();
     }
 
     @GetMapping("/oil-type/{oilTypeId}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<GradeType> getByOilType(@PathVariable Long oilTypeId) {
-        return service.getActiveGradesByOilType(oilTypeId);
+    public List<GradeTypeDTO> getByOilType(@PathVariable Long oilTypeId) {
+        return service.getActiveGradesByOilType(oilTypeId).stream().map(GradeTypeDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public GradeType getById(@PathVariable Long id) {
-        return service.getGradeById(id);
+    public GradeTypeDTO getById(@PathVariable Long id) {
+        return GradeTypeDTO.from(service.getGradeById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public GradeType create(@Valid @RequestBody GradeType grade) {
-        return service.createGrade(grade);
+    public GradeTypeDTO create(@Valid @RequestBody GradeType grade) {
+        return GradeTypeDTO.from(service.createGrade(grade));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public GradeType update(@PathVariable Long id, @Valid @RequestBody GradeType grade) {
-        return service.updateGrade(id, grade);
+    public GradeTypeDTO update(@PathVariable Long id, @Valid @RequestBody GradeType grade) {
+        return GradeTypeDTO.from(service.updateGrade(id, grade));
     }
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public GradeType toggleStatus(@PathVariable Long id) {
-        return service.toggleStatus(id);
+    public GradeTypeDTO toggleStatus(@PathVariable Long id) {
+        return GradeTypeDTO.from(service.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
