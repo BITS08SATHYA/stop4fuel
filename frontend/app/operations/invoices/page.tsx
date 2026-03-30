@@ -1155,35 +1155,66 @@ export default function InvoicesPage() {
 
                     {/* Product lines */}
                     <div className="border border-border rounded-xl overflow-hidden">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-muted/50 border-b border-border">
-                                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-muted-foreground">Product</th>
-                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Qty</th>
-                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Rate</th>
-                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/50">
-                                {selectedProducts.map((line: any, idx: number) => (
-                                    <tr key={idx}>
-                                        <td className="px-4 py-3 font-medium">
-                                            {line.product?.name || "Unknown"}
-                                            {line.nozzle && <span className="text-xs text-muted-foreground ml-1">({line.nozzle.nozzleName})</span>}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono">{line.quantity}</td>
-                                        <td className="px-4 py-3 text-right font-mono">₹{parseFloat(line.unitPrice || 0).toFixed(2)}</td>
-                                        <td className="px-4 py-3 text-right font-bold">₹{(line.amount || 0).toFixed(2)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="bg-primary/5 border-t border-primary/20">
-                                    <td colSpan={3} className="px-4 py-4 text-right font-black uppercase text-sm">Total</td>
-                                    <td className="px-4 py-4 text-right font-black text-primary text-xl">₹{calculateTotal().toFixed(2)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                        {(() => {
+                            const hasAnyDiscount = selectedProducts.some((l: any) => l.discountRate > 0);
+                            const totalGross = selectedProducts.reduce((s: number, l: any) => s + (l.grossAmount || l.amount || 0), 0);
+                            const totalDiscount = selectedProducts.reduce((s: number, l: any) => s + (l.discountAmount || 0), 0);
+                            return (
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-muted/50 border-b border-border">
+                                            <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-muted-foreground">Product</th>
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Qty</th>
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Rate</th>
+                                            {hasAnyDiscount && (
+                                                <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Discount</th>
+                                            )}
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/50">
+                                        {selectedProducts.map((line: any, idx: number) => (
+                                            <tr key={idx}>
+                                                <td className="px-4 py-3 font-medium">
+                                                    {line.product?.name || "Unknown"}
+                                                    {line.nozzle && <span className="text-xs text-muted-foreground ml-1">({line.nozzle.nozzleName})</span>}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-mono">{line.quantity}</td>
+                                                <td className="px-4 py-3 text-right font-mono">₹{parseFloat(line.unitPrice || 0).toFixed(2)}</td>
+                                                {hasAnyDiscount && (
+                                                    <td className="px-4 py-3 text-right">
+                                                        {line.discountRate > 0 ? (
+                                                            <span className="text-emerald-500 font-bold">-₹{(line.discountAmount || 0).toFixed(2)}</span>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">—</span>
+                                                        )}
+                                                    </td>
+                                                )}
+                                                <td className="px-4 py-3 text-right font-bold">₹{(line.amount || 0).toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        {hasAnyDiscount && (
+                                            <>
+                                                <tr className="border-t border-border/50">
+                                                    <td colSpan={hasAnyDiscount ? 4 : 3} className="px-4 py-2 text-right text-xs text-muted-foreground font-bold uppercase">Gross Total</td>
+                                                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">₹{totalGross.toFixed(2)}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td colSpan={hasAnyDiscount ? 4 : 3} className="px-4 py-2 text-right text-xs text-emerald-500 font-bold uppercase">Total Discount</td>
+                                                    <td className="px-4 py-2 text-right font-bold text-emerald-500">-₹{totalDiscount.toFixed(2)}</td>
+                                                </tr>
+                                            </>
+                                        )}
+                                        <tr className="bg-primary/5 border-t border-primary/20">
+                                            <td colSpan={hasAnyDiscount ? 4 : 3} className="px-4 py-4 text-right font-black uppercase text-sm">Net Total</td>
+                                            <td className="px-4 py-4 text-right font-black text-primary text-xl">₹{calculateTotal().toFixed(2)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            );
+                        })()}
                     </div>
 
                     {error && (
