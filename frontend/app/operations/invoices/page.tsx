@@ -139,6 +139,11 @@ export default function InvoicesPage() {
                     setActiveShiftId(shift.id);
                     const invData = await getInvoicesByShift(shift.id);
                     setInvoices(invData.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+                    // Pre-fill date filters with shift start time
+                    if (shift.startTime) {
+                        setHistoryFromDate(shift.startTime.split("T")[0]);
+                        setHistoryToDate(new Date().toISOString().split("T")[0]);
+                    }
                 } else {
                     setIsLoading(false);
                 }
