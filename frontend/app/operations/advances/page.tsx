@@ -131,7 +131,7 @@ async function fetchAdvanceById(id: number): Promise<OperationalAdvance> {
     return res.json();
 }
 
-async function fetchActiveShift(): Promise<{ id: number } | null> {
+async function fetchActiveShift(): Promise<{ id: number; startTime?: string } | null> {
     try {
         const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
@@ -277,7 +277,7 @@ async function fetchAdvancesByDateRange(fromDate: string, toDate: string): Promi
 
 export default function OperationalAdvancesPage() {
     const [advances, setAdvances] = useState<OperationalAdvance[]>([]);
-    const [activeShift, setActiveShift] = useState<{ id: number } | null>(null);
+    const [activeShift, setActiveShift] = useState<{ id: number; startTime?: string } | null>(null);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -358,6 +358,11 @@ export default function OperationalAdvancesPage() {
             if (shift?.id) {
                 const advs = await fetchAdvancesByShift(shift.id);
                 setAdvances(advs);
+                // Pre-fill date filters with shift start time
+                if (shift.startTime) {
+                    setFromDate(shift.startTime.split("T")[0]);
+                    setToDate(new Date().toISOString().split("T")[0]);
+                }
             }
         } catch (err) {
             console.error("Failed to load data", err);

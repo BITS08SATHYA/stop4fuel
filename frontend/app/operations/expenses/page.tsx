@@ -23,7 +23,9 @@ import {
     StationExpense,
     ExpenseType,
     ExpenseSummary,
+    API_BASE_URL,
 } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 
 const formatRupees = (val: number) => `₹${val.toLocaleString("en-IN")}`;
@@ -44,12 +46,13 @@ export default function ExpensesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [summary, setSummary] = useState<ExpenseSummary | null>(null);
 
-    // Date filters
+    // Date filters — default to shift start time (fallback: first of month)
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
     const today = now.toISOString().split("T")[0];
     const [fromDate, setFromDate] = useState(firstOfMonth);
     const [toDate, setToDate] = useState(today);
+    const [shiftLoaded, setShiftLoaded] = useState(false);
 
     // Form state
     const [expenseTypeId, setExpenseTypeId] = useState("");
@@ -60,7 +63,26 @@ export default function ExpensesPage() {
     const [paymentMode, setPaymentMode] = useState("CASH");
     const [recurringType, setRecurringType] = useState("ONE_TIME");
 
-    useEffect(() => { loadData(); }, [fromDate, toDate]);
+    // Fetch active shift on mount and set fromDate to shift start time
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
+                if (res.ok) {
+                    const text = await res.text();
+                    if (text) {
+                        const shift = JSON.parse(text);
+                        if (shift.startTime) {
+                            setFromDate(shift.startTime.split("T")[0]);
+                        }
+                    }
+                }
+            } catch { /* ignore */ }
+            setShiftLoaded(true);
+        })();
+    }, []);
+
+    useEffect(() => { if (shiftLoaded) loadData(); }, [fromDate, toDate, shiftLoaded]);
 
     const loadData = async () => {
         setIsLoading(true);
