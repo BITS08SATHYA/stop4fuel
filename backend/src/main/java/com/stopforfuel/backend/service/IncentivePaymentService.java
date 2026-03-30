@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.IncentivePayment;
 import com.stopforfuel.backend.entity.Shift;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.IncentivePaymentRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -41,9 +42,10 @@ public class IncentivePaymentService {
     @Transactional
     public IncentivePayment create(IncentivePayment payment) {
         Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null) {
-            payment.setShiftId(activeShift.getId());
+        if (activeShift == null) {
+            throw new BusinessException("No active shift. Please open a shift before recording an incentive payment.");
         }
+        payment.setShiftId(activeShift.getId());
         return repository.save(payment);
     }
 
