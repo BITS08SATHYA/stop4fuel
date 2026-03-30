@@ -23,6 +23,7 @@ public class ProductDTO {
     private String brand;
     private BigDecimal gstRate;
     private String fuelFamily;
+    private BigDecimal discountRate;
     private boolean active;
     private SupplierSummary supplier;
     private OilTypeSummary oilType;
@@ -43,6 +44,7 @@ public class ProductDTO {
                 .brand(p.getBrand())
                 .gstRate(p.getGstRate())
                 .fuelFamily(p.getFuelFamily())
+                .discountRate(p.getDiscountRate())
                 .active(p.isActive())
                 .supplier(SupplierSummary.from(p.getSupplier()))
                 .oilType(OilTypeSummary.from(p.getOilType()))
