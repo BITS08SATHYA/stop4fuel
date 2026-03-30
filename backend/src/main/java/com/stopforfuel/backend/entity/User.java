@@ -39,4 +39,8 @@ public class User extends PersonEntity {
 
     @Pattern(regexp = "^(Active|Inactive|ACTIVE|INACTIVE)$", message = "Status must be Active or Inactive")
     private String status;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "passcode")
+    private String passcode; // BCrypt-hashed 4-digit passcode
 }
