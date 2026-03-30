@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.LeaveRequestDTO;
 import com.stopforfuel.backend.entity.LeaveBalance;
 import com.stopforfuel.backend.entity.LeaveRequest;
 import com.stopforfuel.backend.entity.LeaveType;
@@ -73,31 +74,31 @@ public class LeaveController {
     // Leave Requests
     @PostMapping("/employees/{employeeId}/leave-requests")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public LeaveRequest createLeaveRequest(@PathVariable Long employeeId, @Valid @RequestBody LeaveRequest request) {
-        return leaveService.createLeaveRequest(employeeId, request);
+    public LeaveRequestDTO createLeaveRequest(@PathVariable Long employeeId, @Valid @RequestBody LeaveRequest request) {
+        return LeaveRequestDTO.from(leaveService.createLeaveRequest(employeeId, request));
     }
 
     @GetMapping("/employees/{employeeId}/leave-requests")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<LeaveRequest> getEmployeeLeaveRequests(@PathVariable Long employeeId) {
-        return leaveService.getEmployeeLeaveRequests(employeeId);
+    public List<LeaveRequestDTO> getEmployeeLeaveRequests(@PathVariable Long employeeId) {
+        return leaveService.getEmployeeLeaveRequests(employeeId).stream().map(LeaveRequestDTO::from).toList();
     }
 
     @GetMapping("/leave-requests")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<LeaveRequest> getLeaveRequests(@RequestParam(required = false) String status) {
-        return leaveService.getLeaveRequestsByStatus(status);
+    public List<LeaveRequestDTO> getLeaveRequests(@RequestParam(required = false) String status) {
+        return leaveService.getLeaveRequestsByStatus(status).stream().map(LeaveRequestDTO::from).toList();
     }
 
     @PatchMapping("/leave-requests/{id}/approve")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public ResponseEntity<LeaveRequest> approveLeaveRequest(
+    public ResponseEntity<LeaveRequestDTO> approveLeaveRequest(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
         try {
             String approvedBy = body != null ? body.get("approvedBy") : null;
             String remarks = body != null ? body.get("remarks") : null;
-            return ResponseEntity.ok(leaveService.approveLeaveRequest(id, approvedBy, remarks));
+            return ResponseEntity.ok(LeaveRequestDTO.from(leaveService.approveLeaveRequest(id, approvedBy, remarks)));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -105,12 +106,12 @@ public class LeaveController {
 
     @PatchMapping("/leave-requests/{id}/reject")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public ResponseEntity<LeaveRequest> rejectLeaveRequest(
+    public ResponseEntity<LeaveRequestDTO> rejectLeaveRequest(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
         try {
             String remarks = body != null ? body.get("remarks") : null;
-            return ResponseEntity.ok(leaveService.rejectLeaveRequest(id, remarks));
+            return ResponseEntity.ok(LeaveRequestDTO.from(leaveService.rejectLeaveRequest(id, remarks)));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }

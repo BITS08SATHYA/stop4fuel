@@ -14,7 +14,7 @@ const API = API_BASE_URL;
 
 type Group = { id: number; groupName: string; description?: string };
 type Customer = { id: number; name: string; phoneNumbers?: string[]; emails?: string[]; group?: Group | null; isActive: boolean };
-type Vehicle = { id: number; vehicleNumber: string; maxCapacity?: number; customer?: Customer | null; vehicleType?: { typeName: string } };
+type Vehicle = { id: number; vehicleNumber: string; maxCapacity?: number; customer?: Customer | null; vehicleType?: { id: number; name: string } };
 
 type Tab = "customer-group" | "vehicle-customer";
 
@@ -518,7 +518,7 @@ function VehicleCustomerMapping() {
                                         <span className="font-medium font-mono">{vehicle.vehicleNumber}</span>
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 text-sm text-muted-foreground">{vehicle.vehicleType?.typeName || "-"}</td>
+                                <td className="px-4 py-3 text-sm text-muted-foreground">{vehicle.vehicleType?.name || "-"}</td>
                                 <td className="px-4 py-3 text-sm text-muted-foreground">{vehicle.maxCapacity ? `${vehicle.maxCapacity} L` : "-"}</td>
                                 <td className="px-4 py-3">
                                     {vehicle.customer ? (

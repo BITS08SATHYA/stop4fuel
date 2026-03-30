@@ -8,7 +8,7 @@ const mockEmployees = [
 ];
 
 const mockLeaveTypes = [
-  { id: 1, typeName: "Casual Leave", maxDaysPerYear: 12, carryForward: false, maxCarryForwardDays: 0 },
+  { id: 1, name: "Casual Leave", maxDaysPerYear: 12, carryForward: false, maxCarryForwardDays: 0 },
 ];
 
 async function mockLeaveApiRoutes(page: import("@playwright/test").Page) {

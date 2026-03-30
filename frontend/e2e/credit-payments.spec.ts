@@ -72,7 +72,7 @@ const mockPayments = {
       id: 1,
       paymentDate: "2026-03-20T14:00:00",
       amount: 10000,
-      paymentMode: { id: 1, modeName: "CASH" },
+      paymentMode: { id: 1, name: "CASH" },
       customer: { id: 1, name: "ABC Transport" },
       referenceNo: "PAY-001",
       remarks: null,
@@ -84,7 +84,7 @@ const mockPayments = {
       id: 2,
       paymentDate: "2026-03-21T10:00:00",
       amount: 25000,
-      paymentMode: { id: 2, modeName: "UPI" },
+      paymentMode: { id: 2, name: "UPI" },
       customer: { id: 2, name: "XYZ Logistics" },
       referenceNo: "PAY-002",
       remarks: null,
@@ -149,8 +149,8 @@ test.describe("Payments Page", () => {
     });
     await page.route(`${API_BASE}/payment-modes`, (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([
-        { id: 1, modeName: "CASH" },
-        { id: 2, modeName: "UPI" },
+        { id: 1, name: "CASH" },
+        { id: 2, name: "UPI" },
       ]) })
     );
     await page.route(`${API_BASE}/**`, (route) => {

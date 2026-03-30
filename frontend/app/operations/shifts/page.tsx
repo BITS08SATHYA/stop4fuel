@@ -272,10 +272,10 @@ export default function ShiftsPage() {
                     remarks: txnRemarks || undefined,
                 };
                 if (newExpenseTypeName) {
-                    const created = await createExpenseType({ typeName: newExpenseTypeName });
+                    const created = await createExpenseType({ name: newExpenseTypeName });
                     payload.expenseType = created;
                 } else if (selectedExpenseTypeId) {
-                    payload.expenseType = { id: Number(selectedExpenseTypeId), typeName: "" };
+                    payload.expenseType = { id: Number(selectedExpenseTypeId), name: "" };
                 }
                 await createExpense(payload);
             } else {
@@ -720,7 +720,7 @@ export default function ShiftsPage() {
                                 >
                                     <option value="">Select or add new...</option>
                                     {expenseTypes.map((et) => (
-                                        <option key={et.id} value={et.id}>{et.typeName}</option>
+                                        <option key={et.id} value={et.id}>{et.name}</option>
                                     ))}
                                 </select>
                                 {!selectedExpenseTypeId && (
@@ -830,7 +830,7 @@ function TxnDetails({ txn }: { txn: ShiftTxnRow }) {
     if (txn.chequeNo) details.push(`Chq: ${txn.chequeNo}`);
     if (txn.ccmsNumber) details.push(`CCMS: ${txn.ccmsNumber}`);
     if (txn.description) details.push(txn.description);
-    if (txn.expenseType?.typeName) details.push(`[${txn.expenseType.typeName}]`);
+    if (txn.expenseType?.name) details.push(`[${txn.expenseType.name}]`);
 
     if (details.length === 0) return <span className="text-xs text-muted-foreground">-</span>;
     return (

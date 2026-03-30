@@ -545,7 +545,7 @@ function BillsTable({ unpaidBills, paidBills }: { unpaidBills: InvoiceBill[]; pa
                                 </td>
                                 <td className="py-1.5 px-3 font-medium">{bill.vehicle?.vehicleNumber || "-"}</td>
                                 <td className="py-1.5 px-3 text-muted-foreground max-w-[140px] truncate">
-                                    {bill.products?.map(p => p.product?.name).filter(Boolean).join(", ") || "-"}
+                                    {bill.products?.map(p => p.productName).filter(Boolean).join(", ") || "-"}
                                 </td>
                                 <td className="py-1.5 px-3">{bill.indentNo || "-"}</td>
                                 <td className="py-1.5 px-3 text-muted-foreground">{bill.driverName || "-"}</td>
@@ -693,7 +693,7 @@ function PaymentsTable({ payments }: { payments: Payment[] }) {
                         </td>
                         <td className="py-1.5 px-3">
                             <Badge variant="default" className="text-[9px] px-1 py-0">
-                                {pmt.paymentMode?.modeName || "-"}
+                                {pmt.paymentMode?.name || "-"}
                             </Badge>
                         </td>
                         <td className="py-1.5 px-3 text-muted-foreground">{pmt.referenceNo || "-"}</td>
