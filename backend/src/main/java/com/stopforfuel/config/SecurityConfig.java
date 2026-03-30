@@ -1,5 +1,6 @@
 package com.stopforfuel.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -42,7 +44,8 @@ public class SecurityConfig {
             HttpSecurity http,
             CorsConfigurationSource corsConfigurationSource,
             CognitoUserSyncFilter cognitoUserSyncFilter,
-            DevAuthFilter devAuthFilter) throws Exception {
+            DevAuthFilter devAuthFilter,
+            @Autowired(required = false) DevJwtAuthFilter devJwtAuthFilter) throws Exception {
 
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
@@ -51,8 +54,17 @@ public class SecurityConfig {
 
         if (!authEnabled) {
             http
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .addFilterBefore(devAuthFilter, BearerTokenAuthenticationFilter.class);
+                .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/api/auth/login").permitAll()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .anyRequest().permitAll()
+                );
+            if (devJwtAuthFilter != null) {
+                http.addFilterBefore(devJwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                http.addFilterAfter(devAuthFilter, DevJwtAuthFilter.class);
+            } else {
+                http.addFilterBefore(devAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            }
         } else {
             http
                 .authorizeHttpRequests(auth -> auth

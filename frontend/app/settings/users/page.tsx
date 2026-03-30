@@ -1,0 +1,278 @@
+"use client";
+
+import React, { useEffect, useState, useCallback } from "react";
+import { RouteGuard } from "@/components/route-guard";
+import { PermissionGate } from "@/components/permission-gate";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
+import { Plus, Search, RotateCcw, Loader2 } from "lucide-react";
+import { CreateUserModal } from "@/components/users/create-user-modal";
+
+const getApiBaseUrl = () => {
+    if (typeof window !== "undefined") {
+        return process.env.NEXT_PUBLIC_API_URL || `${window.location.protocol}//${window.location.hostname}:8080/api`;
+    }
+    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+};
+
+interface UserItem {
+    id: number;
+    name: string;
+    phone: string | null;
+    email: string | null;
+    role: string;
+    designation: string | null;
+    userType: string;
+    status: string;
+    joinDate: string | null;
+    employeeCode: string | null;
+}
+
+export default function UsersPage() {
+    const [users, setUsers] = useState<UserItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [typeFilter, setTypeFilter] = useState("");
+    const [roleFilter, setRoleFilter] = useState("");
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [resetingId, setResetingId] = useState<number | null>(null);
+    const [passcodeResult, setPasscodeResult] = useState<{ name: string; passcode: string } | null>(null);
+
+    const loadUsers = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams();
+            if (search) params.set("search", search);
+            if (typeFilter) params.set("type", typeFilter);
+            if (roleFilter) params.set("role", roleFilter);
+
+            const res = await fetchWithAuth(
+                `${getApiBaseUrl()}/admin/users?${params.toString()}`
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setUsers(data);
+            }
+        } catch (err) {
+            console.error("Failed to load users", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [search, typeFilter, roleFilter]);
+
+    useEffect(() => {
+        loadUsers();
+    }, [loadUsers]);
+
+    const handleResetPasscode = async (userId: number, userName: string) => {
+        setResetingId(userId);
+        try {
+            const res = await fetchWithAuth(
+                `${getApiBaseUrl()}/admin/users/${userId}/reset-passcode`,
+                { method: "POST" }
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setPasscodeResult({ name: userName, passcode: data.passcode });
+            }
+        } catch (err) {
+            console.error("Failed to reset passcode", err);
+        } finally {
+            setResetingId(null);
+        }
+    };
+
+    const handleUserCreated = (name: string, passcode: string) => {
+        setPasscodeResult({ name, passcode });
+        setShowCreateModal(false);
+        loadUsers();
+    };
+
+    const statusBadge = (status: string) => {
+        const isActive = status?.toUpperCase() === "ACTIVE";
+        return (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                isActive
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+            }`}>
+                {status}
+            </span>
+        );
+    };
+
+    const typeBadge = (userType: string) => {
+        const colors = userType === "EMPLOYEE"
+            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+            : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+        return (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors}`}>
+                {userType}
+            </span>
+        );
+    };
+
+    return (
+        <RouteGuard permission="USER_VIEW">
+            <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+                        <p className="text-sm text-muted-foreground">Manage all users - employees and customers</p>
+                    </div>
+                    <PermissionGate permission="USER_MANAGE">
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Create User
+                        </button>
+                    </PermissionGate>
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-wrap gap-3">
+                    <div className="relative flex-1 min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Search by name, phone, or username..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    <select
+                        value={typeFilter}
+                        onChange={(e) => setTypeFilter(e.target.value)}
+                        className="px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                        <option value="">All Types</option>
+                        <option value="EMPLOYEE">Employees</option>
+                        <option value="CUSTOMER">Customers</option>
+                    </select>
+                    <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        className="px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                        <option value="">All Roles</option>
+                        <option value="OWNER">Owner</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="CASHIER">Cashier</option>
+                        <option value="EMPLOYEE">Employee</option>
+                        <option value="CUSTOMER">Customer</option>
+                    </select>
+                </div>
+
+                {/* Table */}
+                {loading ? (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    </div>
+                ) : (
+                    <div className="border border-border rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-muted/50 border-b border-border">
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Phone</th>
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Role</th>
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Designation</th>
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {users.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                                                No users found
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        users.map((user) => (
+                                            <tr key={user.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                                                <td className="px-4 py-3">
+                                                    <div>
+                                                        <div className="font-medium text-foreground">{user.name}</div>
+                                                        {user.employeeCode && (
+                                                            <div className="text-xs text-muted-foreground">{user.employeeCode}</div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-foreground">{user.phone || "-"}</td>
+                                                <td className="px-4 py-3">{typeBadge(user.userType)}</td>
+                                                <td className="px-4 py-3 text-foreground">{user.role}</td>
+                                                <td className="px-4 py-3 text-foreground">{user.designation || "-"}</td>
+                                                <td className="px-4 py-3">{statusBadge(user.status)}</td>
+                                                <td className="px-4 py-3">
+                                                    <PermissionGate permission="USER_MANAGE">
+                                                        <button
+                                                            onClick={() => handleResetPasscode(user.id, user.name)}
+                                                            disabled={resetingId === user.id}
+                                                            className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-input hover:bg-muted transition-colors disabled:opacity-50"
+                                                            title="Reset Passcode"
+                                                        >
+                                                            {resetingId === user.id ? (
+                                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                                            ) : (
+                                                                <RotateCcw className="w-3 h-3" />
+                                                            )}
+                                                            Reset Passcode
+                                                        </button>
+                                                    </PermissionGate>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Passcode Result Modal */}
+                {passcodeResult && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="bg-background rounded-xl p-6 w-full max-w-sm space-y-4 shadow-xl border border-border">
+                            <h3 className="text-lg font-semibold text-foreground">Passcode for {passcodeResult.name}</h3>
+                            <div className="flex items-center justify-center">
+                                <span className="text-4xl font-mono font-bold tracking-[0.5em] text-primary">
+                                    {passcodeResult.passcode}
+                                </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground text-center">
+                                Share this passcode with the user. It won&apos;t be shown again.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(passcodeResult.passcode);
+                                }}
+                                className="w-full py-2 px-4 border border-input rounded-lg text-sm hover:bg-muted transition-colors"
+                            >
+                                Copy to Clipboard
+                            </button>
+                            <button
+                                onClick={() => setPasscodeResult(null)}
+                                className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Create User Modal */}
+                {showCreateModal && (
+                    <CreateUserModal
+                        onClose={() => setShowCreateModal(false)}
+                        onCreated={handleUserCreated}
+                    />
+                )}
+            </div>
+        </RouteGuard>
+    );
+}
