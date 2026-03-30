@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.StationExpenseDTO;
 import com.stopforfuel.backend.entity.StationExpense;
 import com.stopforfuel.backend.service.StationExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,26 +23,29 @@ public class StationExpenseController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
-    public List<StationExpense> getAllExpenses(
+    public List<StationExpenseDTO> getAllExpenses(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        List<StationExpense> result;
         if (from != null && to != null) {
-            return stationExpenseService.getExpensesBetween(from, to);
+            result = stationExpenseService.getExpensesBetween(from, to);
+        } else {
+            result = stationExpenseService.getAllExpenses();
         }
-        return stationExpenseService.getAllExpenses();
+        return result.stream().map(StationExpenseDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
-    public StationExpense createExpense(@Valid @RequestBody StationExpense expense) {
-        return stationExpenseService.createExpense(expense);
+    public StationExpenseDTO createExpense(@Valid @RequestBody StationExpense expense) {
+        return StationExpenseDTO.from(stationExpenseService.createExpense(expense));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
-    public ResponseEntity<StationExpense> updateExpense(@PathVariable Long id, @Valid @RequestBody StationExpense expense) {
+    public ResponseEntity<StationExpenseDTO> updateExpense(@PathVariable Long id, @Valid @RequestBody StationExpense expense) {
         try {
-            return ResponseEntity.ok(stationExpenseService.updateExpense(id, expense));
+            return ResponseEntity.ok(StationExpenseDTO.from(stationExpenseService.updateExpense(id, expense)));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }

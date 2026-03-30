@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.SalaryPaymentDTO;
 import com.stopforfuel.backend.entity.SalaryPayment;
 import com.stopforfuel.backend.service.SalaryPaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,34 +21,34 @@ public class SalaryPaymentController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<SalaryPayment> getMonthlyPayments(
+    public List<SalaryPaymentDTO> getMonthlyPayments(
             @RequestParam Integer month,
             @RequestParam Integer year) {
-        return salaryPaymentService.getMonthlyPayments(month, year);
+        return salaryPaymentService.getMonthlyPayments(month, year).stream().map(SalaryPaymentDTO::from).toList();
     }
 
     @GetMapping("/employee/{employeeId}")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<SalaryPayment> getEmployeePayments(@PathVariable Long employeeId) {
-        return salaryPaymentService.getEmployeePayments(employeeId);
+    public List<SalaryPaymentDTO> getEmployeePayments(@PathVariable Long employeeId) {
+        return salaryPaymentService.getEmployeePayments(employeeId).stream().map(SalaryPaymentDTO::from).toList();
     }
 
     @PostMapping("/process")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public List<SalaryPayment> processMonthlyPayroll(
+    public List<SalaryPaymentDTO> processMonthlyPayroll(
             @RequestParam Integer month,
             @RequestParam Integer year) {
-        return salaryPaymentService.processMonthlyPayroll(month, year);
+        return salaryPaymentService.processMonthlyPayroll(month, year).stream().map(SalaryPaymentDTO::from).toList();
     }
 
     @PatchMapping("/{id}/pay")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public ResponseEntity<SalaryPayment> markAsPaid(
+    public ResponseEntity<SalaryPaymentDTO> markAsPaid(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
         try {
             String paymentMode = body != null ? body.get("paymentMode") : "CASH";
-            return ResponseEntity.ok(salaryPaymentService.markAsPaid(id, paymentMode));
+            return ResponseEntity.ok(SalaryPaymentDTO.from(salaryPaymentService.markAsPaid(id, paymentMode)));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -55,9 +56,9 @@ public class SalaryPaymentController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public ResponseEntity<SalaryPayment> updatePayment(@PathVariable Long id, @Valid @RequestBody SalaryPayment payment) {
+    public ResponseEntity<SalaryPaymentDTO> updatePayment(@PathVariable Long id, @Valid @RequestBody SalaryPayment payment) {
         try {
-            return ResponseEntity.ok(salaryPaymentService.updatePayment(id, payment));
+            return ResponseEntity.ok(SalaryPaymentDTO.from(salaryPaymentService.updatePayment(id, payment)));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
