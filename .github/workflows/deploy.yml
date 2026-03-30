@@ -264,7 +264,7 @@ jobs:
           COGNITO_ISSUER_URI=https://cognito-idp.${{ needs.setup.outputs.cognito_region }}.amazonaws.com/${{ needs.setup.outputs.cognito_pool_id }}
           COGNITO_JWK_URI=https://cognito-idp.${{ needs.setup.outputs.cognito_region }}.amazonaws.com/${{ needs.setup.outputs.cognito_pool_id }}/.well-known/jwks.json
           AWS_REGION=${{ needs.setup.outputs.cognito_region }}
-          CORS_ALLOWED_ORIGINS=http://$EC2_HOST:3000
+          CORS_ALLOWED_ORIGINS=http://$EC2_HOST:3000,http://localhost:3000
           ENVEOF
           chmod 600 /home/ubuntu/.env
 
