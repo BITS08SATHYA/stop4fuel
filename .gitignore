@@ -65,3 +65,6 @@ models/
 todos
 yet_to_do.txt
 landing_page/
+CODEBASE_ANALYSIS.md
+SECURITY_AUDIT.md
+migration_bunkdb.txt
