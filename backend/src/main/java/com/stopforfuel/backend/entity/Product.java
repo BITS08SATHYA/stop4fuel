@@ -66,6 +66,11 @@ public class Product extends BaseEntity {
     @Column(name = "fuel_family")
     private String fuelFamily;
 
+    /** Per-unit discount rate (e.g., ₹2.50/liter). Applied on cash invoices when no customer-specific incentive exists. */
+    @PositiveOrZero(message = "Discount rate must be zero or positive")
+    @Column(name = "discount_rate", precision = 19, scale = 4)
+    private BigDecimal discountRate;
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean active = true;
 }

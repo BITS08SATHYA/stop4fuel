@@ -241,17 +241,28 @@ export default function InvoicesPage() {
         const gross = qty * price;
         line.grossAmount = gross;
 
-        // Auto-apply incentive discount
+        // Auto-apply incentive discount (customer-specific takes priority)
         const productId = line.product?.id;
         const incentive = productId ? incentives.find((i: Incentive) => (i.product as any)?.id === productId || (i.product as any) === productId) : null;
         if (incentive && (incentive.minQuantity == null || qty >= incentive.minQuantity)) {
             line.discountRate = incentive.discountRate;
             line.discountAmount = incentive.discountRate * qty;
             line.amount = gross - line.discountAmount;
+            line.discountSource = 'incentive';
+        } else if (line.product?.discountRate > 0 && line.applyProductDiscount !== false) {
+            // Product-level discount fallback (cashier can toggle off)
+            line.discountRate = line.product.discountRate;
+            line.discountAmount = line.product.discountRate * qty;
+            line.amount = gross - line.discountAmount;
+            line.discountSource = 'product';
+            if (line.applyProductDiscount === undefined) {
+                line.applyProductDiscount = true;
+            }
         } else {
             line.discountRate = null;
             line.discountAmount = null;
             line.amount = gross;
+            line.discountSource = null;
         }
 
         newLines[index] = line;
@@ -388,7 +399,10 @@ export default function InvoicesPage() {
                     nozzle: p.nozzle ? { id: p.nozzle.id } : undefined,
                     quantity: parseFloat(p.quantity) || 0,
                     unitPrice: parseFloat(p.unitPrice) || 0,
-                    amount: p.amount || 0
+                    amount: p.amount || 0,
+                    grossAmount: p.grossAmount || undefined,
+                    discountRate: p.discountRate || undefined,
+                    discountAmount: p.discountAmount || undefined,
                 })),
                 customer: selectedCustomer ? { id: selectedCustomer.id } : undefined,
                 vehicle: selectedVehicle ? { id: selectedVehicle.id } : undefined,
@@ -886,9 +900,25 @@ export default function InvoicesPage() {
                                 </div>
                             </div>
                             <div className="text-right">
+                                {/* Product discount toggle (only when no customer incentive) */}
+                                {line.product?.discountRate > 0 && line.discountSource !== 'incentive' && (
+                                    <div className="flex items-center justify-end gap-2 mb-1">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={line.applyProductDiscount !== false}
+                                                onChange={(e) => updateProductLine(idx, { applyProductDiscount: e.target.checked })}
+                                                className="rounded border-border accent-emerald-500"
+                                            />
+                                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                                Apply Discount (₹{line.product.discountRate}/{line.product.unit || 'unit'})
+                                            </span>
+                                        </label>
+                                    </div>
+                                )}
                                 {line.discountRate > 0 && (
                                     <div className="text-[10px] text-emerald-500 font-bold mb-0.5">
-                                        Discount: ₹{line.discountRate}/unit &times; {parseFloat(line.quantity) || 0} = -₹{(line.discountAmount || 0).toFixed(2)}
+                                        {line.discountSource === 'incentive' ? 'Incentive' : 'Discount'}: ₹{line.discountRate}/unit &times; {parseFloat(line.quantity) || 0} = -₹{(line.discountAmount || 0).toFixed(2)}
                                     </div>
                                 )}
                                 <span className="text-primary font-black text-lg">
