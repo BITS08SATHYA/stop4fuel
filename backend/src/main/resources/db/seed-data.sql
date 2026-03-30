@@ -33,6 +33,86 @@ INSERT INTO roles (role_type) VALUES ('OWNER') ON CONFLICT (role_type) DO NOTHIN
 INSERT INTO roles (role_type) VALUES ('ADMIN') ON CONFLICT (role_type) DO NOTHING;;
 INSERT INTO roles (role_type) VALUES ('CASHIER') ON CONFLICT (role_type) DO NOTHING;;
 
+-- Permissions (seed all permission codes)
+DO $$
+BEGIN
+IF (SELECT COUNT(*) FROM permissions) = 0 THEN
+    INSERT INTO permissions (code, description, module) VALUES
+        ('DASHBOARD_VIEW', 'View dashboard', 'DASHBOARD'),
+        ('CUSTOMER_VIEW', 'View customers', 'CUSTOMER'),
+        ('CUSTOMER_MANAGE', 'Manage customers', 'CUSTOMER'),
+        ('EMPLOYEE_VIEW', 'View employees', 'EMPLOYEE'),
+        ('EMPLOYEE_MANAGE', 'Manage employees', 'EMPLOYEE'),
+        ('PRODUCT_VIEW', 'View products', 'PRODUCT'),
+        ('PRODUCT_MANAGE', 'Manage products', 'PRODUCT'),
+        ('STATION_VIEW', 'View station layout', 'STATION'),
+        ('STATION_MANAGE', 'Manage station layout', 'STATION'),
+        ('INVENTORY_VIEW', 'View inventory', 'INVENTORY'),
+        ('INVENTORY_MANAGE', 'Manage inventory', 'INVENTORY'),
+        ('SHIFT_VIEW', 'View shifts', 'SHIFT'),
+        ('SHIFT_MANAGE', 'Manage shifts', 'SHIFT'),
+        ('INVOICE_VIEW', 'View invoices', 'INVOICE'),
+        ('INVOICE_MANAGE', 'Manage invoices', 'INVOICE'),
+        ('PAYMENT_VIEW', 'View payments', 'PAYMENT'),
+        ('PAYMENT_MANAGE', 'Manage payments', 'PAYMENT'),
+        ('FINANCE_VIEW', 'View finance', 'FINANCE'),
+        ('FINANCE_MANAGE', 'Manage finance', 'FINANCE'),
+        ('REPORT_VIEW', 'View reports', 'REPORT'),
+        ('SETTINGS_VIEW', 'View settings', 'SETTINGS'),
+        ('SETTINGS_MANAGE', 'Manage settings', 'SETTINGS'),
+        ('USER_VIEW', 'View users', 'USER'),
+        ('USER_MANAGE', 'Manage users', 'USER');
+    RAISE NOTICE 'Seeded permissions';
+END IF;
+END $$;;
+
+-- Assign permissions to CASHIER role
+DO $$
+DECLARE v_role_id BIGINT;
+BEGIN
+SELECT id INTO v_role_id FROM roles WHERE role_type = 'CASHIER';
+IF v_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = v_role_id) THEN
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT v_role_id, id FROM permissions WHERE code IN (
+        'DASHBOARD_VIEW', 'SHIFT_VIEW', 'SHIFT_MANAGE',
+        'INVOICE_VIEW', 'INVOICE_MANAGE',
+        'PAYMENT_VIEW', 'PAYMENT_MANAGE',
+        'FINANCE_VIEW'
+    )
+    ON CONFLICT DO NOTHING;
+    RAISE NOTICE 'Assigned permissions to CASHIER';
+END IF;
+END $$;;
+
+-- Assign permissions to ADMIN role
+DO $$
+DECLARE v_role_id BIGINT;
+BEGIN
+SELECT id INTO v_role_id FROM roles WHERE role_type = 'ADMIN';
+IF v_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = v_role_id) THEN
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT v_role_id, id FROM permissions
+    WHERE code NOT IN ('SETTINGS_MANAGE', 'USER_MANAGE')
+    ON CONFLICT DO NOTHING;
+    RAISE NOTICE 'Assigned permissions to ADMIN';
+END IF;
+END $$;;
+
+-- Assign permissions to EMPLOYEE role
+DO $$
+DECLARE v_role_id BIGINT;
+BEGIN
+SELECT id INTO v_role_id FROM roles WHERE role_type = 'EMPLOYEE';
+IF v_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = v_role_id) THEN
+    INSERT INTO role_permissions (role_id, permission_id)
+    SELECT v_role_id, id FROM permissions WHERE code IN (
+        'DASHBOARD_VIEW', 'SHIFT_VIEW', 'INVENTORY_VIEW'
+    )
+    ON CONFLICT DO NOTHING;
+    RAISE NOTICE 'Assigned permissions to EMPLOYEE';
+END IF;
+END $$;;
+
 -- Customer Groups (check by name)
 DO $$
 BEGIN
@@ -207,6 +287,25 @@ IF (SELECT COUNT(*) FROM designations) = 0 THEN
 END IF;
 END $$;;
 
+-- Owner User (for dev mode login)
+DO $$
+DECLARE
+    v_id BIGINT;
+    v_role_id BIGINT;
+BEGIN
+IF NOT EXISTS (SELECT 1 FROM users u JOIN roles r ON u.role_id = r.id WHERE r.role_type = 'OWNER') THEN
+    SELECT id INTO v_role_id FROM roles WHERE role_type = 'OWNER';
+    INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
+    VALUES (1, 'Sathipa', 'Chennai', 'Employee', NOW(), NOW())
+    RETURNING id INTO v_id;
+    INSERT INTO users (id, username, role_id, join_date, status, passcode)
+    VALUES (v_id, '9840000000', v_role_id, '2024-01-01', 'Active', '$2a$12$odFww0BaiMCi.x01MilC3eCLpPQ8v.aGKYg89jSCiGKmp7rfajfJW');
+    INSERT INTO person_phones (person_id, phone_number) VALUES (v_id, '9840000000');
+    INSERT INTO person_emails (person_id, email) VALUES (v_id, 'owner@stopforfuel.com');
+    RAISE NOTICE 'Seeded owner user';
+END IF;
+END $$;;
+
 -- Employees (JOINED inheritance: person_entity -> users -> employees)
 DO $$
 DECLARE
@@ -222,8 +321,8 @@ IF (SELECT COUNT(*) FROM employees) = 0 THEN
     INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
     VALUES (1, 'Murugan S', '12 Anna Nagar, Chennai', 'Employee', NOW(), NOW())
     RETURNING id INTO v_id;
-    INSERT INTO users (id, username, role_id, join_date, status)
-    VALUES (v_id, 'emp001', v_role_id, '2024-06-15', 'Active');
+    INSERT INTO users (id, username, role_id, join_date, status, passcode)
+    VALUES (v_id, 'emp001', v_role_id, '2024-06-15', 'Active', '$2a$12$odFww0BaiMCi.x01MilC3eCLpPQ8v.aGKYg89jSCiGKmp7rfajfJW');
     INSERT INTO employees (id, designation_id, department, employee_code, salary, salary_day,
                            city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number)
     VALUES (v_id, v_desig_id, 'Operations', 'EMP001', 18000, 1,
@@ -235,8 +334,8 @@ IF (SELECT COUNT(*) FROM employees) = 0 THEN
     INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
     VALUES (1, 'Lakshmi R', '34 T Nagar, Chennai', 'Employee', NOW(), NOW())
     RETURNING id INTO v_id;
-    INSERT INTO users (id, username, role_id, join_date, status)
-    VALUES (v_id, 'emp002', v_role_id, '2024-08-01', 'Active');
+    INSERT INTO users (id, username, role_id, join_date, status, passcode)
+    VALUES (v_id, 'emp002', v_role_id, '2024-08-01', 'Active', '$2a$12$odFww0BaiMCi.x01MilC3eCLpPQ8v.aGKYg89jSCiGKmp7rfajfJW');
     INSERT INTO employees (id, designation_id, department, employee_code, salary, salary_day,
                            city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number)
     VALUES (v_id, v_desig_id, 'Operations', 'EMP002', 18000, 1,
@@ -250,8 +349,8 @@ IF (SELECT COUNT(*) FROM employees) = 0 THEN
     INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
     VALUES (1, 'Karthik V', '56 Adyar, Chennai', 'Employee', NOW(), NOW())
     RETURNING id INTO v_id;
-    INSERT INTO users (id, username, role_id, join_date, status)
-    VALUES (v_id, 'emp003', v_role_id, '2024-03-10', 'Active');
+    INSERT INTO users (id, username, role_id, join_date, status, passcode)
+    VALUES (v_id, 'emp003', v_role_id, '2024-03-10', 'Active', '$2a$12$odFww0BaiMCi.x01MilC3eCLpPQ8v.aGKYg89jSCiGKmp7rfajfJW');
     INSERT INTO employees (id, designation_id, department, employee_code, salary, salary_day,
                            city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number)
     VALUES (v_id, v_desig_id, 'Accounts', 'EMP003', 22000, 1,
@@ -265,8 +364,8 @@ IF (SELECT COUNT(*) FROM employees) = 0 THEN
     INSERT INTO person_entity (scid, name, address, person_type, created_at, updated_at)
     VALUES (1, 'Priya M', '78 Velachery, Chennai', 'Employee', NOW(), NOW())
     RETURNING id INTO v_id;
-    INSERT INTO users (id, username, role_id, join_date, status)
-    VALUES (v_id, 'emp004', v_role_id, '2023-11-01', 'Active');
+    INSERT INTO users (id, username, role_id, join_date, status, passcode)
+    VALUES (v_id, 'emp004', v_role_id, '2023-11-01', 'Active', '$2a$12$odFww0BaiMCi.x01MilC3eCLpPQ8v.aGKYg89jSCiGKmp7rfajfJW');
     INSERT INTO employees (id, designation_id, department, employee_code, salary, salary_day,
                            city, state, pincode, bank_name, bank_branch, gender, blood_group, aadhar_number)
     VALUES (v_id, v_desig_id, 'Management', 'EMP004', 35000, 1,
@@ -277,6 +376,10 @@ IF (SELECT COUNT(*) FROM employees) = 0 THEN
     RAISE NOTICE 'Seeded 4 employees';
 END IF;
 END $$;;
+
+-- Backfill passcodes for existing employees (passcode: 1234)
+UPDATE users SET passcode = '$2a$12$odFww0BaiMCi.x01MilC3eCLpPQ8v.aGKYg89jSCiGKmp7rfajfJW'
+WHERE passcode IS NULL AND id IN (SELECT id FROM employees);;
 
 
 -- =====================
