@@ -23,7 +23,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       DATABASE_URL: jdbc:postgresql://postgres:5432/stopforfuel
       DATABASE_USER: postgres
       DATABASE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
