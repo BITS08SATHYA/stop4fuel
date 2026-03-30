@@ -37,6 +37,8 @@ public class ShiftTestDataSeeder {
     private final ExpenseRepository expenseRepository;
     private final ExpenseTypeRepository expenseTypeRepository;
     private final IncentivePaymentRepository incentivePaymentRepository;
+    private final VehicleRepository vehicleRepository;
+    private final ProductInventoryRepository productInventoryRepository;
 
     @Transactional
     public Map<String, Object> seedTestData(Long shiftId) {
@@ -89,6 +91,10 @@ public class ShiftTestDataSeeder {
         // 8. Incentive Payments
         int incentiveCount = seedIncentives(shiftId, scid, shiftStart);
         summary.put("incentives", incentiveCount);
+
+        // 9. Product Inventory for non-fuel products (lubricants, accessories)
+        int productInvCount = seedProductInventory(shiftId, scid);
+        summary.put("productInventories", productInvCount);
 
         summary.put("message", "Test data seeded successfully");
         return summary;
@@ -356,9 +362,15 @@ public class ShiftTestDataSeeder {
                 Nozzle nozzle = productNozzleMap.get(fuel.getId());
                 if (nozzle == null) continue;
 
+                Customer cust = customers.get(i);
                 InvoiceBill bill = createFuelBill(shiftId, scid, fuel, nozzle, creditQuantities[i],
-                        "CREDIT", null, "TEST-A-" + (i + 1), customers.get(i),
+                        "CREDIT", null, "TEST-A-" + (i + 1), cust,
                         shiftStart.plusMinutes(40 + i * 60));
+                // Assign first vehicle of customer
+                List<Vehicle> custVehicles = vehicleRepository.findByCustomerId(cust.getId());
+                if (!custVehicles.isEmpty()) {
+                    bill.setVehicle(custVehicles.get(0));
+                }
                 invoiceBillRepository.save(bill);
                 creditCount++;
             }
@@ -516,6 +528,11 @@ public class ShiftTestDataSeeder {
             ip.setInvoiceBill(oilCreditBill);
             oilCreditBill.getProducts().add(ip);
 
+            // Assign first vehicle of customer
+            List<Vehicle> custVehicles = vehicleRepository.findByCustomerId(cust.getId());
+            if (!custVehicles.isEmpty()) {
+                oilCreditBill.setVehicle(custVehicles.get(0));
+            }
             invoiceBillRepository.save(oilCreditBill);
             creditCount++;
         }
@@ -720,6 +737,52 @@ public class ShiftTestDataSeeder {
             count++;
         }
 
+        return count;
+    }
+
+    // ========== 9. Product Inventory for non-fuel products ==========
+
+    private int seedProductInventory(Long shiftId, Long scid) {
+        // Calculate sales per non-fuel product from the invoices we just created
+        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+        Map<Long, Double> salesByProduct = new HashMap<>();
+
+        for (InvoiceBill inv : invoices) {
+            if (inv.getProducts() != null) {
+                for (InvoiceProduct ip : inv.getProducts()) {
+                    if (ip.getProduct() != null && !"FUEL".equalsIgnoreCase(ip.getProduct().getCategory())) {
+                        double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
+                        salesByProduct.merge(ip.getProduct().getId(), qty, Double::sum);
+                    }
+                }
+            }
+        }
+
+        int count = 0;
+        for (Map.Entry<Long, Double> entry : salesByProduct.entrySet()) {
+            Product product = productRepository.findById(entry.getKey()).orElse(null);
+            if (product == null) continue;
+
+            double sales = entry.getValue();
+            double openStock = sales + 10; // simulate having more stock than sold
+
+            ProductInventory pi = new ProductInventory();
+            pi.setScid(scid);
+            pi.setShiftId(shiftId);
+            pi.setDate(LocalDate.now());
+            pi.setProduct(product);
+            pi.setOpenStock(openStock);
+            pi.setIncomeStock(0.0);
+            pi.setTotalStock(openStock);
+            pi.setCloseStock(openStock - sales);
+            pi.setSales(sales);
+            pi.setRate(product.getPrice());
+            pi.setAmount(product.getPrice() != null
+                    ? product.getPrice().multiply(BigDecimal.valueOf(sales)).setScale(2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO);
+            productInventoryRepository.save(pi);
+            count++;
+        }
         return count;
     }
 }

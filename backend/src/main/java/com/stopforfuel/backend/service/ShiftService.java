@@ -157,14 +157,22 @@ public class ShiftService {
                     && nozzle.getTank().getProduct().getPrice() != null
                     ? nozzle.getTank().getProduct().getPrice().doubleValue() : null);
 
-            // Get last close reading as the open reading
-            NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
-            if (lastReading != null && lastReading.getCloseMeterReading() != null) {
-                row.setOpenMeterReading(lastReading.getCloseMeterReading());
-            } else if (lastReading != null && lastReading.getOpenMeterReading() != null) {
-                row.setOpenMeterReading(lastReading.getOpenMeterReading());
+            // Check for existing inventory record for THIS shift first
+            NozzleInventory currentShiftReading = nozzleInventoryRepository.findByShiftIdAndNozzleId(shiftId, nozzle.getId());
+            if (currentShiftReading != null) {
+                row.setOpenMeterReading(currentShiftReading.getOpenMeterReading());
+                row.setCloseMeterReading(currentShiftReading.getCloseMeterReading());
+                row.setTestQuantity(currentShiftReading.getTestQuantity());
             } else {
-                row.setOpenMeterReading(0.0);
+                // Fallback: get last close reading as the open reading
+                NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
+                if (lastReading != null && lastReading.getCloseMeterReading() != null) {
+                    row.setOpenMeterReading(lastReading.getCloseMeterReading());
+                } else if (lastReading != null && lastReading.getOpenMeterReading() != null) {
+                    row.setOpenMeterReading(lastReading.getOpenMeterReading());
+                } else {
+                    row.setOpenMeterReading(0.0);
+                }
             }
             nozzleRows.add(row);
         }
@@ -180,18 +188,29 @@ public class ShiftService {
             row.setProductName(tank.getProduct() != null ? tank.getProduct().getName() : null);
             row.setCapacity(tank.getCapacity());
 
-            TankInventory lastReading = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
-            if (lastReading != null && lastReading.getCloseDip() != null) {
-                row.setOpenDip(lastReading.getCloseDip());
-            } else if (lastReading != null && lastReading.getOpenDip() != null) {
-                row.setOpenDip(lastReading.getOpenDip());
-            }
-            if (lastReading != null && lastReading.getCloseStock() != null) {
-                row.setOpenStock(lastReading.getCloseStock());
-            } else if (lastReading != null && lastReading.getOpenStock() != null) {
-                row.setOpenStock(lastReading.getOpenStock());
+            // Check for existing inventory record for THIS shift first
+            TankInventory currentShiftReading = tankInventoryRepository.findByShiftIdAndTankId(shiftId, tank.getId());
+            if (currentShiftReading != null) {
+                row.setOpenDip(currentShiftReading.getOpenDip());
+                row.setOpenStock(currentShiftReading.getOpenStock());
+                row.setIncomeStock(currentShiftReading.getIncomeStock());
+                row.setCloseDip(currentShiftReading.getCloseDip());
+                row.setCloseStock(currentShiftReading.getCloseStock());
             } else {
-                row.setOpenStock(0.0);
+                // Fallback: get last close reading as the open reading
+                TankInventory lastReading = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
+                if (lastReading != null && lastReading.getCloseDip() != null) {
+                    row.setOpenDip(lastReading.getCloseDip());
+                } else if (lastReading != null && lastReading.getOpenDip() != null) {
+                    row.setOpenDip(lastReading.getOpenDip());
+                }
+                if (lastReading != null && lastReading.getCloseStock() != null) {
+                    row.setOpenStock(lastReading.getCloseStock());
+                } else if (lastReading != null && lastReading.getOpenStock() != null) {
+                    row.setOpenStock(lastReading.getOpenStock());
+                } else {
+                    row.setOpenStock(0.0);
+                }
             }
             tankRows.add(row);
         }
@@ -208,37 +227,43 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"OPEN".equals(shift.getStatus())) {
-            throw new BusinessException("Only an OPEN shift can be submitted for review");
+        if (!"OPEN".equals(shift.getStatus()) && !"REVIEW".equals(shift.getStatus())) {
+            throw new BusinessException("Only an OPEN or REVIEW shift can be submitted for review");
         }
 
         Long scid = shift.getScid();
         LocalDate today = LocalDate.now();
 
-        // Save nozzle inventory readings
+        // Save nozzle inventory readings (upsert: update existing or create new)
         for (ShiftClosingSubmitDTO.NozzleReadingInput input : submitDTO.getNozzleReadings()) {
-            NozzleInventory ni = new NozzleInventory();
-            ni.setScid(scid);
-            ni.setShiftId(shiftId);
-            ni.setDate(today);
-            ni.setNozzle(nozzleRepository.findById(input.getNozzleId())
-                    .orElseThrow(() -> new RuntimeException("Nozzle not found: " + input.getNozzleId())));
+            NozzleInventory ni = nozzleInventoryRepository.findByShiftIdAndNozzleId(shiftId, input.getNozzleId());
+            if (ni == null) {
+                ni = new NozzleInventory();
+                ni.setScid(scid);
+                ni.setShiftId(shiftId);
+                ni.setDate(today);
+                ni.setNozzle(nozzleRepository.findById(input.getNozzleId())
+                        .orElseThrow(() -> new RuntimeException("Nozzle not found: " + input.getNozzleId())));
+            }
             ni.setOpenMeterReading(input.getOpenMeterReading());
             ni.setCloseMeterReading(input.getCloseMeterReading());
             ni.setTestQuantity(input.getTestQuantity());
             nozzleInventoryService.save(ni);
         }
 
-        // Save tank inventory readings and update tank available stock
+        // Save tank inventory readings and update tank available stock (upsert)
         for (ShiftClosingSubmitDTO.TankDipInput input : submitDTO.getTankDips()) {
             Tank tank = tankRepository.findById(input.getTankId())
                     .orElseThrow(() -> new RuntimeException("Tank not found: " + input.getTankId()));
 
-            TankInventory ti = new TankInventory();
-            ti.setScid(scid);
-            ti.setShiftId(shiftId);
-            ti.setDate(today);
-            ti.setTank(tank);
+            TankInventory ti = tankInventoryRepository.findByShiftIdAndTankId(shiftId, input.getTankId());
+            if (ti == null) {
+                ti = new TankInventory();
+                ti.setScid(scid);
+                ti.setShiftId(shiftId);
+                ti.setDate(today);
+                ti.setTank(tank);
+            }
             ti.setOpenDip(input.getOpenDip());
             ti.setOpenStock(input.getOpenStock());
             ti.setIncomeStock(input.getIncomeStock());
@@ -329,6 +354,20 @@ public class ShiftService {
         }
 
         return saved;
+    }
+
+    @Transactional
+    public Shift reopenToEdit(Long shiftId) {
+        Shift shift = repository.findById(shiftId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
+
+        if (!"REVIEW".equals(shift.getStatus())) {
+            throw new BusinessException("Only a REVIEW shift can be reopened for editing");
+        }
+
+        shift.setStatus("OPEN");
+        shift.setEndTime(null);
+        return repository.save(shift);
     }
 
     private void computeShiftTotals(ShiftClosingDataDTO dto, Long shiftId) {
