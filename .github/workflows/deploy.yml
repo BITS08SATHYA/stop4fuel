@@ -256,6 +256,7 @@ jobs:
 
           # Write .env file
           cat > /home/ubuntu/.env << 'ENVEOF'
+          SPRING_PROFILES_ACTIVE=dev
           DB_PASSWORD=$DB_PASSWORD
           AUTH_ENABLED=true
           COGNITO_USER_POOL_ID=${{ needs.setup.outputs.cognito_pool_id }}
