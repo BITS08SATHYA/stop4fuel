@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.CustomerCategoryDTO;
 import com.stopforfuel.backend.entity.CustomerCategory;
 import com.stopforfuel.backend.service.CustomerCategoryService;
 import org.springframework.beans.factory.annotation.Autowired;

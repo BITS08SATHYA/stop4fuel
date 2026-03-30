@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.CompanyDocumentDTO;
 import com.stopforfuel.backend.entity.CompanyDocument;
 import com.stopforfuel.backend.service.CompanyDocumentService;
 import jakarta.validation.Valid;
