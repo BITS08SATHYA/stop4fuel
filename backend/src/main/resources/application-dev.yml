@@ -1,6 +1,8 @@
 app:
   auth:
     enabled: false
+  jwt:
+    secret: stopforfuel-dev-secret-key-min-32-chars!!
   seed-test-data:
     enabled: true
 
