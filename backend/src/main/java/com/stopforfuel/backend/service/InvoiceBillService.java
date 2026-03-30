@@ -236,27 +236,42 @@ public class InvoiceBillService {
                 totalGross = totalGross.add(gross);
 
                 // Apply incentive discount if applicable
+                boolean discountApplied = false;
                 if (custId != null && product.getProduct() != null && product.getProduct().getId() != null) {
-                    incentiveService.getActiveIncentive(custId, product.getProduct().getId())
-                            .ifPresent(incentive -> {
-                                boolean meetsMin = incentive.getMinQuantity() == null
-                                        || qty.compareTo(incentive.getMinQuantity()) >= 0;
-                                if (meetsMin) {
-                                    product.setDiscountRate(incentive.getDiscountRate());
-                                    BigDecimal discAmt = incentive.getDiscountRate().multiply(qty);
-                                    product.setDiscountAmount(discAmt);
-                                    product.setAmount(gross.subtract(discAmt));
-                                }
-                            });
+                    var incentiveOpt = incentiveService.getActiveIncentive(custId, product.getProduct().getId());
+                    if (incentiveOpt.isPresent()) {
+                        Incentive incentive = incentiveOpt.get();
+                        boolean meetsMin = incentive.getMinQuantity() == null
+                                || qty.compareTo(incentive.getMinQuantity()) >= 0;
+                        if (meetsMin) {
+                            product.setDiscountRate(incentive.getDiscountRate());
+                            BigDecimal discAmt = incentive.getDiscountRate().multiply(qty);
+                            product.setDiscountAmount(discAmt);
+                            product.setAmount(gross.subtract(discAmt));
+                            discountApplied = true;
+                        }
+                    }
+                }
+
+                // Fallback: apply product-level discount if no customer incentive found
+                if (!discountApplied && product.getProduct() != null && product.getProduct().getId() != null) {
+                    Product prod = productRepository.findById(product.getProduct().getId()).orElse(null);
+                    if (prod != null && prod.getDiscountRate() != null
+                            && prod.getDiscountRate().compareTo(BigDecimal.ZERO) > 0
+                            && product.getDiscountRate() != null
+                            && product.getDiscountRate().compareTo(prod.getDiscountRate()) == 0) {
+                        BigDecimal discAmt = prod.getDiscountRate().multiply(qty);
+                        product.setDiscountRate(prod.getDiscountRate());
+                        product.setDiscountAmount(discAmt);
+                        product.setAmount(gross.subtract(discAmt));
+                        discountApplied = true;
+                    }
                 }
 
                 // If no discount was applied, set amount = gross
-                if (product.getAmount() == null || product.getDiscountRate() != null) {
-                    // already set above if discount applied
-                } else {
-                    product.setAmount(gross);
-                }
-                if (product.getAmount() == null) {
+                if (!discountApplied) {
+                    product.setDiscountRate(null);
+                    product.setDiscountAmount(null);
                     product.setAmount(gross);
                 }
 
