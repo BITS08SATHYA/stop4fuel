@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.PaymentDTO;
 import com.stopforfuel.backend.entity.Payment;
 import com.stopforfuel.backend.service.PaymentService;
 import com.stopforfuel.backend.service.PaymentReportService;
@@ -32,7 +33,7 @@ public class PaymentController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
-    public Page<Payment> getAll(
+    public Page<PaymentDTO> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String categoryType,
@@ -42,7 +43,8 @@ public class PaymentController {
         LocalDateTime from = fromDate != null ? fromDate.atStartOfDay() : null;
         LocalDateTime to = toDate != null ? toDate.atTime(23, 59, 59) : null;
         return paymentService.getPayments(categoryType, paidAgainst, from, to,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "paymentDate")));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "paymentDate")))
+                .map(PaymentDTO::from);
     }
 
     @GetMapping("/export/pdf")
@@ -92,35 +94,36 @@ public class PaymentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
-    public Payment getById(@PathVariable Long id) {
-        return paymentService.getPaymentById(id);
+    public PaymentDTO getById(@PathVariable Long id) {
+        return PaymentDTO.from(paymentService.getPaymentById(id));
     }
 
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
-    public Page<Payment> getByCustomer(
+    public Page<PaymentDTO> getByCustomer(
             @PathVariable Long customerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return paymentService.getPaymentsByCustomer(customerId, PageRequest.of(page, size));
+        return paymentService.getPaymentsByCustomer(customerId, PageRequest.of(page, size))
+                .map(PaymentDTO::from);
     }
 
     @GetMapping("/statement/{statementId}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
-    public List<Payment> getByStatement(@PathVariable Long statementId) {
-        return paymentService.getPaymentsByStatement(statementId);
+    public List<PaymentDTO> getByStatement(@PathVariable Long statementId) {
+        return paymentService.getPaymentsByStatement(statementId).stream().map(PaymentDTO::from).toList();
     }
 
     @GetMapping("/bill/{invoiceBillId}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
-    public List<Payment> getByInvoiceBill(@PathVariable Long invoiceBillId) {
-        return paymentService.getPaymentsByInvoiceBill(invoiceBillId);
+    public List<PaymentDTO> getByInvoiceBill(@PathVariable Long invoiceBillId) {
+        return paymentService.getPaymentsByInvoiceBill(invoiceBillId).stream().map(PaymentDTO::from).toList();
     }
 
     @GetMapping("/shift/{shiftId}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
-    public List<Payment> getByShift(@PathVariable Long shiftId) {
-        return paymentService.getPaymentsByShift(shiftId);
+    public List<PaymentDTO> getByShift(@PathVariable Long shiftId) {
+        return paymentService.getPaymentsByShift(shiftId).stream().map(PaymentDTO::from).toList();
     }
 
     /**
@@ -129,11 +132,11 @@ public class PaymentController {
      */
     @PostMapping("/statement/{statementId}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
-    public ResponseEntity<Payment> recordStatementPayment(
+    public ResponseEntity<PaymentDTO> recordStatementPayment(
             @PathVariable Long statementId,
             @Valid @RequestBody Payment payment) {
         Payment saved = paymentService.recordStatementPayment(statementId, payment);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(PaymentDTO.from(saved));
     }
 
     /**
@@ -142,11 +145,11 @@ public class PaymentController {
      */
     @PostMapping("/bill/{invoiceBillId}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
-    public ResponseEntity<Payment> recordBillPayment(
+    public ResponseEntity<PaymentDTO> recordBillPayment(
             @PathVariable Long invoiceBillId,
             @Valid @RequestBody Payment payment) {
         Payment saved = paymentService.recordBillPayment(invoiceBillId, payment);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(PaymentDTO.from(saved));
     }
 
     /**
@@ -175,11 +178,11 @@ public class PaymentController {
      */
     @PostMapping("/{id}/upload-proof")
     @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
-    public ResponseEntity<Payment> uploadProof(
+    public ResponseEntity<PaymentDTO> uploadProof(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) throws IOException {
         Payment updated = paymentService.uploadProofImage(id, file);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(PaymentDTO.from(updated));
     }
 
     /**

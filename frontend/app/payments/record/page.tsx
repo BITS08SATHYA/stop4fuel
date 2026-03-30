@@ -120,7 +120,7 @@ export default function RecordPaymentPage() {
         }
     };
 
-    const selectedModeName = paymentModes.find(m => m.id === payModeId)?.modeName || "";
+    const selectedModeName = paymentModes.find(m => m.id === payModeId)?.name || "";
 
     const buildReferenceNo = (): string => {
         const parts: string[] = [];
@@ -515,7 +515,7 @@ export default function RecordPaymentPage() {
                                                     {bill.driverName && <span className="text-xs text-muted-foreground">Driver: {bill.driverName}</span>}
                                                     {bill.products?.length > 0 && (
                                                         <span className="text-xs text-muted-foreground truncate max-w-[250px]">
-                                                            {bill.products.map(p => p.product?.name).filter(Boolean).join(", ")}
+                                                            {bill.products.map(p => p.productName).filter(Boolean).join(", ")}
                                                         </span>
                                                     )}
                                                     {isSelected && <Check className="w-3.5 h-3.5 text-primary ml-auto" />}
@@ -593,7 +593,7 @@ export default function RecordPaymentPage() {
                                         >
                                             <option value="">Select mode...</option>
                                             {paymentModes.map((m) => (
-                                                <option key={m.id} value={m.id}>{m.modeName}</option>
+                                                <option key={m.id} value={m.id}>{m.name}</option>
                                             ))}
                                         </select>
                                     </div>

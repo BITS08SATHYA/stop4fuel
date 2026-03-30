@@ -844,7 +844,7 @@ export default function InvoicesPage() {
                                         >
                                             <option value="">Select Nozzle...</option>
                                             {nozzles
-                                                .filter(n => n.tank?.product?.id === line.product?.id)
+                                                .filter(n => n.tank?.productId === line.product?.id)
                                                 .map(n => (
                                                     <option key={n.id} value={n.id}>
                                                         {n.nozzleName} ({n.pump.name})

@@ -114,7 +114,7 @@ export default function NozzlesPage() {
 
     const filtered = nozzles.filter((n) => {
         const q = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery || n.nozzleName?.toLowerCase().includes(q) || n.pump.name?.toLowerCase().includes(q) || n.tank.name?.toLowerCase().includes(q) || n.tank.product.name?.toLowerCase().includes(q);
+        const matchesSearch = !searchQuery || n.nozzleName?.toLowerCase().includes(q) || n.pump.name?.toLowerCase().includes(q) || n.tank.name?.toLowerCase().includes(q) || n.tank.productName?.toLowerCase().includes(q);
         const matchesStatus = statusFilter === "ALL" || (n.active ? "ACTIVE" : "INACTIVE") === statusFilter;
         const matchesPump = !pumpFilter || String(n.pump.id) === pumpFilter;
         return matchesSearch && matchesStatus && matchesPump;
@@ -229,7 +229,7 @@ export default function NozzlesPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="text-sm text-primary font-medium">{nozzle.tank.product.name}</span>
+                                                <span className="text-sm text-primary font-medium">{nozzle.tank.productName}</span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${

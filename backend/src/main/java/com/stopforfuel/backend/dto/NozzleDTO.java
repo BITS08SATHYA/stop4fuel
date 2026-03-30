@@ -45,6 +45,7 @@ public class NozzleDTO {
     public static class TankSummary {
         private Long id;
         private String name;
+        private Long productId;
         private String productName;
 
         public static TankSummary from(Tank t) {
@@ -52,6 +53,7 @@ public class NozzleDTO {
             return TankSummary.builder()
                     .id(t.getId())
                     .name(t.getName())
+                    .productId(t.getProduct() != null ? t.getProduct().getId() : null)
                     .productName(t.getProduct() != null ? t.getProduct().getName() : null)
                     .build();
         }

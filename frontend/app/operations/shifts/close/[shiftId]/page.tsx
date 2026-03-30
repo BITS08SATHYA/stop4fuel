@@ -568,7 +568,7 @@ export default function ShiftClosingWorkspace() {
                                                             <td className="py-1 px-2">{inv.vehicle?.vehicleNumber || "-"}</td>
                                                             <td className="py-1 px-2">{inv.driverName || "-"}</td>
                                                             <td className="py-1 px-2">
-                                                                {inv.products?.map(p => `${p.product?.name || "?"}: ${p.quantity}`).join(", ") || "-"}
+                                                                {inv.products?.map(p => `${p.productName || "?"}: ${p.quantity}`).join(", ") || "-"}
                                                             </td>
                                                             <td className="py-1 px-2">
                                                                 <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-medium">{inv.paymentMode || "CASH"}</span>
@@ -612,7 +612,7 @@ export default function ShiftClosingWorkspace() {
                                                             <td className="py-1 px-2">{inv.customer?.name || "-"}</td>
                                                             <td className="py-1 px-2">{inv.vehicle?.vehicleNumber || "-"}</td>
                                                             <td className="py-1 px-2">
-                                                                {inv.products?.map(p => `${p.product?.name || "?"}: ${p.quantity}`).join(", ") || "-"}
+                                                                {inv.products?.map(p => `${p.productName || "?"}: ${p.quantity}`).join(", ") || "-"}
                                                             </td>
                                                             <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCur(inv.netAmount)}</td>
                                                         </tr>
@@ -678,7 +678,7 @@ export default function ShiftClosingWorkspace() {
                                                 <td className="py-1 px-2">
                                                     {p.invoiceBill?.billNo || p.statement?.statementNo || p.referenceNo || "-"}
                                                 </td>
-                                                <td className="py-1 px-2">{p.paymentMode?.modeName || "-"}</td>
+                                                <td className="py-1 px-2">{p.paymentMode?.name || "-"}</td>
                                                 <td className="py-1 px-2 text-muted-foreground">{p.remarks || "-"}</td>
                                                 <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCur(p.amount)}</td>
                                             </tr>

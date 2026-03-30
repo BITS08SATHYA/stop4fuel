@@ -46,9 +46,9 @@ export default function NozzleInventoryPage() {
 
     const filteredInv = useMemo(() => inventories.filter((inv) => {
         const q = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery || inv.nozzle?.nozzleName?.toLowerCase().includes(q) || inv.nozzle?.pump?.name?.toLowerCase().includes(q) || inv.nozzle?.tank?.product?.name?.toLowerCase().includes(q);
+        const matchesSearch = !searchQuery || inv.nozzle?.nozzleName?.toLowerCase().includes(q) || inv.nozzle?.pump?.name?.toLowerCase().includes(q) || inv.nozzle?.tank?.productName?.toLowerCase().includes(q);
         const matchesNozzle = !nozzleFilter || String(inv.nozzle?.id) === nozzleFilter;
-        const matchesProduct = !productFilter || String(inv.nozzle?.tank?.product?.id) === productFilter;
+        const matchesProduct = !productFilter || String(inv.nozzle?.tank?.productId) === productFilter;
         return matchesSearch && matchesNozzle && matchesProduct;
     }), [inventories, searchQuery, nozzleFilter, productFilter]);
 
@@ -66,10 +66,10 @@ export default function NozzleInventoryPage() {
         return Array.from(grouped.entries())
             .map(([date, items]) => {
                 const totalSales = items.reduce((sum, i) => sum + (i.sales || 0), 0);
-                const rate = items[0]?.rate || items[0]?.nozzle?.tank?.product?.price || 0;
+                const rate = items[0]?.rate || 0;
                 return {
                     date,
-                    product: items[0]?.nozzle?.tank?.product?.name || '-',
+                    product: items[0]?.nozzle?.tank?.productName || '-',
                     nozzles: [...new Set(items.map(i => i.nozzle?.nozzleName))].sort().join(', '),
                     totalSales,
                     rate,
@@ -99,8 +99,8 @@ export default function NozzleInventoryPage() {
     const uniqueProducts = useMemo(() => {
         const map = new Map<number, { id: number; name: string }>();
         nozzles.forEach(n => {
-            if (n.tank?.product) {
-                map.set(n.tank.product.id, { id: n.tank.product.id, name: n.tank.product.name });
+            if (n.tank?.productId != null) {
+                map.set(n.tank.productId, { id: n.tank.productId, name: n.tank.productName || '' });
             }
         });
         return Array.from(map.values());
@@ -324,7 +324,7 @@ export default function NozzleInventoryPage() {
                                         ))
                                     ) : (
                                         (pagedData as NozzleInventory[]).map((inv, idx) => {
-                                            const rate = inv.rate || inv.nozzle?.tank?.product?.price || 0;
+                                            const rate = inv.rate || 0;
                                             const amount = inv.amount || (inv.sales && rate ? inv.sales * rate : 0);
                                             return (
                                             <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
@@ -340,7 +340,7 @@ export default function NozzleInventoryPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className="text-sm font-medium text-foreground">{inv.nozzle?.tank?.product?.name || '-'}</div>
+                                                    <div className="text-sm font-medium text-foreground">{inv.nozzle?.tank?.productName || '-'}</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-mono text-sm">{inv.openMeterReading?.toLocaleString()}</td>
                                                 <td className="px-6 py-4 text-right font-mono text-sm">{inv.closeMeterReading?.toLocaleString()}</td>
@@ -391,7 +391,7 @@ export default function NozzleInventoryPage() {
                             <select value={nozzleId} onChange={(e) => { setNozzleId(e.target.value); clearError("nozzleId"); }}
                                 className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.nozzleId)}`}>
                                 <option value="">Select Nozzle...</option>
-                                {nozzles.map(n => <option key={n.id} value={n.id}>{n.nozzleName} ({n.pump.name} - {n.tank.product.name})</option>)}
+                                {nozzles.map(n => <option key={n.id} value={n.id}>{n.nozzleName} ({n.pump.name} - {n.tank.productName})</option>)}
                             </select>
                             <FieldError error={errors.nozzleId} />
                         </div>

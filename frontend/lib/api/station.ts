@@ -45,7 +45,7 @@ export interface OilType {
 
 export interface GradeType {
     id: number;
-    oilType?: OilType;
+    oilType?: { id: number; name: string };
     name: string;
     description?: string;
     active: boolean;
@@ -60,11 +60,13 @@ export interface Product {
     unit: string;
     volume?: number;
     brand?: string;
-    active: boolean;
-    supplier?: Supplier;
-    oilType?: OilType;
-    gradeType?: GradeType;
+    gstRate?: number;
     fuelFamily?: string;
+    active: boolean;
+    supplier?: { id: number; name: string };
+    oilType?: { id: number; name: string };
+    gradeType?: { id: number; name: string };
+    scid?: number;
 }
 
 export interface Tank {
@@ -73,8 +75,9 @@ export interface Tank {
     capacity: number;
     availableStock: number;
     thresholdStock?: number;
-    product: Product;
+    product: { id: number; name: string; category: string; fuelFamily: string };
     active: boolean;
+    scid?: number;
 }
 
 export interface Pump {
@@ -89,9 +92,10 @@ export interface Nozzle {
     nozzleNumber?: string;
     nozzleCompany?: string;
     stampingExpiryDate?: string;
-    tank: Tank;
-    pump: Pump;
+    tank: { id: number; name: string; productId: number | null; productName: string | null };
+    pump: { id: number; name: string };
     active: boolean;
+    scid?: number;
 }
 
 export interface TankInventory {
@@ -135,13 +139,13 @@ export interface Vehicle {
     id: number;
     vehicleNumber: string;
     vehicleType?: { id: number; name: string };
-    preferredProduct?: Product;
+    preferredProduct?: { id: number; name: string; fuelFamily?: string };
     maxCapacity?: number;
     maxLitersPerMonth?: number;
     consumedLiters?: number;
     status?: string;
-    active: boolean;
-    customer?: Customer;
+    isActive: boolean;
+    customer?: { id: number; name: string };
 }
 
 export interface Customer {
@@ -166,8 +170,10 @@ export interface User {
 
 export interface InvoiceProduct {
     id?: number;
-    product: Product;
-    nozzle?: Nozzle;
+    productId: number;
+    productName: string;
+    nozzleId?: number;
+    nozzleName?: string;
     quantity: number;
     unitPrice: number;
     amount: number;
@@ -198,24 +204,26 @@ export interface InvoiceBill {
     indentPic?: string;
     status: string;
     paymentStatus?: 'PAID' | 'NOT_PAID';
-    statement?: Statement;
-    customer?: Customer | any;
-    vehicle?: Vehicle;
+    statement?: { id: number; statementNo: string };
+    customer?: { id: number; name: string; username?: string } | any;
+    vehicle?: { id: number; vehicleNumber: string };
     driverName?: string;
     driverPhone?: string;
-    raisedBy?: User;
+    raisedBy?: { id: number; name: string; username?: string };
     products: InvoiceProduct[];
+    shiftId?: number;
+    scid?: number;
 }
 
 export interface PaymentMode {
     id: number;
-    modeName: string;
+    name: string;
 }
 
 export interface Statement {
     id?: number;
     statementNo: string;
-    customer: Customer;
+    customer: { id: number; name: string; username?: string };
     fromDate: string;
     toDate: string;
     statementDate: string;
@@ -235,14 +243,15 @@ export interface Payment {
     amount: number;
     paymentMode: PaymentMode;
     referenceNo?: string;
-    customer?: Customer;
-    statement?: Statement;
-    invoiceBill?: InvoiceBill;
+    customer?: { id: number; name: string; username?: string };
+    statement?: { id: number; statementNo: string };
+    invoiceBill?: { id: number; billNo: string; netAmount: number };
     shiftId?: number;
     remarks?: string;
     proofImageKey?: string;
-    receivedBy?: { id: number; name: string };
+    receivedBy?: { id: number; name: string; username?: string };
     targetPaymentStatus?: string;
+    scid?: number;
 }
 
 export interface LedgerEntry {
@@ -1083,7 +1092,7 @@ export interface Shift {
     startTime: string;
     endTime?: string;
     status: string; // OPEN, REVIEW, CLOSED
-    attendant?: User;
+    attendant?: { id: number; name: string; username?: string };
     scid?: number;
 }
 
@@ -1141,7 +1150,7 @@ export interface UpiCompany {
 
 export interface ExpenseType {
     id: number;
-    typeName: string;
+    name: string;
 }
 
 // Expense (shift-level expenses)
@@ -1731,7 +1740,7 @@ export const getEmployeeFileUrl = (id: number, type: string): Promise<{ url: str
 
 export interface LeaveType {
     id: number;
-    typeName: string;
+    name: string;
     maxDaysPerYear: number;
     carryForward: boolean;
     maxCarryForwardDays: number;
