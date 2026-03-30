@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.PaymentModeDTO;
 import com.stopforfuel.backend.entity.PaymentMode;
 import com.stopforfuel.backend.repository.PaymentModeRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.GodownStockDTO;
 import com.stopforfuel.backend.entity.GodownStock;
 import com.stopforfuel.backend.service.GodownStockService;
 import lombok.RequiredArgsConstructor;
@@ -19,36 +20,36 @@ public class GodownStockController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
-    public List<GodownStock> getAll(@RequestParam(required = false) Long productId) {
+    public List<GodownStockDTO> getAll(@RequestParam(required = false) Long productId) {
         if (productId != null) {
             GodownStock stock = service.getByProduct(productId);
-            return stock != null ? List.of(stock) : List.of();
+            return stock != null ? List.of(GodownStockDTO.from(stock)) : List.of();
         }
-        return service.getAll();
+        return service.getAll().stream().map(GodownStockDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
-    public GodownStock getById(@PathVariable Long id) {
-        return service.getById(id);
+    public GodownStockDTO getById(@PathVariable Long id) {
+        return GodownStockDTO.from(service.getById(id));
     }
 
     @GetMapping("/low-stock")
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
-    public List<GodownStock> getLowStockItems() {
-        return service.getLowStockItems();
+    public List<GodownStockDTO> getLowStockItems() {
+        return service.getLowStockItems().stream().map(GodownStockDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
-    public GodownStock create(@Valid @RequestBody GodownStock stock) {
-        return service.save(stock);
+    public GodownStockDTO create(@Valid @RequestBody GodownStock stock) {
+        return GodownStockDTO.from(service.save(stock));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
-    public GodownStock update(@PathVariable Long id, @Valid @RequestBody GodownStock stock) {
-        return service.update(id, stock);
+    public GodownStockDTO update(@PathVariable Long id, @Valid @RequestBody GodownStock stock) {
+        return GodownStockDTO.from(service.update(id, stock));
     }
 
     @DeleteMapping("/{id}")

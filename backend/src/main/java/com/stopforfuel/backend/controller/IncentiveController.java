@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.IncentiveDTO;
 import com.stopforfuel.backend.entity.Incentive;
 import com.stopforfuel.backend.service.IncentiveService;
 import lombok.RequiredArgsConstructor;

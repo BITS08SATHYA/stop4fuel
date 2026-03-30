@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.IncentivePaymentDTO;
 import com.stopforfuel.backend.entity.IncentivePayment;
 import com.stopforfuel.backend.service.IncentivePaymentService;
 import lombok.RequiredArgsConstructor;
@@ -22,26 +23,26 @@ public class IncentivePaymentController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<IncentivePayment> getAll() {
-        return service.getAll();
+    public List<IncentivePaymentDTO> getAll() {
+        return service.getAll().stream().map(IncentivePaymentDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public IncentivePayment getById(@PathVariable Long id) {
-        return service.getById(id);
+    public IncentivePaymentDTO getById(@PathVariable Long id) {
+        return IncentivePaymentDTO.from(service.getById(id));
     }
 
     @GetMapping("/shift/{shiftId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<IncentivePayment> getByShift(@PathVariable Long shiftId) {
-        return service.getByShift(shiftId);
+    public List<IncentivePaymentDTO> getByShift(@PathVariable Long shiftId) {
+        return service.getByShift(shiftId).stream().map(IncentivePaymentDTO::from).toList();
     }
 
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<IncentivePayment> getByCustomer(@PathVariable Long customerId) {
-        return service.getByCustomer(customerId);
+    public List<IncentivePaymentDTO> getByCustomer(@PathVariable Long customerId) {
+        return service.getByCustomer(customerId).stream().map(IncentivePaymentDTO::from).toList();
     }
 
     @GetMapping("/shift/{shiftId}/total")
@@ -52,16 +53,16 @@ public class IncentivePaymentController {
 
     @GetMapping("/search")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<IncentivePayment> search(
+    public List<IncentivePaymentDTO> search(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return service.getByDateRange(fromDate, toDate);
+        return service.getByDateRange(fromDate, toDate).stream().map(IncentivePaymentDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public IncentivePayment create(@Valid @RequestBody IncentivePayment payment) {
-        return service.create(payment);
+    public IncentivePaymentDTO create(@Valid @RequestBody IncentivePayment payment) {
+        return IncentivePaymentDTO.from(service.create(payment));
     }
 
     @DeleteMapping("/{id}")
