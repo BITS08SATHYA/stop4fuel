@@ -295,9 +295,10 @@ public class InvoiceBillService {
         // --- Assign active shift ---
         if (invoice.getShiftId() == null) {
             Shift activeShift = shiftService.getActiveShift();
-            if (activeShift != null) {
-                invoice.setShiftId(activeShift.getId());
+            if (activeShift == null) {
+                throw new BusinessException("No active shift. Please open a shift before creating an invoice.");
             }
+            invoice.setShiftId(activeShift.getId());
         }
 
         // --- Generate bill number ---
