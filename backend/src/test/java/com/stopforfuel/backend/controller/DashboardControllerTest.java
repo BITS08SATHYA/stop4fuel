@@ -65,6 +65,12 @@ class DashboardControllerTest {
     @MockBean
     private CreditManagementService creditManagementService;
 
+    @MockBean
+    private OperationalAdvanceRepository operationalAdvanceRepository;
+
+    @MockBean
+    private IncentivePaymentRepository incentivePaymentRepository;
+
     private InvoiceBill testInvoice;
     private Tank testTank;
 
