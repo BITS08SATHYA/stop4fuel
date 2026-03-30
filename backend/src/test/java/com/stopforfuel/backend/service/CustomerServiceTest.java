@@ -74,9 +74,9 @@ class CustomerServiceTest {
     void getCustomers_noFilters_returnsAll() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Customer> page = new PageImpl<>(List.of(testCustomer));
-        when(customerRepository.findByGroupAndStatus(isNull(), isNull(), eq(pageable))).thenReturn(page);
+        when(customerRepository.findByGroupAndStatus(isNull(), isNull(), isNull(), eq(pageable))).thenReturn(page);
 
-        Page<Customer> result = customerService.getCustomers(null, null, null, pageable);
+        Page<Customer> result = customerService.getCustomers(null, null, null, null, pageable);
 
         assertEquals(1, result.getTotalElements());
     }
@@ -85,9 +85,9 @@ class CustomerServiceTest {
     void getCustomers_withSearch_filtersBySearchTerm() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Customer> page = new PageImpl<>(List.of(testCustomer));
-        when(customerRepository.findBySearchAndFilters(eq("test"), isNull(), isNull(), eq(pageable))).thenReturn(page);
+        when(customerRepository.findBySearchAndFilters(eq("test"), isNull(), isNull(), isNull(), eq(pageable))).thenReturn(page);
 
-        Page<Customer> result = customerService.getCustomers("test", null, null, pageable);
+        Page<Customer> result = customerService.getCustomers("test", null, null, null, pageable);
 
         assertEquals(1, result.getTotalElements());
     }
@@ -96,9 +96,9 @@ class CustomerServiceTest {
     void getCustomers_withGroupId_filtersByGroup() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Customer> page = new PageImpl<>(List.of(testCustomer));
-        when(customerRepository.findByGroupAndStatus(eq(1L), isNull(), eq(pageable))).thenReturn(page);
+        when(customerRepository.findByGroupAndStatus(eq(1L), isNull(), isNull(), eq(pageable))).thenReturn(page);
 
-        Page<Customer> result = customerService.getCustomers(null, 1L, null, pageable);
+        Page<Customer> result = customerService.getCustomers(null, 1L, null, null, pageable);
 
         assertEquals(1, result.getTotalElements());
     }
@@ -107,9 +107,9 @@ class CustomerServiceTest {
     void getCustomers_withSearchAndGroupId_filtersByBoth() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Customer> page = new PageImpl<>(List.of(testCustomer));
-        when(customerRepository.findBySearchAndFilters(eq("test"), eq(1L), isNull(), eq(pageable))).thenReturn(page);
+        when(customerRepository.findBySearchAndFilters(eq("test"), eq(1L), isNull(), isNull(), eq(pageable))).thenReturn(page);
 
-        Page<Customer> result = customerService.getCustomers("test", 1L, null, pageable);
+        Page<Customer> result = customerService.getCustomers("test", 1L, null, null, pageable);
 
         assertEquals(1, result.getTotalElements());
     }
@@ -118,9 +118,9 @@ class CustomerServiceTest {
     void getCustomers_withStatus_filtersByStatus() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Customer> page = new PageImpl<>(List.of(testCustomer));
-        when(customerRepository.findByGroupAndStatus(isNull(), eq("ACTIVE"), eq(pageable))).thenReturn(page);
+        when(customerRepository.findByGroupAndStatus(isNull(), eq("ACTIVE"), isNull(), eq(pageable))).thenReturn(page);
 
-        Page<Customer> result = customerService.getCustomers(null, null, "ACTIVE", pageable);
+        Page<Customer> result = customerService.getCustomers(null, null, "ACTIVE", null, pageable);
 
         assertEquals(1, result.getTotalElements());
     }
