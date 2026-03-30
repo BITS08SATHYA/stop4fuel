@@ -80,6 +80,12 @@ public class ShiftController {
         return ShiftDTO.from(service.reopenForReview(id));
     }
 
+    @PostMapping("/{id}/reopen-to-edit")
+    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    public ShiftDTO reopenToEdit(@PathVariable Long id) {
+        return ShiftDTO.from(service.reopenToEdit(id));
+    }
+
     @PostMapping("/{id}/seed-test-data")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
     public Map<String, Object> seedTestData(@PathVariable Long id) {

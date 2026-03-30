@@ -6,10 +6,10 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import {
-    Clock, Search, FileText, Download, Eye, Loader2
+    Clock, Search, FileText, Download, Eye, Loader2, RotateCcw
 } from "lucide-react";
 import {
-    getShifts, getShiftReportPdfUrl, Shift,
+    getShifts, getShiftReportPdfUrl, reopenShiftToEdit, Shift,
 } from "@/lib/api/station";
 
 const formatDateTime = (iso?: string) => {
@@ -165,6 +165,22 @@ export default function ShiftHistoryPage() {
                                                 <td className="px-4 py-3 text-foreground">{shift.attendant?.name || "—"}</td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        {shift.status === "REVIEW" && (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await reopenShiftToEdit(shift.id);
+                                                                        router.push(`/operations/shifts/close/${shift.id}`);
+                                                                    } catch (e: any) {
+                                                                        alert(e.message || "Failed to reopen shift");
+                                                                    }
+                                                                }}
+                                                                className="p-2 rounded-lg hover:bg-orange-500/10 text-orange-500 transition-colors"
+                                                                title="Reopen to Edit"
+                                                            >
+                                                                <RotateCcw className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                         {(shift.status === "CLOSED" || shift.status === "RECONCILED") && (
                                                             <>
                                                                 <button

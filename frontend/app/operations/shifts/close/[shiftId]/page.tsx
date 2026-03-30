@@ -101,6 +101,31 @@ export default function ShiftClosingWorkspace() {
 
     useEffect(() => { loadData(); }, [loadData]);
 
+    // Pre-fill close readings from existing data (when editing a previously submitted shift)
+    useEffect(() => {
+        if (!data) return;
+        const closeR: Record<number, string> = {};
+        const testQ: Record<number, string> = {};
+        for (const r of data.nozzleReadings) {
+            if (r.closeMeterReading != null) closeR[r.nozzleId] = String(r.closeMeterReading);
+            if (r.testQuantity != null) testQ[r.nozzleId] = String(r.testQuantity);
+        }
+        if (Object.keys(closeR).length > 0) setNozzleCloseReadings(closeR);
+        if (Object.keys(testQ).length > 0) setNozzleTestQty(testQ);
+
+        const incS: Record<number, string> = {};
+        const clD: Record<number, string> = {};
+        const clS: Record<number, string> = {};
+        for (const t of data.tankDips) {
+            if (t.incomeStock != null) incS[t.tankId] = String(t.incomeStock);
+            if (t.closeDip != null) clD[t.tankId] = t.closeDip;
+            if (t.closeStock != null) clS[t.tankId] = String(t.closeStock);
+        }
+        if (Object.keys(incS).length > 0) setTankIncomeStock(incS);
+        if (Object.keys(clD).length > 0) setTankCloseDip(clD);
+        if (Object.keys(clS).length > 0) setTankCloseStock(clS);
+    }, [data]);
+
     // Lazy-load invoices when section is expanded
     useEffect(() => {
         if (showInvoices && invoices.length === 0 && !invoicesLoading) {

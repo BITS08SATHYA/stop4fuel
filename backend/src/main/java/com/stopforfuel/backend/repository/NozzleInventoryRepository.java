@@ -20,6 +20,7 @@ public interface NozzleInventoryRepository extends ScidRepository<NozzleInventor
     List<NozzleInventory> findByNozzleId(Long nozzleId);
     NozzleInventory findTopByNozzleIdOrderByDateDescIdDesc(Long nozzleId);
     List<NozzleInventory> findByShiftId(Long shiftId);
+    NozzleInventory findByShiftIdAndNozzleId(Long shiftId, Long nozzleId);
 
     @Query("SELECT ni FROM NozzleInventory ni JOIN FETCH ni.nozzle n JOIN FETCH n.pump JOIN FETCH n.tank t JOIN FETCH t.product WHERE ni.scid = :scid ORDER BY ni.date DESC, ni.id DESC")
     List<NozzleInventory> findAllByScidWithNozzle(Long scid);

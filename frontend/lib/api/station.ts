@@ -2200,6 +2200,8 @@ export interface NozzleReadingRow {
     productName?: string;
     productPrice?: number;
     openMeterReading: number;
+    closeMeterReading?: number;
+    testQuantity?: number;
 }
 
 export interface TankDipRow {
@@ -2209,6 +2211,9 @@ export interface TankDipRow {
     capacity?: number;
     openDip?: string;
     openStock: number;
+    incomeStock?: number;
+    closeDip?: string;
+    closeStock?: number;
 }
 
 export interface ShiftClosingData {
@@ -2252,6 +2257,9 @@ export interface ShiftClosingSubmit {
 
 export const getShiftClosingData = (shiftId: number): Promise<ShiftClosingData> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/closing-data`).then(handleResponse);
+
+export const reopenShiftToEdit = (shiftId: number): Promise<Shift> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/reopen-to-edit`, { method: 'POST' }).then(handleResponse);
 
 export const submitShiftForReview = (shiftId: number, data: ShiftClosingSubmit): Promise<Shift> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/submit-for-review`, {
