@@ -46,7 +46,7 @@ export default function TankInventoryPage() {
 
     const filteredInv = useMemo(() => inventories.filter((inv) => {
         const q = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery || inv.tank.name?.toLowerCase().includes(q) || inv.tank.product.name?.toLowerCase().includes(q);
+        const matchesSearch = !searchQuery || inv.tank.name?.toLowerCase().includes(q) || inv.tank.product?.name?.toLowerCase().includes(q);
         const matchesTank = !tankFilter || String(inv.tank.id) === tankFilter;
         return matchesSearch && matchesTank;
     }), [inventories, searchQuery, tankFilter]);

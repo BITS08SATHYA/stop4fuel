@@ -773,7 +773,7 @@ export default function CustomerProfilePage() {
                                 return (
                                     <tr key={vehicle.id} className="group hover:bg-muted/30 transition-colors">
                                         <td className="py-4 text-sm font-medium text-foreground uppercase">{vehicle.vehicleNumber}</td>
-                                        <td className="py-4 text-sm text-muted-foreground">{vehicle.vehicleType?.typeName || "-"}</td>
+                                        <td className="py-4 text-sm text-muted-foreground">{vehicle.vehicleType?.name || "-"}</td>
                                         <td className="py-4 text-sm text-muted-foreground">{vehicle.preferredProduct?.name || "-"}</td>
                                         <td className="py-4 text-sm text-muted-foreground">{vehicle.maxCapacity ? `${vehicle.maxCapacity} L` : "-"}</td>
                                         <td className="py-4 text-sm text-muted-foreground">{vLimit > 0 ? `${vLimit} L` : "No limit"}</td>
@@ -1025,7 +1025,7 @@ export default function CustomerProfilePage() {
                                 >
                                     <option value="" className="bg-card text-foreground">Select Type</option>
                                     {vehicleTypes.map(vt => (
-                                        <option key={vt.id} value={vt.id} className="bg-card text-foreground">{vt.typeName}</option>
+                                        <option key={vt.id} value={vt.id} className="bg-card text-foreground">{vt.name}</option>
                                     ))}
                                 </select>
                             </div>

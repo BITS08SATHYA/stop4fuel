@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.InvoiceBillDTO;
+import com.stopforfuel.backend.dto.OperationalAdvanceDTO;
 import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.service.OperationalAdvanceService;
@@ -24,108 +26,108 @@ public class OperationalAdvanceController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<OperationalAdvance> getAll() {
-        return service.getAll();
+    public List<OperationalAdvanceDTO> getAll() {
+        return service.getAll().stream().map(OperationalAdvanceDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public OperationalAdvance getById(@PathVariable Long id) {
-        return service.getById(id);
+    public OperationalAdvanceDTO getById(@PathVariable Long id) {
+        return OperationalAdvanceDTO.from(service.getById(id));
     }
 
     @GetMapping("/status/{status}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<OperationalAdvance> getByStatus(@PathVariable String status) {
-        return service.getByStatus(status);
+    public List<OperationalAdvanceDTO> getByStatus(@PathVariable String status) {
+        return service.getByStatus(status).stream().map(OperationalAdvanceDTO::from).toList();
     }
 
     @GetMapping("/shift/{shiftId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<OperationalAdvance> getByShift(@PathVariable Long shiftId) {
-        return service.getByShift(shiftId);
+    public List<OperationalAdvanceDTO> getByShift(@PathVariable Long shiftId) {
+        return service.getByShift(shiftId).stream().map(OperationalAdvanceDTO::from).toList();
     }
 
     @GetMapping("/employee/{employeeId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<OperationalAdvance> getByEmployee(@PathVariable Long employeeId) {
-        return service.getByEmployee(employeeId);
+    public List<OperationalAdvanceDTO> getByEmployee(@PathVariable Long employeeId) {
+        return service.getByEmployee(employeeId).stream().map(OperationalAdvanceDTO::from).toList();
     }
 
     @GetMapping("/type/{advanceType}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<OperationalAdvance> getByType(@PathVariable String advanceType) {
-        return service.getByType(advanceType);
+    public List<OperationalAdvanceDTO> getByType(@PathVariable String advanceType) {
+        return service.getByType(advanceType).stream().map(OperationalAdvanceDTO::from).toList();
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<OperationalAdvance> search(
+    public List<OperationalAdvanceDTO> search(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return service.getByDateRange(fromDate, toDate);
+        return service.getByDateRange(fromDate, toDate).stream().map(OperationalAdvanceDTO::from).toList();
     }
 
     @GetMapping("/outstanding")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<OperationalAdvance> getOutstanding() {
-        return service.getOutstanding();
+    public List<OperationalAdvanceDTO> getOutstanding() {
+        return service.getOutstanding().stream().map(OperationalAdvanceDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public OperationalAdvance create(@Valid @RequestBody OperationalAdvance advance) {
-        return service.create(advance);
+    public OperationalAdvanceDTO create(@Valid @RequestBody OperationalAdvance advance) {
+        return OperationalAdvanceDTO.from(service.create(advance));
     }
 
     @PostMapping("/{id}/return")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public OperationalAdvance recordReturn(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public OperationalAdvanceDTO recordReturn(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         BigDecimal returnedAmount = new BigDecimal(body.get("returnedAmount").toString());
         String returnRemarks = body.get("returnRemarks") != null ? body.get("returnRemarks").toString() : null;
-        return service.recordReturn(id, returnedAmount, returnRemarks);
+        return OperationalAdvanceDTO.from(service.recordReturn(id, returnedAmount, returnRemarks));
     }
 
     @PostMapping("/{id}/invoices/{invoiceId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public OperationalAdvance assignInvoice(@PathVariable Long id, @PathVariable Long invoiceId) {
-        return service.assignInvoice(id, invoiceId);
+    public OperationalAdvanceDTO assignInvoice(@PathVariable Long id, @PathVariable Long invoiceId) {
+        return OperationalAdvanceDTO.from(service.assignInvoice(id, invoiceId));
     }
 
     @DeleteMapping("/{id}/invoices/{invoiceId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public OperationalAdvance unassignInvoice(@PathVariable Long id, @PathVariable Long invoiceId) {
-        return service.unassignInvoice(id, invoiceId);
+    public OperationalAdvanceDTO unassignInvoice(@PathVariable Long id, @PathVariable Long invoiceId) {
+        return OperationalAdvanceDTO.from(service.unassignInvoice(id, invoiceId));
     }
 
     @GetMapping("/{id}/invoices")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<InvoiceBill> getAssignedInvoices(@PathVariable Long id) {
-        return service.getAssignedInvoices(id);
+    public List<InvoiceBillDTO> getAssignedInvoices(@PathVariable Long id) {
+        return service.getAssignedInvoices(id).stream().map(InvoiceBillDTO::from).toList();
     }
 
     @PostMapping("/{id}/statement/{statementId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public OperationalAdvance assignStatement(@PathVariable Long id, @PathVariable Long statementId) {
-        return service.assignStatement(id, statementId);
+    public OperationalAdvanceDTO assignStatement(@PathVariable Long id, @PathVariable Long statementId) {
+        return OperationalAdvanceDTO.from(service.assignStatement(id, statementId));
     }
 
     @DeleteMapping("/{id}/statement")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public OperationalAdvance unassignStatement(@PathVariable Long id) {
-        return service.unassignStatement(id);
+    public OperationalAdvanceDTO unassignStatement(@PathVariable Long id) {
+        return OperationalAdvanceDTO.from(service.unassignStatement(id));
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public OperationalAdvance updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        return service.updateStatus(id, body.get("status"));
+    public OperationalAdvanceDTO updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return OperationalAdvanceDTO.from(service.updateStatus(id, body.get("status")));
     }
 
     @PatchMapping("/{id}/cancel")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public OperationalAdvance cancel(@PathVariable Long id) {
-        return service.cancel(id);
+    public OperationalAdvanceDTO cancel(@PathVariable Long id) {
+        return OperationalAdvanceDTO.from(service.cancel(id));
     }
 
     @DeleteMapping("/{id}")

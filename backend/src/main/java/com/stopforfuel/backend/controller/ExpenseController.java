@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.ExpenseDTO;
 import com.stopforfuel.backend.entity.Expense;
 import com.stopforfuel.backend.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
@@ -21,20 +22,20 @@ public class ExpenseController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<Expense> getAll() {
-        return service.getAll();
+    public List<ExpenseDTO> getAll() {
+        return service.getAll().stream().map(ExpenseDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public Expense getById(@PathVariable Long id) {
-        return service.getById(id);
+    public ExpenseDTO getById(@PathVariable Long id) {
+        return ExpenseDTO.from(service.getById(id));
     }
 
     @GetMapping("/shift/{shiftId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<Expense> getByShift(@PathVariable Long shiftId) {
-        return service.getByShift(shiftId);
+    public List<ExpenseDTO> getByShift(@PathVariable Long shiftId) {
+        return service.getByShift(shiftId).stream().map(ExpenseDTO::from).toList();
     }
 
     @GetMapping("/shift/{shiftId}/total")
@@ -45,16 +46,16 @@ public class ExpenseController {
 
     @GetMapping("/search")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<Expense> searchByDateRange(
+    public List<ExpenseDTO> searchByDateRange(
             @RequestParam LocalDate fromDate,
             @RequestParam LocalDate toDate) {
-        return service.getByDateRange(fromDate, toDate);
+        return service.getByDateRange(fromDate, toDate).stream().map(ExpenseDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public Expense create(@Valid @RequestBody Expense expense) {
-        return service.create(expense);
+    public ExpenseDTO create(@Valid @RequestBody Expense expense) {
+        return ExpenseDTO.from(service.create(expense));
     }
 
     @DeleteMapping("/{id}")

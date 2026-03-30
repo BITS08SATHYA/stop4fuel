@@ -168,7 +168,7 @@ export default function StationLayoutPage() {
                                                         <div className="min-w-0">
                                                             <p className="text-sm font-bold text-foreground truncate">{nozzle.nozzleName}</p>
                                                             <p className="text-[10px] text-muted-foreground">
-                                                                {nozzle.tank.product.name} &middot; from {nozzle.tank.name}
+                                                                {nozzle.tank.productName} &middot; from {nozzle.tank.name}
                                                             </p>
                                                         </div>
                                                         <span className={`ml-auto shrink-0 w-2 h-2 rounded-full ${nozzle.active ? 'bg-green-500' : 'bg-red-500'}`}></span>

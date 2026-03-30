@@ -62,6 +62,7 @@ public class OperationalAdvanceDTO {
         private Long id;
         private String name;
         private String employeeCode;
+        private String designation;
 
         public static EmployeeSummary from(Employee e) {
             if (e == null) return null;
@@ -69,6 +70,7 @@ public class OperationalAdvanceDTO {
                     .id(e.getId())
                     .name(e.getName())
                     .employeeCode(e.getEmployeeCode())
+                    .designation(e.getDesignation())
                     .build();
         }
     }

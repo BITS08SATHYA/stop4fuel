@@ -363,7 +363,7 @@ export default function PaymentsPage() {
             p.referenceNo?.toLowerCase().includes(q) ||
             p.remarks?.toLowerCase().includes(q) ||
             p.receivedBy?.name?.toLowerCase().includes(q);
-        const matchesMode = modeFilter === "ALL" || p.paymentMode?.modeName === modeFilter;
+        const matchesMode = modeFilter === "ALL" || p.paymentMode?.name === modeFilter;
         return matchesSearch && matchesMode;
     });
 
@@ -505,7 +505,7 @@ export default function PaymentsPage() {
                         >
                             <option value="ALL">All Modes</option>
                             {paymentModes.map((m) => (
-                                <option key={m.id} value={m.modeName}>{m.modeName}</option>
+                                <option key={m.id} value={m.name}>{m.name}</option>
                             ))}
                         </select>
                     </div>
@@ -594,7 +594,7 @@ export default function PaymentsPage() {
                                             <td className="py-3 px-3 text-right font-semibold text-emerald-400 whitespace-nowrap">
                                                 {fmtCurrency(p.amount)}
                                             </td>
-                                            <td className="py-3 px-3">{p.paymentMode?.modeName || "-"}</td>
+                                            <td className="py-3 px-3">{p.paymentMode?.name || "-"}</td>
                                             <td className="py-3 px-3 text-muted-foreground">{p.referenceNo || "-"}</td>
                                             <td className="py-3 px-3 text-muted-foreground">{p.receivedBy?.name || "-"}</td>
                                             <td className="py-3 px-3 text-center">{statusBadge(p.targetPaymentStatus)}</td>
@@ -833,7 +833,7 @@ export default function PaymentsPage() {
                                                     {bill.driverName && <span className="text-[10px] text-muted-foreground">Driver: {bill.driverName}</span>}
                                                     {bill.products?.length > 0 && (
                                                         <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-                                                            {bill.products.map(p => p.product?.name).filter(Boolean).join(", ")}
+                                                            {bill.products.map(p => p.productName).filter(Boolean).join(", ")}
                                                         </span>
                                                     )}
                                                     {isSelected && <Check className="w-3 h-3 text-primary ml-auto" />}
@@ -898,7 +898,7 @@ export default function PaymentsPage() {
                                     >
                                         <option value="">Select mode...</option>
                                         {paymentModes.map((m) => (
-                                            <option key={m.id} value={m.id}>{m.modeName}</option>
+                                            <option key={m.id} value={m.id}>{m.name}</option>
                                         ))}
                                     </select>
                                 </div>
