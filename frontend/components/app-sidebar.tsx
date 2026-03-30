@@ -143,8 +143,34 @@ const analyticsNav = [
 ];
 
 const systemNav = [
+    { name: "Users", href: "/settings/users", icon: UserCog },
     { name: "Configurations", href: "/settings", icon: Settings },
     { name: "Notifications", href: "/settings/notifications", icon: Bell },
+];
+
+// Cashier-specific restricted navigation
+const cashierSections: NavSection[] = [
+    {
+        label: "Main",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        ],
+    },
+    {
+        label: "Shift Operations",
+        permission: "SHIFT_VIEW",
+        items: [
+            { name: "Invoice Bills", href: "/operations/invoices", icon: FileText },
+            { name: "View Invoices", href: "/operations/invoices/history", icon: Eye },
+            { name: "Payments", href: "/payments", icon: CreditCard },
+            { name: "Expenses", href: "/operations/expenses", icon: Receipt },
+            { name: "Incentive Payments", href: "/operations/incentive-payments", icon: Gift },
+            { name: "Operational Advances", href: "/operations/advances", icon: Wallet },
+            { name: "E-Advances", href: "/operations/e-advances", icon: CreditCard },
+            { name: "Shift Closing", href: "/operations/shifts", icon: Clock },
+        ],
+    },
 ];
 
 type NavSection = {
@@ -178,7 +204,9 @@ export function AppSidebar() {
         return pathname === href || pathname.startsWith(href + "/");
     };
 
-    const filteredSections = sections.filter(section => hasPermission(section.permission));
+    const isCashier = user?.designation === "Cashier" && user?.role !== "OWNER" && user?.role !== "ADMIN";
+    const activeSections = isCashier ? cashierSections : sections;
+    const filteredSections = activeSections.filter(section => hasPermission(section.permission));
 
     return (
         <aside className="w-64 border-r border-border bg-card text-card-foreground flex flex-col h-screen sticky top-0 transition-colors duration-300">

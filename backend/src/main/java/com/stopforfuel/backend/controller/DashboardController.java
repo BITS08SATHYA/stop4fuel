@@ -1,20 +1,11 @@
 package com.stopforfuel.backend.controller;
 
-import com.stopforfuel.backend.entity.InvoiceBill;
-import com.stopforfuel.backend.entity.InvoiceProduct;
-import com.stopforfuel.backend.entity.Tank;
-import com.stopforfuel.backend.entity.TankInventory;
-import com.stopforfuel.backend.repository.InvoiceBillRepository;
-import com.stopforfuel.backend.repository.NozzleRepository;
-import com.stopforfuel.backend.repository.PaymentRepository;
-import com.stopforfuel.backend.repository.PumpRepository;
-import com.stopforfuel.backend.repository.TankRepository;
-import com.stopforfuel.backend.repository.TankInventoryRepository;
+import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.backend.service.CreditManagementService;
 import com.stopforfuel.backend.service.EAdvanceService;
 import com.stopforfuel.backend.service.ExpenseService;
 import com.stopforfuel.backend.service.ShiftService;
-import com.stopforfuel.backend.entity.Shift;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -48,6 +39,8 @@ public class DashboardController {
     private final EAdvanceService eAdvanceService;
     private final ExpenseService expenseService;
     private final CreditManagementService creditManagementService;
+    private final OperationalAdvanceRepository operationalAdvanceRepository;
+    private final IncentivePaymentRepository incentivePaymentRepository;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
@@ -640,5 +633,160 @@ public class DashboardController {
         private String date;
         private long count;
         private BigDecimal amount = BigDecimal.ZERO;
+    }
+
+    // ==========================================
+    // Cashier Dashboard
+    // ==========================================
+
+    @GetMapping("/cashier")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public CashierDashboard getCashierDashboard() {
+        CashierDashboard dashboard = new CashierDashboard();
+
+        Shift activeShift = shiftService.getActiveShift();
+        if (activeShift == null) {
+            dashboard.setHasActiveShift(false);
+            return dashboard;
+        }
+
+        dashboard.setHasActiveShift(true);
+        dashboard.setShiftId(activeShift.getId());
+        dashboard.setShiftStatus(activeShift.getStatus());
+        dashboard.setStartTime(activeShift.getStartTime() != null
+                ? activeShift.getStartTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
+        dashboard.setEndTime(activeShift.getEndTime() != null
+                ? activeShift.getEndTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
+        if (activeShift.getAttendant() != null) {
+            dashboard.setAttendantName(activeShift.getAttendant().getName());
+        }
+
+        Long sid = activeShift.getId();
+
+        // Invoice totals
+        BigDecimal cashBills = invoiceBillRepository.sumCashBillsByShift(sid);
+        BigDecimal creditBills = invoiceBillRepository.sumCreditBillsByShift(sid);
+        dashboard.setCashBillTotal(cashBills);
+        dashboard.setCreditBillTotal(creditBills);
+
+        // E-Advance (card/upi/cheque/ccms/bank) totals
+        Map<String, BigDecimal> eAdvSummary = eAdvanceService.getShiftSummary(sid);
+        dashboard.setEAdvanceTotals(eAdvSummary);
+
+        // Expenses
+        BigDecimal expenses = expenseService.sumByShift(sid);
+        dashboard.setExpenseTotal(expenses);
+
+        // Payments collected (bill + statement)
+        BigDecimal billPayments = paymentRepository.sumBillPaymentsByShift(sid);
+        BigDecimal stmtPayments = paymentRepository.sumStatementPaymentsByShift(sid);
+        dashboard.setBillPaymentTotal(billPayments != null ? billPayments : BigDecimal.ZERO);
+        dashboard.setStatementPaymentTotal(stmtPayments != null ? stmtPayments : BigDecimal.ZERO);
+
+        // Operational advances
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(sid);
+        BigDecimal opAdvanceTotal = opAdvances.stream()
+                .map(oa -> oa.getAmount() != null ? oa.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        dashboard.setOperationalAdvanceTotal(opAdvanceTotal);
+        dashboard.setOperationalAdvanceCount(opAdvances.size());
+
+        // Incentive payments
+        List<IncentivePayment> incentives = incentivePaymentRepository.findByShiftIdOrderByPaymentDateDesc(sid);
+        BigDecimal incentiveTotal = incentives.stream()
+                .map(ip -> ip.getAmount() != null ? ip.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        dashboard.setIncentiveTotal(incentiveTotal);
+        dashboard.setIncentiveCount(incentives.size());
+
+        // Invoice counts
+        List<InvoiceBill> shiftInvoices = invoiceBillRepository.findByShiftId(sid);
+        dashboard.setTotalInvoiceCount(shiftInvoices.size());
+        dashboard.setCashInvoiceCount((int) shiftInvoices.stream()
+                .filter(inv -> "CASH".equals(inv.getBillType())).count());
+        dashboard.setCreditInvoiceCount((int) shiftInvoices.stream()
+                .filter(inv -> "CREDIT".equals(inv.getBillType())).count());
+
+        // Recent invoices (last 10)
+        List<CashierInvoiceItem> recentInvoices = shiftInvoices.stream()
+                .sorted((a, b) -> {
+                    if (a.getDate() == null) return 1;
+                    if (b.getDate() == null) return -1;
+                    return b.getDate().compareTo(a.getDate());
+                })
+                .limit(10)
+                .map(inv -> {
+                    CashierInvoiceItem item = new CashierInvoiceItem();
+                    item.setId(inv.getId());
+                    item.setBillNo(inv.getBillNo());
+                    item.setBillType(inv.getBillType());
+                    item.setPaymentMode(inv.getPaymentMode());
+                    item.setNetAmount(inv.getNetAmount());
+                    item.setDate(inv.getDate() != null
+                            ? inv.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
+                    if (inv.getCustomer() != null) {
+                        item.setCustomerName(inv.getCustomer().getName());
+                    }
+                    return item;
+                })
+                .toList();
+        dashboard.setRecentInvoices(recentInvoices);
+
+        // Computed: cash in hand
+        BigDecimal totalIn = cashBills
+                .add(dashboard.getBillPaymentTotal())
+                .add(dashboard.getStatementPaymentTotal());
+        BigDecimal totalOut = expenses.add(opAdvanceTotal).add(incentiveTotal);
+        dashboard.setCashInHand(totalIn.subtract(totalOut));
+
+        return dashboard;
+    }
+
+    @Getter @Setter @NoArgsConstructor
+    public static class CashierDashboard {
+        private boolean hasActiveShift;
+        private Long shiftId;
+        private String shiftStatus;
+        private String startTime;
+        private String endTime;
+        private String attendantName;
+
+        // Invoice totals
+        private BigDecimal cashBillTotal = BigDecimal.ZERO;
+        private BigDecimal creditBillTotal = BigDecimal.ZERO;
+        private int totalInvoiceCount;
+        private int cashInvoiceCount;
+        private int creditInvoiceCount;
+
+        // E-Advances (card/upi/cheque etc.)
+        private Map<String, BigDecimal> eAdvanceTotals = new HashMap<>();
+
+        // Collections
+        private BigDecimal billPaymentTotal = BigDecimal.ZERO;
+        private BigDecimal statementPaymentTotal = BigDecimal.ZERO;
+
+        // Outflows
+        private BigDecimal expenseTotal = BigDecimal.ZERO;
+        private BigDecimal operationalAdvanceTotal = BigDecimal.ZERO;
+        private int operationalAdvanceCount;
+        private BigDecimal incentiveTotal = BigDecimal.ZERO;
+        private int incentiveCount;
+
+        // Computed
+        private BigDecimal cashInHand = BigDecimal.ZERO;
+
+        // Recent invoices
+        private List<CashierInvoiceItem> recentInvoices = new ArrayList<>();
+    }
+
+    @Getter @Setter @NoArgsConstructor
+    public static class CashierInvoiceItem {
+        private Long id;
+        private String billNo;
+        private String billType;
+        private String paymentMode;
+        private BigDecimal netAmount;
+        private String date;
+        private String customerName;
     }
 }
