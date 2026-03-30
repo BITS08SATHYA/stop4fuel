@@ -86,9 +86,9 @@ class PaymentServiceTest {
     @Test
     void getPayments_returnsPaginatedResults() {
         Page<Payment> page = new PageImpl<>(List.of(testPayment));
-        when(paymentRepository.findAll(any(PageRequest.class))).thenReturn(page);
+        when(paymentRepository.findAllEager(any(PageRequest.class))).thenReturn(page);
 
-        Page<Payment> result = paymentService.getPayments(PageRequest.of(0, 10));
+        Page<Payment> result = paymentService.getPayments(null, null, null, null, PageRequest.of(0, 10));
 
         assertEquals(1, result.getTotalElements());
     }
