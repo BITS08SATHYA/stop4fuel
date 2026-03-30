@@ -750,12 +750,9 @@ export default function StatementsPage() {
                                                     </td>
                                                     <td className="py-2 px-3">
                                                         {bill.vehicle?.vehicleNumber || "-"}
-                                                        {bill.vehicle?.customer && selectedCustomerId && bill.vehicle.customer.id !== Number(selectedCustomerId) && (
-                                                            <span className="block text-[9px] text-amber-500 font-medium">(owned by {bill.vehicle.customer.name})</span>
-                                                        )}
                                                     </td>
                                                     <td className="py-2 px-3 text-muted-foreground">
-                                                        {bill.products?.map(p => p.product?.name).filter(Boolean).join(", ") || "-"}
+                                                        {bill.products?.map(p => p.productName).filter(Boolean).join(", ") || "-"}
                                                     </td>
                                                     <td className="py-2 px-3">{bill.indentNo || "-"}</td>
                                                     <td className="py-2 px-3 text-right font-medium">
@@ -939,9 +936,6 @@ export default function StatementsPage() {
                                                         </td>
                                                         <td className="py-2 px-3">
                                                             {bill.vehicle?.vehicleNumber || "-"}
-                                                            {bill.vehicle?.customer && detailStatement.customer && bill.vehicle.customer.id !== detailStatement.customer.id && (
-                                                                <span className="block text-[10px] text-amber-500 font-medium">(owned by {bill.vehicle.customer.name})</span>
-                                                            )}
                                                         </td>
                                                         <td className="py-2 px-3 text-right font-medium">
                                                             {Number(bill.netAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -985,8 +979,8 @@ export default function StatementsPage() {
                                                                             <tbody>
                                                                                 {bill.products.map((ip: any, idx: number) => (
                                                                                     <tr key={idx} className="border-t border-border/20">
-                                                                                        <td className="py-1.5 pr-4 text-foreground">{ip.product?.name || "-"}</td>
-                                                                                        <td className="py-1.5 pr-4 text-muted-foreground font-mono">{ip.nozzle?.nozzleNumber || "-"}</td>
+                                                                                        <td className="py-1.5 pr-4 text-foreground">{ip.productName || "-"}</td>
+                                                                                        <td className="py-1.5 pr-4 text-muted-foreground font-mono">{ip.nozzleName || "-"}</td>
                                                                                         <td className="py-1.5 pr-4 text-right">{Number(ip.quantity || 0).toFixed(2)}</td>
                                                                                         <td className="py-1.5 pr-4 text-right">{Number(ip.rate || 0).toFixed(2)}</td>
                                                                                         <td className="py-1.5 pr-4 text-right text-amber-400">{Number(ip.discountAmount || 0).toFixed(2)}</td>

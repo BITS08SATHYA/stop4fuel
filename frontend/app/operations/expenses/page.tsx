@@ -137,7 +137,7 @@ export default function ExpensesPage() {
         !searchQuery ||
         exp.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         exp.paidTo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        exp.expenseType?.typeName?.toLowerCase().includes(searchQuery.toLowerCase())
+        exp.expenseType?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const { page, setPage, totalPages, totalElements, pageSize, paginatedData } =
@@ -245,7 +245,7 @@ export default function ExpensesPage() {
                                             <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4 text-sm">{exp.expenseDate}</td>
                                             <td className="px-6 py-4">
-                                                <Badge variant="default">{exp.expenseType?.typeName || "Uncategorized"}</Badge>
+                                                <Badge variant="default">{exp.expenseType?.name || "Uncategorized"}</Badge>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-foreground">{exp.description || "-"}</td>
                                             <td className="px-6 py-4 text-sm text-muted-foreground">{exp.paidTo || "-"}</td>
@@ -285,7 +285,7 @@ export default function ExpensesPage() {
                             <select value={expenseTypeId} onChange={(e) => setExpenseTypeId(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
                                 <option value="">Select Category</option>
                                 {expenseTypes.map((et) => (
-                                    <option key={et.id} value={et.id}>{et.typeName}</option>
+                                    <option key={et.id} value={et.id}>{et.name}</option>
                                 ))}
                             </select>
                         </div>

@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.VehicleDTO;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,32 +19,32 @@ public class VehicleController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'VEHICLE_VIEW')")
-    public List<Vehicle> getAllVehicles(@RequestParam(required = false) String search) {
-        return vehicleService.getAllVehicles(search);
+    public List<VehicleDTO> getAllVehicles(@RequestParam(required = false) String search) {
+        return vehicleService.getAllVehicles(search).stream().map(VehicleDTO::from).toList();
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasPermission(null, 'VEHICLE_VIEW')")
-    public List<Vehicle> searchVehicles(@RequestParam String q) {
-        return vehicleService.searchVehicles(q);
+    public List<VehicleDTO> searchVehicles(@RequestParam String q) {
+        return vehicleService.searchVehicles(q).stream().map(VehicleDTO::from).toList();
     }
 
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasPermission(null, 'VEHICLE_VIEW')")
-    public List<Vehicle> getVehiclesByCustomerId(@PathVariable Long customerId) {
-        return vehicleService.getVehiclesByCustomerId(customerId);
+    public List<VehicleDTO> getVehiclesByCustomerId(@PathVariable Long customerId) {
+        return vehicleService.getVehiclesByCustomerId(customerId).stream().map(VehicleDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
-    public Vehicle createVehicle(@Valid @RequestBody Vehicle vehicle) {
-        return vehicleService.createVehicle(vehicle);
+    public VehicleDTO createVehicle(@Valid @RequestBody Vehicle vehicle) {
+        return VehicleDTO.from(vehicleService.createVehicle(vehicle));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
-    public Vehicle updateVehicle(@PathVariable Long id, @Valid @RequestBody Vehicle vehicle) {
-        return vehicleService.updateVehicle(id, vehicle);
+    public VehicleDTO updateVehicle(@PathVariable Long id, @Valid @RequestBody Vehicle vehicle) {
+        return VehicleDTO.from(vehicleService.updateVehicle(id, vehicle));
     }
 
     @DeleteMapping("/{id}")
@@ -54,13 +55,13 @@ public class VehicleController {
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
-    public Vehicle toggleStatus(@PathVariable Long id) {
-        return vehicleService.toggleStatus(id);
+    public VehicleDTO toggleStatus(@PathVariable Long id) {
+        return VehicleDTO.from(vehicleService.toggleStatus(id));
     }
 
     @PatchMapping("/{id}/liter-limit")
     @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
-    public Vehicle updateLiterLimit(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
-        return vehicleService.updateLiterLimit(id, body.get("maxLitersPerMonth"));
+    public VehicleDTO updateLiterLimit(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
+        return VehicleDTO.from(vehicleService.updateLiterLimit(id, body.get("maxLitersPerMonth")));
     }
 }

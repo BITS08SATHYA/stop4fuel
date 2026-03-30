@@ -60,10 +60,11 @@ public class VehicleDTO {
     public static class ProductSummary {
         private Long id;
         private String name;
+        private String fuelFamily;
 
         public static ProductSummary from(Product p) {
             if (p == null) return null;
-            return ProductSummary.builder().id(p.getId()).name(p.getName()).build();
+            return ProductSummary.builder().id(p.getId()).name(p.getName()).fuelFamily(p.getFuelFamily()).build();
         }
     }
 
