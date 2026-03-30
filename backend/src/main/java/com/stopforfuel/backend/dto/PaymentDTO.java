@@ -76,10 +76,19 @@ public class PaymentDTO {
     public static class StatementSummary {
         private Long id;
         private String statementNo;
+        private BigDecimal netAmount;
+        private BigDecimal receivedAmount;
+        private BigDecimal balanceAmount;
 
         public static StatementSummary from(Statement s) {
             if (s == null) return null;
-            return StatementSummary.builder().id(s.getId()).statementNo(s.getStatementNo()).build();
+            return StatementSummary.builder()
+                    .id(s.getId())
+                    .statementNo(s.getStatementNo())
+                    .netAmount(s.getNetAmount())
+                    .receivedAmount(s.getReceivedAmount())
+                    .balanceAmount(s.getBalanceAmount())
+                    .build();
         }
     }
 
