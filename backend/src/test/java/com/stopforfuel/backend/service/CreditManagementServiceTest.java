@@ -74,7 +74,7 @@ class CreditManagementServiceTest {
         when(statementRepository.findByCustomerIdAndStatus(1L, "NOT_PAID"))
                 .thenReturn(Collections.emptyList());
 
-        CreditManagementService.CreditOverview overview = creditManagementService.getCreditOverview();
+        CreditManagementService.CreditOverview overview = creditManagementService.getCreditOverview(null);
 
         assertEquals(1, overview.getTotalCustomers());
         assertEquals(1, overview.getTotalCreditCustomers());
@@ -90,7 +90,7 @@ class CreditManagementServiceTest {
         when(invoiceBillRepository.findByBillType("CREDIT")).thenReturn(Collections.emptyList());
         when(paymentRepository.findAll()).thenReturn(Collections.emptyList());
 
-        CreditManagementService.CreditOverview overview = creditManagementService.getCreditOverview();
+        CreditManagementService.CreditOverview overview = creditManagementService.getCreditOverview(null);
 
         assertEquals(0, overview.getTotalCustomers());
         assertEquals(BigDecimal.ZERO, overview.getTotalOutstanding());
@@ -106,7 +106,7 @@ class CreditManagementServiceTest {
         when(statementRepository.findByCustomerIdAndStatus(1L, "NOT_PAID"))
                 .thenReturn(Collections.emptyList());
 
-        CreditManagementService.CreditOverview overview = creditManagementService.getCreditOverview();
+        CreditManagementService.CreditOverview overview = creditManagementService.getCreditOverview(null);
 
         assertEquals(new BigDecimal("5000"), overview.getTotalAging90Plus());
         assertEquals(BigDecimal.ZERO, overview.getTotalAging0to30());
@@ -120,7 +120,7 @@ class CreditManagementServiceTest {
         when(statementRepository.findByCustomerIdAndStatus(1L, "NOT_PAID"))
                 .thenReturn(Collections.emptyList());
 
-        CreditManagementService.CreditOverview overview = creditManagementService.getCreditOverview();
+        CreditManagementService.CreditOverview overview = creditManagementService.getCreditOverview(null);
 
         CreditManagementService.CreditCustomerSummary summary = overview.getCustomers().get(0);
         // Billed 5000, paid 2000 = ledger balance 3000
