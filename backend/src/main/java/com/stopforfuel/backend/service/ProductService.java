@@ -60,6 +60,7 @@ public class ProductService {
         product.setSupplier(productDetails.getSupplier());
         product.setOilType(productDetails.getOilType());
         product.setGrade(productDetails.getGrade());
+        product.setDiscountRate(productDetails.getDiscountRate());
         return productRepository.save(product);
     }
 

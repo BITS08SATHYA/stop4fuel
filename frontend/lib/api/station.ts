@@ -62,6 +62,7 @@ export interface Product {
     brand?: string;
     gstRate?: number;
     fuelFamily?: string;
+    discountRate?: number;
     active: boolean;
     supplier?: { id: number; name: string };
     oilType?: { id: number; name: string };
@@ -244,7 +245,7 @@ export interface Payment {
     paymentMode: PaymentMode;
     referenceNo?: string;
     customer?: { id: number; name: string; username?: string };
-    statement?: { id: number; statementNo: string };
+    statement?: { id: number; statementNo: string; netAmount: number; receivedAmount: number; balanceAmount: number };
     invoiceBill?: { id: number; billNo: string; netAmount: number };
     shiftId?: number;
     remarks?: string;
