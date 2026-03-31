@@ -63,8 +63,8 @@ export default function PaymentsPage() {
 
     // Step 1: Customer search
     const [customerSearch, setCustomerSearch] = useState("");
-    const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
-    const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+    const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     // Step 2: Outstanding items
     const [outstandingStatements, setOutstandingStatements] = useState<Statement[]>([]);

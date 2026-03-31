@@ -11,7 +11,7 @@ import {
     getPaymentModes, getOutstandingByCustomer,
     getCustomers, recordStatementPayment, recordBillPayment,
     getOutstandingBills, uploadPaymentProof,
-    type Payment, type PaymentMode, type Statement, type InvoiceBill
+    type Payment, type PaymentMode, type Statement, type InvoiceBill, type Customer
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
 
@@ -30,8 +30,8 @@ export default function RecordPaymentPage() {
 
     // Customer search
     const [customerSearch, setCustomerSearch] = useState("");
-    const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
-    const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+    const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     // Outstanding items
     const [outstandingStatements, setOutstandingStatements] = useState<Statement[]>([]);

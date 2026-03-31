@@ -30,6 +30,8 @@ export interface Employee {
     maritalStatus: string;
     aadharDocUrl: string;
     panDocUrl: string;
+    monthlyLeaveThreshold?: number;
+    terminationDate?: string;
 }
 
 export interface SalaryHistory {
