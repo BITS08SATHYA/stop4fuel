@@ -68,7 +68,7 @@ public class EmployeeService {
 
     @Transactional(readOnly = true)
     public List<Employee> getActiveEmployees() {
-        return employeeRepository.findByStatus("ACTIVE");
+        return employeeRepository.findByStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
     }
 
     @Transactional
@@ -104,7 +104,7 @@ public class EmployeeService {
             employee.setJoinDate(LocalDate.now());
         }
         if (employee.getStatus() == null) {
-            employee.setStatus("Active");
+            employee.setStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
         }
 
         Employee saved = employeeRepository.save(employee);
@@ -200,7 +200,7 @@ public class EmployeeService {
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getPendingAdvances(Long employeeId) {
-        return operationalAdvanceRepository.findByEmployeeIdAndStatus(employeeId, "PENDING");
+        return operationalAdvanceRepository.findByEmployeeIdAndStatus(employeeId, com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
     }
 
     public OperationalAdvance addAdvance(OperationalAdvance advance) {
@@ -210,7 +210,7 @@ public class EmployeeService {
     public OperationalAdvance updateAdvanceStatus(Long advanceId, String status) {
         OperationalAdvance advance = operationalAdvanceRepository.findById(advanceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Advance not found"));
-        advance.setStatus(status);
+        advance.setStatus(com.stopforfuel.backend.enums.AdvanceStatus.valueOf(status));
         return operationalAdvanceRepository.save(advance);
     }
 

@@ -54,7 +54,7 @@ public class CustomerListDTO {
                 .phoneNumbers(c.getPhoneNumbers())
                 .address(c.getAddress())
                 .personType(c.getPersonType())
-                .status(c.getStatus())
+                .status(c.getStatus() != null ? c.getStatus().name() : null)
                 .isActive(c.isActive())
                 .joinDate(c.getJoinDate())
                 .scid(c.getScid())

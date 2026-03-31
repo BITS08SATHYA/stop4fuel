@@ -46,7 +46,7 @@ public class CreditManagementService {
         }
 
         // Load all credit bills (both paid and unpaid) for balance calculation
-        List<InvoiceBill> allCreditBills = invoiceBillRepository.findByBillType("CREDIT");
+        List<InvoiceBill> allCreditBills = invoiceBillRepository.findByBillType(com.stopforfuel.backend.enums.BillType.CREDIT);
 
         // Load all payments
         List<Payment> allPayments = paymentRepository.findAllByScid(SecurityUtils.getScid());
@@ -129,7 +129,7 @@ public class CreditManagementService {
             summary.setCategoryType(customer.getCustomerCategory() != null ? customer.getCustomerCategory().getCategoryType() : null);
             summary.setCategoryName(customer.getCustomerCategory() != null ? customer.getCustomerCategory().getCategoryName() : null);
             summary.setCreditLimitAmount(customer.getCreditLimitAmount());
-            summary.setStatus(customer.getStatus());
+            summary.setStatus(customer.getStatus() != null ? customer.getStatus().name() : null);
             summary.setLedgerBalance(ledgerBalance);
             summary.setTotalBilled(totalBilled);
             summary.setTotalPaid(totalPaid);
@@ -196,7 +196,7 @@ public class CreditManagementService {
     @Transactional(readOnly = true)
     public CreditCustomerDetail getCustomerCreditDetail(Long customerId) {
         // All credit bills (both paid and unpaid)
-        List<InvoiceBill> allBills = invoiceBillRepository.findByBillType("CREDIT").stream()
+        List<InvoiceBill> allBills = invoiceBillRepository.findByBillType(com.stopforfuel.backend.enums.BillType.CREDIT).stream()
                 .filter(b -> b.getCustomer() != null && b.getCustomer().getId().equals(customerId))
                 .sorted((a, b) -> {
                     if (a.getDate() == null || b.getDate() == null) return 0;

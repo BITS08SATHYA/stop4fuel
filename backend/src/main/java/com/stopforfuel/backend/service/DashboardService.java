@@ -193,9 +193,9 @@ public class DashboardService {
                     item.setId(inv.getId());
                     item.setDate(inv.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                     item.setCustomerName(inv.getCustomer() != null ? inv.getCustomer().getName() : null);
-                    item.setBillType(inv.getBillType());
+                    item.setBillType(inv.getBillType() != null ? inv.getBillType().name() : null);
                     item.setAmount(inv.getNetAmount());
-                    item.setPaymentStatus(inv.getPaymentStatus());
+                    item.setPaymentStatus(inv.getPaymentStatus() != null ? inv.getPaymentStatus().name() : null);
                     return item;
                 })
                 .collect(Collectors.toList());
@@ -431,7 +431,7 @@ public class DashboardService {
 
         dashboard.setHasActiveShift(true);
         dashboard.setShiftId(activeShift.getId());
-        dashboard.setShiftStatus(activeShift.getStatus());
+        dashboard.setShiftStatus(activeShift.getStatus() != null ? activeShift.getStatus().name() : null);
         dashboard.setStartTime(activeShift.getStartTime() != null
                 ? activeShift.getStartTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
         dashboard.setEndTime(activeShift.getEndTime() != null
@@ -498,7 +498,7 @@ public class DashboardService {
                     CashierInvoiceItem item = new CashierInvoiceItem();
                     item.setId(inv.getId());
                     item.setBillNo(inv.getBillNo());
-                    item.setBillType(inv.getBillType());
+                    item.setBillType(inv.getBillType() != null ? inv.getBillType().name() : null);
                     item.setPaymentMode(inv.getPaymentMode());
                     item.setNetAmount(inv.getNetAmount());
                     item.setDate(inv.getDate() != null

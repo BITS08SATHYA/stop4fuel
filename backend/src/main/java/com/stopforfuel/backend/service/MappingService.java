@@ -3,6 +3,8 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
+import com.stopforfuel.backend.enums.PaymentStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
@@ -73,7 +75,7 @@ public class MappingService {
             if (oldCustomer != null && !oldCustomer.getId().equals(customerId)) {
                 // Check for unpaid credit bills before reassigning
                 long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
-                        vehicle.getId(), oldCustomer.getId(), "NOT_PAID");
+                        vehicle.getId(), oldCustomer.getId(), PaymentStatus.NOT_PAID);
                 if (unpaidCount > 0) {
                     throw new BusinessException(
                             "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +
@@ -95,7 +97,7 @@ public class MappingService {
 
             // Reset consumed liters for the new assignment cycle
             vehicle.setConsumedLiters(BigDecimal.ZERO);
-            vehicle.setStatus("ACTIVE");
+            vehicle.setStatus(EntityStatus.ACTIVE);
             vehicle.setCustomer(customer);
         }
         return vehicleRepository.saveAll(vehicles);
@@ -109,7 +111,7 @@ public class MappingService {
             if (oldCustomer != null) {
                 // Check for unpaid credit bills
                 long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
-                        vehicle.getId(), oldCustomer.getId(), "NOT_PAID");
+                        vehicle.getId(), oldCustomer.getId(), PaymentStatus.NOT_PAID);
                 if (unpaidCount > 0) {
                     throw new BusinessException(
                             "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +

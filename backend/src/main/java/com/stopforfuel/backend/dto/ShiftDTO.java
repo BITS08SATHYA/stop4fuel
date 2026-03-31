@@ -24,7 +24,7 @@ public class ShiftDTO {
                 .id(s.getId())
                 .startTime(s.getStartTime())
                 .endTime(s.getEndTime())
-                .status(s.getStatus())
+                .status(s.getStatus() != null ? s.getStatus().name() : null)
                 .attendant(AttendantSummary.from(s.getAttendant()))
                 .scid(s.getScid())
                 .createdAt(s.getCreatedAt())

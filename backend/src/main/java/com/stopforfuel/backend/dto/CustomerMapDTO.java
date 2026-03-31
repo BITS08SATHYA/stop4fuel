@@ -24,7 +24,7 @@ public class CustomerMapDTO {
         return CustomerMapDTO.builder()
                 .id(c.getId())
                 .name(c.getName())
-                .status(c.getStatus())
+                .status(c.getStatus() != null ? c.getStatus().name() : null)
                 .latitude(c.getLatitude())
                 .longitude(c.getLongitude())
                 .groupName(c.getGroup() != null ? c.getGroup().getGroupName() : null)

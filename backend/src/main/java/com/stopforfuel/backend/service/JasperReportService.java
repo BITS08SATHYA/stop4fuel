@@ -88,7 +88,7 @@ public class JasperReportService {
                 row.put("monthlyLimit", formatNumber(v.getMaxLitersPerMonth()));
                 row.put("consumed", formatNumber(v.getConsumedLiters()));
 
-                String status = v.getStatus() != null ? v.getStatus() : "ACTIVE";
+                String status = v.getStatus() != null ? v.getStatus().name() : "ACTIVE";
                 row.put("status", status);
 
                 switch (status) {
