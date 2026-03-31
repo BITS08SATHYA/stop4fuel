@@ -30,10 +30,12 @@ public class SalaryPaymentService {
 
     private final LeaveRequestRepository leaveRequestRepository;
 
+    @Transactional(readOnly = true)
     public List<SalaryPayment> getMonthlyPayments(Integer month, Integer year) {
         return salaryPaymentRepository.findByMonthAndYear(month, year);
     }
 
+    @Transactional(readOnly = true)
     public List<SalaryPayment> getEmployeePayments(Long employeeId) {
         return salaryPaymentRepository.findByEmployeeIdOrderByYearDescMonthDesc(employeeId);
     }

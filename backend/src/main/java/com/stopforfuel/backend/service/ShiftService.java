@@ -83,6 +83,7 @@ public class ShiftService {
         this.shiftClosingReportRepository = shiftClosingReportRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<Shift> getAllShifts() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
@@ -122,12 +123,14 @@ public class ShiftService {
         return closed;
     }
 
+    @Transactional(readOnly = true)
     public Shift getActiveShift() {
         return repository.findByStatusAndScid("OPEN", SecurityUtils.getScid()).orElse(null);
     }
 
     // ========== NEW SHIFT CLOSING WORKSPACE METHODS ==========
 
+    @Transactional(readOnly = true)
     public ShiftClosingDataDTO getShiftClosingData(Long shiftId) {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));

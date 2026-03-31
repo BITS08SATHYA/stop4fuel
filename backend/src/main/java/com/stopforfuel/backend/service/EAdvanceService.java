@@ -23,23 +23,28 @@ public class EAdvanceService {
     private final EAdvanceRepository repository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<EAdvance> getAll() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public EAdvance getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("E-Advance not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<EAdvance> getByShift(Long shiftId) {
         return repository.findByShiftIdOrderByTransactionDateDesc(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<EAdvance> getByType(String advanceType) {
         return repository.findByAdvanceTypeOrderByTransactionDateDesc(advanceType);
     }
 
+    @Transactional(readOnly = true)
     public List<EAdvance> getByDateRange(LocalDate fromDate, LocalDate toDate, String type) {
         LocalDateTime from = fromDate.atStartOfDay();
         LocalDateTime to = toDate.atTime(LocalTime.MAX);
@@ -85,10 +90,12 @@ public class EAdvanceService {
         repository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal sumByShift(Long shiftId) {
         return repository.sumAllByShift(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public Map<String, BigDecimal> getShiftSummary(Long shiftId) {
         return Map.of(
             "card", repository.sumByShiftAndType(shiftId, "CARD"),

@@ -19,6 +19,7 @@ public class GroupService {
 
     private final CustomerRepository customerRepository;
 
+    @Transactional(readOnly = true)
     public List<Group> getAllGroups() {
         return groupRepository.findAll();
     }
