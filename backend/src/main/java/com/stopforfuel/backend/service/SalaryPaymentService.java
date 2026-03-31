@@ -9,7 +9,7 @@ import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.LeaveRequestRepository;
 import com.stopforfuel.backend.repository.SalaryPaymentRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,19 +19,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SalaryPaymentService {
 
-    @Autowired
-    private SalaryPaymentRepository salaryPaymentRepository;
+    private final SalaryPaymentRepository salaryPaymentRepository;
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
-    @Autowired
-    private OperationalAdvanceRepository operationalAdvanceRepository;
+    private final OperationalAdvanceRepository operationalAdvanceRepository;
 
-    @Autowired
-    private LeaveRequestRepository leaveRequestRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
     public List<SalaryPayment> getMonthlyPayments(Integer month, Integer year) {
         return salaryPaymentRepository.findByMonthAndYear(month, year);

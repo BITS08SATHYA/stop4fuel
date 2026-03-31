@@ -9,7 +9,7 @@ import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,22 +22,18 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class CustomerService {
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
-    @Autowired
-    private VehicleRepository vehicleRepository;
+    private final VehicleRepository vehicleRepository;
 
-    @Autowired
-    private InvoiceBillRepository invoiceBillRepository;
+    private final InvoiceBillRepository invoiceBillRepository;
 
-    @Autowired
-    private PaymentRepository paymentRepository;
+    private final PaymentRepository paymentRepository;
 
-    @Autowired
-    private com.stopforfuel.backend.repository.RolesRepository rolesRepository;
+    private final com.stopforfuel.backend.repository.RolesRepository rolesRepository;
 
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String categoryType, org.springframework.data.domain.Pageable pageable) {
         String cat = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;

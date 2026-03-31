@@ -7,19 +7,18 @@ import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.GradeTypeRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
 
-    @Autowired
-    private GradeTypeRepository gradeTypeRepository;
+    private final GradeTypeRepository gradeTypeRepository;
 
     public List<Product> getAllProducts() {
         return productRepository.findAllByScid(SecurityUtils.getScid());

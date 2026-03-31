@@ -4,7 +4,7 @@ import com.stopforfuel.backend.entity.Attendance;
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.repository.AttendanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,13 +14,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class AttendanceService {
 
-    @Autowired
-    private AttendanceRepository attendanceRepository;
+    private final AttendanceRepository attendanceRepository;
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
     public List<Attendance> getDailyAttendance(LocalDate date) {
         return attendanceRepository.findByDateOrderByEmployeeNameAsc(date);

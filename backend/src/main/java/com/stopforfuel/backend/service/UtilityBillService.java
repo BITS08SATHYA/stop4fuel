@@ -8,7 +8,7 @@ import com.stopforfuel.config.SecurityUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,10 +20,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@RequiredArgsConstructor
 public class UtilityBillService {
 
-    @Autowired
-    private UtilityBillRepository utilityBillRepository;
+    private final UtilityBillRepository utilityBillRepository;
 
     public List<UtilityBill> getAllBills() {
         return utilityBillRepository.findAllByScid(SecurityUtils.getScid());

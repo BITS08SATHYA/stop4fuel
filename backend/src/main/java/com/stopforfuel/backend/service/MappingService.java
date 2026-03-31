@@ -12,7 +12,7 @@ import com.stopforfuel.backend.repository.VehicleRepository;
 import com.stopforfuel.config.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,21 +20,18 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class MappingService {
 
     private static final Logger log = LoggerFactory.getLogger(MappingService.class);
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
-    @Autowired
-    private VehicleRepository vehicleRepository;
+    private final VehicleRepository vehicleRepository;
 
-    @Autowired
-    private GroupRepository groupRepository;
+    private final GroupRepository groupRepository;
 
-    @Autowired
-    private InvoiceBillRepository invoiceBillRepository;
+    private final InvoiceBillRepository invoiceBillRepository;
 
     public List<Customer> getUnassignedCustomers() {
         return customerRepository.findByGroupIsNull();

@@ -5,7 +5,7 @@ import com.stopforfuel.backend.entity.Tank;
 import com.stopforfuel.backend.repository.StockAlertRepository;
 import com.stopforfuel.backend.repository.TankRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,13 +13,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class StockAlertService {
 
-    @Autowired
-    private StockAlertRepository stockAlertRepository;
+    private final StockAlertRepository stockAlertRepository;
 
-    @Autowired
-    private TankRepository tankRepository;
+    private final TankRepository tankRepository;
 
     public List<StockAlert> getActiveAlerts() {
         return stockAlertRepository.findByActiveAndScid(true, SecurityUtils.getScid());
