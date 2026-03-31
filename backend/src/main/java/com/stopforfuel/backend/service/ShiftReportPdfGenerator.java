@@ -29,19 +29,19 @@ import java.util.stream.Collectors;
 @Component
 public class ShiftReportPdfGenerator {
 
-    // Fonts
-    private static final Font COMPANY_FONT = new Font(Font.HELVETICA, 13, Font.BOLD);
-    private static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 8, Font.NORMAL);
-    private static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 10, Font.BOLD);
-    private static final Font SECTION_FONT = new Font(Font.HELVETICA, 8, Font.BOLD);
-    private static final Font HEADER_FONT = new Font(Font.HELVETICA, 6.5f, Font.BOLD);
-    private static final Font NORMAL_FONT = new Font(Font.HELVETICA, 6.5f, Font.NORMAL);
-    private static final Font BOLD_FONT = new Font(Font.HELVETICA, 6.5f, Font.BOLD);
-    private static final Font SMALL_FONT = new Font(Font.HELVETICA, 6, Font.NORMAL);
-    private static final Font SMALL_BOLD = new Font(Font.HELVETICA, 6, Font.BOLD);
-    private static final Font TOTAL_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
-    private static final Font FOOTER_FONT = new Font(Font.HELVETICA, 7, Font.NORMAL);
-    private static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 7, Font.BOLD);
+    // Fonts — compact for dense professional layout
+    private static final Font COMPANY_FONT = new Font(Font.HELVETICA, 10, Font.BOLD);
+    private static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 6.5f, Font.NORMAL);
+    private static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 8, Font.BOLD);
+    private static final Font SECTION_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
+    private static final Font HEADER_FONT = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
+    private static final Font NORMAL_FONT = new Font(Font.HELVETICA, 6, Font.NORMAL);
+    private static final Font BOLD_FONT = new Font(Font.HELVETICA, 6, Font.BOLD);
+    private static final Font SMALL_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
+    private static final Font SMALL_BOLD = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
+    private static final Font TOTAL_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
+    private static final Font FOOTER_FONT = new Font(Font.HELVETICA, 6, Font.NORMAL);
+    private static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 6, Font.BOLD);
 
     private static final Color HEADER_BG = new Color(230, 230, 230);
     private static final Color LIGHT_BG = new Color(245, 245, 245);
@@ -54,7 +54,7 @@ public class ShiftReportPdfGenerator {
 
     public byte[] generate(ShiftReportPrintData data, ShiftClosingReport report) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4, 20, 20, 20, 20);
+        Document document = new Document(PageSize.A4, 15, 15, 15, 15);
 
         try {
             PdfWriter.getInstance(document, baos);
@@ -121,7 +121,7 @@ public class ShiftReportPdfGenerator {
 
         Paragraph info = new Paragraph(infoLine, NORMAL_FONT);
         info.setAlignment(Element.ALIGN_CENTER);
-        info.setSpacingAfter(6);
+        info.setSpacingAfter(3);
         doc.add(info);
     }
 
@@ -135,7 +135,7 @@ public class ShiftReportPdfGenerator {
         PdfPCell leftCell = new PdfPCell();
         leftCell.setBorder(Rectangle.NO_BORDER);
         leftCell.setPadding(0);
-        leftCell.setPaddingRight(4);
+        leftCell.setPaddingRight(3);
 
         addMeterwise(leftCell, data);
         addGrossNetSales(leftCell, data);
@@ -150,7 +150,7 @@ public class ShiftReportPdfGenerator {
         PdfPCell rightCell = new PdfPCell();
         rightCell.setBorder(Rectangle.NO_BORDER);
         rightCell.setPadding(0);
-        rightCell.setPaddingLeft(4);
+        rightCell.setPaddingLeft(3);
 
         addRevenue(rightCell, data, report);
         addAdvances(rightCell, data, report);
@@ -195,7 +195,7 @@ public class ShiftReportPdfGenerator {
 
                 PdfPTable table = new PdfPTable(cols);
                 table.setWidthPercentage(100);
-                table.setSpacingAfter(2);
+                table.setSpacingAfter(1);
 
                 // Header row (nozzle names)
                 addHeaderCell(table, "");
@@ -324,7 +324,7 @@ public class ShiftReportPdfGenerator {
         container.addElement(sectionHeader("TANKWISE"));
         PdfPTable table = new PdfPTable(new float[]{1.8f, 1f, 1.2f, 0.8f, 1.2f, 1f, 1.2f, 1f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(3);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "TANK");
         addHeaderCell(table, "O.DIP");
@@ -355,7 +355,7 @@ public class ShiftReportPdfGenerator {
         container.addElement(sectionHeader("SALES DIFFERENCE"));
         PdfPTable table = new PdfPTable(new float[]{2f, 1.5f, 1.5f, 1.5f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(3);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "TANK");
         addHeaderCell(table, "TANKWISE");
@@ -379,7 +379,7 @@ public class ShiftReportPdfGenerator {
         container.addElement(sectionHeader("CASH BILL SALES"));
         PdfPTable table = new PdfPTable(new float[]{2f, 2f, 2f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(3);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "MODE");
         addHeaderCell(table, "BILLS");
@@ -409,7 +409,7 @@ public class ShiftReportPdfGenerator {
         container.addElement(sectionHeader("STOCK REFERENCE"));
         PdfPTable table = new PdfPTable(new float[]{2f, 1.5f, 1.5f, 2f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(3);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "");
         addHeaderCell(table, "PRICE");
@@ -434,7 +434,7 @@ public class ShiftReportPdfGenerator {
         container.addElement(sectionHeader("REVENUE"));
         PdfPTable table = new PdfPTable(new float[]{3f, 1f, 1.2f, 2f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(3);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "ITEMS");
         addHeaderCell(table, "LITRES");
@@ -535,7 +535,7 @@ public class ShiftReportPdfGenerator {
         container.addElement(sectionHeader("ADVANCES"));
         PdfPTable table = new PdfPTable(new float[]{4f, 2.5f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(3);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "ITEM");
         addHeaderCell(table, "AMOUNT");
@@ -573,13 +573,13 @@ public class ShiftReportPdfGenerator {
     private void addTurnoverBalanceBox(PdfPCell container, ShiftClosingReport report) {
         PdfPTable box = new PdfPTable(3);
         box.setWidthPercentage(100);
-        box.setSpacingBefore(4);
-        box.setSpacingAfter(4);
+        box.setSpacingBefore(2);
+        box.setSpacingAfter(2);
 
         // Turnover
         PdfPCell turnCell = new PdfPCell();
         turnCell.setBorderColor(Color.DARK_GRAY);
-        turnCell.setPadding(5);
+        turnCell.setPadding(3);
         turnCell.addElement(new Paragraph("TURNOVER", SMALL_BOLD));
         turnCell.addElement(new Paragraph("Rs." + fmtComma(report.getTotalRevenue()), TOTAL_FONT));
         box.addCell(turnCell);
@@ -587,7 +587,7 @@ public class ShiftReportPdfGenerator {
         // Balance
         PdfPCell balCell = new PdfPCell();
         balCell.setBorderColor(Color.DARK_GRAY);
-        balCell.setPadding(5);
+        balCell.setPadding(3);
         balCell.addElement(new Paragraph("BALANCE", SMALL_BOLD));
         balCell.addElement(new Paragraph("Rs." + fmtComma(report.getBalance()), TOTAL_FONT));
         box.addCell(balCell);
@@ -595,7 +595,7 @@ public class ShiftReportPdfGenerator {
         // Cash Bill
         PdfPCell cashCell = new PdfPCell();
         cashCell.setBorderColor(Color.DARK_GRAY);
-        cashCell.setPadding(5);
+        cashCell.setPadding(3);
         cashCell.addElement(new Paragraph("CASH BILL", SMALL_BOLD));
         cashCell.addElement(new Paragraph("Rs." + fmtComma(report.getCashBillAmount()), TOTAL_FONT));
         box.addCell(cashCell);
@@ -609,7 +609,7 @@ public class ShiftReportPdfGenerator {
         container.addElement(sectionHeader("INCOME BILLS (Payments Received)"));
         PdfPTable table = new PdfPTable(new float[]{0.5f, 3f, 1.5f, 1.5f, 2f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(3);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "#");
         addHeaderCell(table, "CUSTOMER / VEHICLE");
@@ -648,7 +648,7 @@ public class ShiftReportPdfGenerator {
         container.addElement(sectionHeader("CREDIT BILLS (" + data.getCreditBillDetails().size() + ") — Rs." + fmtComma(creditTotal)));
         PdfPTable table = new PdfPTable(new float[]{0.4f, 2f, 1.2f, 1.8f, 1.5f, 1.5f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(3);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "#");
         addHeaderCell(table, "CUSTOMER");
@@ -681,7 +681,7 @@ public class ShiftReportPdfGenerator {
     private void addPageOneFooter(Document doc, ShiftReportPrintData data) throws DocumentException {
         PdfPTable footer = new PdfPTable(3);
         footer.setWidthPercentage(100);
-        footer.setSpacingBefore(8);
+        footer.setSpacingBefore(4);
 
         String shiftInfo = "SHIFT: " + (data.getShiftStart() != null ? data.getShiftStart().format(DT_FMT) : "-")
                 + " — " + (data.getShiftEnd() != null ? data.getShiftEnd().format(DT_FMT) : "ongoing");
@@ -689,19 +689,19 @@ public class ShiftReportPdfGenerator {
         PdfPCell left = new PdfPCell(new Phrase(shiftInfo, FOOTER_FONT));
         left.setBorder(Rectangle.TOP);
         left.setHorizontalAlignment(Element.ALIGN_LEFT);
-        left.setPadding(4);
+        left.setPadding(3);
         footer.addCell(left);
 
         PdfPCell mid = new PdfPCell(new Phrase("CASHIER: " + data.getEmployeeName(), FOOTER_BOLD));
         mid.setBorder(Rectangle.TOP);
         mid.setHorizontalAlignment(Element.ALIGN_CENTER);
-        mid.setPadding(4);
+        mid.setPadding(3);
         footer.addCell(mid);
 
         PdfPCell right = new PdfPCell(new Phrase("Signature: __________________", FOOTER_FONT));
         right.setBorder(Rectangle.TOP);
         right.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        right.setPadding(4);
+        right.setPadding(3);
         footer.addCell(right);
 
         doc.add(footer);
@@ -715,7 +715,7 @@ public class ShiftReportPdfGenerator {
                 data.getCompanyName().toUpperCase() + " — " + shiftDate + " Shift Report (Page 2) — CASHIER: " + data.getEmployeeName(),
                 SECTION_FONT);
         header.setAlignment(Element.ALIGN_CENTER);
-        header.setSpacingAfter(6);
+        header.setSpacingAfter(3);
         doc.add(header);
     }
 
@@ -728,12 +728,12 @@ public class ShiftReportPdfGenerator {
         PdfPCell leftCell = new PdfPCell();
         leftCell.setBorder(Rectangle.NO_BORDER);
         leftCell.setPadding(0);
-        leftCell.setPaddingRight(4);
+        leftCell.setPaddingRight(3);
 
         PdfPCell rightCell = new PdfPCell();
         rightCell.setBorder(Rectangle.NO_BORDER);
         rightCell.setPadding(0);
-        rightCell.setPaddingLeft(4);
+        rightCell.setPaddingLeft(3);
 
         // Group advance entries by type
         Map<String, List<AdvanceEntryDetail>> advByType = new LinkedHashMap<>();
@@ -772,7 +772,7 @@ public class ShiftReportPdfGenerator {
 
         PdfPTable table = new PdfPTable(new float[]{0.5f, 3.5f, 2f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(4);
+        table.setSpacingAfter(1);
 
         addHeaderCell(table, "#");
         addHeaderCell(table, "DESCRIPTION");
@@ -804,7 +804,7 @@ public class ShiftReportPdfGenerator {
                 data.getCompanyName().toUpperCase() + " — " + shiftDate + " Shift Report (Page 3 — Product Inventory)",
                 SECTION_FONT);
         header.setAlignment(Element.ALIGN_CENTER);
-        header.setSpacingAfter(6);
+        header.setSpacingAfter(3);
         doc.add(header);
     }
 
@@ -814,7 +814,7 @@ public class ShiftReportPdfGenerator {
             doc.add(sectionHeader("PRODUCT INVENTORY"));
             PdfPTable table = new PdfPTable(new float[]{0.4f, 2.5f, 1f, 1f, 1f, 1f, 1f, 1f, 1.2f});
             table.setWidthPercentage(100);
-            table.setSpacingAfter(4);
+            table.setSpacingAfter(1);
 
             addHeaderCell(table, "#");
             addHeaderCell(table, "PRODUCT NAME");
@@ -857,7 +857,7 @@ public class ShiftReportPdfGenerator {
             doc.add(sectionHeader("STOCK POSITION"));
             PdfPTable table = new PdfPTable(new float[]{3f, 1.5f, 1.5f, 1.5f});
             table.setWidthPercentage(70);
-            table.setSpacingAfter(4);
+            table.setSpacingAfter(1);
 
             addHeaderCell(table, "PRODUCT");
             addHeaderCell(table, "GODOWN");
@@ -885,35 +885,35 @@ public class ShiftReportPdfGenerator {
 
     private Paragraph sectionHeader(String text) {
         Paragraph p = new Paragraph(text, SECTION_FONT);
-        p.setSpacingBefore(5);
-        p.setSpacingAfter(2);
+        p.setSpacingBefore(2);
+        p.setSpacingAfter(1);
         return p;
     }
 
     private void addHeaderCell(PdfPTable table, String text) {
         PdfPCell cell = new PdfPCell(new Phrase(text, HEADER_FONT));
         cell.setBackgroundColor(HEADER_BG);
-        cell.setPadding(3);
+        cell.setPadding(2);
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-        cell.setBorderWidth(0.5f);
+        cell.setBorderWidth(0.25f);
         cell.setBorderColor(Color.GRAY);
         table.addCell(cell);
     }
 
     private void addCellLeft(PdfPTable table, String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "-", font));
-        cell.setPadding(2);
+        cell.setPadding(1.5f);
         cell.setHorizontalAlignment(Element.ALIGN_LEFT);
-        cell.setBorderWidth(0.3f);
+        cell.setBorderWidth(0.25f);
         cell.setBorderColor(Color.LIGHT_GRAY);
         table.addCell(cell);
     }
 
     private void addCellRight(PdfPTable table, String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "-", font));
-        cell.setPadding(2);
+        cell.setPadding(1.5f);
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        cell.setBorderWidth(0.3f);
+        cell.setBorderWidth(0.25f);
         cell.setBorderColor(Color.LIGHT_GRAY);
         table.addCell(cell);
     }
@@ -921,7 +921,7 @@ public class ShiftReportPdfGenerator {
     private void addPlainCell(PdfPTable table, String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setBorder(Rectangle.NO_BORDER);
-        cell.setPadding(2);
+        cell.setPadding(1.5f);
         table.addCell(cell);
     }
 
