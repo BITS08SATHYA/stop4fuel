@@ -7,35 +7,38 @@ import com.stopforfuel.backend.repository.TankRepository;
 import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class TankService {
 
-    @Autowired
-    private TankRepository tankRepository;
+    private final TankRepository tankRepository;
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
 
-    @Autowired
-    private NozzleRepository nozzleRepository;
+    private final NozzleRepository nozzleRepository;
 
+    @Transactional(readOnly = true)
     public List<Tank> getAllTanks() {
         return tankRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Tank> getActiveTanks() {
         return tankRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Tank> getTanksByProduct(Long productId) {
         return tankRepository.findByProductIdAndScid(productId, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Tank getTankById(Long id) {
         return tankRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Tank not found with id: " + id));
@@ -114,6 +117,7 @@ public class TankService {
         return tankRepository.save(tank);
     }
 
+    @Transactional(readOnly = true)
     public List<Tank> getLowStockTanks() {
         return tankRepository.findByActiveAndScid(true, SecurityUtils.getScid()).stream()
                 .filter(Tank::isBelowThreshold)

@@ -143,7 +143,7 @@ export default function VehiclesPage() {
     const [vehicles, setVehicles] = useState<any[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [formData, setFormData] = useState<any>({});
+    const [formData, setFormData] = useState<{ id?: number; vehicleNumber?: string; maxCapacity?: number | string; maxLitersPerMonth?: number | string | null; customerId?: number | string; vehicleType?: number | string; fuelType?: number | string }>({});
     const [loading, setLoading] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [searchQuery, setSearchQuery] = useState("");
@@ -271,7 +271,7 @@ export default function VehiclesPage() {
             const method = formData.id ? "PUT" : "POST";
 
             const payload: any = {
-                vehicleNumber: formData.vehicleNumber.trim(),
+                vehicleNumber: (formData.vehicleNumber || "").trim(),
                 maxCapacity: formData.maxCapacity,
                 maxLitersPerMonth: formData.maxLitersPerMonth || null,
                 customer: { id: formData.customerId },
@@ -467,7 +467,7 @@ export default function VehiclesPage() {
                         </label>
                         <CustomerAutocomplete
                             customers={customers}
-                            value={formData.customerId || ""}
+                            value={String(formData.customerId || "")}
                             onChange={(id) => {
                                 setFormData({ ...formData, customerId: id });
                                 if (id) setFormErrors((prev) => { const { customer, ...rest } = prev; return rest; });

@@ -29,18 +29,22 @@ public class StockTransferService {
     private final ProductInventoryRepository productInventoryRepository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<StockTransfer> getAll() {
         return repository.findByScidOrderByTransferDateDesc(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<StockTransfer> getByProduct(Long productId) {
         return repository.findByProductId(productId);
     }
 
+    @Transactional(readOnly = true)
     public List<StockTransfer> getByDateRange(LocalDateTime from, LocalDateTime to) {
         return repository.findByScidAndTransferDateBetweenOrderByTransferDateDesc(SecurityUtils.getScid(), from, to);
     }
 
+    @Transactional(readOnly = true)
     public List<StockTransfer> getByShiftId(Long shiftId) {
         return repository.findByShiftId(shiftId);
     }
@@ -59,7 +63,7 @@ public class StockTransferService {
         Long productId = transfer.getProduct().getId();
         Double qty = transfer.getQuantity();
 
-        if ("GODOWN".equals(transfer.getFromLocation())) {
+        if (transfer.getFromLocation() == com.stopforfuel.backend.enums.StockLocation.GODOWN) {
             // Godown -> Cashier (lock both rows)
             GodownStock godown = godownStockRepository.findByProductIdAndScidForUpdate(productId, SecurityUtils.getScid())
                     .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + productId));
@@ -124,10 +128,10 @@ public class StockTransferService {
 
         Long oldProductId = existing.getProduct().getId();
         Double oldQty = existing.getQuantity();
-        String oldFromLocation = existing.getFromLocation();
+        com.stopforfuel.backend.enums.StockLocation oldFromLocation = existing.getFromLocation();
 
         // Reverse old stock changes (with pessimistic locks)
-        if ("GODOWN".equals(oldFromLocation)) {
+        if (oldFromLocation == com.stopforfuel.backend.enums.StockLocation.GODOWN) {
             GodownStock godown = godownStockRepository.findByProductIdAndScidForUpdate(oldProductId, SecurityUtils.getScid())
                     .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + oldProductId));
             godown.setCurrentStock(godown.getCurrentStock() + oldQty);
@@ -169,7 +173,7 @@ public class StockTransferService {
         Long newProductId = details.getProduct().getId();
         Double newQty = details.getQuantity();
 
-        if ("GODOWN".equals(details.getFromLocation())) {
+        if (details.getFromLocation() == com.stopforfuel.backend.enums.StockLocation.GODOWN) {
             GodownStock godown = godownStockRepository.findByProductIdAndScidForUpdate(newProductId, SecurityUtils.getScid())
                     .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + newProductId));
             if (godown.getCurrentStock() < newQty) {
@@ -232,7 +236,7 @@ public class StockTransferService {
         Double qty = existing.getQuantity();
 
         // Reverse stock changes (with pessimistic locks)
-        if ("GODOWN".equals(existing.getFromLocation())) {
+        if (existing.getFromLocation() == com.stopforfuel.backend.enums.StockLocation.GODOWN) {
             GodownStock godown = godownStockRepository.findByProductIdAndScidForUpdate(productId, SecurityUtils.getScid())
                     .orElseThrow(() -> new ResourceNotFoundException("No godown stock found for product: " + productId));
             godown.setCurrentStock(godown.getCurrentStock() + qty);

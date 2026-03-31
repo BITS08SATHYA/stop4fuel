@@ -8,8 +8,9 @@ import com.stopforfuel.config.SecurityUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -20,19 +21,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@RequiredArgsConstructor
 public class UtilityBillService {
 
-    @Autowired
-    private UtilityBillRepository utilityBillRepository;
+    private final UtilityBillRepository utilityBillRepository;
 
+    @Transactional(readOnly = true)
     public List<UtilityBill> getAllBills() {
         return utilityBillRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<UtilityBill> getBillsByType(String type) {
         return utilityBillRepository.findByBillTypeOrderByBillDateDesc(type);
     }
 
+    @Transactional(readOnly = true)
     public List<UtilityBill> getPendingBills() {
         return utilityBillRepository.findByStatusOrderByDueDateAsc("PENDING");
     }

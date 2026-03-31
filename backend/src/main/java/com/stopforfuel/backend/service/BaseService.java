@@ -3,6 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.BaseEntity;
 import com.stopforfuel.backend.repository.ScidRepository;
 import com.stopforfuel.config.SecurityUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,10 +23,12 @@ public abstract class BaseService<T extends BaseEntity, R extends ScidRepository
         return SecurityUtils.getScid();
     }
 
+    @Transactional(readOnly = true)
     public List<T> findAll() {
         return repository.findAllByScid(getScid());
     }
 
+    @Transactional(readOnly = true)
     public T findById(Long id) {
         return repository.findByIdAndScid(id, getScid())
                 .orElseThrow(() -> new RuntimeException(getEntityName() + " not found with id: " + id));

@@ -22,19 +22,23 @@ public class IncentivePaymentService {
     private final IncentivePaymentRepository repository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<IncentivePayment> getAll() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public IncentivePayment getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Incentive payment not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<IncentivePayment> getByShift(Long shiftId) {
         return repository.findByShiftIdOrderByPaymentDateDesc(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<IncentivePayment> getByCustomer(Long customerId) {
         return repository.findByCustomerIdOrderByPaymentDateDesc(customerId);
     }
@@ -54,10 +58,12 @@ public class IncentivePaymentService {
         repository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal sumByShift(Long shiftId) {
         return repository.sumByShift(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<IncentivePayment> getByDateRange(LocalDate fromDate, LocalDate toDate) {
         LocalDateTime from = fromDate.atStartOfDay();
         LocalDateTime to = toDate.atTime(LocalTime.MAX);

@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
@@ -9,7 +10,7 @@ import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,23 +23,20 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class CustomerService {
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
-    @Autowired
-    private VehicleRepository vehicleRepository;
+    private final VehicleRepository vehicleRepository;
 
-    @Autowired
-    private InvoiceBillRepository invoiceBillRepository;
+    private final InvoiceBillRepository invoiceBillRepository;
 
-    @Autowired
-    private PaymentRepository paymentRepository;
+    private final PaymentRepository paymentRepository;
 
-    @Autowired
-    private com.stopforfuel.backend.repository.RolesRepository rolesRepository;
+    private final com.stopforfuel.backend.repository.RolesRepository rolesRepository;
 
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String categoryType, org.springframework.data.domain.Pageable pageable) {
         String cat = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         if (search != null && !search.isEmpty()) {
@@ -47,18 +45,22 @@ public class CustomerService {
         return customerRepository.findByGroupAndStatus(groupId, status, cat, pageable);
     }
 
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Customer> getCustomersByGroupId(Long groupId, org.springframework.data.domain.Pageable pageable) {
         return customerRepository.findByGroupId(groupId, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Customer> getAllCustomers() {
         return customerRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Customer> getCustomersWithCoordinates() {
         return customerRepository.findAllWithCoordinatesByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Customer getCustomerById(Long id) {
         return customerRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
@@ -71,7 +73,7 @@ public class CustomerService {
             customer.setRole(customerRole);
         }
         if (customer.getStatus() == null) {
-            customer.setStatus("ACTIVE");
+            customer.setStatus(EntityStatus.ACTIVE);
         }
         if (customer.getConsumedLiters() == null) {
             customer.setConsumedLiters(BigDecimal.ZERO);
@@ -120,12 +122,12 @@ public class CustomerService {
     @Transactional
     public Customer toggleStatus(Long id) {
         Customer customer = getCustomerById(id);
-        String current = customer.getStatus();
-        if (current == null || "ACTIVE".equals(current)) {
-            customer.setStatus("INACTIVE");
+        EntityStatus current = customer.getStatus();
+        if (current == null || current == EntityStatus.ACTIVE) {
+            customer.setStatus(EntityStatus.INACTIVE);
         } else {
             // Both INACTIVE and BLOCKED can be manually set back to ACTIVE
-            customer.setStatus("ACTIVE");
+            customer.setStatus(EntityStatus.ACTIVE);
         }
         return customerRepository.save(customer);
     }
@@ -157,10 +159,10 @@ public class CustomerService {
     @Transactional
     public Customer blockCustomer(Long id) {
         Customer customer = getCustomerById(id);
-        if (!"ACTIVE".equals(customer.getStatus())) {
+        if (customer.getStatus() != EntityStatus.ACTIVE) {
             throw new BusinessException("Customer can only be blocked when ACTIVE. Current status: " + customer.getStatus());
         }
-        customer.setStatus("BLOCKED");
+        customer.setStatus(EntityStatus.BLOCKED);
         return customerRepository.save(customer);
     }
 
@@ -170,10 +172,10 @@ public class CustomerService {
     @Transactional
     public Customer unblockCustomer(Long id) {
         Customer customer = getCustomerById(id);
-        if (!"BLOCKED".equals(customer.getStatus())) {
+        if (customer.getStatus() != EntityStatus.BLOCKED) {
             throw new BusinessException("Customer can only be unblocked when BLOCKED. Current status: " + customer.getStatus());
         }
-        customer.setStatus("ACTIVE");
+        customer.setStatus(EntityStatus.ACTIVE);
         return customerRepository.save(customer);
     }
 
@@ -255,7 +257,7 @@ public class CustomerService {
     @Transactional
     public void checkAndAutoBlock(Long customerId) {
         Customer customer = customerRepository.findByIdForUpdate(customerId).orElse(null);
-        if (customer == null || !"ACTIVE".equals(customer.getStatus())) {
+        if (customer == null || customer.getStatus() != EntityStatus.ACTIVE) {
             return;
         }
 
@@ -265,7 +267,7 @@ public class CustomerService {
             BigDecimal totalPaid = paymentRepository.sumAllPaymentsByCustomer(customerId);
             BigDecimal ledgerBalance = totalBilled.subtract(totalPaid);
             if (ledgerBalance.compareTo(customer.getCreditLimitAmount()) > 0) {
-                customer.setStatus("BLOCKED");
+                customer.setStatus(EntityStatus.BLOCKED);
                 customerRepository.save(customer);
                 return;
             }
@@ -274,7 +276,7 @@ public class CustomerService {
         // 2. Liters exceeded (safety net for existing inline check)
         if (customer.getCreditLimitLiters() != null && customer.getConsumedLiters() != null
                 && customer.getConsumedLiters().compareTo(customer.getCreditLimitLiters()) >= 0) {
-            customer.setStatus("BLOCKED");
+            customer.setStatus(EntityStatus.BLOCKED);
             customerRepository.save(customer);
             return;
         }
@@ -282,7 +284,7 @@ public class CustomerService {
         // 3. Aging 90+ days
         LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
         if (invoiceBillRepository.existsUnpaidCreditBillBefore(customerId, ninetyDaysAgo)) {
-            customer.setStatus("BLOCKED");
+            customer.setStatus(EntityStatus.BLOCKED);
             customerRepository.save(customer);
         }
     }
@@ -309,6 +311,7 @@ public class CustomerService {
      * Returns credit limit info for a customer including current ledger balance.
      * Used by the invoice page for real-time credit limit validation.
      */
+    @Transactional(readOnly = true)
     public Map<String, Object> getCreditInfo(Long customerId) {
         Customer customer = getCustomerById(customerId);
         Map<String, Object> info = new HashMap<>();
@@ -327,14 +330,15 @@ public class CustomerService {
         return info;
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getStats() {
         List<Customer> allCustomers = customerRepository.findAllByScid(SecurityUtils.getScid());
         long totalCustomers = allCustomers.size();
         long activeCustomers = allCustomers.stream()
-                .filter(c -> "ACTIVE".equals(c.getStatus()))
+                .filter(c -> c.getStatus() == EntityStatus.ACTIVE)
                 .count();
         long blockedCustomers = allCustomers.stream()
-                .filter(c -> "BLOCKED".equals(c.getStatus()) || "INACTIVE".equals(c.getStatus()))
+                .filter(c -> c.getStatus() == EntityStatus.BLOCKED || c.getStatus() == EntityStatus.INACTIVE)
                 .count();
 
         BigDecimal totalCreditGiven = allCustomers.stream()

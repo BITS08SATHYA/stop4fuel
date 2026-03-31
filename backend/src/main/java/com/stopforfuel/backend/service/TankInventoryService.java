@@ -7,6 +7,7 @@ import com.stopforfuel.backend.repository.TankInventoryRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,18 +19,22 @@ public class TankInventoryService {
     private final TankInventoryRepository repository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<TankInventory> getAll() {
         return repository.findAllByScidWithTank(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<TankInventory> getByDate(LocalDate date) {
         return repository.findByDateWithTank(date);
     }
 
+    @Transactional(readOnly = true)
     public List<TankInventory> getByTankId(Long tankId) {
         return repository.findByTankIdWithTank(tankId);
     }
 
+    @Transactional(readOnly = true)
     public TankInventory getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("TankInventory not found with id: " + id));
@@ -63,10 +68,12 @@ public class TankInventoryService {
         return repository.save(existing);
     }
 
+    @Transactional(readOnly = true)
     public List<TankInventory> getByDateRange(LocalDate fromDate, LocalDate toDate) {
         return repository.findByScidAndDateBetween(SecurityUtils.getScid(), fromDate, toDate);
     }
 
+    @Transactional(readOnly = true)
     public List<TankInventory> getByTankAndDateRange(Long tankId, LocalDate fromDate, LocalDate toDate) {
         return repository.findByScidAndTankIdAndDateBetween(SecurityUtils.getScid(), tankId, fromDate, toDate);
     }

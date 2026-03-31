@@ -33,7 +33,7 @@ public class PurchaseOrderDTO {
                 .id(po.getId())
                 .orderDate(po.getOrderDate())
                 .expectedDeliveryDate(po.getExpectedDeliveryDate())
-                .status(po.getStatus())
+                .status(po.getStatus() != null ? po.getStatus().name() : null)
                 .totalAmount(po.getTotalAmount())
                 .remarks(po.getRemarks())
                 .supplier(SupplierSummary.from(po.getSupplier()))

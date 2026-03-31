@@ -235,7 +235,7 @@ public class CustomerBalanceReportService {
                         cb.unpaidStatements > 0 ? boldCellFont : cellFont, Element.ALIGN_CENTER, rowBg, border);
 
                 // Status
-                String status = cb.customer.getStatus() != null ? cb.customer.getStatus() : "ACTIVE";
+                String status = cb.customer.getStatus() != null ? cb.customer.getStatus().name() : "ACTIVE";
                 Font statusFont = "BLOCKED".equals(status) ? warningFont : "ACTIVE".equals(status) ? greenFont : cellFont;
                 Color statusBg = "BLOCKED".equals(status) ? new Color(255, 235, 238)
                         : "ACTIVE".equals(status) ? new Color(232, 245, 233) : rowBg;
@@ -363,7 +363,7 @@ public class CustomerBalanceReportService {
                 row.createCell(9).setCellValue(cb.unpaidStatements);
                 row.getCell(9).setCellStyle(cellStyle);
 
-                String status = cb.customer.getStatus() != null ? cb.customer.getStatus() : "ACTIVE";
+                String status = cb.customer.getStatus() != null ? cb.customer.getStatus().name() : "ACTIVE";
                 row.createCell(10).setCellValue(status);
                 row.getCell(10).setCellStyle("BLOCKED".equals(status) ? warningStyle
                         : "ACTIVE".equals(status) ? greenStyle : cellStyle);
