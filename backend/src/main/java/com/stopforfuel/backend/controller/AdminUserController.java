@@ -1,8 +1,11 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.CreateUserRequest;
+import com.stopforfuel.backend.dto.UpdateUserRoleRequest;
 import com.stopforfuel.backend.dto.UserListDTO;
 import com.stopforfuel.backend.entity.User;
 import com.stopforfuel.backend.service.AdminUserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,17 +42,12 @@ public class AdminUserController {
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
-    public ResponseEntity<Map<String, Object>> createUser(@RequestBody Map<String, String> request) {
-        String name = request.get("name");
-        String phone = request.get("phone");
-        String roleType = request.get("roleType");
-        String designation = request.get("designation");
-        String userType = request.get("userType");
-
-        if (phone != null && !phone.isBlank()) {
+    public ResponseEntity<Map<String, Object>> createUser(@Valid @RequestBody CreateUserRequest request) {
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
             // Mobile-first user creation
             Map<String, Object> result = adminUserService.createUserWithPhone(
-                    name, phone, roleType, designation, userType);
+                    request.getName(), request.getPhone(), request.getRoleType(),
+                    request.getDesignation(), request.getUserType());
             Map<String, Object> response = new HashMap<>();
             response.put("user", UserListDTO.from((User) result.get("user")));
             response.put("passcode", result.get("passcode"));
@@ -57,11 +55,11 @@ public class AdminUserController {
         } else {
             // Legacy email-based creation
             User user = adminUserService.createUser(
-                    request.get("username"),
-                    request.get("email"),
-                    name,
-                    roleType,
-                    request.get("tempPassword")
+                    request.getUsername(),
+                    request.getEmail(),
+                    request.getName(),
+                    request.getRoleType(),
+                    request.getTempPassword()
             );
             Map<String, Object> response = new HashMap<>();
             response.put("user", UserListDTO.from(user));
@@ -78,8 +76,8 @@ public class AdminUserController {
 
     @PutMapping("/{id}/role")
     @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
-    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> request) {
-        User user = adminUserService.updateUserRole(id, request.get("roleType"));
+    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @Valid @RequestBody UpdateUserRoleRequest request) {
+        User user = adminUserService.updateUserRole(id, request.getRoleType());
         return ResponseEntity.ok(user);
     }
 

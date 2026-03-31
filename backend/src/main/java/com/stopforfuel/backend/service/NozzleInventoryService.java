@@ -9,6 +9,7 @@ import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -21,18 +22,22 @@ public class NozzleInventoryService {
     private final NozzleRepository nozzleRepository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<NozzleInventory> getAll() {
         return repository.findAllByScidWithNozzle(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<NozzleInventory> getByDate(LocalDate date) {
         return repository.findByDate(date);
     }
 
+    @Transactional(readOnly = true)
     public List<NozzleInventory> getByNozzleId(Long nozzleId) {
         return repository.findByNozzleId(nozzleId);
     }
 
+    @Transactional(readOnly = true)
     public NozzleInventory getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("NozzleInventory not found with id: " + id));
@@ -64,14 +69,17 @@ public class NozzleInventoryService {
         return repository.save(existing);
     }
 
+    @Transactional(readOnly = true)
     public List<NozzleInventory> getByDateRange(LocalDate fromDate, LocalDate toDate) {
         return repository.findByScidAndDateBetween(SecurityUtils.getScid(), fromDate, toDate);
     }
 
+    @Transactional(readOnly = true)
     public List<NozzleInventory> getByNozzleAndDateRange(Long nozzleId, LocalDate fromDate, LocalDate toDate) {
         return repository.findByScidAndNozzleIdAndDateBetween(SecurityUtils.getScid(), nozzleId, fromDate, toDate);
     }
 
+    @Transactional(readOnly = true)
     public List<NozzleInventory> getByProductAndDateRange(Long productId, LocalDate fromDate, LocalDate toDate) {
         return repository.findByScidAndProductIdAndDateBetween(SecurityUtils.getScid(), productId, fromDate, toDate);
     }

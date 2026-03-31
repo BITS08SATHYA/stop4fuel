@@ -30,7 +30,7 @@ public class VehicleDTO {
         return VehicleDTO.builder()
                 .id(v.getId())
                 .vehicleNumber(v.getVehicleNumber())
-                .status(v.getStatus())
+                .status(v.getStatus() != null ? v.getStatus().name() : null)
                 .isActive(v.isActive())
                 .maxCapacity(v.getMaxCapacity())
                 .maxLitersPerMonth(v.getMaxLitersPerMonth())

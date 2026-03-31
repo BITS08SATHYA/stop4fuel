@@ -29,26 +29,32 @@ public class ProductInventoryService {
     private final CashierStockRepository cashierStockRepository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<ProductInventory> getAll() {
         return repository.findAllByScidWithProduct(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<ProductInventory> getByDate(LocalDate date) {
         return repository.findByDateWithProduct(date);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductInventory> getByProductId(Long productId) {
         return repository.findByProductIdWithProduct(productId);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductInventory> getByDateRange(LocalDate fromDate, LocalDate toDate) {
         return repository.findByScidAndDateBetween(SecurityUtils.getScid(), fromDate, toDate);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductInventory> getByProductAndDateRange(Long productId, LocalDate fromDate, LocalDate toDate) {
         return repository.findByScidAndProductIdAndDateBetween(SecurityUtils.getScid(), productId, fromDate, toDate);
     }
 
+    @Transactional(readOnly = true)
     public ProductInventory getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("ProductInventory not found with id: " + id));

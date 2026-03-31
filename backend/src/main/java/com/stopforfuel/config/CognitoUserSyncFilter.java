@@ -60,7 +60,7 @@ public class CognitoUserSyncFilter extends OncePerRequestFilter {
         user.setName(name != null ? name : "Unknown");
         user.setRole(role);
         user.setJoinDate(LocalDate.now());
-        user.setStatus("ACTIVE");
+        user.setStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
         user.setScid(SecurityUtils.getScid());
         user.setPersonType("Employee");
 

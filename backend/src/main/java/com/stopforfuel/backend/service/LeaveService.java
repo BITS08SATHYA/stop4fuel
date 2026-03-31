@@ -3,7 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,21 +11,19 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class LeaveService {
 
-    @Autowired
-    private LeaveTypeRepository leaveTypeRepository;
+    private final LeaveTypeRepository leaveTypeRepository;
 
-    @Autowired
-    private LeaveBalanceRepository leaveBalanceRepository;
+    private final LeaveBalanceRepository leaveBalanceRepository;
 
-    @Autowired
-    private LeaveRequestRepository leaveRequestRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
     // Leave Types
+    @Transactional(readOnly = true)
     public List<LeaveType> getAllLeaveTypes() {
         return leaveTypeRepository.findAll();
     }
@@ -49,6 +47,7 @@ public class LeaveService {
     }
 
     // Leave Balances
+    @Transactional(readOnly = true)
     public List<LeaveBalance> getEmployeeLeaveBalances(Long employeeId, Integer year) {
         return leaveBalanceRepository.findByEmployeeIdAndYear(employeeId, year);
     }
@@ -76,16 +75,18 @@ public class LeaveService {
     }
 
     // Leave Requests
+    @Transactional(readOnly = true)
     public List<LeaveRequest> getEmployeeLeaveRequests(Long employeeId) {
         return leaveRequestRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId);
     }
 
+    @Transactional(readOnly = true)
     public List<LeaveRequest> getLeaveRequestsByStatus(String status) {
         Long scid = SecurityUtils.getScid();
         if (status == null || status.isEmpty()) {
             return leaveRequestRepository.findAllByScidOrderByCreatedAtDesc(scid);
         }
-        return leaveRequestRepository.findByScidAndStatusOrderByCreatedAtDesc(scid, status);
+        return leaveRequestRepository.findByScidAndStatusOrderByCreatedAtDesc(scid, com.stopforfuel.backend.enums.LeaveStatus.valueOf(status));
     }
 
     @Transactional
@@ -94,7 +95,7 @@ public class LeaveService {
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         request.setEmployee(employee);
-        request.setStatus("PENDING");
+        request.setStatus(com.stopforfuel.backend.enums.LeaveStatus.PENDING);
         return leaveRequestRepository.save(request);
     }
 
@@ -103,7 +104,7 @@ public class LeaveService {
         LeaveRequest request = leaveRequestRepository.findByIdAndScid(requestId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Leave request not found"));
 
-        request.setStatus("APPROVED");
+        request.setStatus(com.stopforfuel.backend.enums.LeaveStatus.APPROVED);
         request.setApprovedBy(approvedBy);
         request.setRemarks(remarks);
 
@@ -127,7 +128,7 @@ public class LeaveService {
         LeaveRequest request = leaveRequestRepository.findByIdAndScid(requestId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Leave request not found"));
 
-        request.setStatus("REJECTED");
+        request.setStatus(com.stopforfuel.backend.enums.LeaveStatus.REJECTED);
         request.setRemarks(remarks);
         return leaveRequestRepository.save(request);
     }

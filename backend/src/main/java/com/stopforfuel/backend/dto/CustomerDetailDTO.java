@@ -58,7 +58,7 @@ public class CustomerDetailDTO {
                 .phoneNumbers(c.getPhoneNumbers())
                 .address(c.getAddress())
                 .personType(c.getPersonType())
-                .status(c.getStatus())
+                .status(c.getStatus() != null ? c.getStatus().name() : null)
                 .isActive(c.isActive())
                 .joinDate(c.getJoinDate())
                 .role(c.getRole())
