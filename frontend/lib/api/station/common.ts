@@ -5,12 +5,12 @@ import { fetchWithAuth } from '../fetch-with-auth';
 // NEXT_PUBLIC_API_URL to be baked in at build time.
 const getApiBaseUrl = () => {
     if (typeof window !== 'undefined') {
-        if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
         const host = window.location.hostname;
-        // devapp.stopforfuel.com → devapi.stopforfuel.com
+        // devapp.stopforfuel.com → devapi.stopforfuel.com (takes priority over build-time env)
         if (host.startsWith('devapp.')) {
             return `${window.location.protocol}//devapi.${host.slice(7)}/api`;
         }
+        if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
         // Default: same hostname, port 8080 (for direct IP access)
         return `${window.location.protocol}//${host}:8080/api`;
     }
