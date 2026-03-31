@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.DuplicateResourceException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
@@ -53,7 +54,7 @@ public class VehicleService {
         }
 
         if (vehicle.getStatus() == null) {
-            vehicle.setStatus("ACTIVE");
+            vehicle.setStatus(EntityStatus.ACTIVE);
         }
         if (vehicle.getConsumedLiters() == null) {
             vehicle.setConsumedLiters(BigDecimal.ZERO);
@@ -96,12 +97,12 @@ public class VehicleService {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
 
-        String current = vehicle.getStatus();
-        if (current == null || "ACTIVE".equals(current)) {
-            vehicle.setStatus("INACTIVE");
+        EntityStatus current = vehicle.getStatus();
+        if (current == null || current == EntityStatus.ACTIVE) {
+            vehicle.setStatus(EntityStatus.INACTIVE);
         } else {
             // Both INACTIVE and BLOCKED can be manually set back to ACTIVE
-            vehicle.setStatus("ACTIVE");
+            vehicle.setStatus(EntityStatus.ACTIVE);
         }
         return vehicleRepository.save(vehicle);
     }

@@ -61,7 +61,7 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid phone number or passcode"));
         }
 
-        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+        if (user.getStatus() != com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
             return ResponseEntity.status(403).body(Map.of("error", "Account is inactive"));
         }
 

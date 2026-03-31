@@ -33,7 +33,7 @@ public class LeaveRequestDTO {
                 .toDate(lr.getToDate())
                 .numberOfDays(lr.getNumberOfDays())
                 .reason(lr.getReason())
-                .status(lr.getStatus())
+                .status(lr.getStatus() != null ? lr.getStatus().name() : null)
                 .approvedBy(lr.getApprovedBy())
                 .remarks(lr.getRemarks())
                 .employee(EmployeeSummary.from(lr.getEmployee()))

@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.stopforfuel.backend.enums.LeaveStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,7 +34,8 @@ public class LeaveRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String reason;
 
-    private String status = "PENDING"; // PENDING, APPROVED, REJECTED
+    @Enumerated(EnumType.STRING)
+    private LeaveStatus status = LeaveStatus.PENDING;
 
     private String approvedBy;
 

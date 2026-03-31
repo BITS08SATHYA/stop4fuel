@@ -2,6 +2,7 @@ package com.stopforfuel.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stopforfuel.backend.entity.InvoiceBill;
+import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.service.InvoiceBillService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class InvoiceBillControllerTest {
     void setUp() {
         testBill = new InvoiceBill();
         testBill.setId(1L);
-        testBill.setBillType("CASH");
+        testBill.setBillType(BillType.CASH);
         testBill.setNetAmount(new BigDecimal("5000"));
     }
 

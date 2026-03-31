@@ -123,7 +123,7 @@ public class LedgerService {
      */
     @Transactional(readOnly = true)
     public List<InvoiceBill> getOutstandingBills(Long customerId) {
-        return invoiceBillRepository.findByCustomerIdAndPaymentStatus(customerId, "NOT_PAID");
+        return invoiceBillRepository.findByCustomerIdAndPaymentStatus(customerId, com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID);
     }
 
     // DTOs

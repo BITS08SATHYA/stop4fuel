@@ -43,7 +43,7 @@ public class OperationalAdvanceService {
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getByStatus(String status) {
-        return repository.findByStatusOrderByAdvanceDateDesc(status);
+        return repository.findByStatusOrderByAdvanceDateDesc(com.stopforfuel.backend.enums.AdvanceStatus.valueOf(status));
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +58,7 @@ public class OperationalAdvanceService {
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getByType(String advanceType) {
-        return repository.findByAdvanceTypeOrderByAdvanceDateDesc(advanceType);
+        return repository.findByAdvanceTypeOrderByAdvanceDateDesc(com.stopforfuel.backend.enums.AdvanceType.valueOf(advanceType));
     }
 
     @Transactional(readOnly = true)
@@ -70,12 +70,12 @@ public class OperationalAdvanceService {
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getOutstanding() {
-        return repository.findByStatusInOrderByAdvanceDateDesc(List.of("GIVEN", "PARTIALLY_RETURNED"));
+        return repository.findByStatusInOrderByAdvanceDateDesc(List.of(com.stopforfuel.backend.enums.AdvanceStatus.GIVEN, com.stopforfuel.backend.enums.AdvanceStatus.PARTIALLY_RETURNED));
     }
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getPendingByEmployee(Long employeeId) {
-        return repository.findByEmployeeIdAndStatus(employeeId, "PENDING");
+        return repository.findByEmployeeIdAndStatus(employeeId, com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
     }
 
     @Transactional
@@ -120,8 +120,8 @@ public class OperationalAdvanceService {
         OperationalAdvance advance = repository.findByIdForUpdate(advanceId)
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
-        if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
-            throw new BusinessException("Cannot assign invoices to a " + advance.getStatus().toLowerCase() + " advance");
+        if (advance.getStatus() == com.stopforfuel.backend.enums.AdvanceStatus.CANCELLED || advance.getStatus() == com.stopforfuel.backend.enums.AdvanceStatus.RETURNED) {
+            throw new BusinessException("Cannot assign invoices to a " + advance.getStatus().name().toLowerCase() + " advance");
         }
 
         InvoiceBill invoice = invoiceBillRepository.findById(invoiceId)
@@ -169,8 +169,8 @@ public class OperationalAdvanceService {
         OperationalAdvance advance = repository.findByIdForUpdate(advanceId)
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + advanceId));
 
-        if ("CANCELLED".equals(advance.getStatus()) || "RETURNED".equals(advance.getStatus())) {
-            throw new BusinessException("Cannot assign statement to a " + advance.getStatus().toLowerCase() + " advance");
+        if (advance.getStatus() == com.stopforfuel.backend.enums.AdvanceStatus.CANCELLED || advance.getStatus() == com.stopforfuel.backend.enums.AdvanceStatus.RETURNED) {
+            throw new BusinessException("Cannot assign statement to a " + advance.getStatus().name().toLowerCase() + " advance");
         }
 
         Statement statement = statementRepository.findById(statementId)
@@ -197,7 +197,7 @@ public class OperationalAdvanceService {
     public OperationalAdvance updateStatus(Long id, String status) {
         OperationalAdvance advance = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + id));
-        advance.setStatus(status);
+        advance.setStatus(com.stopforfuel.backend.enums.AdvanceStatus.valueOf(status));
         return repository.save(advance);
     }
 
@@ -241,12 +241,12 @@ public class OperationalAdvanceService {
 
         if (settled.compareTo(advance.getAmount()) >= 0) {
             if (utilized.compareTo(BigDecimal.ZERO) > 0) {
-                advance.setStatus("SETTLED");
+                advance.setStatus(com.stopforfuel.backend.enums.AdvanceStatus.SETTLED);
             } else {
-                advance.setStatus("RETURNED");
+                advance.setStatus(com.stopforfuel.backend.enums.AdvanceStatus.RETURNED);
             }
         } else if (settled.compareTo(BigDecimal.ZERO) > 0) {
-            advance.setStatus("PARTIALLY_RETURNED");
+            advance.setStatus(com.stopforfuel.backend.enums.AdvanceStatus.PARTIALLY_RETURNED);
         }
     }
 }

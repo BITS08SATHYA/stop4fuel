@@ -43,7 +43,7 @@ class VehicleControllerTest {
         testVehicle = new Vehicle();
         testVehicle.setId(1L);
         testVehicle.setVehicleNumber("TN01AB1234");
-        testVehicle.setStatus("ACTIVE");
+        testVehicle.setStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
     }
 
     @Test
@@ -108,7 +108,7 @@ class VehicleControllerTest {
 
     @Test
     void toggleStatus_returnsToggledVehicle() throws Exception {
-        testVehicle.setStatus("INACTIVE");
+        testVehicle.setStatus(com.stopforfuel.backend.enums.EntityStatus.INACTIVE);
         when(vehicleService.toggleStatus(1L)).thenReturn(testVehicle);
 
         mockMvc.perform(patch("/api/vehicles/1/toggle-status"))

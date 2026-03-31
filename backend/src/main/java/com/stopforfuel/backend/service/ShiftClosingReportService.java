@@ -49,7 +49,7 @@ public class ShiftClosingReportService {
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Shift not found"));
 
-        if (!"REVIEW".equals(shift.getStatus()) && !"CLOSED".equals(shift.getStatus()) && !"RECONCILED".equals(shift.getStatus())) {
+        if (shift.getStatus() != com.stopforfuel.backend.enums.ShiftStatus.REVIEW && shift.getStatus() != com.stopforfuel.backend.enums.ShiftStatus.CLOSED && shift.getStatus() != com.stopforfuel.backend.enums.ShiftStatus.RECONCILED) {
             throw new BusinessException("Shift must be in REVIEW or CLOSED state before generating a report");
         }
 
@@ -219,7 +219,7 @@ public class ShiftClosingReportService {
         // Mark the shift as RECONCILED
         Shift shift = report.getShift();
         if (shift != null) {
-            shift.setStatus("RECONCILED");
+            shift.setStatus(com.stopforfuel.backend.enums.ShiftStatus.RECONCILED);
             shiftRepository.save(shift);
         }
 
@@ -429,22 +429,22 @@ public class ShiftClosingReportService {
 
         // 6-10. Electronic payment advances (from e_advance table)
         addTransactionLineItem(lineItems, report, shiftId, "CARD",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "CARD"), "Card Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CARD), "Card Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "CCMS",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "CCMS"), "CCMS Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CCMS), "CCMS Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "UPI",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "UPI"), "UPI Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.UPI), "UPI Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "BANK",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "BANK_TRANSFER"), "Bank Transfer Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.BANK_TRANSFER), "Bank Transfer Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "CHEQUE",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "CHEQUE"), "Cheque Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CHEQUE), "Cheque Advance", ++sortOrder);
 
         // 11. Operational Advances (Cash, Salary, Management)
         List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
         Map<String, BigDecimal> opAdvanceTotals = new HashMap<>();
         for (OperationalAdvance oa : opAdvances) {
-            if ("CANCELLED".equals(oa.getStatus())) continue;
-            String type = oa.getAdvanceType() != null ? oa.getAdvanceType() : "CASH";
+            if (oa.getStatus() == com.stopforfuel.backend.enums.AdvanceStatus.CANCELLED) continue;
+            String type = oa.getAdvanceType() != null ? oa.getAdvanceType().name() : "CASH";
             opAdvanceTotals.merge(type, oa.getAmount(), BigDecimal::add);
         }
         for (Map.Entry<String, BigDecimal> entry : opAdvanceTotals.entrySet()) {
@@ -640,9 +640,9 @@ public class ShiftClosingReportService {
             InvoiceBill bill = payment.getInvoiceBill();
             BigDecimal totalReceived = paymentRepository.sumPaymentsByInvoiceBillId(bill.getId());
             if (totalReceived.compareTo(bill.getNetAmount()) >= 0) {
-                bill.setPaymentStatus("PAID");
+                bill.setPaymentStatus(com.stopforfuel.backend.enums.PaymentStatus.PAID);
             } else {
-                bill.setPaymentStatus("NOT_PAID");
+                bill.setPaymentStatus(com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID);
             }
             invoiceBillRepository.save(bill);
         }
@@ -943,7 +943,7 @@ public class ShiftClosingReportService {
         List<EAdvance> eAdvances = eAdvanceRepository.findByShiftIdOrderByTransactionDateDesc(shiftId);
         for (EAdvance eAdv : eAdvances) {
             ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            entry.setType(eAdv.getAdvanceType() != null ? eAdv.getAdvanceType() : "OTHER");
+            entry.setType(eAdv.getAdvanceType() != null ? eAdv.getAdvanceType().name() : "OTHER");
             entry.setDescription(eAdv.getRemarks() != null ? eAdv.getRemarks() : "-");
             entry.setAmount(eAdv.getAmount());
             data.getAdvanceEntries().add(entry);
@@ -952,9 +952,9 @@ public class ShiftClosingReportService {
         // Add operational advances as advance entries
         List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
         for (OperationalAdvance oa : opAdvances) {
-            if ("CANCELLED".equals(oa.getStatus())) continue;
+            if (oa.getStatus() == com.stopforfuel.backend.enums.AdvanceStatus.CANCELLED) continue;
             ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            entry.setType(oa.getAdvanceType() != null ? oa.getAdvanceType() : "CASH");
+            entry.setType(oa.getAdvanceType() != null ? oa.getAdvanceType().name() : "CASH");
             String desc = oa.getRecipientName() != null ? oa.getRecipientName() : "-";
             StringBuilder linkInfo = new StringBuilder();
             if (oa.getInvoiceBills() != null && !oa.getInvoiceBills().isEmpty()) {

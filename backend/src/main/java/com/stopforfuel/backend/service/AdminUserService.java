@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.repository.DesignationRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.UserRepository;
@@ -60,7 +61,7 @@ public class AdminUserService {
                 })
                 .filter(u -> {
                     if (status != null && !status.isBlank()) {
-                        return status.equalsIgnoreCase(u.getStatus());
+                        return u.getStatus() != null && status.equalsIgnoreCase(u.getStatus().name());
                     }
                     return true;
                 })
@@ -118,7 +119,7 @@ public class AdminUserService {
         user.setRole(role);
         user.setPasscode(hashedPasscode);
         user.setJoinDate(LocalDate.now());
-        user.setStatus("ACTIVE");
+        user.setStatus(EntityStatus.ACTIVE);
         user.setScid(SecurityUtils.getScid());
 
         Set<String> phones = new HashSet<>();
@@ -182,7 +183,7 @@ public class AdminUserService {
         user.setCognitoId(cognitoId);
         user.setRole(role);
         user.setJoinDate(LocalDate.now());
-        user.setStatus("ACTIVE");
+        user.setStatus(EntityStatus.ACTIVE);
         user.setScid(SecurityUtils.getScid());
         user.setPersonType("Employee");
 
@@ -220,7 +221,7 @@ public class AdminUserService {
         User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setStatus("INACTIVE");
+        user.setStatus(EntityStatus.INACTIVE);
         userRepository.save(user);
 
         if (authEnabled && user.getCognitoId() != null && userPoolId != null && !userPoolId.isBlank()) {
