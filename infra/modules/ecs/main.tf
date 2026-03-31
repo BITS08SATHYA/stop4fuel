@@ -2,6 +2,7 @@ resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
 
   tags = {
+    Name        = "${var.project_name}-cluster"
     Environment = var.environment
   }
 }
@@ -35,7 +36,7 @@ resource "aws_ecs_task_definition" "backend" {
 
   container_definitions = jsonencode([
     {
-      name      = "${var.project_name}-backend"
+      name      = "backend"
       image     = "${var.ecr_registry}/${var.project_name}-backend:latest"
       essential = true
       portMappings = [
@@ -75,7 +76,7 @@ resource "aws_ecs_task_definition" "backend" {
   }
 
   lifecycle {
-    ignore_changes = [container_definitions]
+    ignore_changes = [container_definitions, task_role_arn]
   }
 }
 
@@ -89,7 +90,7 @@ resource "aws_ecs_task_definition" "frontend" {
 
   container_definitions = jsonencode([
     {
-      name      = "${var.project_name}-frontend"
+      name      = "frontend"
       image     = "${var.ecr_registry}/${var.project_name}-frontend:latest"
       essential = true
       portMappings = [
@@ -125,6 +126,8 @@ resource "aws_ecs_service" "backend" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  availability_zone_rebalancing = "ENABLED"
+
   network_configuration {
     subnets          = var.subnet_ids
     security_groups  = [var.security_group_id]
@@ -133,7 +136,7 @@ resource "aws_ecs_service" "backend" {
 
   load_balancer {
     target_group_arn = var.backend_target_group_arn
-    container_name   = "${var.project_name}-backend"
+    container_name   = "backend"
     container_port   = 8080
   }
 
@@ -155,6 +158,8 @@ resource "aws_ecs_service" "frontend" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  availability_zone_rebalancing = "ENABLED"
+
   network_configuration {
     subnets          = var.subnet_ids
     security_groups  = [var.security_group_id]
@@ -163,7 +168,7 @@ resource "aws_ecs_service" "frontend" {
 
   load_balancer {
     target_group_arn = var.frontend_target_group_arn
-    container_name   = "${var.project_name}-frontend"
+    container_name   = "frontend"
     container_port   = 3000
   }
 
