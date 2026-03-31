@@ -14,7 +14,7 @@ import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
     type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
-    type Product, type Nozzle, type Vehicle
+    type Product, type Nozzle, type Vehicle, type Customer
 } from "@/lib/api/station";
 
 interface EditLine {
@@ -66,11 +66,11 @@ export default function InvoiceHistoryPage() {
     const [editPaymentMode, setEditPaymentMode] = useState("");
     const [editVehicleKM, setEditVehicleKM] = useState("");
     const [editBillType, setEditBillType] = useState<"CASH" | "CREDIT">("CASH");
-    const [editCustomer, setEditCustomer] = useState<any>(null);
-    const [editVehicle, setEditVehicle] = useState<any>(null);
+    const [editCustomer, setEditCustomer] = useState<{ id: number; name: string; username?: string } | null>(null);
+    const [editVehicle, setEditVehicle] = useState<{ id: number; vehicleNumber: string } | null>(null);
     const [editCustomerSearch, setEditCustomerSearch] = useState("");
-    const [editCustomerSuggestions, setEditCustomerSuggestions] = useState<any[]>([]);
-    const [editCustomerVehicles, setEditCustomerVehicles] = useState<any[]>([]);
+    const [editCustomerSuggestions, setEditCustomerSuggestions] = useState<Customer[]>([]);
+    const [editCustomerVehicles, setEditCustomerVehicles] = useState<Vehicle[]>([]);
     const [editVehicleSearch, setEditVehicleSearch] = useState("");
     const [editVehicleResults, setEditVehicleResults] = useState<Vehicle[]>([]);
     const [saving, setSaving] = useState(false);

@@ -24,6 +24,16 @@ import {
     getCustomerCreditInfo
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
+
+interface CustomerWithCredit extends Customer {
+    creditLimitAmount?: number | null;
+    creditLimitLiters?: number | null;
+    consumedLiters?: number;
+    ledgerBalance?: number;
+    status?: string;
+    phoneNumbers?: string;
+    [key: string]: unknown;
+}
 import { FileUploadField } from "@/components/ui/file-upload-field";
 import {
     Receipt,
@@ -66,10 +76,10 @@ export default function InvoicesPage() {
 
     // Customer & Vehicle
     const [customerSearch, setCustomerSearch] = useState("");
-    const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
-    const [selectedCustomer, setSelectedCustomer] = useState<any>(undefined);
-    const [customerVehicles, setCustomerVehicles] = useState<any[]>([]);
-    const [selectedVehicle, setSelectedVehicle] = useState<any>(undefined);
+    const [customerSuggestions, setCustomerSuggestions] = useState<CustomerWithCredit[]>([]);
+    const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithCredit | undefined>(undefined);
+    const [customerVehicles, setCustomerVehicles] = useState<Vehicle[]>([]);
+    const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>(undefined);
     const [isSaving, setIsSaving] = useState(false);
     const [isWalkIn, setIsWalkIn] = useState(false);
     const [walkInCustomerName, setWalkInCustomerName] = useState("");
@@ -626,12 +636,12 @@ export default function InvoicesPage() {
                             </p>
                             <p className="text-foreground font-black text-2xl">{selectedCustomer.name}</p>
                             <p className="text-sm text-muted-foreground">{selectedCustomer.phoneNumbers}</p>
-                            {(selectedCustomer.creditLimitAmount > 0 || selectedCustomer.creditLimitLiters > 0) && (
+                            {((selectedCustomer.creditLimitAmount ?? 0) > 0 || (selectedCustomer.creditLimitLiters ?? 0) > 0) && (
                                 <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                                    {selectedCustomer.creditLimitAmount > 0 && (
+                                    {(selectedCustomer.creditLimitAmount ?? 0) > 0 && (
                                         <p>Credit: ₹{Number(selectedCustomer.ledgerBalance || 0).toLocaleString("en-IN")} / ₹{Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")} used</p>
                                     )}
-                                    {selectedCustomer.creditLimitLiters > 0 && (
+                                    {(selectedCustomer.creditLimitLiters ?? 0) > 0 && (
                                         <p>Liters: {selectedCustomer.consumedLiters || 0} / {Number(selectedCustomer.creditLimitLiters)} L used</p>
                                     )}
                                 </div>
@@ -767,7 +777,7 @@ export default function InvoicesPage() {
                     <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3">
                         <Info size={20} className="text-blue-500 shrink-0 mt-0.5" />
                         <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                            This vehicle belongs to <span className="font-bold">{selectedVehicle.customer.name}</span>. The bill will be charged to <span className="font-bold">{selectedCustomer?.name}</span>.
+                            This vehicle belongs to <span className="font-bold">{selectedVehicle.customer?.name}</span>. The bill will be charged to <span className="font-bold">{selectedCustomer?.name}</span>.
                         </p>
                     </div>
                 )}

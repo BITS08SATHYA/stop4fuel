@@ -13,7 +13,7 @@ import { TablePagination, useClientPagination } from "@/components/ui/table-pagi
 export default function GroupsPage() {
     const [groups, setGroups] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [formData, setFormData] = useState<any>({});
+    const [formData, setFormData] = useState<{ id?: number; groupName?: string; groupDescription?: string }>({});
     const [loading, setLoading] = useState(false);
     const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
     const [groupCustomers, setGroupCustomers] = useState<Record<number, any[]>>({});
