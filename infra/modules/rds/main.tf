@@ -1,6 +1,7 @@
 resource "aws_db_subnet_group" "main" {
-  name       = "${var.project_name}-db-subnet"
-  subnet_ids = var.subnet_ids
+  name        = "${var.project_name}-db-subnet"
+  description = "Private subnets for RDS"
+  subnet_ids  = var.subnet_ids
 
   tags = {
     Name        = "${var.project_name}-db-subnet"
@@ -30,8 +31,8 @@ resource "aws_db_instance" "main" {
   deletion_protection  = true
 
   backup_retention_period = 7
-  backup_window           = "03:00-04:00"
-  maintenance_window      = "sun:04:00-sun:05:00"
+  backup_window           = "23:26-23:56"
+  maintenance_window      = "thu:06:02-thu:06:32"
 
   tags = {
     Name        = "${var.project_name}-db"
