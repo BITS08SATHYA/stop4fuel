@@ -31,7 +31,7 @@ public class UserListDTO {
                 .email(user.getEmails() != null && !user.getEmails().isEmpty()
                         ? user.getEmails().iterator().next() : null)
                 .role(user.getRole() != null ? user.getRole().getRoleType() : null)
-                .status(user.getStatus())
+                .status(user.getStatus() != null ? user.getStatus().name() : null)
                 .joinDate(user.getJoinDate());
 
         if (user instanceof Employee employee) {

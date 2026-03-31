@@ -145,7 +145,7 @@ export default function EAdvancesPage() {
     // CCMS
     const [ccmsNumber, setCcmsNumber] = useState("");
     // Invoice linking
-    const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
+    const [linkedInvoice, setLinkedInvoice] = useState<{ id: number; billNo?: string; billType?: string; netAmount?: number; customer?: { id: number; name: string } | null } | null>(null);
 
     const loadData = useCallback(async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);

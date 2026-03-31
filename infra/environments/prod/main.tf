@@ -158,16 +158,6 @@ module "rds" {
 }
 
 # ============================================================
-# S3 Bucket (import existing)
-# ============================================================
-module "s3" {
-  source = "../../modules/s3"
-
-  bucket_name = "${var.project_name}-frontend-prod"
-  environment = var.environment
-}
-
-# ============================================================
 # SSM Parameter Store — All config
 # ============================================================
 module "ssm" {

@@ -39,7 +39,7 @@ public class EmployeeListDTO {
                 .phone(e.getPhone())
                 .emails(e.getEmails())
                 .phoneNumbers(e.getPhoneNumbers())
-                .status(e.getStatus())
+                .status(e.getStatus() != null ? e.getStatus().name() : null)
                 .joinDate(e.getJoinDate())
                 .photoUrl(e.getPhotoUrl())
                 .gender(e.getGender())

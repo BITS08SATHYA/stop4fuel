@@ -9,7 +9,7 @@ import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.LeaveRequestRepository;
 import com.stopforfuel.backend.repository.SalaryPaymentRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,31 +19,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SalaryPaymentService {
 
-    @Autowired
-    private SalaryPaymentRepository salaryPaymentRepository;
+    private final SalaryPaymentRepository salaryPaymentRepository;
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
-    @Autowired
-    private OperationalAdvanceRepository operationalAdvanceRepository;
+    private final OperationalAdvanceRepository operationalAdvanceRepository;
 
-    @Autowired
-    private LeaveRequestRepository leaveRequestRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
+    @Transactional(readOnly = true)
     public List<SalaryPayment> getMonthlyPayments(Integer month, Integer year) {
         return salaryPaymentRepository.findByMonthAndYear(month, year);
     }
 
+    @Transactional(readOnly = true)
     public List<SalaryPayment> getEmployeePayments(Long employeeId) {
         return salaryPaymentRepository.findByEmployeeIdOrderByYearDescMonthDesc(employeeId);
     }
 
     @Transactional
     public List<SalaryPayment> processMonthlyPayroll(Integer month, Integer year) {
-        List<Employee> employees = employeeRepository.findByStatus("ACTIVE");
+        List<Employee> employees = employeeRepository.findByStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
         List<SalaryPayment> payments = new ArrayList<>();
 
         for (Employee emp : employees) {
@@ -58,7 +57,7 @@ public class SalaryPaymentService {
 
             // Calculate advance deductions
             List<OperationalAdvance> pendingAdvances = operationalAdvanceRepository
-                    .findByEmployeeIdAndStatus(emp.getId(), "PENDING");
+                    .findByEmployeeIdAndStatus(emp.getId(), com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
             double advanceDeduction = pendingAdvances.stream()
                     .map(OperationalAdvance::getAmount)
                     .filter(a -> a != null)
@@ -109,9 +108,9 @@ public class SalaryPaymentService {
 
         // Mark pending advances as DEDUCTED
         List<OperationalAdvance> pendingAdvances = operationalAdvanceRepository
-                .findByEmployeeIdAndStatus(payment.getEmployee().getId(), "PENDING");
+                .findByEmployeeIdAndStatus(payment.getEmployee().getId(), com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
         for (OperationalAdvance advance : pendingAdvances) {
-            advance.setStatus("DEDUCTED");
+            advance.setStatus(com.stopforfuel.backend.enums.AdvanceStatus.DEDUCTED);
             operationalAdvanceRepository.save(advance);
         }
 

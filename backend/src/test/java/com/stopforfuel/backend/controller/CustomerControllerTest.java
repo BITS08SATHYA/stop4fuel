@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.service.CustomerService;
 import com.stopforfuel.backend.service.JasperReportService;
 import com.stopforfuel.backend.service.VehicleService;
@@ -64,7 +65,7 @@ class CustomerControllerTest {
         testCustomer.setId(1L);
         testCustomer.setName("Test Customer");
         testCustomer.setUsername("testcustomer");
-        testCustomer.setStatus("ACTIVE");
+        testCustomer.setStatus(EntityStatus.ACTIVE);
         testCustomer.setRole(role);
         testCustomer.setConsumedLiters(BigDecimal.ZERO);
         testCustomer.setCreditLimitAmount(new BigDecimal("50000"));
@@ -175,7 +176,7 @@ class CustomerControllerTest {
 
     @Test
     void toggleStatus_returnsToggledCustomer() throws Exception {
-        testCustomer.setStatus("INACTIVE");
+        testCustomer.setStatus(EntityStatus.INACTIVE);
         when(customerService.toggleStatus(1L)).thenReturn(testCustomer);
 
         mockMvc.perform(patch("/api/customers/1/toggle-status"))
@@ -185,7 +186,7 @@ class CustomerControllerTest {
 
     @Test
     void blockCustomer_returnsBlockedCustomer() throws Exception {
-        testCustomer.setStatus("BLOCKED");
+        testCustomer.setStatus(EntityStatus.BLOCKED);
         when(customerService.blockCustomer(1L)).thenReturn(testCustomer);
 
         mockMvc.perform(patch("/api/customers/1/block"))
@@ -195,7 +196,7 @@ class CustomerControllerTest {
 
     @Test
     void unblockCustomer_returnsUnblockedCustomer() throws Exception {
-        testCustomer.setStatus("ACTIVE");
+        testCustomer.setStatus(EntityStatus.ACTIVE);
         when(customerService.unblockCustomer(1L)).thenReturn(testCustomer);
 
         mockMvc.perform(patch("/api/customers/1/unblock"))
@@ -208,7 +209,7 @@ class CustomerControllerTest {
         Vehicle vehicle = new Vehicle();
         vehicle.setId(1L);
         vehicle.setVehicleNumber("TN01AB1234");
-        vehicle.setStatus("ACTIVE");
+        vehicle.setStatus(EntityStatus.ACTIVE);
 
         when(vehicleService.getVehiclesByCustomerId(1L)).thenReturn(List.of(vehicle));
 
