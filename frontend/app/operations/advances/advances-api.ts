@@ -106,7 +106,7 @@ export async function fetchAdvanceById(id: number): Promise<OperationalAdvance> 
     return res.json();
 }
 
-export async function fetchActiveShift(): Promise<{ id: number } | null> {
+export async function fetchActiveShift(): Promise<{ id: number; startTime?: string } | null> {
     try {
         const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
