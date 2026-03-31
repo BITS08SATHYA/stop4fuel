@@ -6,20 +6,19 @@ import com.stopforfuel.backend.exception.DuplicateResourceException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerCategoryRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CustomerCategoryService {
 
-    @Autowired
-    private CustomerCategoryRepository categoryRepository;
+    private final CustomerCategoryRepository categoryRepository;
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
     public List<CustomerCategory> getAllCategories() {
         return categoryRepository.findAll();

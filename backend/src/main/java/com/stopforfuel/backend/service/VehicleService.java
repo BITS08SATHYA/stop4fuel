@@ -7,7 +7,7 @@ import com.stopforfuel.backend.exception.DuplicateResourceException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,13 +16,12 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class VehicleService {
 
-    @Autowired
-    private VehicleRepository vehicleRepository;
+    private final VehicleRepository vehicleRepository;
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
     public List<Vehicle> getAllVehicles(String search) {
         if (search != null && !search.isEmpty()) {

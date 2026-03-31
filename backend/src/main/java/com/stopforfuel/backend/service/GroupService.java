@@ -4,7 +4,7 @@ import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.GroupRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,13 +12,12 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class GroupService {
 
-    @Autowired
-    private GroupRepository groupRepository;
+    private final GroupRepository groupRepository;
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
     public List<Group> getAllGroups() {
         return groupRepository.findAll();

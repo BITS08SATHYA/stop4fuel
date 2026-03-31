@@ -6,7 +6,7 @@ import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CompanyDocumentRepository;
 import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,16 +14,14 @@ import java.io.IOException;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CompanyDocumentService {
 
-    @Autowired
-    private CompanyDocumentRepository documentRepository;
+    private final CompanyDocumentRepository documentRepository;
 
-    @Autowired
-    private CompanyRepository companyRepository;
+    private final CompanyRepository companyRepository;
 
-    @Autowired
-    private S3StorageService s3StorageService;
+    private final S3StorageService s3StorageService;
 
     public List<CompanyDocument> getDocumentsByCompany(Long companyId) {
         return documentRepository.findByCompanyIdAndScid(companyId, SecurityUtils.getScid());
