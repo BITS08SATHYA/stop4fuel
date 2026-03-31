@@ -37,6 +37,7 @@ public class StatementService {
     private final StatementPdfGenerator pdfGenerator;
     private final S3StorageService s3StorageService;
 
+    @Transactional(readOnly = true)
     public Page<Statement> getStatements(Long customerId, String status, String categoryType, LocalDate fromDate, LocalDate toDate, String search, Pageable pageable) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         if (search != null && !search.isBlank()) {
@@ -45,28 +46,34 @@ public class StatementService {
         return statementRepository.findWithFilters(customerId, status, ct, fromDate, toDate, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Statement> getAllStatements() {
         return statementRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Statement getStatementById(Long id) {
         return statementRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public Statement getStatementByNo(String statementNo) {
         return statementRepository.findByStatementNo(statementNo)
                 .orElseThrow(() -> new RuntimeException("Statement not found with no: " + statementNo));
     }
 
+    @Transactional(readOnly = true)
     public List<Statement> getStatementsByCustomer(Long customerId) {
         return statementRepository.findByCustomerId(customerId);
     }
 
+    @Transactional(readOnly = true)
     public List<Statement> getOutstandingStatements() {
         return statementRepository.findByStatus("NOT_PAID");
     }
 
+    @Transactional(readOnly = true)
     public List<Statement> getOutstandingByCustomer(Long customerId) {
         return statementRepository.findByCustomerIdAndStatus(customerId, "NOT_PAID");
     }
@@ -161,6 +168,7 @@ public class StatementService {
     /**
      * Preview unlinked credit bills matching the given filters (without creating a statement).
      */
+    @Transactional(readOnly = true)
     public List<InvoiceBill> previewBills(Long customerId, LocalDate fromDate, LocalDate toDate,
                                           Long vehicleId, Long productId) {
         LocalDateTime fromDateTime = fromDate.atStartOfDay();
@@ -237,6 +245,7 @@ public class StatementService {
     /**
      * Get all bills linked to a statement, useful for statement detail/print view.
      */
+    @Transactional(readOnly = true)
     public List<InvoiceBill> getStatementBills(Long statementId) {
         return invoiceBillRepository.findByStatementId(statementId);
     }
@@ -272,6 +281,7 @@ public class StatementService {
         return statementRepository.save(statement);
     }
 
+    @Transactional(readOnly = true)
     public String getStatementPdfUrl(Long id) {
         Statement statement = statementRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
@@ -295,6 +305,7 @@ public class StatementService {
         statementRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public StatementStats getStats() {
         LocalDate startOfThisMonth = LocalDate.now().withDayOfMonth(1);
         LocalDate startOfLastMonth = startOfThisMonth.minusMonths(1);

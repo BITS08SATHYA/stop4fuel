@@ -33,10 +33,12 @@ public class MappingService {
 
     private final InvoiceBillRepository invoiceBillRepository;
 
+    @Transactional(readOnly = true)
     public List<Customer> getUnassignedCustomers() {
         return customerRepository.findByGroupIsNull();
     }
 
+    @Transactional(readOnly = true)
     public List<Vehicle> getUnassignedVehicles() {
         return vehicleRepository.findByCustomerIsNull();
     }

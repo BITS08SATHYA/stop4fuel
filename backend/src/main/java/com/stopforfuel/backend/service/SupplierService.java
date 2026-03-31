@@ -5,6 +5,7 @@ import com.stopforfuel.backend.repository.SupplierRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,14 +15,17 @@ public class SupplierService {
 
     private final SupplierRepository repository;
 
+    @Transactional(readOnly = true)
     public List<Supplier> getAllSuppliers() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Supplier> getActiveSuppliers() {
         return repository.findByActiveTrueAndScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Supplier getSupplierById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + id));

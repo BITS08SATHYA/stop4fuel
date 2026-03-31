@@ -35,6 +35,7 @@ public class CustomerService {
 
     private final com.stopforfuel.backend.repository.RolesRepository rolesRepository;
 
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String categoryType, org.springframework.data.domain.Pageable pageable) {
         String cat = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         if (search != null && !search.isEmpty()) {
@@ -43,18 +44,22 @@ public class CustomerService {
         return customerRepository.findByGroupAndStatus(groupId, status, cat, pageable);
     }
 
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Customer> getCustomersByGroupId(Long groupId, org.springframework.data.domain.Pageable pageable) {
         return customerRepository.findByGroupId(groupId, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Customer> getAllCustomers() {
         return customerRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Customer> getCustomersWithCoordinates() {
         return customerRepository.findAllWithCoordinatesByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Customer getCustomerById(Long id) {
         return customerRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
@@ -305,6 +310,7 @@ public class CustomerService {
      * Returns credit limit info for a customer including current ledger balance.
      * Used by the invoice page for real-time credit limit validation.
      */
+    @Transactional(readOnly = true)
     public Map<String, Object> getCreditInfo(Long customerId) {
         Customer customer = getCustomerById(customerId);
         Map<String, Object> info = new HashMap<>();
@@ -323,6 +329,7 @@ public class CustomerService {
         return info;
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getStats() {
         List<Customer> allCustomers = customerRepository.findAllByScid(SecurityUtils.getScid());
         long totalCustomers = allCustomers.size();

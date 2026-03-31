@@ -20,10 +20,12 @@ public class StockAlertService {
 
     private final TankRepository tankRepository;
 
+    @Transactional(readOnly = true)
     public List<StockAlert> getActiveAlerts() {
         return stockAlertRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<StockAlert> getAllAlerts() {
         return stockAlertRepository.findAllByScid(SecurityUtils.getScid());
     }
