@@ -73,9 +73,14 @@ function clearAuthCookie() {
 
 const getApiBaseUrl = () => {
     if (typeof window !== "undefined") {
+        const host = window.location.hostname;
+        // devapp.stopforfuel.com → devapi.stopforfuel.com
+        if (host.startsWith("devapp.")) {
+            return `${window.location.protocol}//devapi.${host.slice(7)}/api`;
+        }
         return (
             process.env.NEXT_PUBLIC_API_URL ||
-            `${window.location.protocol}//${window.location.hostname}:8080/api`
+            `${window.location.protocol}//${host}:8080/api`
         );
     }
     return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
