@@ -37,7 +37,7 @@ jobs:
       # Dev environment
       - name: Configure AWS credentials (dev)
         if: steps.env.outputs.environment == 'dev'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
@@ -46,7 +46,7 @@ jobs:
       # Production environment
       - name: Configure AWS credentials (production)
         if: steps.env.outputs.environment == 'production'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
@@ -88,9 +88,9 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin
           java-version: "21"
@@ -101,7 +101,7 @@ jobs:
 
       - name: Configure AWS credentials (dev)
         if: needs.setup.outputs.environment == 'dev'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
@@ -109,14 +109,14 @@ jobs:
 
       - name: Configure AWS credentials (production)
         if: needs.setup.outputs.environment == 'production'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
       - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2
 
       - name: Build & Push Docker Image
         working-directory: backend
@@ -130,7 +130,7 @@ jobs:
           docker push $ECR/stopforfuel-backend:latest
 
       - name: Scan Backend Image (Trivy)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: "${{ needs.setup.outputs.ecr_registry }}/stopforfuel-backend:latest"
           format: "table"
@@ -154,11 +154,11 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Configure AWS credentials (dev)
         if: needs.setup.outputs.environment == 'dev'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
@@ -166,14 +166,14 @@ jobs:
 
       - name: Configure AWS credentials (production)
         if: needs.setup.outputs.environment == 'production'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
       - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2
 
       - name: Build & Push Docker Image
         working-directory: frontend
@@ -193,7 +193,7 @@ jobs:
           docker push $ECR/stopforfuel-frontend:latest
 
       - name: Scan Frontend Image (Trivy)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: "${{ needs.setup.outputs.ecr_registry }}/stopforfuel-frontend:latest"
           format: "table"
@@ -218,10 +218,10 @@ jobs:
     if: needs.setup.outputs.deploy_target == 'ec2'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}

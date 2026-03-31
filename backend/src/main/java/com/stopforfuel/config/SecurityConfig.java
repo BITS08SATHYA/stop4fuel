@@ -44,7 +44,7 @@ public class SecurityConfig {
             HttpSecurity http,
             CorsConfigurationSource corsConfigurationSource,
             CognitoUserSyncFilter cognitoUserSyncFilter,
-            DevAuthFilter devAuthFilter,
+            @Autowired(required = false) DevAuthFilter devAuthFilter,
             @Autowired(required = false) DevJwtAuthFilter devJwtAuthFilter) throws Exception {
 
         http
@@ -61,8 +61,10 @@ public class SecurityConfig {
                 );
             if (devJwtAuthFilter != null) {
                 http.addFilterBefore(devJwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-                http.addFilterAfter(devAuthFilter, DevJwtAuthFilter.class);
-            } else {
+                if (devAuthFilter != null) {
+                    http.addFilterAfter(devAuthFilter, DevJwtAuthFilter.class);
+                }
+            } else if (devAuthFilter != null) {
                 http.addFilterBefore(devAuthFilter, UsernamePasswordAuthenticationFilter.class);
             }
         } else {
