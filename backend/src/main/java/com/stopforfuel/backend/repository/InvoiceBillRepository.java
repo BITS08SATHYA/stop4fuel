@@ -276,6 +276,18 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     // Count unpaid bills for a vehicle under a specific customer
     long countByVehicleIdAndCustomerIdAndPaymentStatus(Long vehicleId, Long customerId, String paymentStatus);
 
+    // Dashboard: invoices in date range with products eagerly loaded
+    @EntityGraph(attributePaths = {"customer", "products", "products.product"})
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    List<InvoiceBill> findByDateBetween(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard: recent invoices (top N by date desc)
+    @EntityGraph(attributePaths = {"customer", "products", "products.product"})
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.date IS NOT NULL ORDER BY ib.date DESC")
+    List<InvoiceBill> findRecentInvoices(Pageable pageable);
+
     // Operational advance linked invoices
     List<InvoiceBill> findByOperationalAdvanceId(Long operationalAdvanceId);
 
