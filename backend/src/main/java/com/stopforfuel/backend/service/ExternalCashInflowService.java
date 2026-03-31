@@ -24,14 +24,17 @@ public class ExternalCashInflowService {
     private final ShiftService shiftService;
     private final ExpenseService expenseService;
 
+    @Transactional(readOnly = true)
     public List<ExternalCashInflow> getAll() {
         return inflowRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<ExternalCashInflow> getByShift(Long shiftId) {
         return inflowRepository.findByShiftIdOrderByInflowDateDesc(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<ExternalCashInflow> getByStatus(String status) {
         return inflowRepository.findByStatusOrderByInflowDateDesc(status);
     }
@@ -91,6 +94,7 @@ public class ExternalCashInflowService {
         return saved;
     }
 
+    @Transactional(readOnly = true)
     public List<CashInflowRepayment> getRepayments(Long inflowId) {
         return repaymentRepository.findByCashInflowIdOrderByRepaymentDateDesc(inflowId);
     }

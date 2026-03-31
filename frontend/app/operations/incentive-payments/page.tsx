@@ -103,8 +103,8 @@ export default function IncentivePaymentsPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState("");
     const [amount, setAmount] = useState("");
     const [description, setDescription] = useState("");
-    const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
-    const [linkedStatement, setLinkedStatement] = useState<any>(null);
+    const [linkedInvoice, setLinkedInvoice] = useState<{ id: number; billNo?: string; billType?: string; netAmount?: number } | null>(null);
+    const [linkedStatement, setLinkedStatement] = useState<{ id: number; statementNo?: string } | null>(null);
 
     const loadData = useCallback(async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);

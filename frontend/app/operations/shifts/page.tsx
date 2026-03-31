@@ -161,7 +161,7 @@ export default function ShiftsPage() {
     const [selectedExpenseTypeId, setSelectedExpenseTypeId] = useState("");
     const [newExpenseTypeName, setNewExpenseTypeName] = useState("");
     // Invoice linking
-    const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
+    const [linkedInvoice, setLinkedInvoice] = useState<{ id: number; billNo?: string; billType?: string; netAmount?: number } | null>(null);
 
     const viewingShift = activeShift;
 

@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.stopforfuel.backend.enums.AdvanceStatus;
+import com.stopforfuel.backend.enums.AdvanceType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,8 +29,9 @@ public class OperationalAdvance extends BaseEntity {
     @Column(name = "amount", precision = 19, scale = 4, nullable = false)
     private BigDecimal amount;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "advance_type", nullable = false)
-    private String advanceType; // CASH, SALARY, MANAGEMENT
+    private AdvanceType advanceType;
 
     @Column(name = "recipient_name")
     private String recipientName;
@@ -42,8 +45,9 @@ public class OperationalAdvance extends BaseEntity {
     @Column(name = "remarks")
     private String remarks;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private String status = "GIVEN"; // GIVEN, RETURNED, PARTIALLY_RETURNED, SETTLED, CANCELLED, PENDING, DEDUCTED, WAIVED
+    private AdvanceStatus status = AdvanceStatus.GIVEN;
 
     @Column(name = "returned_amount", precision = 19, scale = 4)
     private BigDecimal returnedAmount;

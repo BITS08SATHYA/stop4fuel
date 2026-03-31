@@ -2,6 +2,8 @@ package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
+import com.stopforfuel.backend.enums.BillType;
+import com.stopforfuel.backend.enums.PaymentStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +27,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     List<InvoiceBill> findByScid(Long scid);
     @EntityGraph(attributePaths = {"customer", "products", "products.product", "products.nozzle"})
     List<InvoiceBill> findByShiftId(Long shiftId);
-    List<InvoiceBill> findByBillType(String billType);
+    List<InvoiceBill> findByBillType(BillType billType);
 
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CASH'")
     BigDecimal sumCashBillsByShift(@Param("shiftId") Long shiftId);
@@ -104,9 +106,9 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("customerId") Long customerId,
             @Param("beforeDate") LocalDateTime beforeDate);
 
-    List<InvoiceBill> findByCustomerIdAndPaymentStatus(Long customerId, String paymentStatus);
+    List<InvoiceBill> findByCustomerIdAndPaymentStatus(Long customerId, PaymentStatus paymentStatus);
 
-    List<InvoiceBill> findByBillTypeAndPaymentStatus(String billType, String paymentStatus);
+    List<InvoiceBill> findByBillTypeAndPaymentStatus(BillType billType, PaymentStatus paymentStatus);
 
     // Sum of all credit bills for a customer (total credit ever billed)
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
@@ -128,17 +130,17 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
 
     // Paginated customer invoices — with billType filter only
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndBillTypeOrderByDateDesc(
-            Long customerId, String billType,
+            Long customerId, BillType billType,
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated customer invoices — with paymentStatus filter only
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndPaymentStatusOrderByDateDesc(
-            Long customerId, String paymentStatus,
+            Long customerId, PaymentStatus paymentStatus,
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated customer invoices — with both billType and paymentStatus
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(
-            Long customerId, String billType, String paymentStatus,
+            Long customerId, BillType billType, PaymentStatus paymentStatus,
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated with date range
@@ -155,7 +157,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.billType = :billType AND ib.date >= :fromDate AND ib.date <= :toDate ORDER BY ib.date DESC")
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndBillTypeAndDateRange(
             @Param("customerId") Long customerId,
-            @Param("billType") String billType,
+            @Param("billType") BillType billType,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             org.springframework.data.domain.Pageable pageable);
@@ -165,7 +167,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus = :paymentStatus AND ib.date >= :fromDate AND ib.date <= :toDate ORDER BY ib.date DESC")
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndPaymentStatusAndDateRange(
             @Param("customerId") Long customerId,
-            @Param("paymentStatus") String paymentStatus,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             org.springframework.data.domain.Pageable pageable);
@@ -176,8 +178,8 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.date >= :fromDate AND ib.date <= :toDate ORDER BY ib.date DESC")
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(
             @Param("customerId") Long customerId,
-            @Param("billType") String billType,
-            @Param("paymentStatus") String paymentStatus,
+            @Param("billType") BillType billType,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             org.springframework.data.domain.Pageable pageable);
@@ -206,8 +208,8 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
          + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%')))")
     Page<InvoiceBill> findAllFiltered(
-            @Param("billType") String billType,
-            @Param("paymentStatus") String paymentStatus,
+            @Param("billType") BillType billType,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("categoryType") String categoryType,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
@@ -267,14 +269,26 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
          + "AND ib.date <= :toDate "
          + "GROUP BY ip.product.id, p.name")
     List<ProductSalesSummary> getProductSalesSummary(
-            @Param("billType") String billType,
-            @Param("paymentStatus") String paymentStatus,
+            @Param("billType") BillType billType,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("categoryType") String categoryType,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
     // Count unpaid bills for a vehicle under a specific customer
-    long countByVehicleIdAndCustomerIdAndPaymentStatus(Long vehicleId, Long customerId, String paymentStatus);
+    long countByVehicleIdAndCustomerIdAndPaymentStatus(Long vehicleId, Long customerId, PaymentStatus paymentStatus);
+
+    // Dashboard: invoices in date range with products eagerly loaded
+    @EntityGraph(attributePaths = {"customer", "products", "products.product"})
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    List<InvoiceBill> findByDateBetween(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard: recent invoices (top N by date desc)
+    @EntityGraph(attributePaths = {"customer", "products", "products.product"})
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.date IS NOT NULL ORDER BY ib.date DESC")
+    List<InvoiceBill> findRecentInvoices(Pageable pageable);
 
     // Operational advance linked invoices
     List<InvoiceBill> findByOperationalAdvanceId(Long operationalAdvanceId);

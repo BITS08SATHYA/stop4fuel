@@ -44,7 +44,7 @@ class ShiftControllerTest {
     void setUp() {
         testShift = new Shift();
         testShift.setId(1L);
-        testShift.setStatus("OPEN");
+        testShift.setStatus(com.stopforfuel.backend.enums.ShiftStatus.OPEN);
         testShift.setStartTime(LocalDateTime.of(2026, 3, 17, 8, 0));
         testShift.setScid(1L);
     }
@@ -110,7 +110,7 @@ class ShiftControllerTest {
 
     @Test
     void close_closesShift() throws Exception {
-        testShift.setStatus("CLOSED");
+        testShift.setStatus(com.stopforfuel.backend.enums.ShiftStatus.CLOSED);
         testShift.setEndTime(LocalDateTime.of(2026, 3, 17, 20, 0));
         when(shiftService.closeShift(1L)).thenReturn(testShift);
 

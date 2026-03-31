@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.stopforfuel.backend.enums.EntityStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -37,8 +38,8 @@ public class User extends PersonEntity {
     @PastOrPresent(message = "Join date cannot be in the future")
     private LocalDate joinDate;
 
-    @Pattern(regexp = "^(Active|Inactive|ACTIVE|INACTIVE)$", message = "Status must be Active or Inactive")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private EntityStatus status;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "passcode")

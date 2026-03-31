@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.stopforfuel.backend.enums.StockLocation;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,11 +22,13 @@ public class StockTransfer extends BaseEntity {
     @Column(nullable = false)
     private Double quantity;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String fromLocation; // GODOWN or CASHIER
+    private StockLocation fromLocation;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String toLocation; // GODOWN or CASHIER
+    private StockLocation toLocation;
 
     @Column(nullable = false)
     private LocalDateTime transferDate;

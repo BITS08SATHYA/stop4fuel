@@ -1,11 +1,6 @@
 package com.stopforfuel.backend.controller;
 
-import com.stopforfuel.backend.entity.*;
-import com.stopforfuel.backend.repository.*;
-import com.stopforfuel.backend.service.CreditManagementService;
-import com.stopforfuel.backend.service.EAdvanceService;
-import com.stopforfuel.backend.service.ExpenseService;
-import com.stopforfuel.backend.service.ShiftService;
+import com.stopforfuel.backend.service.DashboardService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,227 +11,53 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
 public class DashboardController {
 
-    private final InvoiceBillRepository invoiceBillRepository;
-    private final PaymentRepository paymentRepository;
-    private final TankRepository tankRepository;
-    private final PumpRepository pumpRepository;
-    private final NozzleRepository nozzleRepository;
-    private final TankInventoryRepository tankInventoryRepository;
-    private final ShiftService shiftService;
-    private final EAdvanceService eAdvanceService;
-    private final ExpenseService expenseService;
-    private final CreditManagementService creditManagementService;
-    private final OperationalAdvanceRepository operationalAdvanceRepository;
-    private final IncentivePaymentRepository incentivePaymentRepository;
+    private final DashboardService dashboardService;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
     public DashboardStats getStats() {
-        DashboardStats stats = new DashboardStats();
-
-        // --- Today's stats ---
-        List<InvoiceBill> allInvoices = invoiceBillRepository.findAll();
-        LocalDate today = LocalDate.now();
-        List<InvoiceBill> todayInvoices = allInvoices.stream()
-                .filter(inv -> inv.getDate() != null && inv.getDate().toLocalDate().equals(today))
-                .collect(Collectors.toList());
-
-        stats.setTodayRevenue(todayInvoices.stream()
-                .map(inv -> inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        stats.setTodayFuelVolume(todayInvoices.stream()
-                .filter(inv -> inv.getProducts() != null)
-                .flatMap(inv -> inv.getProducts().stream())
-                .map(ip -> ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        stats.setTodayInvoiceCount(todayInvoices.size());
-
-        stats.setTodayCashInvoices(todayInvoices.stream()
-                .filter(inv -> "CASH".equals(inv.getBillType()))
-                .count());
-
-        stats.setTodayCreditInvoices(todayInvoices.stream()
-                .filter(inv -> "CREDIT".equals(inv.getBillType()))
-                .count());
-
-        // --- Active shift stats ---
-        Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null) {
-            stats.setActiveShiftId(activeShift.getId());
-            stats.setActiveShiftStartTime(activeShift.getStartTime() != null
-                    ? activeShift.getStartTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                    : null);
-
-            // Derive shift stats from source entities
-            Long sid = activeShift.getId();
-            BigDecimal shiftCash = invoiceBillRepository.sumCashBillsByShift(sid);
-            Map<String, BigDecimal> eAdvSummary = eAdvanceService.getShiftSummary(sid);
-            BigDecimal shiftUpi = eAdvSummary.getOrDefault("upi", BigDecimal.ZERO);
-            BigDecimal shiftCard = eAdvSummary.getOrDefault("card", BigDecimal.ZERO);
-            BigDecimal shiftExpense = expenseService.sumByShift(sid);
-            BigDecimal shiftTotal = shiftCash.add(eAdvSummary.getOrDefault("total", BigDecimal.ZERO));
-            BigDecimal shiftNet = shiftTotal.subtract(shiftExpense);
-
-            stats.setShiftCash(shiftCash);
-            stats.setShiftUpi(shiftUpi);
-            stats.setShiftCard(shiftCard);
-            stats.setShiftExpense(shiftExpense);
-            stats.setShiftTotal(shiftTotal);
-            stats.setShiftNet(shiftNet);
-        }
-
-        // --- Station stats ---
-        stats.setTotalTanks(tankRepository.count());
-        stats.setActiveTanks(tankRepository.findByActive(true).size());
-        stats.setTotalPumps(pumpRepository.count());
-        stats.setActivePumps(pumpRepository.findByActive(true).size());
-        stats.setTotalNozzles(nozzleRepository.count());
-        stats.setActiveNozzles(nozzleRepository.findByActive(true).size());
-
-        // --- Credit stats + aging ---
-        try {
-            CreditManagementService.CreditOverview creditOverview = creditManagementService.getCreditOverview(null);
-            stats.setTotalOutstanding(creditOverview.getTotalOutstanding());
-            stats.setTotalCreditCustomers(creditOverview.getTotalCreditCustomers());
-            stats.setCreditAging0to30(creditOverview.getTotalAging0to30());
-            stats.setCreditAging31to60(creditOverview.getTotalAging31to60());
-            stats.setCreditAging61to90(creditOverview.getTotalAging61to90());
-            stats.setCreditAging90Plus(creditOverview.getTotalAging90Plus());
-        } catch (Exception e) {
-            stats.setTotalOutstanding(BigDecimal.ZERO);
-            stats.setTotalCreditCustomers(0);
-            stats.setCreditAging0to30(BigDecimal.ZERO);
-            stats.setCreditAging31to60(BigDecimal.ZERO);
-            stats.setCreditAging61to90(BigDecimal.ZERO);
-            stats.setCreditAging90Plus(BigDecimal.ZERO);
-        }
-
-        // --- Daily revenue trend (last 7 days) ---
-        List<DailyRevenue> dailyRevenue = new ArrayList<>();
-        for (int i = 6; i >= 0; i--) {
-            LocalDate date = today.minusDays(i);
-            BigDecimal revenue = allInvoices.stream()
-                    .filter(inv -> inv.getDate() != null && inv.getDate().toLocalDate().equals(date))
-                    .map(inv -> inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            long count = allInvoices.stream()
-                    .filter(inv -> inv.getDate() != null && inv.getDate().toLocalDate().equals(date))
-                    .count();
-            BigDecimal fuelVolume = allInvoices.stream()
-                    .filter(inv -> inv.getDate() != null && inv.getDate().toLocalDate().equals(date))
-                    .filter(inv -> inv.getProducts() != null)
-                    .flatMap(inv -> inv.getProducts().stream())
-                    .map(ip -> ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            DailyRevenue dr = new DailyRevenue();
-            dr.setDate(date.format(DateTimeFormatter.ISO_LOCAL_DATE));
-            dr.setRevenue(revenue);
-            dr.setInvoiceCount(count);
-            dr.setFuelVolume(fuelVolume);
-            dailyRevenue.add(dr);
-        }
-        stats.setDailyRevenue(dailyRevenue);
-
-        // --- Product-wise sales for today ---
-        Map<String, BigDecimal[]> productMap = new LinkedHashMap<>();
-        todayInvoices.stream()
-                .filter(inv -> inv.getProducts() != null)
-                .flatMap(inv -> inv.getProducts().stream())
-                .forEach(ip -> {
-                    String productName = ip.getProduct() != null ? ip.getProduct().getName() : "Unknown";
-                    productMap.computeIfAbsent(productName, k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
-                    BigDecimal[] vals = productMap.get(productName);
-                    vals[0] = vals[0].add(ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO);
-                    vals[1] = vals[1].add(ip.getAmount() != null ? ip.getAmount() : BigDecimal.ZERO);
-                });
-        List<ProductSales> productSales = productMap.entrySet().stream()
-                .map(e -> {
-                    ProductSales ps = new ProductSales();
-                    ps.setProductName(e.getKey());
-                    ps.setQuantity(e.getValue()[0]);
-                    ps.setAmount(e.getValue()[1]);
-                    return ps;
-                })
-                .collect(Collectors.toList());
-        stats.setProductSales(productSales);
-
-        // --- Tank status (use tank.availableStock as the authoritative source) ---
-        List<Tank> tanks = tankRepository.findAll();
-        List<TankStatus> tankStatuses = tanks.stream().map(tank -> {
-            TankStatus ts = new TankStatus();
-            ts.setTankId(tank.getId());
-            ts.setTankName(tank.getName());
-            ts.setProductName(tank.getProduct() != null ? tank.getProduct().getName() : null);
-            ts.setCapacity(tank.getCapacity());
-            ts.setCurrentStock(tank.getAvailableStock() != null ? tank.getAvailableStock() : 0.0);
-            ts.setThresholdStock(tank.getThresholdStock());
-            ts.setProductPrice(tank.getProduct() != null ? tank.getProduct().getPrice() : null);
-            ts.setActive(tank.isActive());
-
-            TankInventory latestInv = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
-            if (latestInv != null) {
-                ts.setLastReadingDate(latestInv.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE));
-            }
-            return ts;
-        }).collect(Collectors.toList());
-        stats.setTankStatuses(tankStatuses);
-
-        // --- Recent invoices (last 10) ---
-        List<RecentInvoiceItem> recentInvoices = allInvoices.stream()
-                .filter(inv -> inv.getDate() != null)
-                .sorted(Comparator.comparing(InvoiceBill::getDate).reversed())
-                .limit(10)
-                .map(inv -> {
-                    RecentInvoiceItem item = new RecentInvoiceItem();
-                    item.setId(inv.getId());
-                    item.setDate(inv.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                    item.setCustomerName(inv.getCustomer() != null ? inv.getCustomer().getName() : null);
-                    item.setBillType(inv.getBillType());
-                    item.setAmount(inv.getNetAmount());
-                    item.setPaymentStatus(inv.getPaymentStatus());
-                    return item;
-                })
-                .collect(Collectors.toList());
-        stats.setRecentInvoices(recentInvoices);
-
-        return stats;
+        return dashboardService.getStats();
     }
 
-    private BigDecimal toBigDecimal(Object value) {
-        if (value == null) return BigDecimal.ZERO;
-        if (value instanceof BigDecimal) return (BigDecimal) value;
-        if (value instanceof Number) return BigDecimal.valueOf(((Number) value).doubleValue());
-        return BigDecimal.ZERO;
+    @GetMapping("/invoice-analytics")
+    @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
+    public InvoiceAnalytics getInvoiceAnalytics(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return dashboardService.getInvoiceAnalytics(from, to);
+    }
+
+    @GetMapping("/payment-analytics")
+    @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
+    public PaymentAnalytics getPaymentAnalytics(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return dashboardService.getPaymentAnalytics(from, to);
+    }
+
+    @GetMapping("/cashier")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public CashierDashboard getCashierDashboard() {
+        return dashboardService.getCashierDashboard();
     }
 
     // --- DTOs ---
 
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class DashboardStats {
-        // Today's stats
         private BigDecimal todayRevenue;
         private BigDecimal todayFuelVolume;
         private long todayInvoiceCount;
         private long todayCashInvoices;
         private long todayCreditInvoices;
-
-        // Active shift stats (null if no active shift)
         private Long activeShiftId;
         private String activeShiftStartTime;
         private BigDecimal shiftCash;
@@ -245,38 +66,25 @@ public class DashboardController {
         private BigDecimal shiftExpense;
         private BigDecimal shiftTotal;
         private BigDecimal shiftNet;
-
-        // Station stats
         private long totalTanks;
         private long activeTanks;
         private long totalPumps;
         private long activePumps;
         private long totalNozzles;
         private long activeNozzles;
-
-        // Credit stats + aging
         private BigDecimal totalOutstanding;
         private long totalCreditCustomers;
         private BigDecimal creditAging0to30;
         private BigDecimal creditAging31to60;
         private BigDecimal creditAging61to90;
         private BigDecimal creditAging90Plus;
-
-        // 7-day revenue trend
         private List<DailyRevenue> dailyRevenue;
-
-        // Today's product-wise sales
         private List<ProductSales> productSales;
-
-        // Tank status
         private List<TankStatus> tankStatuses;
-
-        // Recent invoices (last 10)
         private List<RecentInvoiceItem> recentInvoices;
     }
 
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class DailyRevenue {
         private String date;
         private BigDecimal revenue;
@@ -284,16 +92,14 @@ public class DashboardController {
         private BigDecimal fuelVolume;
     }
 
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class ProductSales {
         private String productName;
         private BigDecimal quantity;
         private BigDecimal amount;
     }
 
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class TankStatus {
         private Long tankId;
         private String tankName;
@@ -306,8 +112,7 @@ public class DashboardController {
         private String lastReadingDate;
     }
 
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class RecentInvoiceItem {
         private Long id;
         private String date;
@@ -316,241 +121,6 @@ public class DashboardController {
         private BigDecimal amount;
         private String paymentStatus;
     }
-
-    // ==============================
-    // Invoice Analytics Dashboard
-    // ==============================
-
-    @GetMapping("/invoice-analytics")
-    @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
-    public InvoiceAnalytics getInvoiceAnalytics(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-
-        LocalDate endDate = to != null ? to : LocalDate.now();
-        LocalDate startDate = from != null ? from : endDate.minusDays(29);
-        LocalDateTime fromDt = startDate.atStartOfDay();
-        LocalDateTime toDt = endDate.atTime(LocalTime.MAX);
-
-        InvoiceAnalytics analytics = new InvoiceAnalytics();
-        analytics.setFromDate(startDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
-        analytics.setToDate(endDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
-
-        // Summary by billType + paymentStatus
-        List<Object[]> summary = invoiceBillRepository.getInvoiceSummary(fromDt, toDt);
-        long totalCount = 0;
-        BigDecimal totalRevenue = BigDecimal.ZERO;
-        long cashCount = 0, creditCount = 0;
-        BigDecimal cashAmount = BigDecimal.ZERO, creditAmount = BigDecimal.ZERO;
-        long paidCount = 0, unpaidCount = 0;
-        BigDecimal paidAmount = BigDecimal.ZERO, unpaidAmount = BigDecimal.ZERO;
-
-        for (Object[] row : summary) {
-            String billType = (String) row[0];
-            String paymentStatus = (String) row[1];
-            long count = ((Number) row[2]).longValue();
-            BigDecimal amount = (BigDecimal) row[3];
-
-            totalCount += count;
-            totalRevenue = totalRevenue.add(amount);
-
-            if ("CASH".equals(billType)) {
-                cashCount += count;
-                cashAmount = cashAmount.add(amount);
-            } else {
-                creditCount += count;
-                creditAmount = creditAmount.add(amount);
-            }
-            if ("PAID".equals(paymentStatus)) {
-                paidCount += count;
-                paidAmount = paidAmount.add(amount);
-            } else {
-                unpaidCount += count;
-                unpaidAmount = unpaidAmount.add(amount);
-            }
-        }
-
-        analytics.setTotalInvoices(totalCount);
-        analytics.setTotalRevenue(totalRevenue);
-        analytics.setAvgInvoiceValue(totalCount > 0
-                ? totalRevenue.divide(BigDecimal.valueOf(totalCount), 2, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO);
-        analytics.setCashCount(cashCount);
-        analytics.setCashAmount(cashAmount);
-        analytics.setCreditCount(creditCount);
-        analytics.setCreditAmount(creditAmount);
-        analytics.setPaidCount(paidCount);
-        analytics.setPaidAmount(paidAmount);
-        analytics.setUnpaidCount(unpaidCount);
-        analytics.setUnpaidAmount(unpaidAmount);
-
-        // Daily trend
-        List<Object[]> dailyRaw = invoiceBillRepository.getDailyInvoiceStats(fromDt, toDt);
-        Map<LocalDate, InvoiceDailyTrend> dailyMap = new LinkedHashMap<>();
-        for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
-            InvoiceDailyTrend t = new InvoiceDailyTrend();
-            t.setDate(d.format(DateTimeFormatter.ISO_LOCAL_DATE));
-            dailyMap.put(d, t);
-        }
-        for (Object[] row : dailyRaw) {
-            LocalDate date = (LocalDate) row[0];
-            String billType = (String) row[1];
-            long count = ((Number) row[2]).longValue();
-            BigDecimal amount = (BigDecimal) row[3];
-            InvoiceDailyTrend t = dailyMap.get(date);
-            if (t != null) {
-                t.setTotalCount(t.getTotalCount() + count);
-                t.setTotalAmount(t.getTotalAmount().add(amount));
-                if ("CASH".equals(billType)) {
-                    t.setCashAmount(t.getCashAmount().add(amount));
-                    t.setCashCount(t.getCashCount() + count);
-                } else {
-                    t.setCreditAmount(t.getCreditAmount().add(amount));
-                    t.setCreditCount(t.getCreditCount() + count);
-                }
-            }
-        }
-        analytics.setDailyTrend(new ArrayList<>(dailyMap.values()));
-
-        // Payment mode distribution (cash invoices)
-        List<Object[]> modeRaw = invoiceBillRepository.getPaymentModeDistribution(fromDt, toDt);
-        List<NameCountAmount> paymentModes = new ArrayList<>();
-        for (Object[] row : modeRaw) {
-            paymentModes.add(new NameCountAmount((String) row[0], ((Number) row[1]).longValue(), (BigDecimal) row[2]));
-        }
-        analytics.setPaymentModeDistribution(paymentModes);
-
-        // Top customers (limit 10)
-        List<Object[]> custRaw = invoiceBillRepository.getTopCustomersByRevenue(fromDt, toDt);
-        List<NameCountAmount> topCustomers = new ArrayList<>();
-        for (int i = 0; i < Math.min(10, custRaw.size()); i++) {
-            Object[] row = custRaw.get(i);
-            topCustomers.add(new NameCountAmount((String) row[0], ((Number) row[1]).longValue(), (BigDecimal) row[2]));
-        }
-        analytics.setTopCustomers(topCustomers);
-
-        // Product breakdown
-        var productSummaries = invoiceBillRepository.getProductSalesSummary(null, null, null, fromDt, toDt);
-        List<ProductBreakdown> products = new ArrayList<>();
-        for (var ps : productSummaries) {
-            ProductBreakdown pb = new ProductBreakdown();
-            pb.setProductName(ps.getProductName());
-            pb.setQuantity(ps.getTotalQuantity());
-            pb.setAmount(ps.getTotalAmount());
-            products.add(pb);
-        }
-        analytics.setProductBreakdown(products);
-
-        // Hourly distribution
-        List<Object[]> hourlyRaw = invoiceBillRepository.getHourlyDistribution(fromDt, toDt);
-        List<HourlyData> hourlyData = new ArrayList<>();
-        Map<Integer, Long> hourMap = new HashMap<>();
-        for (Object[] row : hourlyRaw) {
-            hourMap.put(((Number) row[0]).intValue(), ((Number) row[1]).longValue());
-        }
-        for (int h = 0; h < 24; h++) {
-            HourlyData hd = new HourlyData();
-            hd.setHour(h);
-            hd.setCount(hourMap.getOrDefault(h, 0L));
-            hourlyData.add(hd);
-        }
-        analytics.setHourlyDistribution(hourlyData);
-
-        return analytics;
-    }
-
-    // ==============================
-    // Payment Analytics Dashboard
-    // ==============================
-
-    @GetMapping("/payment-analytics")
-    @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
-    public PaymentAnalytics getPaymentAnalytics(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-
-        LocalDate endDate = to != null ? to : LocalDate.now();
-        LocalDate startDate = from != null ? from : endDate.minusDays(29);
-        LocalDateTime fromDt = startDate.atStartOfDay();
-        LocalDateTime toDt = endDate.atTime(LocalTime.MAX);
-
-        PaymentAnalytics analytics = new PaymentAnalytics();
-        analytics.setFromDate(startDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
-        analytics.setToDate(endDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
-
-        // KPIs
-        BigDecimal totalCollected = paymentRepository.sumPaymentsInDateRange(fromDt, toDt);
-        long totalPayments = paymentRepository.countPaymentsInDateRange(fromDt, toDt);
-        analytics.setTotalCollected(totalCollected);
-        analytics.setTotalPayments(totalPayments);
-        analytics.setAvgPaymentAmount(totalPayments > 0
-                ? totalCollected.divide(BigDecimal.valueOf(totalPayments), 2, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO);
-
-        // Credit outstanding
-        try {
-            CreditManagementService.CreditOverview creditOverview = creditManagementService.getCreditOverview(null);
-            analytics.setTotalOutstanding(creditOverview.getTotalOutstanding());
-            analytics.setCreditCustomers(creditOverview.getTotalCreditCustomers());
-            analytics.setAging0to30(creditOverview.getTotalAging0to30());
-            analytics.setAging31to60(creditOverview.getTotalAging31to60());
-            analytics.setAging61to90(creditOverview.getTotalAging61to90());
-            analytics.setAging90Plus(creditOverview.getTotalAging90Plus());
-        } catch (Exception e) {
-            analytics.setTotalOutstanding(BigDecimal.ZERO);
-            analytics.setAging0to30(BigDecimal.ZERO);
-            analytics.setAging31to60(BigDecimal.ZERO);
-            analytics.setAging61to90(BigDecimal.ZERO);
-            analytics.setAging90Plus(BigDecimal.ZERO);
-        }
-
-        // Collection rate: collected / (collected + outstanding)
-        BigDecimal denominator = totalCollected.add(analytics.getTotalOutstanding());
-        analytics.setCollectionRate(denominator.compareTo(BigDecimal.ZERO) > 0
-                ? totalCollected.multiply(BigDecimal.valueOf(100)).divide(denominator, 1, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO);
-
-        // Daily trend
-        List<Object[]> dailyRaw = paymentRepository.getDailyPaymentStats(fromDt, toDt);
-        Map<LocalDate, PaymentDailyTrend> dailyMap = new LinkedHashMap<>();
-        for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
-            PaymentDailyTrend t = new PaymentDailyTrend();
-            t.setDate(d.format(DateTimeFormatter.ISO_LOCAL_DATE));
-            dailyMap.put(d, t);
-        }
-        for (Object[] row : dailyRaw) {
-            LocalDate date = (LocalDate) row[0];
-            PaymentDailyTrend t = dailyMap.get(date);
-            if (t != null) {
-                t.setCount(((Number) row[1]).longValue());
-                t.setAmount((BigDecimal) row[2]);
-            }
-        }
-        analytics.setDailyTrend(new ArrayList<>(dailyMap.values()));
-
-        // Payment mode breakdown
-        List<Object[]> modeRaw = paymentRepository.getPaymentModeBreakdown(fromDt, toDt);
-        List<NameCountAmount> modes = new ArrayList<>();
-        for (Object[] row : modeRaw) {
-            modes.add(new NameCountAmount((String) row[0], ((Number) row[1]).longValue(), (BigDecimal) row[2]));
-        }
-        analytics.setPaymentModeBreakdown(modes);
-
-        // Top paying customers (limit 10)
-        List<Object[]> custRaw = paymentRepository.getTopPayingCustomers(fromDt, toDt);
-        List<NameCountAmount> topCustomers = new ArrayList<>();
-        for (int i = 0; i < Math.min(10, custRaw.size()); i++) {
-            Object[] row = custRaw.get(i);
-            topCustomers.add(new NameCountAmount((String) row[0], ((Number) row[1]).longValue(), (BigDecimal) row[2]));
-        }
-        analytics.setTopCustomers(topCustomers);
-
-        return analytics;
-    }
-
-    // ==============================
-    // Invoice Analytics DTOs
-    // ==============================
 
     @Getter @Setter
     public static class InvoiceAnalytics {
@@ -605,10 +175,6 @@ public class DashboardController {
         private long count;
     }
 
-    // ==============================
-    // Payment Analytics DTOs
-    // ==============================
-
     @Getter @Setter
     public static class PaymentAnalytics {
         private String fromDate;
@@ -635,113 +201,6 @@ public class DashboardController {
         private BigDecimal amount = BigDecimal.ZERO;
     }
 
-    // ==========================================
-    // Cashier Dashboard
-    // ==========================================
-
-    @GetMapping("/cashier")
-    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public CashierDashboard getCashierDashboard() {
-        CashierDashboard dashboard = new CashierDashboard();
-
-        Shift activeShift = shiftService.getActiveShift();
-        if (activeShift == null) {
-            dashboard.setHasActiveShift(false);
-            return dashboard;
-        }
-
-        dashboard.setHasActiveShift(true);
-        dashboard.setShiftId(activeShift.getId());
-        dashboard.setShiftStatus(activeShift.getStatus());
-        dashboard.setStartTime(activeShift.getStartTime() != null
-                ? activeShift.getStartTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
-        dashboard.setEndTime(activeShift.getEndTime() != null
-                ? activeShift.getEndTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
-        if (activeShift.getAttendant() != null) {
-            dashboard.setAttendantName(activeShift.getAttendant().getName());
-        }
-
-        Long sid = activeShift.getId();
-
-        // Invoice totals
-        BigDecimal cashBills = invoiceBillRepository.sumCashBillsByShift(sid);
-        BigDecimal creditBills = invoiceBillRepository.sumCreditBillsByShift(sid);
-        dashboard.setCashBillTotal(cashBills);
-        dashboard.setCreditBillTotal(creditBills);
-
-        // E-Advance (card/upi/cheque/ccms/bank) totals
-        Map<String, BigDecimal> eAdvSummary = eAdvanceService.getShiftSummary(sid);
-        dashboard.setEAdvanceTotals(eAdvSummary);
-
-        // Expenses
-        BigDecimal expenses = expenseService.sumByShift(sid);
-        dashboard.setExpenseTotal(expenses);
-
-        // Payments collected (bill + statement)
-        BigDecimal billPayments = paymentRepository.sumBillPaymentsByShift(sid);
-        BigDecimal stmtPayments = paymentRepository.sumStatementPaymentsByShift(sid);
-        dashboard.setBillPaymentTotal(billPayments != null ? billPayments : BigDecimal.ZERO);
-        dashboard.setStatementPaymentTotal(stmtPayments != null ? stmtPayments : BigDecimal.ZERO);
-
-        // Operational advances
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(sid);
-        BigDecimal opAdvanceTotal = opAdvances.stream()
-                .map(oa -> oa.getAmount() != null ? oa.getAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        dashboard.setOperationalAdvanceTotal(opAdvanceTotal);
-        dashboard.setOperationalAdvanceCount(opAdvances.size());
-
-        // Incentive payments
-        List<IncentivePayment> incentives = incentivePaymentRepository.findByShiftIdOrderByPaymentDateDesc(sid);
-        BigDecimal incentiveTotal = incentives.stream()
-                .map(ip -> ip.getAmount() != null ? ip.getAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        dashboard.setIncentiveTotal(incentiveTotal);
-        dashboard.setIncentiveCount(incentives.size());
-
-        // Invoice counts
-        List<InvoiceBill> shiftInvoices = invoiceBillRepository.findByShiftId(sid);
-        dashboard.setTotalInvoiceCount(shiftInvoices.size());
-        dashboard.setCashInvoiceCount((int) shiftInvoices.stream()
-                .filter(inv -> "CASH".equals(inv.getBillType())).count());
-        dashboard.setCreditInvoiceCount((int) shiftInvoices.stream()
-                .filter(inv -> "CREDIT".equals(inv.getBillType())).count());
-
-        // Recent invoices (last 10)
-        List<CashierInvoiceItem> recentInvoices = shiftInvoices.stream()
-                .sorted((a, b) -> {
-                    if (a.getDate() == null) return 1;
-                    if (b.getDate() == null) return -1;
-                    return b.getDate().compareTo(a.getDate());
-                })
-                .limit(10)
-                .map(inv -> {
-                    CashierInvoiceItem item = new CashierInvoiceItem();
-                    item.setId(inv.getId());
-                    item.setBillNo(inv.getBillNo());
-                    item.setBillType(inv.getBillType());
-                    item.setPaymentMode(inv.getPaymentMode());
-                    item.setNetAmount(inv.getNetAmount());
-                    item.setDate(inv.getDate() != null
-                            ? inv.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
-                    if (inv.getCustomer() != null) {
-                        item.setCustomerName(inv.getCustomer().getName());
-                    }
-                    return item;
-                })
-                .toList();
-        dashboard.setRecentInvoices(recentInvoices);
-
-        // Computed: cash in hand
-        BigDecimal totalIn = cashBills
-                .add(dashboard.getBillPaymentTotal())
-                .add(dashboard.getStatementPaymentTotal());
-        BigDecimal totalOut = expenses.add(opAdvanceTotal).add(incentiveTotal);
-        dashboard.setCashInHand(totalIn.subtract(totalOut));
-
-        return dashboard;
-    }
-
     @Getter @Setter @NoArgsConstructor
     public static class CashierDashboard {
         private boolean hasActiveShift;
@@ -750,32 +209,20 @@ public class DashboardController {
         private String startTime;
         private String endTime;
         private String attendantName;
-
-        // Invoice totals
         private BigDecimal cashBillTotal = BigDecimal.ZERO;
         private BigDecimal creditBillTotal = BigDecimal.ZERO;
         private int totalInvoiceCount;
         private int cashInvoiceCount;
         private int creditInvoiceCount;
-
-        // E-Advances (card/upi/cheque etc.)
         private Map<String, BigDecimal> eAdvanceTotals = new HashMap<>();
-
-        // Collections
         private BigDecimal billPaymentTotal = BigDecimal.ZERO;
         private BigDecimal statementPaymentTotal = BigDecimal.ZERO;
-
-        // Outflows
         private BigDecimal expenseTotal = BigDecimal.ZERO;
         private BigDecimal operationalAdvanceTotal = BigDecimal.ZERO;
         private int operationalAdvanceCount;
         private BigDecimal incentiveTotal = BigDecimal.ZERO;
         private int incentiveCount;
-
-        // Computed
         private BigDecimal cashInHand = BigDecimal.ZERO;
-
-        // Recent invoices
         private List<CashierInvoiceItem> recentInvoices = new ArrayList<>();
     }
 

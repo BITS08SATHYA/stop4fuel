@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Employee;
+import com.stopforfuel.backend.enums.EntityStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -14,7 +15,7 @@ import java.util.Optional;
 public interface EmployeeRepository extends ScidRepository<Employee> {
     Optional<Employee> findByAadharNumber(String aadharNumber);
     List<Employee> findByScid(Long scid);
-    List<Employee> findByStatus(String status);
+    List<Employee> findByStatus(EntityStatus status);
 
     @Query("SELECT e FROM Employee e WHERE " +
            "(:search IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +

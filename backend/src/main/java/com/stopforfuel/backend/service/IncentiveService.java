@@ -16,14 +16,17 @@ public class IncentiveService {
 
     private final IncentiveRepository repository;
 
+    @Transactional(readOnly = true)
     public List<Incentive> getAll() {
         return repository.findAllWithCustomerAndProduct(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Incentive> getByCustomer(Long customerId) {
         return repository.findByCustomerId(customerId);
     }
 
+    @Transactional(readOnly = true)
     public Optional<Incentive> getActiveIncentive(Long customerId, Long productId) {
         return repository.findByCustomerIdAndProductIdAndActiveTrue(customerId, productId);
     }

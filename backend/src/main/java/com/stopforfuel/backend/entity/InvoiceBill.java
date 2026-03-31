@@ -1,7 +1,8 @@
 package com.stopforfuel.backend.entity;
 
+import com.stopforfuel.backend.enums.BillType;
+import com.stopforfuel.backend.enums.PaymentStatus;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.Setter;
@@ -70,9 +71,9 @@ public class InvoiceBill extends BaseEntity {
     @Column(name = "bill_no")
     private String billNo; // e.g., "C26/34", "A26/51"
 
-    @NotBlank(message = "Bill type is required")
+    @Enumerated(EnumType.STRING)
     @Column(name = "bill_type", nullable = false)
-    private String billType; // CASH, CREDIT
+    private BillType billType;
 
     @Column(name = "payment_mode")
     private String paymentMode; // CASH, CARD, UPI, etc.
@@ -92,8 +93,9 @@ public class InvoiceBill extends BaseEntity {
     @Column(name = "driver_phone")
     private String driverPhone;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_status")
-    private String paymentStatus; // PAID, NOT_PAID (for credit bills)
+    private PaymentStatus paymentStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "statement_id")
@@ -135,7 +137,7 @@ public class InvoiceBill extends BaseEntity {
         }
         if (this.paymentStatus == null) {
             // Cash bills are paid immediately; credit bills start as NOT_PAID
-            this.paymentStatus = "CREDIT".equals(this.billType) ? "NOT_PAID" : "PAID";
+            this.paymentStatus = BillType.CREDIT.equals(this.billType) ? PaymentStatus.NOT_PAID : PaymentStatus.PAID;
         }
     }
 }

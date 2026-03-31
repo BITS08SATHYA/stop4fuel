@@ -47,7 +47,7 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public" {
-  count          = length(aws_subnet.public)
+  count          = length(var.public_subnet_cidrs)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
@@ -103,7 +103,7 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private" {
-  count          = var.enable_nat_gateway ? length(aws_subnet.private) : 0
+  count          = var.enable_nat_gateway ? length(var.private_subnet_cidrs) : 0
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private[0].id
 }
@@ -156,7 +156,8 @@ resource "aws_security_group" "ec2" {
 
 resource "aws_security_group" "alb" {
   count       = var.enable_private_subnets ? 1 : 0
-  name_prefix = "${var.project_name}-alb-"
+  name        = "${var.project_name}-alb-sg"
+  description = "ALB - allows HTTP/HTTPS from internet"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -194,7 +195,8 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs" {
   count       = var.enable_private_subnets ? 1 : 0
-  name_prefix = "${var.project_name}-ecs-"
+  name        = "${var.project_name}-ecs-sg"
+  description = "ECS tasks - allows traffic from ALB only"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -232,7 +234,8 @@ resource "aws_security_group" "ecs" {
 
 resource "aws_security_group" "rds" {
   count       = var.enable_private_subnets ? 1 : 0
-  name_prefix = "${var.project_name}-rds-"
+  name        = "${var.project_name}-rds-sg"
+  description = "RDS - allows PostgreSQL from ECS only"
   vpc_id      = aws_vpc.main.id
 
   ingress {

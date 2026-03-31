@@ -36,6 +36,7 @@ Thumbs.db
 uploads/
 
 # === Deploy ===
+deploy.sh
 deploy/
 
 # === Test Results ===

@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.enums.EAdvanceType;
+import com.stopforfuel.backend.enums.PaymentStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
@@ -30,6 +32,7 @@ public class PaymentService {
     private final EAdvanceService eAdvanceService;
     private final S3StorageService s3StorageService;
 
+    @Transactional(readOnly = true)
     public Page<Payment> getPayments(String categoryType, String paidAgainst,
                                       LocalDateTime fromDate, LocalDateTime toDate,
                                       Pageable pageable) {
@@ -41,6 +44,7 @@ public class PaymentService {
         return paymentRepository.findAllEager(pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsForExport(String categoryType, String paidAgainst,
                                                LocalDateTime fromDate, LocalDateTime toDate) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
@@ -48,31 +52,38 @@ public class PaymentService {
         return paymentRepository.findAllForExport(ct, pa, fromDate, toDate);
     }
 
+    @Transactional(readOnly = true)
     public Page<Payment> getPaymentsByCustomer(Long customerId, Pageable pageable) {
         return paymentRepository.findByCustomerId(customerId, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getAllPayments() {
         return paymentRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Payment getPaymentById(Long id) {
         return paymentRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByCustomer(Long customerId) {
         return paymentRepository.findByCustomerId(customerId);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByStatement(Long statementId) {
         return paymentRepository.findByStatementId(statementId);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByInvoiceBill(Long invoiceBillId) {
         return paymentRepository.findByInvoiceBillId(invoiceBillId);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByShift(Long shiftId) {
         return paymentRepository.findByShiftId(shiftId);
     }
@@ -132,7 +143,7 @@ public class PaymentService {
             // Mark all underlying credit bills as PAID
             List<InvoiceBill> bills = invoiceBillRepository.findByStatementId(statementId);
             for (InvoiceBill bill : bills) {
-                bill.setPaymentStatus("PAID");
+                bill.setPaymentStatus(PaymentStatus.PAID);
                 invoiceBillRepository.save(bill);
             }
         }
@@ -154,11 +165,11 @@ public class PaymentService {
         InvoiceBill bill = invoiceBillRepository.findByIdForUpdate(invoiceBillId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
 
-        if (!"CREDIT".equals(bill.getBillType())) {
+        if (bill.getBillType() != com.stopforfuel.backend.enums.BillType.CREDIT) {
             throw new BusinessException("Cannot record payment against a non-credit bill");
         }
 
-        if ("PAID".equals(bill.getPaymentStatus())) {
+        if (bill.getPaymentStatus() == PaymentStatus.PAID) {
             throw new BusinessException("Bill is already fully paid");
         }
 
@@ -197,7 +208,7 @@ public class PaymentService {
         // Check if bill is now fully paid
         BigDecimal newTotalReceived = paymentRepository.sumPaymentsByInvoiceBillId(invoiceBillId);
         if (newTotalReceived.compareTo(bill.getNetAmount()) >= 0) {
-            bill.setPaymentStatus("PAID");
+            bill.setPaymentStatus(PaymentStatus.PAID);
             invoiceBillRepository.save(bill);
         }
 
@@ -210,6 +221,7 @@ public class PaymentService {
     /**
      * Get payment history and balance summary for a statement.
      */
+    @Transactional(readOnly = true)
     public StatementPaymentSummary getStatementPaymentSummary(Long statementId) {
         Statement statement = statementRepository.findById(statementId)
                 .orElseThrow(() -> new ResourceNotFoundException("Statement not found"));
@@ -227,6 +239,7 @@ public class PaymentService {
     /**
      * Get payment history and balance for an individual bill.
      */
+    @Transactional(readOnly = true)
     public BillPaymentSummary getBillPaymentSummary(Long invoiceBillId) {
         InvoiceBill bill = invoiceBillRepository.findById(invoiceBillId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
@@ -277,7 +290,7 @@ public class PaymentService {
                 eAdv.setRemarks(remark);
                 eAdv.setShiftId(activeShift.getId());
                 eAdv.setScid(payment.getScid());
-                String type = "BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode;
+                EAdvanceType type = EAdvanceType.valueOf("BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode);
                 eAdv.setAdvanceType(type);
                 eAdv.setPayment(payment);
                 if ("CARD".equals(upperMode) && customerName != null) {
@@ -341,6 +354,7 @@ public class PaymentService {
     /**
      * Get a presigned URL for a payment's proof image.
      */
+    @Transactional(readOnly = true)
     public String getProofImageUrl(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));

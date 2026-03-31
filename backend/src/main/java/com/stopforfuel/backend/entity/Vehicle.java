@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.entity;
 
+import com.stopforfuel.backend.enums.EntityStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -41,13 +42,9 @@ public class Vehicle extends SimpleBaseEntity {
     @Column(name = "consumed_liters")
     private BigDecimal consumedLiters = BigDecimal.ZERO;
 
-    /**
-     * ACTIVE  — normal operating state
-     * INACTIVE — manually disabled by admin
-     * BLOCKED — automatically blocked (consumed >= limit)
-     */
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status = "ACTIVE";
+    private EntityStatus status = EntityStatus.ACTIVE;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
@@ -57,14 +54,14 @@ public class Vehicle extends SimpleBaseEntity {
     // Convenience methods
     @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     public boolean isActive() {
-        return status == null || "ACTIVE".equals(status);
+        return status == null || EntityStatus.ACTIVE.equals(status);
     }
 
     public boolean isBlocked() {
-        return "BLOCKED".equals(status);
+        return EntityStatus.BLOCKED.equals(status);
     }
 
     public boolean canRaiseInvoice() {
-        return status == null || "ACTIVE".equals(status);
+        return status == null || EntityStatus.ACTIVE.equals(status);
     }
 }
