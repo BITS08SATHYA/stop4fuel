@@ -1,0 +1,140 @@
+import { API_BASE_URL, handleResponse, PageResponse } from './common';
+import { fetchWithAuth } from '../fetch-with-auth';
+
+// --- Types ---
+export interface InvoiceProduct {
+    id?: number;
+    productId: number;
+    productName: string;
+    nozzleId?: number;
+    nozzleName?: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+    grossAmount?: number;
+    discountRate?: number;
+    discountAmount?: number;
+}
+
+export interface InvoiceBill {
+    id?: number;
+    date: string;
+    billDesc?: string;
+    pumpBillPic?: string;
+    billPic?: string;
+    signatoryName?: string;
+    signatoryCellNo?: string;
+    vehicleKM?: number;
+    readingOpen?: number;
+    readingClose?: number;
+    customerGST?: string;
+    grossAmount?: number;
+    totalDiscount?: number;
+    netAmount: number;
+    billNo?: string;
+    billType: 'CASH' | 'CREDIT';
+    paymentMode?: string;
+    indentNo?: string;
+    indentPic?: string;
+    status: string;
+    paymentStatus?: 'PAID' | 'NOT_PAID';
+    statement?: { id: number; statementNo: string };
+    customer?: { id: number; name: string; username?: string } | any;
+    vehicle?: { id: number; vehicleNumber: string };
+    driverName?: string;
+    driverPhone?: string;
+    raisedBy?: { id: number; name: string; username?: string };
+    products: InvoiceProduct[];
+    shiftId?: number;
+    scid?: number;
+}
+
+// Product Sales Summary
+export interface ProductSalesSummary {
+    productId: number;
+    productName: string;
+    totalQuantity: number;
+    totalAmount: number;
+    totalGrossAmount: number;
+    totalDiscount: number;
+}
+
+// Invoices
+export const getInvoices = (): Promise<InvoiceBill[]> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices`).then(handleResponse);
+
+export const getInvoicesByShift = (shiftId: number): Promise<InvoiceBill[]> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/shift/${shiftId}`).then(handleResponse);
+
+export const createInvoice = (invoice: Partial<InvoiceBill>): Promise<InvoiceBill> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoice),
+    }).then(handleResponse);
+
+export const updateInvoice = (id: number, invoice: Partial<InvoiceBill>): Promise<InvoiceBill> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoice),
+    }).then(handleResponse);
+
+export const deleteInvoice = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const uploadInvoiceFile = (id: number, type: string, file: File): Promise<InvoiceBill> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchWithAuth(`${API_BASE_URL}/invoices/${id}/upload/${type}`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const getInvoiceFileUrl = (id: number, type: string): Promise<string> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}/file-url?type=${type}`).then(handleResponse).then((data: { url: string }) => data.url);
+
+// Paginated Customer Invoices
+export const getCustomerInvoices = (
+    customerId: number,
+    page = 0,
+    size = 20,
+    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string }
+): Promise<PageResponse<InvoiceBill>> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (filters?.billType) params.append('billType', filters.billType);
+    if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
+    if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters?.toDate) params.append('toDate', filters.toDate);
+    return fetchWithAuth(`${API_BASE_URL}/invoices/customer/${customerId}?${params}`).then(handleResponse);
+};
+
+// Invoice History (paginated + filtered)
+export const getInvoiceHistory = (
+    page = 0,
+    size = 20,
+    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string; search?: string; categoryType?: string }
+): Promise<PageResponse<InvoiceBill>> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (filters?.billType) params.append('billType', filters.billType);
+    if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
+    if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters?.toDate) params.append('toDate', filters.toDate);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.categoryType) params.append('categoryType', filters.categoryType);
+    return fetchWithAuth(`${API_BASE_URL}/invoices/history?${params}`).then(handleResponse);
+};
+
+// Product Sales Summary for history filters
+export const getProductSalesSummary = (
+    filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string; categoryType?: string }
+): Promise<ProductSalesSummary[]> => {
+    const params = new URLSearchParams();
+    if (filters?.billType) params.append('billType', filters.billType);
+    if (filters?.paymentStatus) params.append('paymentStatus', filters.paymentStatus);
+    if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters?.toDate) params.append('toDate', filters.toDate);
+    if (filters?.categoryType) params.append('categoryType', filters.categoryType);
+    return fetchWithAuth(`${API_BASE_URL}/invoices/history/product-summary?${params}`).then(handleResponse);
+};
