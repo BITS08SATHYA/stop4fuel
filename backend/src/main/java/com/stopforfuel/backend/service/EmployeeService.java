@@ -48,10 +48,12 @@ public class EmployeeService {
 
     private final EntityManager entityManager;
 
+    @Transactional(readOnly = true)
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Page<Employee> getEmployees(String search, String status, Pageable pageable) {
         return employeeRepository.findBySearchAndStatus(
                 search != null && !search.isEmpty() ? search : null,
@@ -59,10 +61,12 @@ public class EmployeeService {
                 pageable);
     }
 
+    @Transactional(readOnly = true)
     public Optional<Employee> getEmployeeById(Long id) {
         return employeeRepository.findByIdAndScid(id, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Employee> getActiveEmployees() {
         return employeeRepository.findByStatus("ACTIVE");
     }
@@ -171,6 +175,7 @@ public class EmployeeService {
     }
 
     // Salary History
+    @Transactional(readOnly = true)
     public List<SalaryHistory> getSalaryHistory(Long employeeId) {
         return salaryHistoryRepository.findByEmployeeIdOrderByEffectiveDateDesc(employeeId);
     }
@@ -188,10 +193,12 @@ public class EmployeeService {
     }
 
     // Advances
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getAdvances(Long employeeId) {
         return operationalAdvanceRepository.findByEmployeeIdOrderByAdvanceDateDesc(employeeId);
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getPendingAdvances(Long employeeId) {
         return operationalAdvanceRepository.findByEmployeeIdAndStatus(employeeId, "PENDING");
     }
@@ -251,6 +258,7 @@ public class EmployeeService {
         return employeeRepository.save(employee);
     }
 
+    @Transactional(readOnly = true)
     public String getFilePresignedUrl(Long id, String type) {
         Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));

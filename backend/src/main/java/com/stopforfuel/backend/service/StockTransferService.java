@@ -29,18 +29,22 @@ public class StockTransferService {
     private final ProductInventoryRepository productInventoryRepository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<StockTransfer> getAll() {
         return repository.findByScidOrderByTransferDateDesc(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<StockTransfer> getByProduct(Long productId) {
         return repository.findByProductId(productId);
     }
 
+    @Transactional(readOnly = true)
     public List<StockTransfer> getByDateRange(LocalDateTime from, LocalDateTime to) {
         return repository.findByScidAndTransferDateBetweenOrderByTransferDateDesc(SecurityUtils.getScid(), from, to);
     }
 
+    @Transactional(readOnly = true)
     public List<StockTransfer> getByShiftId(Long shiftId) {
         return repository.findByShiftId(shiftId);
     }

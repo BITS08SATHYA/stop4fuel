@@ -39,10 +39,12 @@ public class InvoiceBillService {
     private final IncentivePaymentService incentivePaymentService;
     private final BillSequenceService billSequenceService;
 
+    @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<InvoiceBill> getInvoicesByShift(Long shiftId) {
         return repository.findByShiftId(shiftId);
     }
@@ -526,6 +528,7 @@ public class InvoiceBillService {
         }
     }
 
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<InvoiceBill> getInvoicesByCustomer(
             Long customerId, String billType, String paymentStatus,
             java.time.LocalDateTime fromDate, java.time.LocalDateTime toDate,
@@ -558,6 +561,7 @@ public class InvoiceBillService {
         }
     }
 
+    @Transactional(readOnly = true)
     public Page<InvoiceBill> getInvoiceHistory(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate, String search, Pageable pageable) {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
@@ -569,6 +573,7 @@ public class InvoiceBillService {
         return repository.findAllFiltered(bt, ps, ct, fd, td, s, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate) {
         String bt = (billType != null && !billType.isEmpty()) ? billType : null;
@@ -644,6 +649,7 @@ public class InvoiceBillService {
         return repository.save(existing);
     }
 
+    @Transactional(readOnly = true)
     public InvoiceBill getInvoiceById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
@@ -694,6 +700,7 @@ public class InvoiceBillService {
         return repository.save(invoice);
     }
 
+    @Transactional(readOnly = true)
     public String getFilePresignedUrl(Long id, String type) {
         InvoiceBill invoice = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));

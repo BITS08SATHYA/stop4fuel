@@ -30,41 +30,50 @@ public class OperationalAdvanceService {
     private final EmployeeRepository employeeRepository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getAll() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public OperationalAdvance getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Operational advance not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getByStatus(String status) {
         return repository.findByStatusOrderByAdvanceDateDesc(status);
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getByShift(Long shiftId) {
         return repository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getByEmployee(Long employeeId) {
         return repository.findByEmployeeIdOrderByAdvanceDateDesc(employeeId);
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getByType(String advanceType) {
         return repository.findByAdvanceTypeOrderByAdvanceDateDesc(advanceType);
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getByDateRange(java.time.LocalDate fromDate, java.time.LocalDate toDate) {
         java.time.LocalDateTime from = fromDate.atStartOfDay();
         java.time.LocalDateTime to = toDate.atTime(java.time.LocalTime.MAX);
         return repository.findByDateRange(SecurityUtils.getScid(), from, to);
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getOutstanding() {
         return repository.findByStatusInOrderByAdvanceDateDesc(List.of("GIVEN", "PARTIALLY_RETURNED"));
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getPendingByEmployee(Long employeeId) {
         return repository.findByEmployeeIdAndStatus(employeeId, "PENDING");
     }
@@ -150,6 +159,7 @@ public class OperationalAdvanceService {
         return repository.save(advance);
     }
 
+    @Transactional(readOnly = true)
     public List<InvoiceBill> getAssignedInvoices(Long advanceId) {
         return invoiceBillRepository.findByOperationalAdvanceId(advanceId);
     }

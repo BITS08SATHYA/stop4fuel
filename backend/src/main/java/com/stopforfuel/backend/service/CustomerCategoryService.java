@@ -20,10 +20,12 @@ public class CustomerCategoryService {
 
     private final CustomerRepository customerRepository;
 
+    @Transactional(readOnly = true)
     public List<CustomerCategory> getAllCategories() {
         return categoryRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public CustomerCategory getById(Long id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer category not found with id: " + id));

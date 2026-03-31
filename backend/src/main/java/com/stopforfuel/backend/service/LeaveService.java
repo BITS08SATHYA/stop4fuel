@@ -23,6 +23,7 @@ public class LeaveService {
     private final EmployeeRepository employeeRepository;
 
     // Leave Types
+    @Transactional(readOnly = true)
     public List<LeaveType> getAllLeaveTypes() {
         return leaveTypeRepository.findAll();
     }
@@ -46,6 +47,7 @@ public class LeaveService {
     }
 
     // Leave Balances
+    @Transactional(readOnly = true)
     public List<LeaveBalance> getEmployeeLeaveBalances(Long employeeId, Integer year) {
         return leaveBalanceRepository.findByEmployeeIdAndYear(employeeId, year);
     }
@@ -73,10 +75,12 @@ public class LeaveService {
     }
 
     // Leave Requests
+    @Transactional(readOnly = true)
     public List<LeaveRequest> getEmployeeLeaveRequests(Long employeeId) {
         return leaveRequestRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId);
     }
 
+    @Transactional(readOnly = true)
     public List<LeaveRequest> getLeaveRequestsByStatus(String status) {
         Long scid = SecurityUtils.getScid();
         if (status == null || status.isEmpty()) {

@@ -9,6 +9,7 @@ import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,18 +23,22 @@ public class TankService {
 
     private final NozzleRepository nozzleRepository;
 
+    @Transactional(readOnly = true)
     public List<Tank> getAllTanks() {
         return tankRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Tank> getActiveTanks() {
         return tankRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Tank> getTanksByProduct(Long productId) {
         return tankRepository.findByProductIdAndScid(productId, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Tank getTankById(Long id) {
         return tankRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Tank not found with id: " + id));
@@ -112,6 +117,7 @@ public class TankService {
         return tankRepository.save(tank);
     }
 
+    @Transactional(readOnly = true)
     public List<Tank> getLowStockTanks() {
         return tankRepository.findByActiveAndScid(true, SecurityUtils.getScid()).stream()
                 .filter(Tank::isBelowThreshold)
