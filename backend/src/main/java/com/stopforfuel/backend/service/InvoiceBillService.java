@@ -375,7 +375,7 @@ public class InvoiceBillService {
                 eAdv.setRemarks(remark);
                 eAdv.setShiftId(activeShift.getId());
                 eAdv.setScid(invoice.getScid());
-                String type = "BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode;
+                com.stopforfuel.backend.enums.EAdvanceType type = com.stopforfuel.backend.enums.EAdvanceType.valueOf("BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode);
                 eAdv.setAdvanceType(type);
                 eAdv.setInvoiceBill(invoice);
                 if ("CARD".equals(upperMode) && customerName != null) {
@@ -433,8 +433,8 @@ public class InvoiceBillService {
 
                 if (v.getMaxLitersPerMonth() != null
                         && newConsumed.compareTo(v.getMaxLitersPerMonth()) >= 0
-                        && "ACTIVE".equals(v.getStatus())) {
-                    v.setStatus("BLOCKED");
+                        && v.getStatus() == com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
+                    v.setStatus(com.stopforfuel.backend.enums.EntityStatus.BLOCKED);
                 }
                 vehicleRepository.save(v);
             }
@@ -449,8 +449,8 @@ public class InvoiceBillService {
 
                 if (c.getCreditLimitLiters() != null
                         && newConsumed.compareTo(c.getCreditLimitLiters()) >= 0
-                        && "ACTIVE".equals(c.getStatus())) {
-                    c.setStatus("BLOCKED");
+                        && c.getStatus() == com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
+                    c.setStatus(com.stopforfuel.backend.enums.EntityStatus.BLOCKED);
                 }
                 customerRepository.save(c);
             }
@@ -537,24 +537,26 @@ public class InvoiceBillService {
         boolean hasBillType = billType != null && !billType.isEmpty();
         boolean hasPaymentStatus = paymentStatus != null && !paymentStatus.isEmpty();
         boolean hasDateRange = fromDate != null && toDate != null;
+        com.stopforfuel.backend.enums.BillType bt = hasBillType ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
+        com.stopforfuel.backend.enums.PaymentStatus ps = hasPaymentStatus ? com.stopforfuel.backend.enums.PaymentStatus.valueOf(paymentStatus) : null;
 
         if (hasDateRange) {
             if (hasBillType && hasPaymentStatus) {
-                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, billType, paymentStatus, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, bt, ps, fromDate, toDate, pageable);
             } else if (hasBillType) {
-                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, billType, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, bt, fromDate, toDate, pageable);
             } else if (hasPaymentStatus) {
-                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, paymentStatus, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, ps, fromDate, toDate, pageable);
             } else {
                 return repository.findByCustomerIdAndDateRange(customerId, fromDate, toDate, pageable);
             }
         } else {
             if (hasBillType && hasPaymentStatus) {
-                return repository.findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(customerId, billType, paymentStatus, pageable);
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(customerId, bt, ps, pageable);
             } else if (hasBillType) {
-                return repository.findByCustomerIdAndBillTypeOrderByDateDesc(customerId, billType, pageable);
+                return repository.findByCustomerIdAndBillTypeOrderByDateDesc(customerId, bt, pageable);
             } else if (hasPaymentStatus) {
-                return repository.findByCustomerIdAndPaymentStatusOrderByDateDesc(customerId, paymentStatus, pageable);
+                return repository.findByCustomerIdAndPaymentStatusOrderByDateDesc(customerId, ps, pageable);
             } else {
                 return repository.findByCustomerIdOrderByDateDesc(customerId, pageable);
             }
@@ -564,8 +566,8 @@ public class InvoiceBillService {
     @Transactional(readOnly = true)
     public Page<InvoiceBill> getInvoiceHistory(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate, String search, Pageable pageable) {
-        String bt = (billType != null && !billType.isEmpty()) ? billType : null;
-        String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
+        com.stopforfuel.backend.enums.BillType bt = (billType != null && !billType.isEmpty()) ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
+        com.stopforfuel.backend.enums.PaymentStatus ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? com.stopforfuel.backend.enums.PaymentStatus.valueOf(paymentStatus) : null;
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         String s = (search != null && !search.isEmpty()) ? search : "";
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
@@ -576,8 +578,8 @@ public class InvoiceBillService {
     @Transactional(readOnly = true)
     public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate) {
-        String bt = (billType != null && !billType.isEmpty()) ? billType : null;
-        String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
+        com.stopforfuel.backend.enums.BillType bt = (billType != null && !billType.isEmpty()) ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
+        com.stopforfuel.backend.enums.PaymentStatus ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? com.stopforfuel.backend.enums.PaymentStatus.valueOf(paymentStatus) : null;
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);

@@ -39,7 +39,7 @@ public class EAdvanceDTO {
                 .id(e.getId())
                 .transactionDate(e.getTransactionDate())
                 .amount(e.getAmount())
-                .advanceType(e.getAdvanceType())
+                .advanceType(e.getAdvanceType() != null ? e.getAdvanceType().name() : null)
                 .remarks(e.getRemarks())
                 .batchId(e.getBatchId())
                 .tid(e.getTid())

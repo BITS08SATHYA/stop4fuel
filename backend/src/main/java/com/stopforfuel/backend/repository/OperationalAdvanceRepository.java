@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.OperationalAdvance;
+import com.stopforfuel.backend.enums.AdvanceStatus;
+import com.stopforfuel.backend.enums.AdvanceType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -17,13 +19,13 @@ public interface OperationalAdvanceRepository extends ScidRepository<Operational
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT oa FROM OperationalAdvance oa WHERE oa.id = :id")
     Optional<OperationalAdvance> findByIdForUpdate(@Param("id") Long id);
-    List<OperationalAdvance> findByStatusOrderByAdvanceDateDesc(String status);
+    List<OperationalAdvance> findByStatusOrderByAdvanceDateDesc(AdvanceStatus status);
     List<OperationalAdvance> findByShiftIdOrderByAdvanceDateDesc(Long shiftId);
     List<OperationalAdvance> findAllByOrderByAdvanceDateDesc();
-    List<OperationalAdvance> findByAdvanceTypeOrderByAdvanceDateDesc(String advanceType);
+    List<OperationalAdvance> findByAdvanceTypeOrderByAdvanceDateDesc(AdvanceType advanceType);
     List<OperationalAdvance> findByEmployeeIdOrderByAdvanceDateDesc(Long employeeId);
-    List<OperationalAdvance> findByStatusInOrderByAdvanceDateDesc(List<String> statuses);
-    List<OperationalAdvance> findByEmployeeIdAndStatus(Long employeeId, String status);
+    List<OperationalAdvance> findByStatusInOrderByAdvanceDateDesc(List<AdvanceStatus> statuses);
+    List<OperationalAdvance> findByEmployeeIdAndStatus(Long employeeId, AdvanceStatus status);
 
     @Query("SELECT oa FROM OperationalAdvance oa WHERE oa.scid = :scid AND oa.advanceDate BETWEEN :from AND :to ORDER BY oa.advanceDate DESC")
     List<OperationalAdvance> findByDateRange(@Param("scid") Long scid, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

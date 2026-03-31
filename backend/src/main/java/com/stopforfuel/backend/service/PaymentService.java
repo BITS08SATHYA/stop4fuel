@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.enums.EAdvanceType;
+import com.stopforfuel.backend.enums.PaymentStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
@@ -141,7 +143,7 @@ public class PaymentService {
             // Mark all underlying credit bills as PAID
             List<InvoiceBill> bills = invoiceBillRepository.findByStatementId(statementId);
             for (InvoiceBill bill : bills) {
-                bill.setPaymentStatus("PAID");
+                bill.setPaymentStatus(PaymentStatus.PAID);
                 invoiceBillRepository.save(bill);
             }
         }
@@ -163,11 +165,11 @@ public class PaymentService {
         InvoiceBill bill = invoiceBillRepository.findByIdForUpdate(invoiceBillId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
 
-        if (!"CREDIT".equals(bill.getBillType())) {
+        if (bill.getBillType() != com.stopforfuel.backend.enums.BillType.CREDIT) {
             throw new BusinessException("Cannot record payment against a non-credit bill");
         }
 
-        if ("PAID".equals(bill.getPaymentStatus())) {
+        if (bill.getPaymentStatus() == PaymentStatus.PAID) {
             throw new BusinessException("Bill is already fully paid");
         }
 
@@ -206,7 +208,7 @@ public class PaymentService {
         // Check if bill is now fully paid
         BigDecimal newTotalReceived = paymentRepository.sumPaymentsByInvoiceBillId(invoiceBillId);
         if (newTotalReceived.compareTo(bill.getNetAmount()) >= 0) {
-            bill.setPaymentStatus("PAID");
+            bill.setPaymentStatus(PaymentStatus.PAID);
             invoiceBillRepository.save(bill);
         }
 
@@ -288,7 +290,7 @@ public class PaymentService {
                 eAdv.setRemarks(remark);
                 eAdv.setShiftId(activeShift.getId());
                 eAdv.setScid(payment.getScid());
-                String type = "BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode;
+                EAdvanceType type = EAdvanceType.valueOf("BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode);
                 eAdv.setAdvanceType(type);
                 eAdv.setPayment(payment);
                 if ("CARD".equals(upperMode) && customerName != null) {

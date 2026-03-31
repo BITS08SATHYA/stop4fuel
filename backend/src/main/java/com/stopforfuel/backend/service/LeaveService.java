@@ -86,7 +86,7 @@ public class LeaveService {
         if (status == null || status.isEmpty()) {
             return leaveRequestRepository.findAllByScidOrderByCreatedAtDesc(scid);
         }
-        return leaveRequestRepository.findByScidAndStatusOrderByCreatedAtDesc(scid, status);
+        return leaveRequestRepository.findByScidAndStatusOrderByCreatedAtDesc(scid, com.stopforfuel.backend.enums.LeaveStatus.valueOf(status));
     }
 
     @Transactional
@@ -95,7 +95,7 @@ public class LeaveService {
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         request.setEmployee(employee);
-        request.setStatus("PENDING");
+        request.setStatus(com.stopforfuel.backend.enums.LeaveStatus.PENDING);
         return leaveRequestRepository.save(request);
     }
 
@@ -104,7 +104,7 @@ public class LeaveService {
         LeaveRequest request = leaveRequestRepository.findByIdAndScid(requestId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Leave request not found"));
 
-        request.setStatus("APPROVED");
+        request.setStatus(com.stopforfuel.backend.enums.LeaveStatus.APPROVED);
         request.setApprovedBy(approvedBy);
         request.setRemarks(remarks);
 
@@ -128,7 +128,7 @@ public class LeaveService {
         LeaveRequest request = leaveRequestRepository.findByIdAndScid(requestId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Leave request not found"));
 
-        request.setStatus("REJECTED");
+        request.setStatus(com.stopforfuel.backend.enums.LeaveStatus.REJECTED);
         request.setRemarks(remarks);
         return leaveRequestRepository.save(request);
     }

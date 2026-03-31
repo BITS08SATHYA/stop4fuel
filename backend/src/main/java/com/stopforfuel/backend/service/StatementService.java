@@ -136,7 +136,7 @@ public class StatementService {
         BigDecimal roundingAmount = netAmount.subtract(totalAmount);
 
         // Get next statement number
-        String nextStatementNo = billSequenceService.getNextBillNo("STMT");
+        String nextStatementNo = billSequenceService.getNextBillNo(com.stopforfuel.backend.enums.BillType.STMT);
 
         // Create statement
         Statement statement = new Statement();
@@ -234,7 +234,7 @@ public class StatementService {
             statement.setBalanceAmount(BigDecimal.ZERO);
             // Mark remaining bills as PAID
             for (InvoiceBill remaining : remainingBills) {
-                remaining.setPaymentStatus("PAID");
+                remaining.setPaymentStatus(com.stopforfuel.backend.enums.PaymentStatus.PAID);
                 invoiceBillRepository.save(remaining);
             }
         }

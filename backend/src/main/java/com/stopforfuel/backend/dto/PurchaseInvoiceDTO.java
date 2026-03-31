@@ -71,7 +71,7 @@ public class PurchaseInvoiceDTO {
 
         public static PurchaseOrderSummary from(PurchaseOrder po) {
             if (po == null) return null;
-            return PurchaseOrderSummary.builder().id(po.getId()).status(po.getStatus()).build();
+            return PurchaseOrderSummary.builder().id(po.getId()).status(po.getStatus() != null ? po.getStatus().name() : null).build();
         }
     }
 
