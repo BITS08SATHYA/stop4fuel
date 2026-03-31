@@ -69,16 +69,16 @@ public class Customer extends User {
      */
     @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     public boolean isActive() {
-        String s = getStatus();
-        return s == null || "ACTIVE".equals(s);
+        com.stopforfuel.backend.enums.EntityStatus s = getStatus();
+        return s == null || s == com.stopforfuel.backend.enums.EntityStatus.ACTIVE;
     }
 
     public boolean isBlocked() {
-        return "BLOCKED".equals(getStatus());
+        return getStatus() == com.stopforfuel.backend.enums.EntityStatus.BLOCKED;
     }
 
     public boolean canRaiseInvoice() {
-        String s = getStatus();
-        return s == null || "ACTIVE".equals(s);
+        com.stopforfuel.backend.enums.EntityStatus s = getStatus();
+        return s == null || s == com.stopforfuel.backend.enums.EntityStatus.ACTIVE;
     }
 }

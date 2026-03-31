@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.BillSequence;
+import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.repository.BillSequenceRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,14 +36,14 @@ class BillSequenceServiceTest {
     void getNextBillNo_existingSequence_incrementsNumber() {
         int fyYear = getCurrentFyYear();
         BillSequence seq = new BillSequence();
-        seq.setType("CASH");
+        seq.setType(BillType.CASH);
         seq.setFyYear(fyYear);
         seq.setLastNumber(5L);
 
-        when(billSequenceRepository.findByTypeAndFyYear("CASH", fyYear)).thenReturn(Optional.of(seq));
+        when(billSequenceRepository.findByTypeAndFyYear(BillType.CASH, fyYear)).thenReturn(Optional.of(seq));
         when(billSequenceRepository.save(any(BillSequence.class))).thenAnswer(i -> i.getArgument(0));
 
-        String result = billSequenceService.getNextBillNo("CASH");
+        String result = billSequenceService.getNextBillNo(BillType.CASH);
 
         assertEquals("C" + fyYear + "/6", result);
         assertEquals(6L, seq.getLastNumber());
@@ -53,13 +54,13 @@ class BillSequenceServiceTest {
     void getNextBillNo_newSequence_createsAndReturns1() {
         int fyYear = getCurrentFyYear();
 
-        when(billSequenceRepository.findByTypeAndFyYear("CASH", fyYear)).thenReturn(Optional.empty());
+        when(billSequenceRepository.findByTypeAndFyYear(BillType.CASH, fyYear)).thenReturn(Optional.empty());
         when(billSequenceRepository.save(any(BillSequence.class))).thenAnswer(i -> {
             BillSequence saved = i.getArgument(0);
             return saved;
         });
 
-        String result = billSequenceService.getNextBillNo("CASH");
+        String result = billSequenceService.getNextBillNo(BillType.CASH);
 
         assertEquals("C" + fyYear + "/1", result);
         verify(billSequenceRepository, times(2)).save(any(BillSequence.class));
@@ -69,14 +70,14 @@ class BillSequenceServiceTest {
     void getNextBillNo_cashType_usesCPrefix() {
         int fyYear = getCurrentFyYear();
         BillSequence seq = new BillSequence();
-        seq.setType("CASH");
+        seq.setType(BillType.CASH);
         seq.setFyYear(fyYear);
         seq.setLastNumber(0L);
 
-        when(billSequenceRepository.findByTypeAndFyYear("CASH", fyYear)).thenReturn(Optional.of(seq));
+        when(billSequenceRepository.findByTypeAndFyYear(BillType.CASH, fyYear)).thenReturn(Optional.of(seq));
         when(billSequenceRepository.save(any(BillSequence.class))).thenAnswer(i -> i.getArgument(0));
 
-        String result = billSequenceService.getNextBillNo("CASH");
+        String result = billSequenceService.getNextBillNo(BillType.CASH);
 
         assertTrue(result.startsWith("C"));
     }
@@ -85,14 +86,14 @@ class BillSequenceServiceTest {
     void getNextBillNo_creditType_usesAPrefix() {
         int fyYear = getCurrentFyYear();
         BillSequence seq = new BillSequence();
-        seq.setType("CREDIT");
+        seq.setType(BillType.CREDIT);
         seq.setFyYear(fyYear);
         seq.setLastNumber(0L);
 
-        when(billSequenceRepository.findByTypeAndFyYear("CREDIT", fyYear)).thenReturn(Optional.of(seq));
+        when(billSequenceRepository.findByTypeAndFyYear(BillType.CREDIT, fyYear)).thenReturn(Optional.of(seq));
         when(billSequenceRepository.save(any(BillSequence.class))).thenAnswer(i -> i.getArgument(0));
 
-        String result = billSequenceService.getNextBillNo("CREDIT");
+        String result = billSequenceService.getNextBillNo(BillType.CREDIT);
 
         assertTrue(result.startsWith("A"));
         assertEquals("A" + fyYear + "/1", result);

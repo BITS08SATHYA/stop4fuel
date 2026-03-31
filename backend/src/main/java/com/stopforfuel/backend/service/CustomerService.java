@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
@@ -72,7 +73,7 @@ public class CustomerService {
             customer.setRole(customerRole);
         }
         if (customer.getStatus() == null) {
-            customer.setStatus("ACTIVE");
+            customer.setStatus(EntityStatus.ACTIVE);
         }
         if (customer.getConsumedLiters() == null) {
             customer.setConsumedLiters(BigDecimal.ZERO);
@@ -121,12 +122,12 @@ public class CustomerService {
     @Transactional
     public Customer toggleStatus(Long id) {
         Customer customer = getCustomerById(id);
-        String current = customer.getStatus();
-        if (current == null || "ACTIVE".equals(current)) {
-            customer.setStatus("INACTIVE");
+        EntityStatus current = customer.getStatus();
+        if (current == null || current == EntityStatus.ACTIVE) {
+            customer.setStatus(EntityStatus.INACTIVE);
         } else {
             // Both INACTIVE and BLOCKED can be manually set back to ACTIVE
-            customer.setStatus("ACTIVE");
+            customer.setStatus(EntityStatus.ACTIVE);
         }
         return customerRepository.save(customer);
     }
@@ -158,10 +159,10 @@ public class CustomerService {
     @Transactional
     public Customer blockCustomer(Long id) {
         Customer customer = getCustomerById(id);
-        if (!"ACTIVE".equals(customer.getStatus())) {
+        if (customer.getStatus() != EntityStatus.ACTIVE) {
             throw new BusinessException("Customer can only be blocked when ACTIVE. Current status: " + customer.getStatus());
         }
-        customer.setStatus("BLOCKED");
+        customer.setStatus(EntityStatus.BLOCKED);
         return customerRepository.save(customer);
     }
 
@@ -171,10 +172,10 @@ public class CustomerService {
     @Transactional
     public Customer unblockCustomer(Long id) {
         Customer customer = getCustomerById(id);
-        if (!"BLOCKED".equals(customer.getStatus())) {
+        if (customer.getStatus() != EntityStatus.BLOCKED) {
             throw new BusinessException("Customer can only be unblocked when BLOCKED. Current status: " + customer.getStatus());
         }
-        customer.setStatus("ACTIVE");
+        customer.setStatus(EntityStatus.ACTIVE);
         return customerRepository.save(customer);
     }
 
@@ -256,7 +257,7 @@ public class CustomerService {
     @Transactional
     public void checkAndAutoBlock(Long customerId) {
         Customer customer = customerRepository.findByIdForUpdate(customerId).orElse(null);
-        if (customer == null || !"ACTIVE".equals(customer.getStatus())) {
+        if (customer == null || customer.getStatus() != EntityStatus.ACTIVE) {
             return;
         }
 
@@ -266,7 +267,7 @@ public class CustomerService {
             BigDecimal totalPaid = paymentRepository.sumAllPaymentsByCustomer(customerId);
             BigDecimal ledgerBalance = totalBilled.subtract(totalPaid);
             if (ledgerBalance.compareTo(customer.getCreditLimitAmount()) > 0) {
-                customer.setStatus("BLOCKED");
+                customer.setStatus(EntityStatus.BLOCKED);
                 customerRepository.save(customer);
                 return;
             }
@@ -275,7 +276,7 @@ public class CustomerService {
         // 2. Liters exceeded (safety net for existing inline check)
         if (customer.getCreditLimitLiters() != null && customer.getConsumedLiters() != null
                 && customer.getConsumedLiters().compareTo(customer.getCreditLimitLiters()) >= 0) {
-            customer.setStatus("BLOCKED");
+            customer.setStatus(EntityStatus.BLOCKED);
             customerRepository.save(customer);
             return;
         }
@@ -283,7 +284,7 @@ public class CustomerService {
         // 3. Aging 90+ days
         LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
         if (invoiceBillRepository.existsUnpaidCreditBillBefore(customerId, ninetyDaysAgo)) {
-            customer.setStatus("BLOCKED");
+            customer.setStatus(EntityStatus.BLOCKED);
             customerRepository.save(customer);
         }
     }
@@ -334,10 +335,10 @@ public class CustomerService {
         List<Customer> allCustomers = customerRepository.findAllByScid(SecurityUtils.getScid());
         long totalCustomers = allCustomers.size();
         long activeCustomers = allCustomers.stream()
-                .filter(c -> "ACTIVE".equals(c.getStatus()))
+                .filter(c -> c.getStatus() == EntityStatus.ACTIVE)
                 .count();
         long blockedCustomers = allCustomers.stream()
-                .filter(c -> "BLOCKED".equals(c.getStatus()) || "INACTIVE".equals(c.getStatus()))
+                .filter(c -> c.getStatus() == EntityStatus.BLOCKED || c.getStatus() == EntityStatus.INACTIVE)
                 .count();
 
         BigDecimal totalCreditGiven = allCustomers.stream()

@@ -4,6 +4,8 @@ import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
 import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
 import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.enums.AdvanceStatus;
+import com.stopforfuel.backend.enums.ShiftStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
@@ -89,12 +91,12 @@ public class ShiftService {
     }
 
     public Shift openShift(Shift shift) {
-        repository.findByStatusAndScid("OPEN", SecurityUtils.getScid()).ifPresent(s -> {
+        repository.findByStatusAndScid(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {
             throw new BusinessException("A shift is already open. Close it before opening a new one.");
         });
 
         shift.setStartTime(LocalDateTime.now());
-        shift.setStatus("OPEN");
+        shift.setStatus(ShiftStatus.OPEN);
         if (shift.getScid() == null) {
             shift.setScid(SecurityUtils.getScid());
         }
@@ -111,7 +113,7 @@ public class ShiftService {
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         shift.setEndTime(LocalDateTime.now());
-        shift.setStatus("REVIEW");
+        shift.setStatus(ShiftStatus.REVIEW);
         Shift closed = repository.save(shift);
 
         // Finalize rate/amount on ProductInventory records
@@ -125,7 +127,7 @@ public class ShiftService {
 
     @Transactional(readOnly = true)
     public Shift getActiveShift() {
-        return repository.findByStatusAndScid("OPEN", SecurityUtils.getScid()).orElse(null);
+        return repository.findByStatusAndScid(ShiftStatus.OPEN, SecurityUtils.getScid()).orElse(null);
     }
 
     // ========== NEW SHIFT CLOSING WORKSPACE METHODS ==========
@@ -135,14 +137,14 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"OPEN".equals(shift.getStatus()) && !"REVIEW".equals(shift.getStatus())) {
+        if (shift.getStatus() != ShiftStatus.OPEN && shift.getStatus() != ShiftStatus.REVIEW) {
             throw new BusinessException("Shift must be OPEN or in REVIEW to get closing data");
         }
 
         Long scid = shift.getScid();
         ShiftClosingDataDTO dto = new ShiftClosingDataDTO();
         dto.setShiftId(shiftId);
-        dto.setShiftStatus(shift.getStatus());
+        dto.setShiftStatus(shift.getStatus() != null ? shift.getStatus().name() : null);
         dto.setStartTime(shift.getStartTime());
         dto.setAttendantName(shift.getAttendant() != null ? shift.getAttendant().getName() : null);
 
@@ -230,7 +232,7 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"OPEN".equals(shift.getStatus()) && !"REVIEW".equals(shift.getStatus())) {
+        if (shift.getStatus() != ShiftStatus.OPEN && shift.getStatus() != ShiftStatus.REVIEW) {
             throw new BusinessException("Only an OPEN or REVIEW shift can be submitted for review");
         }
 
@@ -283,7 +285,7 @@ public class ShiftService {
 
         // Close the shift and move to REVIEW
         shift.setEndTime(LocalDateTime.now());
-        shift.setStatus("REVIEW");
+        shift.setStatus(ShiftStatus.REVIEW);
         Shift saved = repository.save(shift);
 
         // Finalize product inventory and generate report
@@ -298,11 +300,11 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"REVIEW".equals(shift.getStatus())) {
+        if (shift.getStatus() != ShiftStatus.REVIEW) {
             throw new BusinessException("Only a shift in REVIEW can be approved and closed");
         }
 
-        shift.setStatus("CLOSED");
+        shift.setStatus(ShiftStatus.CLOSED);
         Shift saved = repository.save(shift);
 
         // Finalize report and generate PDF → upload to S3
@@ -339,11 +341,11 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"CLOSED".equals(shift.getStatus())) {
+        if (shift.getStatus() != ShiftStatus.CLOSED) {
             throw new BusinessException("Only a CLOSED shift can be reopened for review");
         }
 
-        shift.setStatus("REVIEW");
+        shift.setStatus(ShiftStatus.REVIEW);
         Shift saved = repository.save(shift);
 
         // Set report back to DRAFT so it's editable
@@ -364,11 +366,11 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"REVIEW".equals(shift.getStatus())) {
+        if (shift.getStatus() != ShiftStatus.REVIEW) {
             throw new BusinessException("Only a REVIEW shift can be reopened for editing");
         }
 
-        shift.setStatus("OPEN");
+        shift.setStatus(ShiftStatus.OPEN);
         shift.setEndTime(null);
         return repository.save(shift);
     }
@@ -383,19 +385,19 @@ public class ShiftService {
 
         // E-Advance totals by type
         Map<String, BigDecimal> eAdvTotals = new LinkedHashMap<>();
-        eAdvTotals.put("CARD", eAdvanceRepository.sumByShiftAndType(shiftId, "CARD"));
-        eAdvTotals.put("UPI", eAdvanceRepository.sumByShiftAndType(shiftId, "UPI"));
-        eAdvTotals.put("CCMS", eAdvanceRepository.sumByShiftAndType(shiftId, "CCMS"));
-        eAdvTotals.put("CHEQUE", eAdvanceRepository.sumByShiftAndType(shiftId, "CHEQUE"));
-        eAdvTotals.put("BANK_TRANSFER", eAdvanceRepository.sumByShiftAndType(shiftId, "BANK_TRANSFER"));
+        eAdvTotals.put("CARD", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CARD));
+        eAdvTotals.put("UPI", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.UPI));
+        eAdvTotals.put("CCMS", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CCMS));
+        eAdvTotals.put("CHEQUE", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CHEQUE));
+        eAdvTotals.put("BANK_TRANSFER", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.BANK_TRANSFER));
         dto.setEAdvanceTotals(eAdvTotals);
 
         // Operational advance totals by type
         List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
         Map<String, BigDecimal> opAdvTotals = new LinkedHashMap<>();
         for (OperationalAdvance oa : opAdvances) {
-            if ("CANCELLED".equals(oa.getStatus())) continue;
-            String type = oa.getAdvanceType() != null ? oa.getAdvanceType() : "CASH";
+            if (oa.getStatus() == AdvanceStatus.CANCELLED) continue;
+            String type = oa.getAdvanceType() != null ? oa.getAdvanceType().name() : "CASH";
             opAdvTotals.merge(type, oa.getAmount(), BigDecimal::add);
         }
         dto.setOpAdvanceTotals(opAdvTotals);

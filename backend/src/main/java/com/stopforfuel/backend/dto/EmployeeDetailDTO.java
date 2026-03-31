@@ -87,7 +87,7 @@ public class EmployeeDetailDTO {
                 .city(e.getCity())
                 .state(e.getState())
                 .pincode(e.getPincode())
-                .status(e.getStatus())
+                .status(e.getStatus() != null ? e.getStatus().name() : null)
                 .joinDate(e.getJoinDate())
                 .terminationDate(e.getTerminationDate())
                 .photoUrl(e.getPhotoUrl())
