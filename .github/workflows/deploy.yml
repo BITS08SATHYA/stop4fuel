@@ -283,11 +283,10 @@ jobs:
           sed -i "s|stopforfuel-backend:.*|stopforfuel-backend:$TAG|g" /home/ubuntu/docker-compose.prod.yml
           sed -i "s|stopforfuel-frontend:.*|stopforfuel-frontend:$TAG|g" /home/ubuntu/docker-compose.prod.yml
 
-          # Deploy
+          # Deploy — only recreate app containers, never touch postgres to preserve data
           cd /home/ubuntu
-          docker compose -f docker-compose.prod.yml --env-file .env down || true
-          sleep 2
-          docker compose -f docker-compose.prod.yml --env-file .env up -d --force-recreate
+          docker compose -f docker-compose.prod.yml --env-file .env up -d --no-deps --force-recreate backend frontend nginx
+          docker compose -f docker-compose.prod.yml --env-file .env up -d postgres
 
           sleep 5
           docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
