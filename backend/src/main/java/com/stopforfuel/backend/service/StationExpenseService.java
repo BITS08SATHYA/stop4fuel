@@ -3,7 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.StationExpense;
 import com.stopforfuel.backend.repository.StationExpenseRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -12,10 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class StationExpenseService {
 
-    @Autowired
-    private StationExpenseRepository stationExpenseRepository;
+    private final StationExpenseRepository stationExpenseRepository;
 
     public List<StationExpense> getAllExpenses() {
         return stationExpenseRepository.findAllByScid(SecurityUtils.getScid());

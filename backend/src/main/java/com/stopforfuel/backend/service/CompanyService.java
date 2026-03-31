@@ -3,17 +3,17 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class CompanyService {
 
-    @Autowired
-    private CompanyRepository companyRepository;
+    private final CompanyRepository companyRepository;
 
     public List<Company> getAllCompanies() {
         return companyRepository.findAllByScid(SecurityUtils.getScid());

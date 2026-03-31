@@ -7,22 +7,20 @@ import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.backend.repository.TankRepository;
 import com.stopforfuel.backend.repository.PumpRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class NozzleService {
 
-    @Autowired
-    private NozzleRepository nozzleRepository;
+    private final NozzleRepository nozzleRepository;
 
-    @Autowired
-    private TankRepository tankRepository;
+    private final TankRepository tankRepository;
 
-    @Autowired
-    private PumpRepository pumpRepository;
+    private final PumpRepository pumpRepository;
 
     public List<Nozzle> getAllNozzles() {
         return nozzleRepository.findAllByScid(SecurityUtils.getScid());

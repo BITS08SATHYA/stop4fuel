@@ -14,7 +14,7 @@ import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
 import com.stopforfuel.config.SecurityUtils;
 import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,28 +31,22 @@ import java.util.Optional;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class EmployeeService {
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
-    @Autowired
-    private SalaryHistoryRepository salaryHistoryRepository;
+    private final SalaryHistoryRepository salaryHistoryRepository;
 
-    @Autowired
-    private OperationalAdvanceRepository operationalAdvanceRepository;
+    private final OperationalAdvanceRepository operationalAdvanceRepository;
 
-    @Autowired
-    private S3StorageService s3StorageService;
+    private final S3StorageService s3StorageService;
 
-    @Autowired
-    private DesignationRepository designationRepository;
+    private final DesignationRepository designationRepository;
 
-    @Autowired
-    private RolesRepository rolesRepository;
+    private final RolesRepository rolesRepository;
 
-    @Autowired
-    private EntityManager entityManager;
+    private final EntityManager entityManager;
 
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAllByScid(SecurityUtils.getScid());

@@ -3,7 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,19 +11,16 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class LeaveService {
 
-    @Autowired
-    private LeaveTypeRepository leaveTypeRepository;
+    private final LeaveTypeRepository leaveTypeRepository;
 
-    @Autowired
-    private LeaveBalanceRepository leaveBalanceRepository;
+    private final LeaveBalanceRepository leaveBalanceRepository;
 
-    @Autowired
-    private LeaveRequestRepository leaveRequestRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
     // Leave Types
     public List<LeaveType> getAllLeaveTypes() {
