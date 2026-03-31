@@ -30,6 +30,7 @@ public class PaymentService {
     private final EAdvanceService eAdvanceService;
     private final S3StorageService s3StorageService;
 
+    @Transactional(readOnly = true)
     public Page<Payment> getPayments(String categoryType, String paidAgainst,
                                       LocalDateTime fromDate, LocalDateTime toDate,
                                       Pageable pageable) {
@@ -41,6 +42,7 @@ public class PaymentService {
         return paymentRepository.findAllEager(pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsForExport(String categoryType, String paidAgainst,
                                                LocalDateTime fromDate, LocalDateTime toDate) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
@@ -48,31 +50,38 @@ public class PaymentService {
         return paymentRepository.findAllForExport(ct, pa, fromDate, toDate);
     }
 
+    @Transactional(readOnly = true)
     public Page<Payment> getPaymentsByCustomer(Long customerId, Pageable pageable) {
         return paymentRepository.findByCustomerId(customerId, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getAllPayments() {
         return paymentRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Payment getPaymentById(Long id) {
         return paymentRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByCustomer(Long customerId) {
         return paymentRepository.findByCustomerId(customerId);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByStatement(Long statementId) {
         return paymentRepository.findByStatementId(statementId);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByInvoiceBill(Long invoiceBillId) {
         return paymentRepository.findByInvoiceBillId(invoiceBillId);
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByShift(Long shiftId) {
         return paymentRepository.findByShiftId(shiftId);
     }
@@ -210,6 +219,7 @@ public class PaymentService {
     /**
      * Get payment history and balance summary for a statement.
      */
+    @Transactional(readOnly = true)
     public StatementPaymentSummary getStatementPaymentSummary(Long statementId) {
         Statement statement = statementRepository.findById(statementId)
                 .orElseThrow(() -> new ResourceNotFoundException("Statement not found"));
@@ -227,6 +237,7 @@ public class PaymentService {
     /**
      * Get payment history and balance for an individual bill.
      */
+    @Transactional(readOnly = true)
     public BillPaymentSummary getBillPaymentSummary(Long invoiceBillId) {
         InvoiceBill bill = invoiceBillRepository.findById(invoiceBillId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
@@ -341,6 +352,7 @@ public class PaymentService {
     /**
      * Get a presigned URL for a payment's proof image.
      */
+    @Transactional(readOnly = true)
     public String getProofImageUrl(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));

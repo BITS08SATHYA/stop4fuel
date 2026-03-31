@@ -9,6 +9,7 @@ import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -20,22 +21,27 @@ public class ProductService {
 
     private final GradeTypeRepository gradeTypeRepository;
 
+    @Transactional(readOnly = true)
     public List<Product> getAllProducts() {
         return productRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Product> getActiveProducts() {
         return productRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Product> getProductsByCategory(String category) {
         return productRepository.findByCategoryIgnoreCaseAndActiveAndScid(category, true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Product> getActiveNonFuelProducts() {
         return productRepository.findByCategoryNotIgnoreCaseAndActiveAndScid("FUEL", true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Product getProductById(Long id) {
         return productRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));

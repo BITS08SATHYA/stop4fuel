@@ -9,6 +9,7 @@ import com.stopforfuel.backend.repository.PumpRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,22 +23,27 @@ public class NozzleService {
 
     private final PumpRepository pumpRepository;
 
+    @Transactional(readOnly = true)
     public List<Nozzle> getAllNozzles() {
         return nozzleRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Nozzle> getActiveNozzles() {
         return nozzleRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Nozzle> getNozzlesByTank(Long tankId) {
         return nozzleRepository.findByTankIdAndScid(tankId, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Nozzle> getNozzlesByPump(Long pumpId) {
         return nozzleRepository.findByPumpIdAndScid(pumpId, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Nozzle getNozzleById(Long id) {
         return nozzleRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Nozzle not found with id: " + id));

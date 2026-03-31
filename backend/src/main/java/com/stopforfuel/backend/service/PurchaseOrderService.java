@@ -23,19 +23,23 @@ public class PurchaseOrderService {
     private final PurchaseOrderRepository repository;
     private final GodownStockRepository godownStockRepository;
 
+    @Transactional(readOnly = true)
     public List<PurchaseOrder> getAll() {
         return repository.findByScidOrderByOrderDateDesc(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public PurchaseOrder getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("PurchaseOrder not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseOrder> getByStatus(String status) {
         return repository.findByStatusAndScid(status, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseOrder> getBySupplier(Long supplierId) {
         return repository.findBySupplierIdAndScid(supplierId, SecurityUtils.getScid());
     }

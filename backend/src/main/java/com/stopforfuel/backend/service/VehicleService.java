@@ -23,6 +23,7 @@ public class VehicleService {
 
     private final CustomerRepository customerRepository;
 
+    @Transactional(readOnly = true)
     public List<Vehicle> getAllVehicles(String search) {
         if (search != null && !search.isEmpty()) {
             return vehicleRepository.findByVehicleNumberContainingIgnoreCaseWithCustomer(search);
@@ -30,6 +31,7 @@ public class VehicleService {
         return vehicleRepository.findAllWithCustomer();
     }
 
+    @Transactional(readOnly = true)
     public List<Vehicle> searchVehicles(String query) {
         if (query == null || query.trim().isEmpty()) {
             return List.of();
@@ -37,6 +39,7 @@ public class VehicleService {
         return vehicleRepository.findByVehicleNumberContainingIgnoreCaseWithCustomer(query.trim());
     }
 
+    @Transactional(readOnly = true)
     public List<Vehicle> getVehiclesByCustomerId(Long customerId) {
         return vehicleRepository.findByCustomerIdWithCustomer(customerId);
     }

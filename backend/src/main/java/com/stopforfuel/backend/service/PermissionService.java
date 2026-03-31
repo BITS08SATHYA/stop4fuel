@@ -23,6 +23,7 @@ public class PermissionService {
     private final RolePermissionRepository rolePermissionRepository;
     private final RolesRepository rolesRepository;
 
+    @Transactional(readOnly = true)
     @Cacheable(value = "permissions", key = "#roleType + ':' + #permissionCode")
     public boolean hasPermission(String roleType, String permissionCode) {
         if ("OWNER".equalsIgnoreCase(roleType)) {
@@ -33,6 +34,7 @@ public class PermissionService {
         return rolePermissionRepository.existsByRoleIdAndPermissionCode(role.getId(), permissionCode);
     }
 
+    @Transactional(readOnly = true)
     @Cacheable(value = "rolePermissions", key = "#roleType")
     public List<String> getPermissionsForRole(String roleType) {
         if ("OWNER".equalsIgnoreCase(roleType)) {
@@ -84,6 +86,7 @@ public class PermissionService {
         }
     }
 
+    @Transactional(readOnly = true)
     public Map<String, List<Permission>> getAllPermissionsGrouped() {
         List<Permission> all = permissionRepository.findAllByOrderByModuleAscCodeAsc();
         return all.stream().collect(Collectors.groupingBy(
@@ -93,6 +96,7 @@ public class PermissionService {
         ));
     }
 
+    @Transactional(readOnly = true)
     public List<Permission> getAllPermissions() {
         return permissionRepository.findAllByOrderByModuleAscCodeAsc();
     }

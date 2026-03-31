@@ -21,10 +21,12 @@ public class AttendanceService {
 
     private final EmployeeRepository employeeRepository;
 
+    @Transactional(readOnly = true)
     public List<Attendance> getDailyAttendance(LocalDate date) {
         return attendanceRepository.findByDateOrderByEmployeeNameAsc(date);
     }
 
+    @Transactional(readOnly = true)
     public List<Attendance> getEmployeeAttendance(Long employeeId, Integer month, Integer year) {
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.withDayOfMonth(from.lengthOfMonth());
@@ -71,6 +73,7 @@ public class AttendanceService {
         attendanceRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public long countPresentDays(Long employeeId, Integer month, Integer year) {
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.withDayOfMonth(from.lengthOfMonth());
@@ -80,6 +83,7 @@ public class AttendanceService {
                 .count();
     }
 
+    @Transactional(readOnly = true)
     public long countAbsentDays(Long employeeId, Integer month, Integer year) {
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.withDayOfMonth(from.lengthOfMonth());

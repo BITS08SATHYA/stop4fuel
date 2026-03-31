@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -34,6 +35,7 @@ public class CreditManagementService {
      * Get credit overview: ALL customers with their credit balance and aging breakdown.
      * Balance = total credit billed - total payments received (ledger balance).
      */
+    @Transactional(readOnly = true)
     public CreditOverview getCreditOverview(String categoryType) {
         // Load all customers
         List<Customer> allCustomers = customerRepository.findAllByScid(SecurityUtils.getScid());
@@ -191,6 +193,7 @@ public class CreditManagementService {
     /**
      * Get detailed credit info for a single customer: all credit bills, statements, payments.
      */
+    @Transactional(readOnly = true)
     public CreditCustomerDetail getCustomerCreditDetail(Long customerId) {
         // All credit bills (both paid and unpaid)
         List<InvoiceBill> allBills = invoiceBillRepository.findByBillType("CREDIT").stream()

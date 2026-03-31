@@ -80,11 +80,13 @@ public class ShiftClosingReportService {
         return report;
     }
 
+    @Transactional(readOnly = true)
     public ShiftClosingReport getReportById(Long reportId) {
         return reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found: " + reportId));
     }
 
+    @Transactional(readOnly = true)
     public List<ShiftClosingReport> getAllReports(String status) {
         if (status != null && !status.isEmpty()) {
             return reportRepository.findByStatusOrderByReportDateDesc(status);
@@ -281,6 +283,7 @@ public class ShiftClosingReportService {
         return reportRepository.save(report);
     }
 
+    @Transactional(readOnly = true)
     public String getReportPdfUrl(Long shiftId) {
         ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
                 .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
@@ -290,6 +293,7 @@ public class ShiftClosingReportService {
         return s3StorageService.getPresignedUrl(report.getReportPdfUrl());
     }
 
+    @Transactional(readOnly = true)
     public List<ReportAuditLog> getAuditLog(Long reportId) {
         return auditLogRepository.findByReportIdOrderByPerformedAtDesc(reportId);
     }
@@ -670,6 +674,7 @@ public class ShiftClosingReportService {
 
     // === PRINT DATA ===
 
+    @Transactional(readOnly = true)
     public ShiftReportPrintData getPrintData(Long shiftId) {
         ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
                 .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));

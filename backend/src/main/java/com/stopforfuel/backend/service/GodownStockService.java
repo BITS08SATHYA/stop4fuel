@@ -5,6 +5,7 @@ import com.stopforfuel.backend.repository.GodownStockRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,19 +15,23 @@ public class GodownStockService {
 
     private final GodownStockRepository repository;
 
+    @Transactional(readOnly = true)
     public List<GodownStock> getAll() {
         return repository.findByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public GodownStock getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("GodownStock not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public GodownStock getByProduct(Long productId) {
         return repository.findByProductIdAndScid(productId, SecurityUtils.getScid()).orElse(null);
     }
 
+    @Transactional(readOnly = true)
     public List<GodownStock> getLowStockItems() {
         return repository.findLowStockItems(SecurityUtils.getScid());
     }

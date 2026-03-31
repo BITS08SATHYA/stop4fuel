@@ -5,6 +5,7 @@ import com.stopforfuel.backend.repository.StationExpenseRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -17,10 +18,12 @@ public class StationExpenseService {
 
     private final StationExpenseRepository stationExpenseRepository;
 
+    @Transactional(readOnly = true)
     public List<StationExpense> getAllExpenses() {
         return stationExpenseRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<StationExpense> getExpensesBetween(LocalDate from, LocalDate to) {
         return stationExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(from, to);
     }
@@ -48,6 +51,7 @@ public class StationExpenseService {
         stationExpenseRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getExpenseSummary(LocalDate from, LocalDate to) {
         List<StationExpense> expenses = stationExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(from, to);
         Double total = stationExpenseRepository.sumAmountBetween(from, to);
