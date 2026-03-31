@@ -246,9 +246,12 @@ jobs:
             --secret-id stopforfuel/db-credentials \
             --query "SecretString" --output text | python3 -c "import sys, json; print(json.loads(sys.stdin.read())['password'])")
 
-          # Upload docker-compose file
+          # Upload docker-compose and nginx config
           scp -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no \
             docker-compose.prod.yml ubuntu@$EC2_HOST:/home/ubuntu/docker-compose.prod.yml
+          ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "mkdir -p /home/ubuntu/nginx"
+          scp -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no \
+            nginx/default.conf ubuntu@$EC2_HOST:/home/ubuntu/nginx/default.conf
 
           # Deploy on EC2
           $SSH << REMOTE_EOF
@@ -264,7 +267,7 @@ jobs:
           COGNITO_ISSUER_URI=https://cognito-idp.${{ needs.setup.outputs.cognito_region }}.amazonaws.com/${{ needs.setup.outputs.cognito_pool_id }}
           COGNITO_JWK_URI=https://cognito-idp.${{ needs.setup.outputs.cognito_region }}.amazonaws.com/${{ needs.setup.outputs.cognito_pool_id }}/.well-known/jwks.json
           AWS_REGION=${{ needs.setup.outputs.cognito_region }}
-          CORS_ALLOWED_ORIGINS=http://$EC2_HOST:3000,http://localhost:3000
+          CORS_ALLOWED_ORIGINS=https://devapp.stopforfuel.com,http://$EC2_HOST:3000,http://localhost:3000
           ENVEOF
           chmod 600 /home/ubuntu/.env
 
