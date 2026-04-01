@@ -187,9 +187,11 @@ class CustomerControllerTest {
     @Test
     void blockCustomer_returnsBlockedCustomer() throws Exception {
         testCustomer.setStatus(EntityStatus.BLOCKED);
-        when(customerService.blockCustomer(1L)).thenReturn(testCustomer);
+        when(customerService.blockCustomer(eq(1L), any())).thenReturn(testCustomer);
 
-        mockMvc.perform(patch("/api/customers/1/block"))
+        mockMvc.perform(patch("/api/customers/1/block")
+                        .contentType("application/json")
+                        .content("{\"notes\":\"test\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("BLOCKED"));
     }
@@ -197,9 +199,11 @@ class CustomerControllerTest {
     @Test
     void unblockCustomer_returnsUnblockedCustomer() throws Exception {
         testCustomer.setStatus(EntityStatus.ACTIVE);
-        when(customerService.unblockCustomer(1L)).thenReturn(testCustomer);
+        when(customerService.unblockCustomer(eq(1L), any())).thenReturn(testCustomer);
 
-        mockMvc.perform(patch("/api/customers/1/unblock"))
+        mockMvc.perform(patch("/api/customers/1/unblock")
+                        .contentType("application/json")
+                        .content("{\"notes\":\"test\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }

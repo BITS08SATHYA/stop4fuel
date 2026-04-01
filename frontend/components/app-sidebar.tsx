@@ -122,6 +122,7 @@ const invoiceManagementNav = [
 const paymentManagementNav = [
     { name: "Payment Dashboard", href: "/payments/dashboard", icon: PieChart },
     { name: "Credit Overview", href: "/payments/credit", icon: Eye },
+    { name: "Watchlist", href: "/payments/credit/watchlist", icon: Shield },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
     { name: "Explorer", href: "/payments/explorer", icon: Search },
     { name: "Payments", href: "/payments", icon: CreditCard },
