@@ -142,6 +142,16 @@ export interface PaymentAnalytics {
     topCustomers: NameCountAmount[];
 }
 
+// --- System Health ---
+export interface SystemHealth {
+    totalCustomers: number;
+    totalEmployees: number;
+    totalUsers: number;
+    activeShiftCount: number;
+    todayAttendanceCount: number;
+    totalProducts: number;
+}
+
 // --- Employee Dashboard ---
 export interface EmployeePersonalInfo {
     name: string;
@@ -242,6 +252,9 @@ export interface EmployeeDashboardData {
 // Dashboard
 export const getDashboardStats = (): Promise<DashboardStats> =>
     fetchWithAuth(`${API_BASE_URL}/dashboard/stats`).then(handleResponse);
+
+export const getSystemHealth = (): Promise<SystemHealth> =>
+    fetchWithAuth(`${API_BASE_URL}/dashboard/system-health`).then(handleResponse);
 
 export const getEmployeeDashboard = (): Promise<EmployeeDashboardData> =>
     fetchWithAuth(`${API_BASE_URL}/dashboard/employee`).then(handleResponse);
