@@ -10,3 +10,4 @@ export * from './employees';
 export * from './inventory';
 export * from './dashboard';
 export * from './reports';
+export * from './customer-portal';

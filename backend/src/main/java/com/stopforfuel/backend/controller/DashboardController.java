@@ -1,14 +1,18 @@
 package com.stopforfuel.backend.controller;
 
 import com.stopforfuel.backend.service.DashboardService;
+import com.stopforfuel.backend.service.EmployeeDashboardService;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,6 +24,7 @@ import java.util.*;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final EmployeeDashboardService employeeDashboardService;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
@@ -47,6 +52,15 @@ public class DashboardController {
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
     public CashierDashboard getCashierDashboard() {
         return dashboardService.getCashierDashboard();
+    }
+
+    @GetMapping("/employee")
+    public EmployeeDashboardService.EmployeeDashboardData getEmployeeDashboard() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        return employeeDashboardService.getDashboard(userId);
     }
 
     @GetMapping("/system-health")
