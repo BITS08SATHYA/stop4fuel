@@ -176,6 +176,33 @@ const cashierSections: NavSection[] = [
     },
 ];
 
+// Customer-specific portal navigation
+const customerSections: NavSection[] = [
+    {
+        label: "My Account",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        ],
+    },
+    {
+        label: "Financial",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "Statements", href: "/customer/statements", icon: Receipt },
+            { name: "Payments", href: "/customer/payments", icon: CreditCard },
+            { name: "Invoices", href: "/customer/invoices", icon: FileText },
+        ],
+    },
+    {
+        label: "Vehicles",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "My Vehicles", href: "/customer/vehicles", icon: Truck },
+        ],
+    },
+];
+
 // Employee-specific restricted navigation
 const employeeSections: NavSection[] = [
     {
@@ -227,9 +254,10 @@ export function AppSidebar() {
         return pathname === href || pathname.startsWith(href + "/");
     };
 
+    const isCustomer = user?.role === "CUSTOMER";
     const isCashier = user?.designation === "Cashier" && user?.role !== "OWNER" && user?.role !== "ADMIN";
     const isEmployee = user?.role === "EMPLOYEE" && !isCashier;
-    const activeSections = isCashier ? cashierSections : isEmployee ? employeeSections : sections;
+    const activeSections = isCustomer ? customerSections : isCashier ? cashierSections : isEmployee ? employeeSections : sections;
     const filteredSections = activeSections.filter(section => hasPermission(section.permission));
 
     return (
