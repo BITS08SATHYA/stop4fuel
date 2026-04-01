@@ -195,12 +195,26 @@ public class AdminUserService {
     }
 
     public User updateUserRole(Long userId, String newRoleType) {
+        return updateUserRole(userId, newRoleType, null);
+    }
+
+    public User updateUserRole(Long userId, String newRoleType, String designationName) {
         User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Roles newRole = rolesRepository.findByRoleType(newRoleType)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + newRoleType));
 
         user.setRole(newRole);
+
+        // Update designation if user is an Employee
+        if (designationName != null && user instanceof com.stopforfuel.backend.entity.Employee employee) {
+            if (designationName.isBlank()) {
+                employee.setDesignationEntity(null);
+            } else {
+                designationRepository.findByName(designationName)
+                        .ifPresent(employee::setDesignationEntity);
+            }
+        }
 
         if (authEnabled && user.getCognitoId() != null && userPoolId != null && !userPoolId.isBlank()) {
             cognitoClient.adminUpdateUserAttributes(

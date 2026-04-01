@@ -148,6 +148,7 @@ const analyticsNav = [
 
 const systemNav = [
     { name: "Users", href: "/settings/users", icon: UserCog },
+    { name: "Permissions", href: "/settings/permissions", icon: Shield },
     { name: "Configurations", href: "/settings", icon: Settings },
     { name: "Notifications", href: "/settings/notifications", icon: Bell },
 ];

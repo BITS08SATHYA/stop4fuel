@@ -8,4 +8,6 @@ public class UpdateUserRoleRequest {
 
     @NotBlank(message = "Role type is required")
     private String roleType;
+
+    private String designation;
 }
