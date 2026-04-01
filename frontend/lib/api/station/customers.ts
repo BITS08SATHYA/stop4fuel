@@ -69,6 +69,67 @@ export interface CreditCustomerSummary {
     totalBillCount: number;
     totalPaymentCount: number;
     pendingStatementCount: number;
+    riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' | null;
+    utilizationPercent: number | null;
+    oldestUnpaidDays: number;
+    blockCount: number;
+    lastBlockedAt: string | null;
+}
+
+// Credit Monitoring Types
+export interface CreditHealth {
+    customerId: number;
+    customerName: string;
+    status: string;
+    riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+    creditLimit: number;
+    ledgerBalance: number;
+    totalBilled: number;
+    totalPaid: number;
+    utilizationPercent: number;
+    oldestUnpaidDays: number;
+    suggestedAction: string;
+    blockCount: number;
+    lastBlockedAt: string | null;
+    policyName: string;
+    categoryType: string | null;     // GOVERNMENT, NON_GOVERNMENT
+    categoryName: string | null;
+    groupName: string | null;
+    statementFrequency: string | null; // null = Local/credit customer
+}
+
+export interface BlockEvent {
+    id: number;
+    eventType: 'BLOCKED' | 'UNBLOCKED';
+    triggerType: 'AUTO_SCHEDULED' | 'AUTO_INVOICE' | 'MANUAL';
+    reason: string | null;
+    notes: string | null;
+    performedByName: string;
+    previousStatus: string;
+    createdAt: string;
+}
+
+export interface ReconciliationSummary {
+    health: CreditHealth;
+    creditLimitLiters: number | null;
+    consumedLiters: number | null;
+    statementFrequency: string | null;
+    statementGrouping: string | null;
+    categoryType: string | null;
+    categoryName: string | null;
+    groupName: string | null;
+    blockHistory: BlockEvent[];
+}
+
+export interface CreditPolicy {
+    id?: number;
+    policyName: string;
+    customerCategory?: { id: number; categoryName: string; categoryType: string } | null;
+    agingBlockDays: number;
+    agingWatchDays: number;
+    utilizationWarnPercent: number;
+    utilizationBlockPercent: number;
+    autoBlockEnabled: boolean;
 }
 
 export interface CreditOverview {
@@ -176,12 +237,20 @@ export const getCustomerCreditInfo = (id: number): Promise<{
     totalPaid: number;
 }> => fetchWithAuth(`${API_BASE_URL}/customers/${id}/credit-info`).then(handleResponse);
 
-// Block / Unblock Customer
-export const blockCustomer = (id: number): Promise<any> =>
-    fetchWithAuth(`${API_BASE_URL}/customers/${id}/block`, { method: 'PATCH' }).then(handleResponse);
+// Block / Unblock Customer (with optional notes for audit trail)
+export const blockCustomer = (id: number, notes?: string): Promise<any> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/${id}/block`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notes || null }),
+    }).then(handleResponse);
 
-export const unblockCustomer = (id: number): Promise<any> =>
-    fetchWithAuth(`${API_BASE_URL}/customers/${id}/unblock`, { method: 'PATCH' }).then(handleResponse);
+export const unblockCustomer = (id: number, notes?: string): Promise<any> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/${id}/unblock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notes || null }),
+    }).then(handleResponse);
 
 // Incentives
 export const getAllIncentives = (): Promise<Incentive[]> =>
@@ -206,3 +275,40 @@ export const updateIncentive = (id: number, incentive: Partial<Incentive>): Prom
 
 export const deleteIncentive = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/incentives/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// --- Credit Monitoring ---
+export const getWatchlist = (): Promise<CreditHealth[]> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/monitoring/watchlist`).then(handleResponse);
+
+export const getCreditHealth = (customerId: number): Promise<CreditHealth> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/monitoring/health/${customerId}`).then(handleResponse);
+
+export const getReconciliation = (customerId: number): Promise<ReconciliationSummary> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/monitoring/reconciliation/${customerId}`).then(handleResponse);
+
+export const triggerAutoBlockScan = (): Promise<{ blockedCount: number }> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/monitoring/scan`, { method: 'POST' }).then(handleResponse);
+
+export const getBlockHistory = (customerId: number): Promise<BlockEvent[]> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/monitoring/block-history/${customerId}`).then(handleResponse);
+
+// --- Credit Policies ---
+export const getCreditPolicies = (): Promise<CreditPolicy[]> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/policies`).then(handleResponse);
+
+export const createCreditPolicy = (policy: Partial<CreditPolicy>): Promise<CreditPolicy> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/policies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(policy),
+    }).then(handleResponse);
+
+export const updateCreditPolicy = (id: number, policy: Partial<CreditPolicy>): Promise<CreditPolicy> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/policies/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(policy),
+    }).then(handleResponse);
+
+export const deleteCreditPolicy = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/credit/policies/${id}`, { method: 'DELETE' }).then(handleResponse);

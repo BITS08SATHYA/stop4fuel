@@ -290,6 +290,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.date IS NOT NULL ORDER BY ib.date DESC")
     List<InvoiceBill> findRecentInvoices(Pageable pageable);
 
+    // Oldest unpaid credit bill date for a customer (for aging calculation)
+    @Query("SELECT MIN(ib.date) FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
+           "AND ib.billType = 'CREDIT' AND ib.paymentStatus = 'NOT_PAID'")
+    Optional<LocalDateTime> findOldestUnpaidBillDate(@Param("customerId") Long customerId);
+
     // Operational advance linked invoices
     List<InvoiceBill> findByOperationalAdvanceId(Long operationalAdvanceId);
 

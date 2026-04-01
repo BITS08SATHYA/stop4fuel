@@ -60,6 +60,9 @@ export interface ProductSalesSummary {
 }
 
 // Invoices
+export const getInvoiceById = (id: number): Promise<InvoiceBill> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}`).then(handleResponse);
+
 export const getInvoices = (): Promise<InvoiceBill[]> =>
     fetchWithAuth(`${API_BASE_URL}/invoices`).then(handleResponse);
 
