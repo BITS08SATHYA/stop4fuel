@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { RouteGuard } from "@/components/route-guard";
 import { PermissionGate } from "@/components/permission-gate";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
-import { Plus, Search, RotateCcw, Loader2 } from "lucide-react";
+import { Plus, Search, RotateCcw, Loader2, Pencil, X, Save } from "lucide-react";
 import { CreateUserModal } from "@/components/users/create-user-modal";
 
 const getApiBaseUrl = () => {
@@ -28,6 +28,11 @@ interface UserItem {
     lastLoginAt: string | null;
 }
 
+interface DesignationOption {
+    id: number;
+    name: string;
+}
+
 function formatRelativeTime(dt: string | null): string {
     if (!dt) return "Never";
     const diff = Date.now() - new Date(dt).getTime();
@@ -41,8 +46,11 @@ function formatRelativeTime(dt: string | null): string {
     return new Date(dt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 }
 
+const ROLES = ["OWNER", "ADMIN", "CASHIER", "EMPLOYEE", "CUSTOMER", "DEALER"];
+const PAGE_SIZE = 7;
+
 export default function UsersPage() {
-    const [users, setUsers] = useState<UserItem[]>([]);
+    const [allUsers, setAllUsers] = useState<UserItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
@@ -50,6 +58,15 @@ export default function UsersPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [resetingId, setResetingId] = useState<number | null>(null);
     const [passcodeResult, setPasscodeResult] = useState<{ name: string; passcode: string } | null>(null);
+    const [page, setPage] = useState(0);
+
+    // Edit modal state
+    const [editUser, setEditUser] = useState<UserItem | null>(null);
+    const [editRole, setEditRole] = useState("");
+    const [editDesignation, setEditDesignation] = useState("");
+    const [designations, setDesignations] = useState<DesignationOption[]>([]);
+    const [saving, setSaving] = useState(false);
+    const [editError, setEditError] = useState("");
 
     const loadUsers = useCallback(async () => {
         setLoading(true);
@@ -64,7 +81,8 @@ export default function UsersPage() {
             );
             if (res.ok) {
                 const data = await res.json();
-                setUsers(data);
+                setAllUsers(data);
+                setPage(0);
             }
         } catch (err) {
             console.error("Failed to load users", err);
@@ -75,7 +93,23 @@ export default function UsersPage() {
 
     useEffect(() => {
         loadUsers();
+        loadDesignations();
     }, [loadUsers]);
+
+    const loadDesignations = async () => {
+        try {
+            const res = await fetchWithAuth(`${getApiBaseUrl()}/designations`);
+            if (res.ok) {
+                setDesignations(await res.json());
+            }
+        } catch (e) {
+            console.error("Failed to load designations", e);
+        }
+    };
+
+    // Pagination
+    const totalPages = Math.ceil(allUsers.length / PAGE_SIZE);
+    const pagedUsers = allUsers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
     const handleResetPasscode = async (userId: number, userName: string) => {
         setResetingId(userId);
@@ -99,6 +133,36 @@ export default function UsersPage() {
         setPasscodeResult({ name, passcode });
         setShowCreateModal(false);
         loadUsers();
+    };
+
+    const openEditModal = (user: UserItem) => {
+        setEditUser(user);
+        setEditRole(user.role);
+        setEditDesignation(user.designation || "");
+        setEditError("");
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editUser) return;
+        setSaving(true);
+        setEditError("");
+        try {
+            const res = await fetchWithAuth(`${getApiBaseUrl()}/admin/users/${editUser.id}/role`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roleType: editRole, designation: editDesignation }),
+            });
+            if (!res.ok) {
+                const err = await res.text();
+                throw new Error(err || "Failed to update");
+            }
+            setEditUser(null);
+            loadUsers();
+        } catch (e: any) {
+            setEditError(e.message || "Failed to update user");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const statusBadge = (status: string) => {
@@ -201,14 +265,14 @@ export default function UsersPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {users.length === 0 ? (
+                                    {pagedUsers.length === 0 ? (
                                         <tr>
                                             <td colSpan={8} className="text-center py-8 text-muted-foreground">
                                                 No users found
                                             </td>
                                         </tr>
                                     ) : (
-                                        users.map((user) => (
+                                        pagedUsers.map((user) => (
                                             <tr key={user.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <div>
@@ -228,19 +292,28 @@ export default function UsersPage() {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <PermissionGate permission="USER_MANAGE">
-                                                        <button
-                                                            onClick={() => handleResetPasscode(user.id, user.name)}
-                                                            disabled={resetingId === user.id}
-                                                            className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-input hover:bg-muted transition-colors disabled:opacity-50"
-                                                            title="Reset Passcode"
-                                                        >
-                                                            {resetingId === user.id ? (
-                                                                <Loader2 className="w-3 h-3 animate-spin" />
-                                                            ) : (
-                                                                <RotateCcw className="w-3 h-3" />
-                                                            )}
-                                                            Reset Passcode
-                                                        </button>
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={() => openEditModal(user)}
+                                                                className="p-1.5 rounded-md hover:bg-primary/20 text-primary transition-colors"
+                                                                title="Edit Role & Designation"
+                                                            >
+                                                                <Pencil className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleResetPasscode(user.id, user.name)}
+                                                                disabled={resetingId === user.id}
+                                                                className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-input hover:bg-muted transition-colors disabled:opacity-50"
+                                                                title="Reset Passcode"
+                                                            >
+                                                                {resetingId === user.id ? (
+                                                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                                                ) : (
+                                                                    <RotateCcw className="w-3 h-3" />
+                                                                )}
+                                                                Reset
+                                                            </button>
+                                                        </div>
                                                     </PermissionGate>
                                                 </td>
                                             </tr>
@@ -248,6 +321,110 @@ export default function UsersPage() {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
+                                <p className="text-sm text-muted-foreground">
+                                    Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, allUsers.length)} of {allUsers.length}
+                                </p>
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                                        disabled={page === 0}
+                                        className="px-3 py-1 text-sm rounded border border-input hover:bg-muted transition-colors disabled:opacity-50"
+                                    >
+                                        Prev
+                                    </button>
+                                    {Array.from({ length: totalPages }, (_, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setPage(i)}
+                                            className={`px-3 py-1 text-sm rounded border transition-colors ${
+                                                i === page
+                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                    : "border-input hover:bg-muted"
+                                            }`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                                        disabled={page === totalPages - 1}
+                                        className="px-3 py-1 text-sm rounded border border-input hover:bg-muted transition-colors disabled:opacity-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Edit Role & Designation Modal */}
+                {editUser && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="bg-background rounded-xl p-6 w-full max-w-sm space-y-4 shadow-xl border border-border">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-foreground">Edit {editUser.name}</h3>
+                                <button onClick={() => setEditUser(null)} className="p-1 rounded hover:bg-muted transition-colors">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {editError && (
+                                <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/20 p-2 rounded">{editError}</p>
+                            )}
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-sm font-medium block mb-1">Role</label>
+                                    <select
+                                        value={editRole}
+                                        onChange={(e) => setEditRole(e.target.value)}
+                                        className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    >
+                                        {ROLES.map(r => (
+                                            <option key={r} value={r}>{r}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {editUser.userType === "EMPLOYEE" && (
+                                    <div>
+                                        <label className="text-sm font-medium block mb-1">Designation</label>
+                                        <select
+                                            value={editDesignation}
+                                            onChange={(e) => setEditDesignation(e.target.value)}
+                                            className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        >
+                                            <option value="">No designation</option>
+                                            {designations.map(d => (
+                                                <option key={d.id} value={d.name}>{d.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    onClick={() => setEditUser(null)}
+                                    className="px-4 py-2 text-sm rounded-lg border border-input hover:bg-muted transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveEdit}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                >
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    {saving ? "Saving..." : "Save"}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -81,9 +81,9 @@ public class AdminUserController {
 
     @PutMapping("/{id}/role")
     @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
-    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @Valid @RequestBody UpdateUserRoleRequest request) {
-        User user = adminUserService.updateUserRole(id, request.getRoleType());
-        return ResponseEntity.ok(user);
+    public ResponseEntity<UserListDTO> updateUserRole(@PathVariable Long id, @Valid @RequestBody UpdateUserRoleRequest request) {
+        User user = adminUserService.updateUserRole(id, request.getRoleType(), request.getDesignation());
+        return ResponseEntity.ok(UserListDTO.from(user));
     }
 
     @DeleteMapping("/{id}")
