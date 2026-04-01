@@ -49,6 +49,12 @@ public class DashboardController {
         return dashboardService.getCashierDashboard();
     }
 
+    @GetMapping("/system-health")
+    @PreAuthorize("hasPermission(null, 'DASHBOARD_VIEW')")
+    public SystemHealth getSystemHealth() {
+        return dashboardService.getSystemHealth();
+    }
+
     // --- DTOs ---
 
     @Getter @Setter
@@ -235,5 +241,15 @@ public class DashboardController {
         private BigDecimal netAmount;
         private String date;
         private String customerName;
+    }
+
+    @Getter @Setter @NoArgsConstructor
+    public static class SystemHealth {
+        private long totalCustomers;
+        private long totalEmployees;
+        private long totalUsers;
+        private long activeShiftCount;
+        private long todayAttendanceCount;
+        private long totalProducts;
     }
 }
