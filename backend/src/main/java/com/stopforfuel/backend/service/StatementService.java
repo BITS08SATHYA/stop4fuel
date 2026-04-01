@@ -166,6 +166,21 @@ public class StatementService {
     }
 
     /**
+     * Approve a DRAFT statement: set status to NOT_PAID and auto-generate PDF.
+     */
+    @Transactional
+    public Statement approveStatement(Long id) {
+        Statement stmt = getStatementById(id);
+        if (!"DRAFT".equals(stmt.getStatus())) {
+            throw new BusinessException("Only DRAFT statements can be approved");
+        }
+        stmt.setStatus("NOT_PAID");
+        Statement saved = statementRepository.save(stmt);
+        generateAndStorePdf(saved.getId());
+        return saved;
+    }
+
+    /**
      * Preview unlinked credit bills matching the given filters (without creating a statement).
      */
     @Transactional(readOnly = true)
