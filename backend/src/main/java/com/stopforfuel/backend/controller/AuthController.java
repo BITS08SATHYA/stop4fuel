@@ -1,10 +1,15 @@
 package com.stopforfuel.backend.controller;
 
 import com.stopforfuel.backend.entity.Employee;
+import com.stopforfuel.backend.entity.PasscodeResetRequest;
 import com.stopforfuel.backend.entity.User;
+import com.stopforfuel.backend.repository.PasscodeResetRequestRepository;
 import com.stopforfuel.backend.repository.UserRepository;
+import com.stopforfuel.backend.service.AuditLogService;
 import com.stopforfuel.backend.service.PermissionService;
+import com.stopforfuel.config.SecurityUtils;
 import com.stopforfuel.config.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -12,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,18 +29,25 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PermissionService permissionService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final AuditLogService auditLogService;
+    private final PasscodeResetRequestRepository resetRequestRepository;
 
     public AuthController(UserRepository userRepository, PermissionService permissionService,
-                          @Autowired(required = false) JwtTokenProvider jwtTokenProvider) {
+                          @Autowired(required = false) JwtTokenProvider jwtTokenProvider,
+                          AuditLogService auditLogService,
+                          PasscodeResetRequestRepository resetRequestRepository) {
         this.userRepository = userRepository;
         this.permissionService = permissionService;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.auditLogService = auditLogService;
+        this.resetRequestRepository = resetRequestRepository;
     }
 
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> request,
+                                                      HttpServletRequest httpRequest) {
         if (jwtTokenProvider == null) {
             return ResponseEntity.status(404).body(Map.of("error", "Passcode login is not available in this environment"));
         }
@@ -53,15 +66,21 @@ public class AuthController {
                 .or(() -> userRepository.findByPhoneNumber("+91" + normalizedPhone))
                 .orElse(null);
 
+        String clientIp = httpRequest.getRemoteAddr();
+
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid phone number or passcode"));
         }
 
         if (user.getPasscode() == null || !passwordEncoder.matches(passcode, user.getPasscode())) {
+            auditLogService.logLogin("LOGIN_FAILED", user.getId(), user.getName(), clientIp,
+                    "Failed login attempt for " + normalizedPhone);
             return ResponseEntity.status(401).body(Map.of("error", "Invalid phone number or passcode"));
         }
 
         if (user.getStatus() != com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
+            auditLogService.logLogin("LOGIN_FAILED", user.getId(), user.getName(), clientIp,
+                    "Inactive account login attempt");
             return ResponseEntity.status(403).body(Map.of("error", "Account is inactive"));
         }
 
@@ -81,11 +100,49 @@ public class AuthController {
 
         List<String> permissions = permissionService.getPermissionsForRole(user.getRole().getRoleType());
 
+        // Update last login timestamp
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        // Audit log
+        auditLogService.logLogin("LOGIN_SUCCESS", user.getId(), user.getName(), clientIp,
+                "Successful login via passcode");
+
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("user", buildUserResponse(user, permissions, designation));
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-passcode")
+    public ResponseEntity<Map<String, Object>> forgotPasscode(@RequestBody Map<String, String> request) {
+        String phone = request.get("phone");
+        if (phone == null || phone.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Phone number is required"));
+        }
+
+        String normalizedPhone = phone.replaceAll("^\\+91", "");
+        User user = userRepository.findByPhoneNumber(normalizedPhone)
+                .or(() -> userRepository.findByPhoneNumber("+91" + normalizedPhone))
+                .orElse(null);
+
+        if (user == null) {
+            // Don't reveal whether user exists
+            return ResponseEntity.ok(Map.of("success", true, "message", "If the number is registered, admin will be notified"));
+        }
+
+        // Create a reset request for admin to approve
+        PasscodeResetRequest resetRequest = new PasscodeResetRequest();
+        resetRequest.setUserId(user.getId());
+        resetRequest.setUserName(user.getName());
+        resetRequest.setPhone(normalizedPhone);
+        resetRequest.setStatus(PasscodeResetRequest.Status.PENDING);
+        resetRequest.setRequestedAt(LocalDateTime.now());
+        resetRequest.setScid(user.getScid());
+        resetRequestRepository.save(resetRequest);
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Admin has been notified. Please contact the station for your new passcode."));
     }
 
     @GetMapping("/me")
