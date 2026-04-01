@@ -250,6 +250,31 @@ export const uploadPaymentProof = (paymentId: number, file: File): Promise<Payme
 export const getPaymentProofUrl = (paymentId: number): Promise<{ url: string }> =>
     fetchWithAuth(`${API_BASE_URL}/payments/${paymentId}/proof-url`).then(handleResponse);
 
+// Payment Summaries
+export interface StatementPaymentSummary {
+    statementId: number;
+    statementNo: string;
+    netAmount: number;
+    totalReceived: number;
+    balance: number;
+    payments: Payment[];
+}
+
+export interface BillPaymentSummary {
+    invoiceBillId: number;
+    billNo: string;
+    netAmount: number;
+    totalReceived: number;
+    balance: number;
+    payments: Payment[];
+}
+
+export const getStatementPaymentSummary = (statementId: number): Promise<StatementPaymentSummary> =>
+    fetchWithAuth(`${API_BASE_URL}/payments/summary/statement/${statementId}`).then(handleResponse);
+
+export const getBillPaymentSummary = (invoiceBillId: number): Promise<BillPaymentSummary> =>
+    fetchWithAuth(`${API_BASE_URL}/payments/summary/bill/${invoiceBillId}`).then(handleResponse);
+
 // Ledger
 export const getOpeningBalance = (customerId: number, asOfDate: string): Promise<number> =>
     fetchWithAuth(`${API_BASE_URL}/ledger/opening-balance?customerId=${customerId}&asOfDate=${asOfDate}`).then(handleResponse);

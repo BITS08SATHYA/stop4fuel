@@ -49,6 +49,7 @@ import {
     Bell,
     ClipboardList,
     MapPin,
+    Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -115,12 +116,14 @@ const invoiceManagementNav = [
     { name: "Invoice Dashboard", href: "/operations/invoices/dashboard", icon: BarChart3 },
     { name: "Invoices", href: "/operations/invoices", icon: FileText },
     { name: "Invoice History", href: "/operations/invoices/history", icon: History },
+    { name: "Invoice Explorer", href: "/operations/invoices/explorer", icon: Search },
 ];
 
 const paymentManagementNav = [
     { name: "Payment Dashboard", href: "/payments/dashboard", icon: PieChart },
     { name: "Credit Overview", href: "/payments/credit", icon: Eye },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
+    { name: "Explorer", href: "/payments/explorer", icon: Search },
     { name: "Payments", href: "/payments", icon: CreditCard },
     { name: "Customer Ledger", href: "/payments/ledger", icon: BookOpen },
 ];
