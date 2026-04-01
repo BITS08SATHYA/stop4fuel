@@ -37,10 +37,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     List<InvoiceBill> findByStatementId(Long statementId);
 
-    // Find credit bills for a customer in a date range that are not yet linked to a statement
+    // Find unpaid credit bills for a customer in a date range that are not yet linked to a statement
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "ORDER BY ib.date ASC")
     List<InvoiceBill> findUnlinkedCreditBills(
@@ -48,10 +49,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
-    // Find unlinked credit bills filtered by vehicle
+    // Find unlinked unpaid credit bills filtered by vehicle
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ib.vehicle.id = :vehicleId " +
            "ORDER BY ib.date ASC")
@@ -61,11 +63,12 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("toDate") LocalDateTime toDate,
             @Param("vehicleId") Long vehicleId);
 
-    // Find unlinked credit bills containing a specific product
+    // Find unlinked unpaid credit bills containing a specific product
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT DISTINCT ib FROM InvoiceBill ib JOIN ib.products ip " +
            "WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ip.product.id = :productId " +
            "ORDER BY ib.date ASC")
@@ -75,11 +78,12 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("toDate") LocalDateTime toDate,
             @Param("productId") Long productId);
 
-    // Find unlinked credit bills by vehicle AND product
+    // Find unlinked unpaid credit bills by vehicle AND product
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT DISTINCT ib FROM InvoiceBill ib JOIN ib.products ip " +
            "WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ib.vehicle.id = :vehicleId " +
            "AND ip.product.id = :productId " +
@@ -91,10 +95,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("vehicleId") Long vehicleId,
             @Param("productId") Long productId);
 
-    // Find specific unlinked credit bills by IDs (for bill-wise selection)
+    // Find specific unlinked unpaid credit bills by IDs (for bill-wise selection)
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.id IN :billIds " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "ORDER BY ib.date ASC")
     List<InvoiceBill> findUnlinkedCreditBillsByIds(
             @Param("billIds") List<Long> billIds);

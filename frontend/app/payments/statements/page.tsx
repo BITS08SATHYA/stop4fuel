@@ -9,13 +9,15 @@ import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
-    FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight
+    FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight,
+    CheckCircle2, Zap
 } from "lucide-react";
 import {
     getStatements, generateStatement, getStatementBills,
     getCustomers, deleteStatement, removeBillFromStatement,
     getVehiclesByCustomer, getProducts, previewStatementBills,
     generateStatementPdf, getStatementPdfUrl, getStatementStats,
+    approveStatement, autoGenerateStatementDrafts,
     updateCustomerCreditLimits, updateVehicleLiterLimit,
     type Statement, type InvoiceBill, type Customer, type Vehicle,
     type Product, type PageResponse, type StatementStats
@@ -269,6 +271,42 @@ export default function StatementsPage() {
         }
     };
 
+    const [approvingId, setApprovingId] = useState<number | null>(null);
+    const [autoGenerating, setAutoGenerating] = useState(false);
+
+    const handleApprove = async (id: number) => {
+        if (!confirm("Approve this draft statement? A PDF will be generated.")) return;
+        setApprovingId(id);
+        try {
+            await approveStatement(id);
+            loadStatements();
+            loadStats();
+        } catch (e: any) {
+            setPdfError(e.message || "Failed to approve statement");
+            setTimeout(() => setPdfError(""), 4000);
+        } finally {
+            setApprovingId(null);
+        }
+    };
+
+    const handleAutoGenerate = async () => {
+        if (!confirm("Auto-generate draft statements for all eligible customers?")) return;
+        setAutoGenerating(true);
+        try {
+            const result = await autoGenerateStatementDrafts();
+            if (result.count > 0) {
+                loadStatements();
+                loadStats();
+            }
+            alert(`${result.count} draft statement(s) created.`);
+        } catch (e: any) {
+            setPdfError(e.message || "Failed to auto-generate drafts");
+            setTimeout(() => setPdfError(""), 4000);
+        } finally {
+            setAutoGenerating(false);
+        }
+    };
+
     const handleRemoveBill = async (statementId: number, billId: number) => {
         if (!confirm("Remove this bill from the statement?")) return;
         try {
@@ -313,13 +351,23 @@ export default function StatementsPage() {
                         </p>
                     </div>
                     <PermissionGate permission="PAYMENT_MANAGE">
-                        <button
-                            onClick={() => setShowGenerateModal(true)}
-                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Generate Statement
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleAutoGenerate}
+                                disabled={autoGenerating}
+                                className="px-5 py-3 rounded-xl font-medium flex items-center gap-2 border border-border bg-card hover:bg-muted transition-colors text-foreground disabled:opacity-50"
+                            >
+                                {autoGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                                Auto-Generate Drafts
+                            </button>
+                            <button
+                                onClick={() => setShowGenerateModal(true)}
+                                className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Generate Statement
+                            </button>
+                        </div>
                     </PermissionGate>
                 </div>
 
@@ -376,6 +424,7 @@ export default function StatementsPage() {
                         className="px-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     >
                         <option value="ALL">All Status</option>
+                        <option value="DRAFT">Draft</option>
                         <option value="NOT_PAID">Outstanding</option>
                         <option value="PAID">Paid</option>
                     </select>
@@ -429,8 +478,8 @@ export default function StatementsPage() {
                                                 {Number(stmt.balanceAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="py-3 px-4 text-center whitespace-nowrap">
-                                                <Badge variant={stmt.status === "PAID" ? "success" : "warning"}>
-                                                    {stmt.status === "PAID" ? "PAID" : "NOT PAID"}
+                                                <Badge variant={stmt.status === "PAID" ? "success" : stmt.status === "DRAFT" ? "outline" : "warning"}>
+                                                    {stmt.status === "PAID" ? "PAID" : stmt.status === "DRAFT" ? "DRAFT" : "NOT PAID"}
                                                 </Badge>
                                             </td>
                                             <td className="py-3 px-4 text-center">
@@ -482,6 +531,22 @@ export default function StatementsPage() {
                                                                 <FileText className="w-4 h-4" />
                                                             )}
                                                         </button>
+                                                    )}
+                                                    {stmt.status === "DRAFT" && (
+                                                        <PermissionGate permission="PAYMENT_MANAGE">
+                                                            <button
+                                                                onClick={() => handleApprove(stmt.id!)}
+                                                                disabled={approvingId === stmt.id}
+                                                                className="p-1.5 rounded-md hover:bg-emerald-500/20 text-emerald-400 transition-colors disabled:opacity-50"
+                                                                title="Approve Draft"
+                                                            >
+                                                                {approvingId === stmt.id ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                ) : (
+                                                                    <CheckCircle2 className="w-4 h-4" />
+                                                                )}
+                                                            </button>
+                                                        </PermissionGate>
                                                     )}
                                                     {stmt.status !== "PAID" && (
                                                         <PermissionGate permission="PAYMENT_MANAGE">

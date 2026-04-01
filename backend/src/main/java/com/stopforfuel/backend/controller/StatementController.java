@@ -5,7 +5,9 @@ import com.stopforfuel.backend.dto.StatementDTO;
 import com.stopforfuel.backend.dto.StatementStats;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.service.StatementAutoGenerationService;
 import com.stopforfuel.backend.service.StatementService;
+import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +26,7 @@ import java.util.Map;
 public class StatementController {
 
     private final StatementService statementService;
+    private final StatementAutoGenerationService statementAutoGenerationService;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
@@ -145,6 +148,20 @@ public class StatementController {
     public ResponseEntity<Map<String, String>> getPdfUrl(@PathVariable Long id) {
         String url = statementService.getStatementPdfUrl(id);
         return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    public ResponseEntity<StatementDTO> approve(@PathVariable Long id) {
+        Statement approved = statementService.approveStatement(id);
+        return ResponseEntity.ok(StatementDTO.from(approved));
+    }
+
+    @PostMapping("/auto-generate")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    public ResponseEntity<Map<String, Integer>> autoGenerate() {
+        int count = statementAutoGenerationService.generateDraftsManually(SecurityUtils.getScid());
+        return ResponseEntity.ok(Map.of("count", count));
     }
 
     @DeleteMapping("/{id}")
