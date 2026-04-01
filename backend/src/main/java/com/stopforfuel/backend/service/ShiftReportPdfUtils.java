@@ -20,19 +20,19 @@ public final class ShiftReportPdfUtils {
 
     private ShiftReportPdfUtils() {}
 
-    // Fonts — compact for dense professional layout
-    public static final Font COMPANY_FONT = new Font(Font.HELVETICA, 10, Font.BOLD);
-    public static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 6.5f, Font.NORMAL);
-    public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 8, Font.BOLD);
-    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
-    public static final Font HEADER_FONT = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
-    public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 6, Font.NORMAL);
-    public static final Font BOLD_FONT = new Font(Font.HELVETICA, 6, Font.BOLD);
-    public static final Font SMALL_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
-    public static final Font SMALL_BOLD = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
-    public static final Font TOTAL_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
-    public static final Font FOOTER_FONT = new Font(Font.HELVETICA, 6, Font.NORMAL);
-    public static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 6, Font.BOLD);
+    // Fonts — ultra-compact for dense 2-page layout
+    public static final Font COMPANY_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
+    public static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
+    public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
+    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 6, Font.BOLD);
+    public static final Font HEADER_FONT = new Font(Font.HELVETICA, 5, Font.BOLD);
+    public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
+    public static final Font BOLD_FONT = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
+    public static final Font SMALL_FONT = new Font(Font.HELVETICA, 5, Font.NORMAL);
+    public static final Font SMALL_BOLD = new Font(Font.HELVETICA, 5, Font.BOLD);
+    public static final Font TOTAL_FONT = new Font(Font.HELVETICA, 6, Font.BOLD);
+    public static final Font FOOTER_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
+    public static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
 
     public static final Color HEADER_BG = new Color(230, 230, 230);
     public static final Color LIGHT_BG = new Color(245, 245, 245);
@@ -45,15 +45,15 @@ public final class ShiftReportPdfUtils {
 
     public static Paragraph sectionHeader(String text) {
         Paragraph p = new Paragraph(text, SECTION_FONT);
-        p.setSpacingBefore(2);
-        p.setSpacingAfter(1);
+        p.setSpacingBefore(1);
+        p.setSpacingAfter(0);
         return p;
     }
 
     public static void addHeaderCell(PdfPTable table, String text) {
         PdfPCell cell = new PdfPCell(new Phrase(text, HEADER_FONT));
         cell.setBackgroundColor(HEADER_BG);
-        cell.setPadding(2);
+        cell.setPadding(1);
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         cell.setBorderWidth(0.25f);
         cell.setBorderColor(Color.GRAY);
@@ -62,7 +62,7 @@ public final class ShiftReportPdfUtils {
 
     public static void addCellLeft(PdfPTable table, String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "-", font));
-        cell.setPadding(1.5f);
+        cell.setPadding(1);
         cell.setHorizontalAlignment(Element.ALIGN_LEFT);
         cell.setBorderWidth(0.25f);
         cell.setBorderColor(Color.LIGHT_GRAY);
@@ -71,7 +71,7 @@ public final class ShiftReportPdfUtils {
 
     public static void addCellRight(PdfPTable table, String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "-", font));
-        cell.setPadding(1.5f);
+        cell.setPadding(1);
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         cell.setBorderWidth(0.25f);
         cell.setBorderColor(Color.LIGHT_GRAY);
@@ -81,7 +81,7 @@ public final class ShiftReportPdfUtils {
     public static void addPlainCell(PdfPTable table, String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setBorder(Rectangle.NO_BORDER);
-        cell.setPadding(1.5f);
+        cell.setPadding(1);
         table.addCell(cell);
     }
 
