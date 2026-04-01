@@ -6,7 +6,7 @@ import { CashierDashboard } from "@/components/dashboards/cashier-dashboard";
 import { CustomerDashboard } from "@/components/dashboards/customer-dashboard";
 import { EmployeeDashboard } from "@/components/dashboards/employee-dashboard";
 import { GlassCard } from "@/components/ui/glass-card";
-import { getDashboardStats, DashboardStats, checkStockAlerts, StockAlert } from "@/lib/api/station";
+import { getDashboardStats, DashboardStats, checkStockAlerts, StockAlert, getSystemHealth, SystemHealth } from "@/lib/api/station";
 import {
     IndianRupee,
     Fuel,
@@ -23,7 +23,15 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     AlertTriangle,
+    Users,
+    UserCog,
+    Package,
+    CalendarCheck,
+    UserPlus,
+    FileText,
+    ClipboardList,
 } from "lucide-react";
+import Link from "next/link";
 import {
     AreaChart,
     Area,
@@ -95,6 +103,7 @@ export default function DashboardPage() {
 function OwnerDashboard() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([]);
+    const [health, setHealth] = useState<SystemHealth | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -104,6 +113,7 @@ function OwnerDashboard() {
             .catch((err) => setError(err.message || "Failed to load dashboard"))
             .finally(() => setIsLoading(false));
         checkStockAlerts().then(setStockAlerts).catch(() => {});
+        getSystemHealth().then(setHealth).catch(() => {});
     }, []);
 
     if (isLoading) {
@@ -188,6 +198,47 @@ function OwnerDashboard() {
                         );
                     })()}
                 </div>
+
+                {/* Quick Actions */}
+                <div className="flex flex-wrap gap-2">
+                    {[
+                        { label: "New Invoice", href: "/operations/invoices", icon: FileText },
+                        { label: "Record Payment", href: "/payments/record", icon: CreditCard },
+                        { label: "Create User", href: "/settings/users", icon: UserPlus },
+                        { label: "Shift Register", href: "/operations/shifts", icon: Clock },
+                        { label: "Reports", href: "/operations/reports", icon: ClipboardList },
+                        { label: "Customers", href: "/customers", icon: Users },
+                    ].map((action) => (
+                        <Link
+                            key={action.label}
+                            href={action.href}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-sm transition-colors"
+                        >
+                            <action.icon className="w-3.5 h-3.5 text-muted-foreground" />
+                            {action.label}
+                        </Link>
+                    ))}
+                </div>
+
+                {/* System Health */}
+                {health && (
+                    <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                        {[
+                            { label: "Customers", value: health.totalCustomers, icon: Users, color: "text-blue-500" },
+                            { label: "Employees", value: health.totalEmployees, icon: UserCog, color: "text-emerald-500" },
+                            { label: "Products", value: health.totalProducts, icon: Package, color: "text-purple-500" },
+                            { label: "Active Shifts", value: health.activeShiftCount, icon: Clock, color: "text-amber-500" },
+                            { label: "Attendance", value: health.todayAttendanceCount, icon: CalendarCheck, color: "text-green-500" },
+                            { label: "Total Users", value: health.totalUsers, icon: Users, color: "text-cyan-500" },
+                        ].map((item) => (
+                            <GlassCard key={item.label} className="p-3 text-center">
+                                <item.icon className={`w-4 h-4 ${item.color} mx-auto mb-1`} />
+                                <p className={`text-lg font-bold ${item.color}`}>{item.value}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{item.label}</p>
+                            </GlassCard>
+                        ))}
+                    </div>
+                )}
 
                 {/* Low Stock Alert Banner */}
                 {stockAlerts.length > 0 && (
