@@ -21,7 +21,7 @@ export interface Statement {
     netAmount: number;
     receivedAmount: number;
     balanceAmount: number;
-    status: 'PAID' | 'NOT_PAID';
+    status: 'PAID' | 'NOT_PAID' | 'DRAFT';
     statementPdfUrl?: string;
 }
 
@@ -170,6 +170,12 @@ export const generateStatementPdf = (id: number): Promise<Statement> =>
 
 export const getStatementPdfUrl = (id: number): Promise<string> =>
     fetchWithAuth(`${API_BASE_URL}/statements/${id}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
+
+export const approveStatement = (id: number): Promise<Statement> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/${id}/approve`, { method: 'POST' }).then(handleResponse);
+
+export const autoGenerateStatementDrafts = (): Promise<{ count: number }> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/auto-generate`, { method: 'POST' }).then(handleResponse);
 
 export const getStatementStats = (): Promise<StatementStats> =>
     fetchWithAuth(`${API_BASE_URL}/statements/stats`).then(handleResponse);
