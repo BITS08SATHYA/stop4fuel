@@ -142,9 +142,22 @@ export interface PaymentAnalytics {
     topCustomers: NameCountAmount[];
 }
 
+// --- System Health ---
+export interface SystemHealth {
+    totalCustomers: number;
+    totalEmployees: number;
+    totalUsers: number;
+    activeShiftCount: number;
+    todayAttendanceCount: number;
+    totalProducts: number;
+}
+
 // Dashboard
 export const getDashboardStats = (): Promise<DashboardStats> =>
     fetchWithAuth(`${API_BASE_URL}/dashboard/stats`).then(handleResponse);
+
+export const getSystemHealth = (): Promise<SystemHealth> =>
+    fetchWithAuth(`${API_BASE_URL}/dashboard/system-health`).then(handleResponse);
 
 export const getInvoiceAnalytics = (from?: string, to?: string): Promise<InvoiceAnalytics> => {
     const params = new URLSearchParams();
