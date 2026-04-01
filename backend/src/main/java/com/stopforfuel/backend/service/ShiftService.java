@@ -42,6 +42,7 @@ public class ShiftService {
     private final ShiftReportPdfGenerator pdfGenerator;
     private final S3StorageService s3StorageService;
     private final ShiftClosingReportRepository shiftClosingReportRepository;
+    private final StatementAutoGenerationService statementAutoGenerationService;
 
     public ShiftService(ShiftRepository repository,
                         @Lazy ShiftClosingReportService shiftClosingReportService,
@@ -62,7 +63,8 @@ public class ShiftService {
                         CashInflowRepaymentRepository repaymentRepository,
                         ShiftReportPdfGenerator pdfGenerator,
                         S3StorageService s3StorageService,
-                        ShiftClosingReportRepository shiftClosingReportRepository) {
+                        ShiftClosingReportRepository shiftClosingReportRepository,
+                        @Lazy StatementAutoGenerationService statementAutoGenerationService) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
         this.productInventoryService = productInventoryService;
@@ -83,6 +85,7 @@ public class ShiftService {
         this.pdfGenerator = pdfGenerator;
         this.s3StorageService = s3StorageService;
         this.shiftClosingReportRepository = shiftClosingReportRepository;
+        this.statementAutoGenerationService = statementAutoGenerationService;
     }
 
     @Transactional(readOnly = true)
@@ -331,6 +334,13 @@ public class ShiftService {
         } catch (Exception e) {
             // PDF generation/upload is best-effort; shift is still closed
             System.err.println("Failed to generate/upload shift report PDF: " + e.getMessage());
+        }
+
+        // Auto-generate DRAFT statements if shift crosses a statement boundary
+        try {
+            statementAutoGenerationService.onShiftClosed(saved);
+        } catch (Exception e) {
+            System.err.println("Failed to auto-generate statement drafts: " + e.getMessage());
         }
 
         return saved;

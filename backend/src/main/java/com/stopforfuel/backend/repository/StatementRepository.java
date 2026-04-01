@@ -73,6 +73,8 @@ public interface StatementRepository extends ScidRepository<Statement> {
 
     Optional<Statement> findByStatementNo(String statementNo);
 
+    boolean existsByCustomerIdAndFromDateAndToDateAndScid(Long customerId, LocalDate fromDate, LocalDate toDate, Long scid);
+
     List<Statement> findByCustomerIdAndStatementDateBetween(Long customerId, LocalDate from, LocalDate to);
 
     // Stats aggregation queries
