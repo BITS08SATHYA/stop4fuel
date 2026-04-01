@@ -138,9 +138,14 @@ function LoginContent() {
                         {isSubmitting ? "Signing in..." : "Sign In"}
                     </button>
 
-                    <p className="text-center text-sm text-muted-foreground">
-                        Contact your station admin for an account
-                    </p>
+                    <div className="flex items-center justify-between text-sm">
+                        <a href="/forgot-passcode" className="text-primary hover:underline">
+                            Forgot Passcode?
+                        </a>
+                        <span className="text-muted-foreground">
+                            Contact admin for an account
+                        </span>
+                    </div>
                     <a
                         href={process.env.NEXT_PUBLIC_LANDING_URL || '/'}
                         className="text-center text-sm text-muted-foreground hover:text-foreground transition-colors block"
