@@ -13,6 +13,8 @@ public class ShiftReportPrintData {
     private String companyName;
     private String companyAddress;
     private String companyGstNo;
+    private String companyPhone;
+    private String companyEmail;
     private String employeeName;
     private Long shiftId;
     private LocalDateTime shiftStart;

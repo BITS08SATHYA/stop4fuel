@@ -1,8 +1,6 @@
 package com.stopforfuel.backend.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -35,4 +33,16 @@ public class Company extends BaseEntity {
     private String type;
 
     private String address;
+
+    private String phone;
+
+    private String email;
+
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private User owner;
 }

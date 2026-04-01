@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Save, ArrowLeft, Pencil, Loader2 } from "lucide-react";
+import { Building2, Save, ArrowLeft, Pencil, Loader2, Upload, Image } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { CompanyDocuments } from "./company-documents";
@@ -17,6 +17,17 @@ interface Company {
     site: string;
     type: string;
     address: string;
+    phone: string;
+    email: string;
+    logoUrl: string;
+    ownerId: number | null;
+    ownerName: string;
+}
+
+interface UserOption {
+    id: number;
+    name: string;
+    role: string;
 }
 
 const emptyCompany: Company = {
@@ -27,6 +38,11 @@ const emptyCompany: Company = {
     site: "",
     type: "",
     address: "",
+    phone: "",
+    email: "",
+    logoUrl: "",
+    ownerId: null,
+    ownerName: "",
 };
 
 interface CompanyDetailPageProps {
@@ -42,11 +58,15 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
     const [saving, setSaving] = useState(false);
     const [company, setCompany] = useState<Company>(emptyCompany);
     const [error, setError] = useState<string | null>(null);
+    const [users, setUsers] = useState<UserOption[]>([]);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
 
     useEffect(() => {
         if (companyId) {
             fetchCompany(companyId);
         }
+        fetchUsers();
     }, [companyId]);
 
     const fetchCompany = async (id: number) => {
@@ -64,15 +84,65 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
         }
     };
 
+    const fetchUsers = async () => {
+        try {
+            const res = await fetchWithAuth(`${API_BASE_URL}/admin/users`);
+            if (res.ok) {
+                const data = await res.json();
+                setUsers(data.map((u: any) => ({ id: u.id, name: u.name, role: u.role })));
+            }
+        } catch (e) {
+            console.error("Failed to load users", e);
+        }
+    };
+
+    const handleLogoUpload = async (file: File) => {
+        if (!company.id) return;
+        setUploadingLogo(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await fetchWithAuth(`${API_BASE_URL}/companies/${company.id}/logo`, {
+                method: "POST",
+                body: formData,
+            });
+            if (!res.ok) throw new Error("Failed to upload logo");
+            const updated = await res.json();
+            setCompany(updated);
+            // Fetch fresh logo URL
+            const urlRes = await fetchWithAuth(`${API_BASE_URL}/companies/${company.id}/logo-url`);
+            if (urlRes.ok) {
+                const { url } = await urlRes.json();
+                setLogoPreviewUrl(url || null);
+            }
+        } catch (e) {
+            console.error("Failed to upload logo", e);
+            setError("Failed to upload logo");
+        } finally {
+            setUploadingLogo(false);
+        }
+    };
+
+    // Load logo preview URL when company loads
+    useEffect(() => {
+        if (company.id && company.logoUrl) {
+            fetchWithAuth(`${API_BASE_URL}/companies/${company.id}/logo-url`)
+                .then(res => res.ok ? res.json() : null)
+                .then(data => { if (data?.url) setLogoPreviewUrl(data.url); })
+                .catch(() => {});
+        }
+    }, [company.id, company.logoUrl]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
         setError(null);
 
         try {
+            const ownerParam = company.ownerId ? `?ownerId=${company.ownerId}` : "";
             const url = company.id
-                ? `${API_BASE_URL}/companies/${company.id}`
-                : `${API_BASE_URL}/companies`;
+                ? `${API_BASE_URL}/companies/${company.id}${ownerParam}`
+                : `${API_BASE_URL}/companies${ownerParam}`;
             const method = company.id ? "PUT" : "POST";
 
             const res = await fetchWithAuth(url, {
@@ -226,6 +296,43 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
                                     )}
                                 </div>
 
+                                <div className="space-y-1.5">
+                                    <label htmlFor="phone" className="text-sm font-medium">Phone</label>
+                                    {editing ? (
+                                        <input id="phone" value={company.phone} onChange={handleChange} className={inputClass} placeholder="Enter phone number" />
+                                    ) : (
+                                        <p className="text-sm py-2">{company.phone || "—"}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="email" className="text-sm font-medium">Email</label>
+                                    {editing ? (
+                                        <input id="email" type="email" value={company.email} onChange={handleChange} className={inputClass} placeholder="Enter email address" />
+                                    ) : (
+                                        <p className="text-sm py-2">{company.email || "—"}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="ownerId" className="text-sm font-medium">Owner</label>
+                                    {editing ? (
+                                        <select
+                                            id="ownerId"
+                                            value={company.ownerId ?? ""}
+                                            onChange={(e) => setCompany(prev => ({ ...prev, ownerId: e.target.value ? Number(e.target.value) : null }))}
+                                            className={inputClass}
+                                        >
+                                            <option value="">Select owner</option>
+                                            {users.map(u => (
+                                                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <p className="text-sm py-2">{company.ownerName || "—"}</p>
+                                    )}
+                                </div>
+
                                 <div className="col-span-2 space-y-1.5">
                                     <label htmlFor="address" className="text-sm font-medium">Address</label>
                                     {editing ? (
@@ -242,6 +349,38 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
                                     )}
                                 </div>
                             </div>
+
+                            {/* Logo Section */}
+                            {company.id && (
+                                <div className="mt-6 pt-4 border-t border-border">
+                                    <label className="text-sm font-medium block mb-2">Company Logo</label>
+                                    <div className="flex items-center gap-4">
+                                        {logoPreviewUrl ? (
+                                            <img src={logoPreviewUrl} alt="Company Logo" className="w-20 h-20 object-contain rounded-lg border border-border bg-white" />
+                                        ) : (
+                                            <div className="w-20 h-20 rounded-lg border border-dashed border-border flex items-center justify-center bg-muted/30">
+                                                <Image className="w-8 h-8 text-muted-foreground/50" />
+                                            </div>
+                                        )}
+                                        {editing && (
+                                            <label className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors cursor-pointer">
+                                                {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                                {uploadingLogo ? "Uploading..." : "Upload Logo"}
+                                                <input
+                                                    type="file"
+                                                    accept="image/png,image/jpeg,image/webp"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleLogoUpload(file);
+                                                    }}
+                                                    disabled={uploadingLogo}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {editing && (
                                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">

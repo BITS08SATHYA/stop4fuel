@@ -18,6 +18,11 @@ public class CompanyDTO {
     private String site;
     private String type;
     private String address;
+    private String phone;
+    private String email;
+    private String logoUrl;
+    private Long ownerId;
+    private String ownerName;
     private Long scid;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -32,6 +37,11 @@ public class CompanyDTO {
                 .site(c.getSite())
                 .type(c.getType())
                 .address(c.getAddress())
+                .phone(c.getPhone())
+                .email(c.getEmail())
+                .logoUrl(c.getLogoUrl())
+                .ownerId(c.getOwner() != null ? c.getOwner().getId() : null)
+                .ownerName(c.getOwner() != null ? c.getOwner().getName() : null)
                 .scid(c.getScid())
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())

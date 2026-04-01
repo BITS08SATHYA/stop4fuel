@@ -101,9 +101,21 @@ public class StatementPdfGenerator {
         doc.add(companyPara);
 
         if (company != null) {
-            StringBuilder details = new StringBuilder();
+            // Address line
             if (company.getAddress() != null && !company.getAddress().isEmpty()) {
-                details.append(company.getAddress());
+                Paragraph addrPara = new Paragraph(company.getAddress(), COMPANY_DETAIL_FONT);
+                addrPara.setAlignment(Element.ALIGN_CENTER);
+                doc.add(addrPara);
+            }
+
+            // Contact + GST line
+            StringBuilder details = new StringBuilder();
+            if (company.getPhone() != null && !company.getPhone().isEmpty()) {
+                details.append("Ph: ").append(company.getPhone());
+            }
+            if (company.getEmail() != null && !company.getEmail().isEmpty()) {
+                if (details.length() > 0) details.append("  |  ");
+                details.append("Email: ").append(company.getEmail());
             }
             if (company.getGstNo() != null && !company.getGstNo().isEmpty()) {
                 if (details.length() > 0) details.append("  |  ");
