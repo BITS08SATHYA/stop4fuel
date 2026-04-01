@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth, getDashboardType } from "@/lib/auth/auth-context";
 import { CashierDashboard } from "@/components/dashboards/cashier-dashboard";
+import { EmployeeDashboard } from "@/components/dashboards/employee-dashboard";
 import { GlassCard } from "@/components/ui/glass-card";
 import { getDashboardStats, DashboardStats, checkStockAlerts, StockAlert } from "@/lib/api/station";
 import {
@@ -77,6 +78,10 @@ export default function DashboardPage() {
 
     if (dashboardType === "cashier") {
         return <CashierDashboard />;
+    }
+
+    if (dashboardType === "employee") {
+        return <EmployeeDashboard />;
     }
 
     return <OwnerDashboard />;
