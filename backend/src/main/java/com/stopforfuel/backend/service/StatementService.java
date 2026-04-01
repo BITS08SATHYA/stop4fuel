@@ -1,15 +1,13 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.dto.StatementStats;
-import com.stopforfuel.backend.entity.Company;
-import com.stopforfuel.backend.entity.Customer;
-import com.stopforfuel.backend.entity.InvoiceBill;
-import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
+import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +31,7 @@ public class StatementService {
     private final InvoiceBillRepository invoiceBillRepository;
     private final CustomerRepository customerRepository;
     private final CompanyRepository companyRepository;
+    private final PaymentRepository paymentRepository;
     private final BillSequenceService billSequenceService;
     private final StatementPdfGenerator pdfGenerator;
     private final S3StorageService s3StorageService;
@@ -276,7 +275,9 @@ public class StatementService {
                 statement.getScid() != null ? statement.getScid() : SecurityUtils.getScid());
         Company company = !companies.isEmpty() ? companies.get(0) : null;
 
-        byte[] pdfBytes = pdfGenerator.generate(statement, bills, company);
+        List<Payment> payments = paymentRepository.findByStatementId(id);
+
+        byte[] pdfBytes = pdfGenerator.generate(statement, bills, company, payments);
 
         LocalDate date = statement.getStatementDate() != null ? statement.getStatementDate() : LocalDate.now();
         Long scid = statement.getScid() != null ? statement.getScid() : SecurityUtils.getScid();
