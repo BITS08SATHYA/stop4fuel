@@ -166,13 +166,13 @@ public class ShiftReportFinancialSection {
     public void addTurnoverBalanceBox(PdfPCell container, ShiftClosingReport report) {
         PdfPTable box = new PdfPTable(3);
         box.setWidthPercentage(100);
-        box.setSpacingBefore(2);
-        box.setSpacingAfter(2);
+        box.setSpacingBefore(1);
+        box.setSpacingAfter(1);
 
         // Turnover
         PdfPCell turnCell = new PdfPCell();
         turnCell.setBorderColor(Color.DARK_GRAY);
-        turnCell.setPadding(3);
+        turnCell.setPadding(2);
         turnCell.addElement(new Paragraph("TURNOVER", SMALL_BOLD));
         turnCell.addElement(new Paragraph("Rs." + fmtComma(report.getTotalRevenue()), TOTAL_FONT));
         box.addCell(turnCell);
@@ -180,7 +180,7 @@ public class ShiftReportFinancialSection {
         // Balance
         PdfPCell balCell = new PdfPCell();
         balCell.setBorderColor(Color.DARK_GRAY);
-        balCell.setPadding(3);
+        balCell.setPadding(2);
         balCell.addElement(new Paragraph("BALANCE", SMALL_BOLD));
         balCell.addElement(new Paragraph("Rs." + fmtComma(report.getBalance()), TOTAL_FONT));
         box.addCell(balCell);
@@ -188,7 +188,7 @@ public class ShiftReportFinancialSection {
         // Cash Bill
         PdfPCell cashCell = new PdfPCell();
         cashCell.setBorderColor(Color.DARK_GRAY);
-        cashCell.setPadding(3);
+        cashCell.setPadding(2);
         cashCell.addElement(new Paragraph("CASH BILL", SMALL_BOLD));
         cashCell.addElement(new Paragraph("Rs." + fmtComma(report.getCashBillAmount()), TOTAL_FONT));
         box.addCell(cashCell);

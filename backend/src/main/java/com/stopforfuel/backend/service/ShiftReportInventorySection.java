@@ -86,7 +86,7 @@ public class ShiftReportInventorySection {
 
         // Generation timestamp
         Paragraph gen = new Paragraph("Generated: " + java.time.LocalDateTime.now().format(DT_FMT), SMALL_FONT);
-        gen.setSpacingBefore(10);
+        gen.setSpacingBefore(3);
         doc.add(gen);
     }
 }
