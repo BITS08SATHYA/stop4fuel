@@ -427,6 +427,8 @@ public class ShiftClosingReportService {
             data.setCompanyName(company.getName() != null ? company.getName() : "StopForFuel");
             data.setCompanyAddress(company.getAddress());
             data.setCompanyGstNo(company.getGstNo());
+            data.setCompanyPhone(company.getPhone());
+            data.setCompanyEmail(company.getEmail());
         } else {
             data.setCompanyName("StopForFuel");
         }

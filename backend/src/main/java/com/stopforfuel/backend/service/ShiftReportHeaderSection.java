@@ -30,11 +30,23 @@ public class ShiftReportHeaderSection {
             doc.add(addr);
         }
 
-        // GST
+        // Contact + GST
+        StringBuilder contactLine = new StringBuilder();
+        if (data.getCompanyPhone() != null && !data.getCompanyPhone().isBlank()) {
+            contactLine.append("Ph: ").append(data.getCompanyPhone());
+        }
+        if (data.getCompanyEmail() != null && !data.getCompanyEmail().isBlank()) {
+            if (contactLine.length() > 0) contactLine.append("  |  ");
+            contactLine.append("Email: ").append(data.getCompanyEmail());
+        }
         if (data.getCompanyGstNo() != null && !data.getCompanyGstNo().isBlank()) {
-            Paragraph gst = new Paragraph("GSTIN: " + data.getCompanyGstNo(), SMALL_FONT);
-            gst.setAlignment(Element.ALIGN_CENTER);
-            doc.add(gst);
+            if (contactLine.length() > 0) contactLine.append("  |  ");
+            contactLine.append("GSTIN: ").append(data.getCompanyGstNo());
+        }
+        if (contactLine.length() > 0) {
+            Paragraph contact = new Paragraph(contactLine.toString(), SMALL_FONT);
+            contact.setAlignment(Element.ALIGN_CENTER);
+            doc.add(contact);
         }
 
         // Report title
