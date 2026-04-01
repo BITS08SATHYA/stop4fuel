@@ -2,6 +2,7 @@ package com.stopforfuel.backend.controller;
 
 import com.stopforfuel.backend.controller.DashboardController.*;
 import com.stopforfuel.backend.service.DashboardService;
+import com.stopforfuel.backend.service.EmployeeDashboardService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
@@ -30,6 +31,9 @@ class DashboardControllerTest {
 
     @MockBean
     private DashboardService dashboardService;
+
+    @MockBean
+    private EmployeeDashboardService employeeDashboardService;
 
     // ===========================
     // /api/dashboard/stats
