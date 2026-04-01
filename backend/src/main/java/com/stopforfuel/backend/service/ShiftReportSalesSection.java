@@ -36,7 +36,7 @@ public class ShiftReportSalesSection {
 
             // Product subtotal header
             Paragraph pHeader = new Paragraph(productName + " : " + fmt0(totalSales), BOLD_FONT);
-            pHeader.setSpacingBefore(2);
+            pHeader.setSpacingBefore(1);
             container.addElement(pHeader);
 
             // Split into chunks of 3 nozzles per row
@@ -119,7 +119,7 @@ public class ShiftReportSalesSection {
         container.addElement(sectionHeader("GROSS SALES"));
         PdfPTable grossTable = new PdfPTable(products.size() + 1);
         grossTable.setWidthPercentage(100);
-        grossTable.setSpacingAfter(3);
+        grossTable.setSpacingAfter(1);
 
         addHeaderCell(grossTable, "");
         for (String p : products) addHeaderCell(grossTable, abbreviateProduct(p));
@@ -151,7 +151,7 @@ public class ShiftReportSalesSection {
         container.addElement(sectionHeader("NET SALES"));
         PdfPTable netTable = new PdfPTable(products.size() + 1);
         netTable.setWidthPercentage(100);
-        netTable.setSpacingAfter(3);
+        netTable.setSpacingAfter(1);
 
         addHeaderCell(netTable, "");
         for (String p : products) addHeaderCell(netTable, abbreviateProduct(p));

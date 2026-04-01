@@ -52,7 +52,7 @@ public class ShiftReportHeaderSection {
         // Report title
         Paragraph title = new Paragraph("SHIFT SALES REPORT", REPORT_TITLE_FONT);
         title.setAlignment(Element.ALIGN_CENTER);
-        title.setSpacingBefore(4);
+        title.setSpacingBefore(1);
         doc.add(title);
 
         // Date / Shift / Cashier info line
@@ -63,14 +63,14 @@ public class ShiftReportHeaderSection {
 
         Paragraph info = new Paragraph(infoLine, NORMAL_FONT);
         info.setAlignment(Element.ALIGN_CENTER);
-        info.setSpacingAfter(3);
+        info.setSpacingAfter(1);
         doc.add(info);
     }
 
     public void addPageOneFooter(Document doc, ShiftReportPrintData data) throws DocumentException {
         PdfPTable footer = new PdfPTable(3);
         footer.setWidthPercentage(100);
-        footer.setSpacingBefore(4);
+        footer.setSpacingBefore(1);
 
         String shiftInfo = "SHIFT: " + (data.getShiftStart() != null ? data.getShiftStart().format(DT_FMT) : "-")
                 + " — " + (data.getShiftEnd() != null ? data.getShiftEnd().format(DT_FMT) : "ongoing");
@@ -78,19 +78,19 @@ public class ShiftReportHeaderSection {
         PdfPCell left = new PdfPCell(new Phrase(shiftInfo, FOOTER_FONT));
         left.setBorder(Rectangle.TOP);
         left.setHorizontalAlignment(Element.ALIGN_LEFT);
-        left.setPadding(3);
+        left.setPadding(2);
         footer.addCell(left);
 
         PdfPCell mid = new PdfPCell(new Phrase("CASHIER: " + data.getEmployeeName(), FOOTER_BOLD));
         mid.setBorder(Rectangle.TOP);
         mid.setHorizontalAlignment(Element.ALIGN_CENTER);
-        mid.setPadding(3);
+        mid.setPadding(2);
         footer.addCell(mid);
 
         PdfPCell right = new PdfPCell(new Phrase("Signature: __________________", FOOTER_FONT));
         right.setBorder(Rectangle.TOP);
         right.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        right.setPadding(3);
+        right.setPadding(2);
         footer.addCell(right);
 
         doc.add(footer);
@@ -102,7 +102,7 @@ public class ShiftReportHeaderSection {
                 data.getCompanyName().toUpperCase() + " — " + shiftDate + " Shift Report (Page 2) — CASHIER: " + data.getEmployeeName(),
                 SECTION_FONT);
         header.setAlignment(Element.ALIGN_CENTER);
-        header.setSpacingAfter(3);
+        header.setSpacingAfter(1);
         doc.add(header);
     }
 
@@ -112,7 +112,7 @@ public class ShiftReportHeaderSection {
                 data.getCompanyName().toUpperCase() + " — " + shiftDate + " Shift Report (Page 3 — Product Inventory)",
                 SECTION_FONT);
         header.setAlignment(Element.ALIGN_CENTER);
-        header.setSpacingAfter(3);
+        header.setSpacingAfter(1);
         doc.add(header);
     }
 }
