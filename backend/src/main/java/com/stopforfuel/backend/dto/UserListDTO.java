@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Builder
@@ -21,6 +22,7 @@ public class UserListDTO {
     private String status;
     private LocalDate joinDate;
     private String employeeCode;
+    private LocalDateTime lastLoginAt;
 
     public static UserListDTO from(User user) {
         UserListDTOBuilder builder = UserListDTO.builder()
@@ -32,7 +34,8 @@ public class UserListDTO {
                         ? user.getEmails().iterator().next() : null)
                 .role(user.getRole() != null ? user.getRole().getRoleType() : null)
                 .status(user.getStatus() != null ? user.getStatus().name() : null)
-                .joinDate(user.getJoinDate());
+                .joinDate(user.getJoinDate())
+                .lastLoginAt(user.getLastLoginAt());
 
         if (user instanceof Employee employee) {
             builder.userType("EMPLOYEE");
