@@ -152,12 +152,112 @@ export interface SystemHealth {
     totalProducts: number;
 }
 
+// --- Employee Dashboard ---
+export interface EmployeePersonalInfo {
+    name: string;
+    designation: string | null;
+    employeeCode: string | null;
+    joinDate: string | null;
+    phone: string | null;
+    email: string | null;
+    photoUrl: string | null;
+}
+
+export interface EmployeeAttendanceRecord {
+    date: string;
+    status: string;
+    checkIn: string | null;
+    checkOut: string | null;
+    hoursWorked: number | null;
+}
+
+export interface EmployeeAttendanceSummary {
+    thisMonthPresent: number;
+    thisMonthAbsent: number;
+    totalWorkingDays: number;
+    todayStatus: string;
+    todayCheckIn: string | null;
+    todayCheckOut: string | null;
+    recentAttendance: EmployeeAttendanceRecord[];
+}
+
+export interface EmployeeLeaveBalanceItem {
+    leaveType: string;
+    totalAllotted: number;
+    used: number;
+    remaining: number;
+}
+
+export interface EmployeeLeaveRequestItem {
+    id: number;
+    leaveType: string;
+    fromDate: string;
+    toDate: string;
+    days: number;
+    status: string;
+    reason: string | null;
+}
+
+export interface EmployeeLeaveSummary {
+    monthlyThreshold: number;
+    balances: EmployeeLeaveBalanceItem[];
+    pendingRequests: EmployeeLeaveRequestItem[];
+    recentRequests: EmployeeLeaveRequestItem[];
+}
+
+export interface EmployeeSalaryPaymentItem {
+    month: number;
+    year: number;
+    baseSalary: number;
+    advanceDeduction: number;
+    lopDays: number;
+    lopDeduction: number;
+    incentiveAmount: number;
+    otherDeductions: number;
+    netPayable: number;
+    status: string;
+    paymentDate: string | null;
+    paymentMode: string | null;
+}
+
+export interface EmployeeSalarySummary {
+    currentSalary: number;
+    salaryDay: number | null;
+    recentPayments: EmployeeSalaryPaymentItem[];
+}
+
+export interface EmployeeAdvanceItem {
+    id: number;
+    date: string | null;
+    amount: number;
+    returnedAmount: number | null;
+    utilizedAmount: number | null;
+    status: string | null;
+    purpose: string | null;
+}
+
+export interface EmployeeAdvanceSummary {
+    totalOutstanding: number;
+    recentAdvances: EmployeeAdvanceItem[];
+}
+
+export interface EmployeeDashboardData {
+    personalInfo: EmployeePersonalInfo;
+    attendanceSummary: EmployeeAttendanceSummary;
+    leaveSummary: EmployeeLeaveSummary;
+    salarySummary: EmployeeSalarySummary;
+    advanceSummary: EmployeeAdvanceSummary;
+}
+
 // Dashboard
 export const getDashboardStats = (): Promise<DashboardStats> =>
     fetchWithAuth(`${API_BASE_URL}/dashboard/stats`).then(handleResponse);
 
 export const getSystemHealth = (): Promise<SystemHealth> =>
     fetchWithAuth(`${API_BASE_URL}/dashboard/system-health`).then(handleResponse);
+
+export const getEmployeeDashboard = (): Promise<EmployeeDashboardData> =>
+    fetchWithAuth(`${API_BASE_URL}/dashboard/employee`).then(handleResponse);
 
 export const getInvoiceAnalytics = (from?: string, to?: string): Promise<InvoiceAnalytics> => {
     const params = new URLSearchParams();
