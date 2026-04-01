@@ -86,7 +86,8 @@ const getApiBaseUrl = () => {
     return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 };
 
-export function getDashboardType(designation?: string, role?: string): "owner" | "cashier" | "employee" {
+export function getDashboardType(designation?: string, role?: string): "owner" | "cashier" | "employee" | "customer" {
+    if (role === "CUSTOMER") return "customer";
     if (role === "OWNER" || role === "ADMIN") return "owner";
 
     const designationMap: Record<string, "owner" | "cashier" | "employee"> = {

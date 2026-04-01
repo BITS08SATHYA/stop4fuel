@@ -176,6 +176,26 @@ const cashierSections: NavSection[] = [
     },
 ];
 
+// Employee-specific restricted navigation
+const employeeSections: NavSection[] = [
+    {
+        label: "Main",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        ],
+    },
+    {
+        label: "My Info",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "My Attendance", href: "/employees/attendance", icon: CalendarCheck },
+            { name: "My Leaves", href: "/employees/leaves", icon: CalendarDays },
+            { name: "My Salary", href: "/employees/salary", icon: IndianRupee },
+        ],
+    },
+];
+
 type NavSection = {
     label: string;
     permission: string;
@@ -208,7 +228,8 @@ export function AppSidebar() {
     };
 
     const isCashier = user?.designation === "Cashier" && user?.role !== "OWNER" && user?.role !== "ADMIN";
-    const activeSections = isCashier ? cashierSections : sections;
+    const isEmployee = user?.role === "EMPLOYEE" && !isCashier;
+    const activeSections = isCashier ? cashierSections : isEmployee ? employeeSections : sections;
     const filteredSections = activeSections.filter(section => hasPermission(section.permission));
 
     return (

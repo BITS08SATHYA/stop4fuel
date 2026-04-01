@@ -10,6 +10,18 @@ public class SecurityUtils {
     private SecurityUtils() {}
 
     @SuppressWarnings("unchecked")
+    public static Long getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Map) {
+            Object sub = ((Map<String, Object>) auth.getPrincipal()).get("sub");
+            if (sub != null) {
+                return Long.valueOf(sub.toString());
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
     public static Long getScid() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Map) {
