@@ -6,6 +6,7 @@ import { PermissionGate } from "@/components/permission-gate";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { Plus, Search, RotateCcw, Loader2, Pencil, X, Save } from "lucide-react";
 import { CreateUserModal } from "@/components/users/create-user-modal";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 const getApiBaseUrl = () => {
     if (typeof window !== "undefined") {
@@ -323,43 +324,7 @@ export default function UsersPage() {
                             </table>
                         </div>
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
-                                <p className="text-sm text-muted-foreground">
-                                    Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, allUsers.length)} of {allUsers.length}
-                                </p>
-                                <div className="flex gap-1">
-                                    <button
-                                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                                        disabled={page === 0}
-                                        className="px-3 py-1 text-sm rounded border border-input hover:bg-muted transition-colors disabled:opacity-50"
-                                    >
-                                        Prev
-                                    </button>
-                                    {Array.from({ length: totalPages }, (_, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setPage(i)}
-                                            className={`px-3 py-1 text-sm rounded border transition-colors ${
-                                                i === page
-                                                    ? "bg-primary text-primary-foreground border-primary"
-                                                    : "border-input hover:bg-muted"
-                                            }`}
-                                        >
-                                            {i + 1}
-                                        </button>
-                                    ))}
-                                    <button
-                                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                                        disabled={page === totalPages - 1}
-                                        className="px-3 py-1 text-sm rounded border border-input hover:bg-muted transition-colors disabled:opacity-50"
-                                    >
-                                        Next
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                        <TablePagination page={page} totalPages={totalPages} totalElements={allUsers.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
                     </div>
                 )}
 
