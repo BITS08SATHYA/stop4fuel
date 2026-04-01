@@ -36,7 +36,7 @@ public class ShiftReportPdfGenerator {
 
     public byte[] generate(ShiftReportPrintData data, ShiftClosingReport report) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4, 15, 15, 15, 15);
+        Document document = new Document(PageSize.A4, 12, 12, 10, 10);
 
         try {
             com.lowagie.text.pdf.PdfWriter.getInstance(document, baos);
@@ -47,15 +47,13 @@ public class ShiftReportPdfGenerator {
             addPageOneBody(document, data, report);
             headerSection.addPageOneFooter(document, data);
 
-            // ===== PAGE 2: Detail pages =====
+            // ===== PAGE 2: Advance details + Inventory =====
             document.newPage();
             headerSection.addPageTwoHeader(document, data);
             financialSection.addPageTwoBody(document, data, report);
 
-            // ===== PAGE 3: Product Inventory (if any) =====
+            // Inventory on same page 2 (below advance details)
             if (!data.getStockSummary().isEmpty() || !data.getStockPosition().isEmpty()) {
-                document.newPage();
-                headerSection.addPageThreeHeader(document, data);
                 inventorySection.addProductInventoryPage(document, data);
             }
 
