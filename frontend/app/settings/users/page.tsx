@@ -25,6 +25,20 @@ interface UserItem {
     status: string;
     joinDate: string | null;
     employeeCode: string | null;
+    lastLoginAt: string | null;
+}
+
+function formatRelativeTime(dt: string | null): string {
+    if (!dt) return "Never";
+    const diff = Date.now() - new Date(dt).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(dt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 }
 
 export default function UsersPage() {
@@ -182,13 +196,14 @@ export default function UsersPage() {
                                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Role</th>
                                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Designation</th>
                                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Last Login</th>
                                         <th className="text-left px-4 py-3 font-medium text-muted-foreground">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {users.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                                            <td colSpan={8} className="text-center py-8 text-muted-foreground">
                                                 No users found
                                             </td>
                                         </tr>
@@ -208,6 +223,9 @@ export default function UsersPage() {
                                                 <td className="px-4 py-3 text-foreground">{user.role}</td>
                                                 <td className="px-4 py-3 text-foreground">{user.designation || "-"}</td>
                                                 <td className="px-4 py-3">{statusBadge(user.status)}</td>
+                                                <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                    {formatRelativeTime(user.lastLoginAt)}
+                                                </td>
                                                 <td className="px-4 py-3">
                                                     <PermissionGate permission="USER_MANAGE">
                                                         <button
