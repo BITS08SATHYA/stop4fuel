@@ -33,6 +33,12 @@ public class DashboardService {
     private final CreditManagementService creditManagementService;
     private final OperationalAdvanceRepository operationalAdvanceRepository;
     private final IncentivePaymentRepository incentivePaymentRepository;
+    private final CustomerRepository customerRepository;
+    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final ShiftRepository shiftRepository;
+    private final ProductRepository productRepository;
 
     @Transactional(readOnly = true)
     public DashboardStats getStats() {
@@ -519,5 +525,27 @@ public class DashboardService {
         dashboard.setCashInHand(totalIn.subtract(totalOut));
 
         return dashboard;
+    }
+
+    @Transactional(readOnly = true)
+    public SystemHealth getSystemHealth() {
+        SystemHealth health = new SystemHealth();
+        Long scid = com.stopforfuel.config.SecurityUtils.getScid();
+
+        health.setTotalCustomers(customerRepository.findAllByScid(scid).size());
+        health.setTotalEmployees(employeeRepository.findAllByScid(scid).size());
+        health.setTotalUsers(userRepository.findAllByScid(scid).size());
+        health.setTotalProducts(productRepository.findAllByScid(scid).size());
+
+        // Active shifts
+        health.setActiveShiftCount(shiftRepository.findAllByScid(scid).stream()
+                .filter(s -> "OPEN".equals(s.getStatus()))
+                .count());
+
+        // Today's attendance
+        LocalDate today = LocalDate.now();
+        health.setTodayAttendanceCount(attendanceRepository.findByDateOrderByEmployeeNameAsc(today).size());
+
+        return health;
     }
 }
