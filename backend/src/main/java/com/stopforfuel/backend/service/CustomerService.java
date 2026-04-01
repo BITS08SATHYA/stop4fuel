@@ -36,6 +36,8 @@ public class CustomerService {
 
     private final com.stopforfuel.backend.repository.RolesRepository rolesRepository;
 
+    private final com.stopforfuel.backend.repository.CustomerBlockEventRepository blockEventRepository;
+
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String categoryType, org.springframework.data.domain.Pageable pageable) {
         String cat = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
@@ -158,12 +160,36 @@ public class CustomerService {
      */
     @Transactional
     public Customer blockCustomer(Long id) {
+        return blockCustomer(id, null);
+    }
+
+    /**
+     * Block a customer with optional notes for the audit trail.
+     */
+    @Transactional
+    public Customer blockCustomer(Long id, String notes) {
         Customer customer = getCustomerById(id);
         if (customer.getStatus() != EntityStatus.ACTIVE) {
             throw new BusinessException("Customer can only be blocked when ACTIVE. Current status: " + customer.getStatus());
         }
+        String previousStatus = customer.getStatus() != null ? customer.getStatus().name() : "ACTIVE";
         customer.setStatus(EntityStatus.BLOCKED);
-        return customerRepository.save(customer);
+        customer.setLastBlockedAt(LocalDateTime.now());
+        customer.setBlockCount(customer.getBlockCount() != null ? customer.getBlockCount() + 1 : 1);
+        Customer saved = customerRepository.save(customer);
+
+        // Record block event
+        com.stopforfuel.backend.entity.CustomerBlockEvent event = new com.stopforfuel.backend.entity.CustomerBlockEvent();
+        event.setCustomer(saved);
+        event.setScid(saved.getScid());
+        event.setEventType("BLOCKED");
+        event.setTriggerType("MANUAL");
+        event.setReason("Manual block by admin");
+        event.setNotes(notes);
+        event.setPreviousStatus(previousStatus);
+        blockEventRepository.save(event);
+
+        return saved;
     }
 
     /**
@@ -171,12 +197,33 @@ public class CustomerService {
      */
     @Transactional
     public Customer unblockCustomer(Long id) {
+        return unblockCustomer(id, null);
+    }
+
+    /**
+     * Unblock a customer with optional notes for the audit trail.
+     */
+    @Transactional
+    public Customer unblockCustomer(Long id, String notes) {
         Customer customer = getCustomerById(id);
         if (customer.getStatus() != EntityStatus.BLOCKED) {
             throw new BusinessException("Customer can only be unblocked when BLOCKED. Current status: " + customer.getStatus());
         }
         customer.setStatus(EntityStatus.ACTIVE);
-        return customerRepository.save(customer);
+        Customer saved = customerRepository.save(customer);
+
+        // Record unblock event
+        com.stopforfuel.backend.entity.CustomerBlockEvent event = new com.stopforfuel.backend.entity.CustomerBlockEvent();
+        event.setCustomer(saved);
+        event.setScid(saved.getScid());
+        event.setEventType("UNBLOCKED");
+        event.setTriggerType("MANUAL");
+        event.setReason("Manual unblock by admin");
+        event.setNotes(notes);
+        event.setPreviousStatus("BLOCKED");
+        blockEventRepository.save(event);
+
+        return saved;
     }
 
     /**
@@ -253,6 +300,7 @@ public class CustomerService {
      * 1. Amount exceeded: ledger balance > creditLimitAmount
      * 2. Liters exceeded: consumedLiters >= creditLimitLiters
      * 3. Aging 90+ days: any unpaid credit bill older than 90 days
+     * Now records a CustomerBlockEvent with the reason.
      */
     @Transactional
     public void checkAndAutoBlock(Long customerId) {
@@ -261,31 +309,50 @@ public class CustomerService {
             return;
         }
 
+        String blockReason = null;
+
         // 1. Amount exceeded
         if (customer.getCreditLimitAmount() != null && customer.getCreditLimitAmount().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal totalBilled = invoiceBillRepository.sumAllCreditBillsByCustomer(customerId);
             BigDecimal totalPaid = paymentRepository.sumAllPaymentsByCustomer(customerId);
             BigDecimal ledgerBalance = totalBilled.subtract(totalPaid);
             if (ledgerBalance.compareTo(customer.getCreditLimitAmount()) > 0) {
-                customer.setStatus(EntityStatus.BLOCKED);
-                customerRepository.save(customer);
-                return;
+                blockReason = "Credit limit exceeded. Balance: Rs." + ledgerBalance.toPlainString()
+                        + ", Limit: Rs." + customer.getCreditLimitAmount().toPlainString();
             }
         }
 
-        // 2. Liters exceeded (safety net for existing inline check)
-        if (customer.getCreditLimitLiters() != null && customer.getConsumedLiters() != null
+        // 2. Liters exceeded
+        if (blockReason == null && customer.getCreditLimitLiters() != null && customer.getConsumedLiters() != null
                 && customer.getConsumedLiters().compareTo(customer.getCreditLimitLiters()) >= 0) {
-            customer.setStatus(EntityStatus.BLOCKED);
-            customerRepository.save(customer);
-            return;
+            blockReason = "Liter limit exceeded. Consumed: " + customer.getConsumedLiters().toPlainString()
+                    + " L, Limit: " + customer.getCreditLimitLiters().toPlainString() + " L";
         }
 
         // 3. Aging 90+ days
-        LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
-        if (invoiceBillRepository.existsUnpaidCreditBillBefore(customerId, ninetyDaysAgo)) {
+        if (blockReason == null) {
+            LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
+            if (invoiceBillRepository.existsUnpaidCreditBillBefore(customerId, ninetyDaysAgo)) {
+                blockReason = "Unpaid credit bill older than 90 days";
+            }
+        }
+
+        if (blockReason != null) {
+            String previousStatus = customer.getStatus() != null ? customer.getStatus().name() : "ACTIVE";
             customer.setStatus(EntityStatus.BLOCKED);
+            customer.setLastBlockedAt(LocalDateTime.now());
+            customer.setBlockCount(customer.getBlockCount() != null ? customer.getBlockCount() + 1 : 1);
             customerRepository.save(customer);
+
+            // Record block event
+            com.stopforfuel.backend.entity.CustomerBlockEvent event = new com.stopforfuel.backend.entity.CustomerBlockEvent();
+            event.setCustomer(customer);
+            event.setScid(customer.getScid());
+            event.setEventType("BLOCKED");
+            event.setTriggerType("AUTO_INVOICE");
+            event.setReason(blockReason);
+            event.setPreviousStatus(previousStatus);
+            blockEventRepository.save(event);
         }
     }
 

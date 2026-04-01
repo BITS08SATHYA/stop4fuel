@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -30,6 +31,7 @@ public class CreditManagementService {
     private final InvoiceBillRepository invoiceBillRepository;
     private final PaymentRepository paymentRepository;
     private final StatementRepository statementRepository;
+    private final CreditPolicyService creditPolicyService;
 
     /**
      * Get credit overview: ALL customers with their credit balance and aging breakdown.
@@ -144,6 +146,46 @@ public class CreditManagementService {
             summary.setTotalBillCount(custBills.size());
             summary.setTotalPaymentCount(custPayments.size());
             summary.setPendingStatementCount(outstandingStatements.size());
+            summary.setBlockCount(customer.getBlockCount() != null ? customer.getBlockCount() : 0);
+            summary.setLastBlockedAt(customer.getLastBlockedAt());
+
+            // Compute risk level
+            BigDecimal creditLimit = customer.getCreditLimitAmount() != null
+                    ? customer.getCreditLimitAmount() : BigDecimal.ZERO;
+            BigDecimal utilizationPct = BigDecimal.ZERO;
+            if (creditLimit.compareTo(BigDecimal.ZERO) > 0) {
+                utilizationPct = ledgerBalance.multiply(new BigDecimal(100))
+                        .divide(creditLimit, 2, RoundingMode.HALF_UP);
+            }
+            summary.setUtilizationPercent(utilizationPct);
+
+            // Find oldest unpaid days from the already-computed unpaid bills
+            long maxDaysOld = 0;
+            for (InvoiceBill bill : unpaidBills) {
+                if (bill.getDate() != null) {
+                    long days = ChronoUnit.DAYS.between(bill.getDate().toLocalDate(), today);
+                    if (days > maxDaysOld) maxDaysOld = days;
+                }
+            }
+            summary.setOldestUnpaidDays(maxDaysOld);
+
+            // Risk level based on effective policy
+            com.stopforfuel.backend.entity.CreditPolicy policy = creditPolicyService.getEffectivePolicy(customer);
+            boolean isBlocked = customer.getStatus() == com.stopforfuel.backend.enums.EntityStatus.BLOCKED;
+            boolean utilCritical = creditLimit.compareTo(BigDecimal.ZERO) > 0
+                    && utilizationPct.compareTo(new BigDecimal(policy.getUtilizationBlockPercent())) >= 0;
+            boolean ageCritical = maxDaysOld >= policy.getAgingBlockDays();
+            boolean utilWarn = creditLimit.compareTo(BigDecimal.ZERO) > 0
+                    && utilizationPct.compareTo(new BigDecimal(policy.getUtilizationWarnPercent())) >= 0;
+            boolean ageWarn = maxDaysOld >= policy.getAgingWatchDays();
+
+            if (isBlocked || utilCritical || ageCritical) {
+                summary.setRiskLevel("HIGH");
+            } else if (utilWarn || ageWarn) {
+                summary.setRiskLevel("MEDIUM");
+            } else {
+                summary.setRiskLevel("LOW");
+            }
 
             customerSummaries.add(summary);
 
@@ -273,6 +315,11 @@ public class CreditManagementService {
         private int totalBillCount;
         private int totalPaymentCount;
         private int pendingStatementCount;
+        private String riskLevel;             // HIGH, MEDIUM, LOW
+        private BigDecimal utilizationPercent;
+        private long oldestUnpaidDays;
+        private int blockCount;
+        private java.time.LocalDateTime lastBlockedAt;
     }
 
     @Getter @Setter

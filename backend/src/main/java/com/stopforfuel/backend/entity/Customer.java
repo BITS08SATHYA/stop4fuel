@@ -52,6 +52,13 @@ public class Customer extends User {
     @Column(name = "longitude", precision = 10, scale = 7)
     private BigDecimal longitude;
 
+    /** Credit monitoring fields */
+    @Column(name = "last_blocked_at")
+    private java.time.LocalDateTime lastBlockedAt;
+
+    @Column(name = "block_count", nullable = false, columnDefinition = "integer default 0")
+    private Integer blockCount = 0;
+
     /** Statement preferences */
     @Column(name = "statement_frequency", length = 20)
     private String statementFrequency; // MONTHLY, BIWEEKLY, WEEKLY, CUSTOM
