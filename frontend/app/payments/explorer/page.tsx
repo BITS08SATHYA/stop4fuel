@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -113,6 +114,28 @@ export default function ExplorerPage() {
     const [paymentRemarks, setPaymentRemarks] = useState("");
     const [paymentSubmitting, setPaymentSubmitting] = useState(false);
     const [paymentError, setPaymentError] = useState("");
+
+    // Deep-link: auto-select statement from query param ?statementId=123
+    const searchParams = useSearchParams();
+    const autoSelectedRef = useRef(false);
+    useEffect(() => {
+        const stmtId = searchParams.get("statementId");
+        if (stmtId && !autoSelectedRef.current) {
+            autoSelectedRef.current = true;
+            // Try from current list first, otherwise fetch by ID
+            const found = statements.find(s => s.id === Number(stmtId));
+            if (found) {
+                selectStatement(found);
+            } else {
+                // Fetch directly by ID
+                import("@/lib/api/station/payments").then(({ getStatementById }) => {
+                    getStatementById(Number(stmtId)).then(stmt => {
+                        if (stmt) selectStatement(stmt);
+                    }).catch(console.error);
+                });
+            }
+        }
+    }, [statements, searchParams]);
 
     // Load payment modes
     useEffect(() => {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -106,6 +107,27 @@ export default function InvoiceExplorerPage() {
     const [kpiCredit, setKpiCredit] = useState(0);
     const [kpiPaid, setKpiPaid] = useState(0);
     const [kpiUnpaid, setKpiUnpaid] = useState(0);
+
+    // Deep-link: auto-select invoice from query param ?invoiceId=123
+    const searchParams = useSearchParams();
+    const autoSelectedRef = useRef(false);
+    useEffect(() => {
+        const invId = searchParams.get("invoiceId");
+        if (invId && !autoSelectedRef.current) {
+            autoSelectedRef.current = true;
+            const found = invoices.find(i => i.id === Number(invId));
+            if (found) {
+                selectInvoice(found);
+            } else {
+                // Fetch directly by ID
+                import("@/lib/api/station/invoices").then(({ getInvoiceById }) => {
+                    getInvoiceById(Number(invId)).then(inv => {
+                        if (inv) selectInvoice(inv);
+                    }).catch(console.error);
+                });
+            }
+        }
+    }, [invoices, searchParams]);
 
     // Load payment modes once
     useEffect(() => {
