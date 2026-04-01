@@ -2,7 +2,9 @@ package com.stopforfuel.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stopforfuel.backend.entity.Company;
+import com.stopforfuel.backend.repository.UserRepository;
 import com.stopforfuel.backend.service.CompanyService;
+import com.stopforfuel.backend.service.S3StorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,12 @@ class CompanyControllerTest {
 
     @MockBean
     private CompanyService companyService;
+
+    @MockBean
+    private UserRepository userRepository;
+
+    @MockBean
+    private S3StorageService s3StorageService;
 
     private Company testCompany;
 
