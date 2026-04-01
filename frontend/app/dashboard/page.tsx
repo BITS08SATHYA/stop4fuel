@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth, getDashboardType } from "@/lib/auth/auth-context";
 import { CashierDashboard } from "@/components/dashboards/cashier-dashboard";
+import { CustomerDashboard } from "@/components/dashboards/customer-dashboard";
 import { GlassCard } from "@/components/ui/glass-card";
 import { getDashboardStats, DashboardStats, checkStockAlerts, StockAlert } from "@/lib/api/station";
 import {
@@ -74,6 +75,10 @@ const PRODUCT_COLORS = ["#f97316", "#06b6d4", "#8b5cf6", "#10b981", "#ef4444", "
 export default function DashboardPage() {
     const { user } = useAuth();
     const dashboardType = getDashboardType(user?.designation, user?.role);
+
+    if (dashboardType === "customer") {
+        return <CustomerDashboard />;
+    }
 
     if (dashboardType === "cashier") {
         return <CashierDashboard />;
