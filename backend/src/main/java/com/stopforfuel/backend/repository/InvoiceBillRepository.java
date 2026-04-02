@@ -290,10 +290,75 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
-    // Dashboard: recent invoices (top N by date desc)
+    // Dashboard aggregate: today's revenue
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    BigDecimal sumRevenueByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's invoice count
+    @Query("SELECT COUNT(ib) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    long countByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's cash invoice count
+    @Query("SELECT COUNT(ib) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate AND ib.billType = 'CASH'")
+    long countCashByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's credit invoice count
+    @Query("SELECT COUNT(ib) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate AND ib.billType = 'CREDIT'")
+    long countCreditByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's fuel volume
+    @Query("SELECT COALESCE(SUM(ip.quantity), 0) FROM InvoiceProduct ip " +
+           "JOIN ip.invoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    BigDecimal sumFuelVolumeByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: daily revenue for last N days
+    @Query("SELECT CAST(ib.date AS LocalDate), COALESCE(SUM(ib.netAmount), 0), COUNT(ib) " +
+           "FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY CAST(ib.date AS LocalDate) ORDER BY CAST(ib.date AS LocalDate)")
+    List<Object[]> getDailyRevenueSummary(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: product sales for today
+    @Query("SELECT p.name, COALESCE(SUM(ip.quantity), 0), COALESCE(SUM(ip.amount), 0) " +
+           "FROM InvoiceProduct ip JOIN ip.product p JOIN ip.invoiceBill ib " +
+           "WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY p.id, p.name")
+    List<Object[]> getProductSalesToday(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Credit overview aggregates
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID'")
+    BigDecimal sumTotalOutstanding();
+
+    @Query("SELECT COUNT(DISTINCT ib.customer.id) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID'")
+    long countCreditCustomersWithOutstanding();
+
+    // Credit aging — separate queries per bucket (safe, no Object[] casting)
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID' AND ib.date >= :fromDate")
+    BigDecimal sumOutstandingAfter(@Param("fromDate") LocalDateTime fromDate);
+
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID' AND ib.date >= :fromDate AND ib.date < :toDate")
+    BigDecimal sumOutstandingBetween(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID' AND ib.date < :beforeDate")
+    BigDecimal sumOutstandingBefore(@Param("beforeDate") LocalDateTime beforeDate);
+
+    // Dashboard: recent invoices (top N by date desc) — full entity
     @EntityGraph(attributePaths = {"customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.date IS NOT NULL ORDER BY ib.date DESC")
     List<InvoiceBill> findRecentInvoices(Pageable pageable);
+
+    // Dashboard: recent invoices lightweight (no entity graph, just scalars)
+    @Query("SELECT ib.id, ib.date, c.name, ib.billType, ib.netAmount, ib.paymentStatus " +
+           "FROM InvoiceBill ib LEFT JOIN ib.customer c WHERE ib.date IS NOT NULL ORDER BY ib.date DESC")
+    List<Object[]> findRecentInvoicesLight(Pageable pageable);
 
     // Oldest unpaid credit bill date for a customer (for aging calculation)
     @Query("SELECT MIN(ib.date) FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
