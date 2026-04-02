@@ -45,19 +45,57 @@ data class CustomerListDto(
     val id: Long,
     val name: String?,
     val username: String?,
-    val phoneNumbers: String?,
-    val status: String?
+    val phoneNumbers: Set<String>?,
+    val emails: Set<String>?,
+    val address: String?,
+    val personType: String?,
+    val status: String?,
+    val isActive: Boolean?,
+    val creditLimitAmount: BigDecimal?,
+    val creditLimitLiters: BigDecimal?,
+    val consumedLiters: BigDecimal?,
+    val group: GroupSummary?,
+    val party: PartySummary?,
+    val customerCategory: CategorySummary?
+)
+
+data class GroupSummary(
+    val id: Long?,
+    val groupName: String?
+)
+
+data class PartySummary(
+    val id: Long?,
+    val partyType: String?
+)
+
+data class CategorySummary(
+    val id: Long?,
+    val categoryName: String?,
+    val categoryType: String?
 )
 
 data class VehicleDto(
     val id: Long,
     val vehicleNumber: String?,
-    val vehicleType: String?,
-    val maxCapacity: Double?,
-    val maxLitersPerMonth: Double?,
-    val consumedLiters: Double?,
-    val preferredProduct: String?,
-    val status: String?
+    val status: String?,
+    val isActive: Boolean?,
+    val maxCapacity: BigDecimal?,
+    val maxLitersPerMonth: BigDecimal?,
+    val consumedLiters: BigDecimal?,
+    val vehicleType: VehicleTypeSummary?,
+    val preferredProduct: ProductSummaryRef?
+)
+
+data class VehicleTypeSummary(
+    val id: Long?,
+    val name: String?
+)
+
+data class ProductSummaryRef(
+    val id: Long?,
+    val name: String?,
+    val fuelFamily: String?
 )
 
 data class PageResponse<T>(

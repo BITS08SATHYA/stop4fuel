@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Fuel pump icon -->
+    <group
+        android:translateX="24"
+        android:translateY="24">
+        <!-- Pump body -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M20,10L20,10c0,-2.2 -1.8,-4 -4,-4h-12c-2.2,0 -4,1.8 -4,4v40c0,2.2 1.8,4 4,4h12c2.2,0 4,-1.8 4,-4v-18l8,4v-18l-4,-2v-4l4,-4l-2,-2l-6,6z" />
+        <!-- Nozzle -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M6,14h8v8h-8z" />
+        <!-- S letter -->
+        <path
+            android:fillColor="#1565C0"
+            android:pathData="M7,32l6,0l0,3l-6,0l0,3l6,0l0,3l-6,0l0,-3l-3,0l0,-3l3,0z"
+            android:strokeWidth="0.5"
+            android:strokeColor="#1565C0" />
+    </group>
+</vector>

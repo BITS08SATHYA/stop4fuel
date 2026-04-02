@@ -12,6 +12,7 @@ data class LoginResponse(
 
 data class UserDto(
     val id: Long,
+    val cognitoId: String?,
     val username: String?,
     val name: String?,
     val email: String?,
