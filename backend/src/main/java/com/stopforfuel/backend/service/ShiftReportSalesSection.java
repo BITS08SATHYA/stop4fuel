@@ -142,8 +142,8 @@ public class ShiftReportSalesSection {
         for (String p : products) addCellRight(grossTable, fmt2(testByProduct.getOrDefault(p, 0.0)), SMALL_FONT);
 
         // Gross total
-        addCellLeft(grossTable, "Gross", SMALL_BOLD);
-        for (String p : products) addCellRight(grossTable, fmt2(meterByProduct.getOrDefault(p, 0.0)), SMALL_BOLD);
+        addTotalCellLeft(grossTable, "Gross");
+        for (String p : products) addTotalCellRight(grossTable, fmt2(meterByProduct.getOrDefault(p, 0.0)));
 
         container.addElement(grossTable);
 
@@ -162,10 +162,10 @@ public class ShiftReportSalesSection {
         addCellLeft(netTable, "Testing", SMALL_FONT);
         for (String p : products) addCellRight(netTable, fmt2(testByProduct.getOrDefault(p, 0.0)), SMALL_FONT);
 
-        addCellLeft(netTable, "Net", SMALL_BOLD);
+        addTotalCellLeft(netTable, "Net");
         for (String p : products) {
             double net = meterByProduct.getOrDefault(p, 0.0) - testByProduct.getOrDefault(p, 0.0);
-            addCellRight(netTable, fmt2(net), SMALL_BOLD);
+            addTotalCellRight(netTable, fmt2(net));
         }
 
         container.addElement(netTable);
@@ -219,38 +219,91 @@ public class ShiftReportSalesSection {
             addCellLeft(table, sd.getProductName(), SMALL_FONT);
             addCellRight(table, fmt0(sd.getTankSale()), SMALL_FONT);
             addCellRight(table, fmt0(sd.getMeterSale()), SMALL_FONT);
-            com.lowagie.text.Font diffFont = sd.getDifference() != null && sd.getDifference() < 0 ? SMALL_BOLD : SMALL_FONT;
-            addCellRight(table, fmt0(sd.getDifference()), diffFont);
+            if (sd.getDifference() != null && sd.getDifference() < 0) {
+                com.lowagie.text.Font redBold = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 5, com.lowagie.text.Font.BOLD, DIFF_RED);
+                addCellRight(table, fmt0(sd.getDifference()), redBold);
+            } else {
+                addCellRight(table, fmt0(sd.getDifference()), SMALL_BOLD);
+            }
         }
 
         container.addElement(table);
     }
 
     public void addCashBillSales(PdfPCell container, ShiftReportPrintData data) {
-        if (data.getPaymentModeBreakdown().isEmpty()) return;
+        if (data.getCashBillDetails().isEmpty() && data.getPaymentModeBreakdown().isEmpty()) return;
 
-        container.addElement(sectionHeader("CASH BILL SALES"));
-        PdfPTable table = new PdfPTable(new float[]{2f, 2f, 2f});
+        container.addElement(sectionHeader("CASH BILL SALES (Litres)"));
+
+        // Compute litres per product per payment mode from cash bill details
+        Set<String> productAbbrs = new LinkedHashSet<>();
+        Map<String, Map<String, Double>> modeProductQty = new LinkedHashMap<>();
+
+        for (CashBillDetail cbd : data.getCashBillDetails()) {
+            String mode = cbd.getPaymentMode() != null ? cbd.getPaymentMode().toUpperCase() : "CASH";
+            if (cbd.getProducts() != null && !cbd.getProducts().isBlank()) {
+                for (String part : cbd.getProducts().split("\\s+")) {
+                    String[] kv = part.split(":");
+                    if (kv.length == 2) {
+                        String abbr = kv[0];
+                        productAbbrs.add(abbr);
+                        double qty = 0;
+                        try { qty = Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
+                        modeProductQty.computeIfAbsent(mode, k -> new LinkedHashMap<>())
+                                .merge(abbr, qty, Double::sum);
+                    }
+                }
+            }
+        }
+
+        if (productAbbrs.isEmpty()) {
+            // Fallback: simple mode/bills/amount table
+            PdfPTable table = new PdfPTable(new float[]{2f, 2f, 2f});
+            table.setWidthPercentage(100);
+            table.setSpacingAfter(1);
+            addHeaderCell(table, "MODE");
+            addHeaderCell(table, "BILLS");
+            addHeaderCell(table, "AMOUNT");
+            BigDecimal total = BigDecimal.ZERO;
+            int totalBills = 0;
+            for (PaymentModeBreakdown pmb : data.getPaymentModeBreakdown()) {
+                addCellLeft(table, pmb.getMode(), SMALL_FONT);
+                addCellRight(table, String.valueOf(pmb.getBillCount()), SMALL_FONT);
+                addCellRight(table, fmtBD(pmb.getAmount()), SMALL_FONT);
+                total = total.add(pmb.getAmount() != null ? pmb.getAmount() : BigDecimal.ZERO);
+                totalBills += pmb.getBillCount();
+            }
+            addCellLeft(table, "TOTAL", SMALL_BOLD);
+            addCellRight(table, String.valueOf(totalBills), SMALL_BOLD);
+            addCellRight(table, fmtBD(total), SMALL_BOLD);
+            container.addElement(table);
+            return;
+        }
+
+        // Product columns table (matching mockup: rows=payment modes, cols=product abbreviations)
+        List<String> products = new ArrayList<>(productAbbrs);
+        PdfPTable table = new PdfPTable(products.size() + 1);
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
 
-        addHeaderCell(table, "MODE");
-        addHeaderCell(table, "BILLS");
-        addHeaderCell(table, "AMOUNT");
+        addHeaderCell(table, "");
+        for (String p : products) addHeaderCell(table, p);
 
-        BigDecimal total = BigDecimal.ZERO;
-        int totalBills = 0;
-        for (PaymentModeBreakdown pmb : data.getPaymentModeBreakdown()) {
-            addCellLeft(table, pmb.getMode(), SMALL_FONT);
-            addCellRight(table, String.valueOf(pmb.getBillCount()), SMALL_FONT);
-            addCellRight(table, fmtBD(pmb.getAmount()), SMALL_FONT);
-            total = total.add(pmb.getAmount() != null ? pmb.getAmount() : BigDecimal.ZERO);
-            totalBills += pmb.getBillCount();
+        for (Map.Entry<String, Map<String, Double>> entry : modeProductQty.entrySet()) {
+            addCellLeft(table, entry.getKey(), SMALL_FONT);
+            for (String p : products) {
+                double qty = entry.getValue().getOrDefault(p, 0.0);
+                addCellRight(table, fmt2(qty), SMALL_FONT);
+            }
         }
 
-        addCellLeft(table, "TOTAL", SMALL_BOLD);
-        addCellRight(table, String.valueOf(totalBills), SMALL_BOLD);
-        addCellRight(table, fmtBD(total), SMALL_BOLD);
+        // Totals row
+        addCellLeft(table, "Total", SMALL_BOLD);
+        for (String p : products) {
+            double total = modeProductQty.values().stream()
+                    .mapToDouble(m -> m.getOrDefault(p, 0.0)).sum();
+            addCellRight(table, fmt2(total), SMALL_BOLD);
+        }
 
         container.addElement(table);
     }
