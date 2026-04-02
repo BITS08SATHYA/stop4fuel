@@ -232,6 +232,8 @@ public class ShiftSalesCalculationService {
     public void populateMeterReadings(ShiftReportPrintData data, Long shiftId) {
         List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
         for (NozzleInventory ni : nozzleInvs) {
+            // Skip incomplete readings (no close reading = opening snapshot only)
+            if (ni.getCloseMeterReading() == null) continue;
             ShiftReportPrintData.MeterReading mr = new ShiftReportPrintData.MeterReading();
             mr.setPumpName(ni.getNozzle().getPump() != null ? ni.getNozzle().getPump().getName() : "-");
             mr.setNozzleName(ni.getNozzle().getNozzleName());
@@ -254,6 +256,8 @@ public class ShiftSalesCalculationService {
     public void populateTankReadings(ShiftReportPrintData data, Long shiftId) {
         List<TankInventory> tankInvs = tankInventoryRepository.findByShiftId(shiftId);
         for (TankInventory ti : tankInvs) {
+            // Skip incomplete readings (no close dip = opening snapshot only)
+            if (ti.getCloseDip() == null && ti.getCloseStock() == null) continue;
             ShiftReportPrintData.TankReading tr = new ShiftReportPrintData.TankReading();
             tr.setTankName(ti.getTank().getName());
             tr.setProductName(ti.getTank().getProduct() != null ? ti.getTank().getProduct().getName() : "-");
