@@ -26,8 +26,8 @@ DECLARE
     required_tables TEXT[] := ARRAY[
         -- Master data
         'customergroups', 'vehicle_type', 'customer_data', 'vehicle_new', 'employee',
-        -- Products & tanks
-        'product_names', 'tank_inventory',
+        -- Products & pricing
+        'gst_oil_prices', 'productprice',
         -- Invoices
         'creditbill_test', 'creditbill_products_test', 'cashbill', 'cashbill_products',
         -- Statements & payments
@@ -36,12 +36,19 @@ DECLARE
         'income_creditbill_statement', 'intermediate_creditbill_statement',
         -- Payment details (for enrichment)
         'cheque_incomebill', 'card_incomebill', 'ccms_incomebill', 'bank_transfer_incomebill',
+        'card_incomebill_statement', 'ccms_incomebill_statement', 'cheque_incomebill_statement',
         -- Advances & shifts
         'card_advances', 'cheque_advance', 'ccms_advance', 'bank_transfer_advance',
         'home_advances', 'cash_advances',
         'shift_closing_timings',
+        -- Expenses
+        'expense', 'expensetype',
         -- Incentives
-        'incentive_table'
+        'incentive_table',
+        -- Tank inventory (tank-wise)
+        'e_book_tw_ms', 'e_book_tw_xp', 'e_book_tw_hsd_1',
+        -- Nozzle inventory (meter-wise)
+        'e_book_mw_ms', 'e_book_mw_xp', 'e_book_mw_hsd_1', 'e_book_mw_hsd_2'
     ];
     tbl TEXT;
 BEGIN
@@ -223,7 +230,7 @@ ON CONFLICT DO NOTHING;
 \echo 'M6: Pumps...'
 
 INSERT INTO pump (scid,name,active,created_at,updated_at)
-SELECT 1,n,true,NOW(),NOW() FROM (VALUES ('Pump-1'),('Pump-2'),('Pump-3')) AS t(n)
+SELECT 1,n,true,NOW(),NOW() FROM (VALUES ('DU-11'),('DU-15'),('DU-16')) AS t(n)
 WHERE NOT EXISTS (SELECT 1 FROM pump LIMIT 1);
 
 -- ============================================================
@@ -372,21 +379,21 @@ SELECT setval('customer_vehicle_mapper_id_seq', (SELECT COALESCE(MAX(id),1) FROM
 -- ============================================================
 \echo 'S4: Tanks + Nozzles...'
 
-INSERT INTO tank (scid,name,capacity,available_stock,product_id,active,created_at,updated_at)
-SELECT 1,'Tank-1',12000,0,(SELECT id FROM product WHERE name='Petrol' LIMIT 1),true,NOW(),NOW()
-WHERE NOT EXISTS (SELECT 1 FROM tank WHERE name='Tank-1');
-INSERT INTO tank (scid,name,capacity,available_stock,product_id,active,created_at,updated_at)
-SELECT 1,'Tank-2',6000,0,(SELECT id FROM product WHERE name='Xtra Premium' LIMIT 1),true,NOW(),NOW()
-WHERE NOT EXISTS (SELECT 1 FROM tank WHERE name='Tank-2');
-INSERT INTO tank (scid,name,capacity,available_stock,product_id,active,created_at,updated_at)
-SELECT 1,'Tank-3',12000,0,(SELECT id FROM product WHERE name='Diesel' LIMIT 1),true,NOW(),NOW()
+INSERT INTO tank (scid,name,capacity,available_stock,threshold_stock,product_id,active,created_at,updated_at)
+SELECT 1,'Tank-3',20000,0,4000,(SELECT id FROM product WHERE name='Diesel' LIMIT 1),true,NOW(),NOW()
 WHERE NOT EXISTS (SELECT 1 FROM tank WHERE name='Tank-3');
+INSERT INTO tank (scid,name,capacity,available_stock,threshold_stock,product_id,active,created_at,updated_at)
+SELECT 1,'Tank-4',15000,0,3000,(SELECT id FROM product WHERE name='Petrol' LIMIT 1),true,NOW(),NOW()
+WHERE NOT EXISTS (SELECT 1 FROM tank WHERE name='Tank-4');
+INSERT INTO tank (scid,name,capacity,available_stock,threshold_stock,product_id,active,created_at,updated_at)
+SELECT 1,'Tank-5',15000,0,3000,(SELECT id FROM product WHERE name='Xtra Premium' LIMIT 1),true,NOW(),NOW()
+WHERE NOT EXISTS (SELECT 1 FROM tank WHERE name='Tank-5');
 
 INSERT INTO nozzle (scid,nozzle_name,tank_id,pump_id,active,created_at,updated_at)
 SELECT 1,n.nn,t.id,p.id,true,NOW(),NOW() FROM (VALUES
-    ('N-1','Tank-1','Pump-1'),('N-2','Tank-1','Pump-1'),('N-11','Tank-2','Pump-1'),('N-12','Tank-2','Pump-1'),
-    ('N-3','Tank-1','Pump-2'),('N-4','Tank-1','Pump-2'),('N-9','Tank-3','Pump-2'),('N-10','Tank-3','Pump-2'),
-    ('N-5','Tank-1','Pump-3'),('N-6','Tank-1','Pump-3'),('N-7','Tank-3','Pump-3'),('N-8','Tank-3','Pump-3')
+    ('N-36','Tank-4','DU-11'),('N-37','Tank-4','DU-11'),('N-38','Tank-3','DU-11'),('N-39','Tank-3','DU-11'),
+    ('N-46','Tank-5','DU-15'),('N-47','Tank-4','DU-15'),('N-48','Tank-5','DU-15'),('N-49','Tank-4','DU-15'),
+    ('N-50','Tank-4','DU-16'),('N-51','Tank-4','DU-16'),('N-52','Tank-3','DU-16'),('N-53','Tank-3','DU-16')
 ) AS n(nn,tn,pn) JOIN tank t ON t.name=n.tn JOIN pump p ON p.name=n.pn
 WHERE NOT EXISTS (SELECT 1 FROM nozzle LIMIT 1);
 
@@ -684,7 +691,7 @@ WHERE statement_id IN (SELECT id FROM statement WHERE status='PAID') AND payment
 \echo 'S10b: Payment detail enrichment...'
 
 -- Cheque details → reference_no + remarks
-UPDATE payment p SET reference_no=NULLIF(TRIM(cd.chequeno),''), remarks=NULLIF(TRIM(COALESCE(cd.chequebankname,'')||' '||COALESCE(cd.cheqcusname,'')),'')
+UPDATE payment p SET reference_no=NULLIF(TRIM(cd.chequeno::text),''), remarks=NULLIF(TRIM(COALESCE(cd.chequebankname,'')||' '||COALESCE(cd.cheqcusname,'')),'')
 FROM raw.cheque_incomebill cd JOIN invoice_bill ib ON TRIM(cd.idxbill_id)=ib.bill_no
 WHERE p.invoice_bill_id=ib.id AND p.reference_no IS NULL;
 
@@ -786,8 +793,520 @@ SELECT setval('incentive_payment_id_seq', (SELECT COALESCE(MAX(id),1) FROM incen
 -- ============================================================
 \echo 'Normalizing status enum values...'
 UPDATE users SET status = UPPER(TRIM(status)) WHERE status != UPPER(TRIM(status));
-UPDATE customer SET status = UPPER(TRIM(status)) WHERE status IS NOT NULL AND status != UPPER(TRIM(status));
+-- customer table has no status column; skip normalization
 UPDATE vehicle SET status = UPPER(TRIM(status)) WHERE status IS NOT NULL AND status != UPPER(TRIM(status));
+
+-- ============================================================
+-- S12: Expense Types
+-- ============================================================
+\echo 'S12: Expense types...'
+
+INSERT INTO expense_type (type_name, created_at, updated_at)
+SELECT DISTINCT TRIM(expensetypename), NOW(), NOW()
+FROM raw.expensetype
+WHERE TRIM(expensetypename) NOT IN ('Select')
+  AND NOT EXISTS (SELECT 1 FROM expense_type WHERE type_name = TRIM(raw.expensetype.expensetypename))
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- S13: Expenses
+-- ============================================================
+\echo 'S13: Expenses...'
+
+INSERT INTO expense (scid, expense_date, amount, description, expense_type_id, created_at, updated_at)
+SELECT 1,
+    e.exp_date,
+    e.exp_amount,
+    e.exp_description,
+    et.id,
+    NOW(), NOW()
+FROM raw.expense e
+LEFT JOIN expense_type et ON et.type_name = TRIM(e.exp_type)
+WHERE NOT EXISTS (SELECT 1 FROM expense LIMIT 1);
+
+SELECT setval('expense_id_seq', (SELECT COALESCE(MAX(id),1) FROM expense));
+
+-- ============================================================
+-- S14: Product Price History (Fuel prices)
+-- ============================================================
+\echo 'S14: Product price history...'
+
+INSERT INTO product_price_history (effective_date, product_id, price, created_at, updated_at)
+SELECT pp.pp_date,
+    (SELECT id FROM product WHERE name='Petrol' LIMIT 1),
+    pp.ms_price,
+    NOW(), NOW()
+FROM raw.productprice pp
+WHERE pp.ms_price > 0
+  AND NOT EXISTS (SELECT 1 FROM product_price_history LIMIT 1)
+ORDER BY pp.pp_date;
+
+INSERT INTO product_price_history (effective_date, product_id, price, created_at, updated_at)
+SELECT pp.pp_date,
+    (SELECT id FROM product WHERE name='Xtra Premium' LIMIT 1),
+    pp.xp_price,
+    NOW(), NOW()
+FROM raw.productprice pp
+WHERE pp.xp_price > 0
+  AND NOT EXISTS (SELECT 1 FROM product_price_history WHERE product_id = (SELECT id FROM product WHERE name='Xtra Premium' LIMIT 1) LIMIT 1)
+ORDER BY pp.pp_date;
+
+INSERT INTO product_price_history (effective_date, product_id, price, created_at, updated_at)
+SELECT pp.pp_date,
+    (SELECT id FROM product WHERE name='Diesel' LIMIT 1),
+    pp.hsd_price,
+    NOW(), NOW()
+FROM raw.productprice pp
+WHERE pp.hsd_price > 0
+  AND NOT EXISTS (SELECT 1 FROM product_price_history WHERE product_id = (SELECT id FROM product WHERE name='Diesel' LIMIT 1) LIMIT 1)
+ORDER BY pp.pp_date;
+
+SELECT setval('product_price_history_id_seq', (SELECT COALESCE(MAX(id),1) FROM product_price_history));
+
+-- ============================================================
+-- S15: Tank Inventory (from e_book_tw tables)
+-- ============================================================
+\echo 'S15: Tank inventory...'
+
+-- Tank-4 (MS/Petrol) from e_book_tw_ms
+INSERT INTO tank_inventory (scid, date, tank_id, open_stock, income_stock, total_stock, close_stock, sale_stock, created_at, updated_at)
+SELECT 1,
+    tw.tw_ms_edate,
+    (SELECT id FROM tank WHERE name='Tank-4'),
+    tw.tw_ms_eopen,
+    tw.tw_ms_ereceipt,
+    tw.tw_ms_etotal,
+    tw.tw_ms_closing,
+    tw.tw_ms_sales,
+    NOW(), NOW()
+FROM raw.e_book_tw_ms tw
+WHERE NOT EXISTS (SELECT 1 FROM tank_inventory WHERE tank_id = (SELECT id FROM tank WHERE name='Tank-4') LIMIT 1)
+ORDER BY tw.tw_ms_edate;
+
+-- Tank-5 (XP/Xtra Premium) from e_book_tw_xp
+INSERT INTO tank_inventory (scid, date, tank_id, open_stock, income_stock, total_stock, close_stock, sale_stock, created_at, updated_at)
+SELECT 1,
+    tw.tw_xp_edate,
+    (SELECT id FROM tank WHERE name='Tank-5'),
+    tw.tw_xp_eopen,
+    tw.tw_xp_ereceipt,
+    tw.tw_xp_etotal,
+    tw.tw_xp_eclosing,
+    tw.tw_xp_esales,
+    NOW(), NOW()
+FROM raw.e_book_tw_xp tw
+WHERE NOT EXISTS (SELECT 1 FROM tank_inventory WHERE tank_id = (SELECT id FROM tank WHERE name='Tank-5') LIMIT 1)
+ORDER BY tw.tw_xp_edate;
+
+-- Tank-3 (HSD/Diesel) from e_book_tw_hsd_1
+INSERT INTO tank_inventory (scid, date, tank_id, open_stock, income_stock, total_stock, close_stock, sale_stock, created_at, updated_at)
+SELECT 1,
+    tw.tw_hsd1_edate,
+    (SELECT id FROM tank WHERE name='Tank-3'),
+    tw.tw_hsd1_eopen,
+    tw.tw_hsd1_ereceipt,
+    tw.tw_hsd1_etotal,
+    tw.tw_hsd1_eclosing,
+    tw.tw_hsd1_esales,
+    NOW(), NOW()
+FROM raw.e_book_tw_hsd_1 tw
+WHERE NOT EXISTS (SELECT 1 FROM tank_inventory WHERE tank_id = (SELECT id FROM tank WHERE name='Tank-3') LIMIT 1)
+ORDER BY tw.tw_hsd1_edate;
+
+SELECT setval('tank_inventory_id_seq', (SELECT COALESCE(MAX(id),1) FROM tank_inventory));
+
+-- ============================================================
+-- S16: Nozzle Inventory (from e_book_mw tables)
+-- ============================================================
+\echo 'S16: Nozzle inventory...'
+
+-- Helper: unpivot meter-wise readings into (date, nozzle_name, close_reading)
+-- then use LAG() to derive open_reading and sales
+
+CREATE TEMP TABLE _nozzle_readings (
+    reading_date DATE NOT NULL,
+    nozzle_name VARCHAR(10) NOT NULL,
+    close_meter_reading DOUBLE PRECISION NOT NULL
+);
+
+-- MS nozzles from e_book_mw_ms
+INSERT INTO _nozzle_readings (reading_date, nozzle_name, close_meter_reading)
+SELECT mw_ms_edate, 'N-36', mw_ms_en1 FROM raw.e_book_mw_ms WHERE mw_ms_en1 > 0
+UNION ALL
+SELECT mw_ms_edate, 'N-37', mw_ms_en2 FROM raw.e_book_mw_ms WHERE mw_ms_en2 > 0
+UNION ALL
+SELECT mw_ms_edate, 'N-49', mw_ms_en4 FROM raw.e_book_mw_ms WHERE mw_ms_en4 > 0
+UNION ALL
+SELECT mw_ms_edate, 'N-47', mw_ms_en5 FROM raw.e_book_mw_ms WHERE mw_ms_en5 > 0;
+
+-- XP nozzles from e_book_mw_xp
+INSERT INTO _nozzle_readings (reading_date, nozzle_name, close_meter_reading)
+SELECT mw_xp_edate, 'N-46', mw_xp_n2 FROM raw.e_book_mw_xp WHERE mw_xp_n2 > 0
+UNION ALL
+SELECT mw_xp_edate, 'N-48', mw_xp_n1 FROM raw.e_book_mw_xp WHERE mw_xp_n1 > 0;
+
+-- HSD nozzles from e_book_mw_hsd_1
+INSERT INTO _nozzle_readings (reading_date, nozzle_name, close_meter_reading)
+SELECT mw_hsd_1_edate, 'N-39', mw_hsd_1_en1 FROM raw.e_book_mw_hsd_1 WHERE mw_hsd_1_en1 > 0
+UNION ALL
+SELECT mw_hsd_1_edate, 'N-38', mw_hsd_1_en2 FROM raw.e_book_mw_hsd_1 WHERE mw_hsd_1_en2 > 0
+UNION ALL
+SELECT mw_hsd_1_edate, 'N-53', mw_hsd_1_new_a2 FROM raw.e_book_mw_hsd_1 WHERE mw_hsd_1_new_a2 > 0;
+
+-- HSD nozzle from e_book_mw_hsd_2
+INSERT INTO _nozzle_readings (reading_date, nozzle_name, close_meter_reading)
+SELECT mw_hsd_2_edate, 'N-52', mw_hsd_2_new_a1 FROM raw.e_book_mw_hsd_2 WHERE mw_hsd_2_new_a1 > 0;
+
+-- N-50 and N-51 manual data (DU-16, MS — cumulative readings)
+INSERT INTO _nozzle_readings (reading_date, nozzle_name, close_meter_reading) VALUES
+('2025-05-08','N-50',463),('2025-05-08','N-51',438),
+('2025-05-09','N-50',468),('2025-05-09','N-51',447),
+('2025-05-10','N-50',483),('2025-05-10','N-51',462),
+('2025-05-11','N-50',488),('2025-05-11','N-51',467),
+('2025-05-12','N-50',493),('2025-05-12','N-51',487),
+('2025-05-13','N-50',499),('2025-05-13','N-51',492),
+('2025-05-14','N-50',504),('2025-05-14','N-51',500),
+('2025-05-15','N-50',510),('2025-05-15','N-51',509),
+('2025-05-16','N-50',554),('2025-05-16','N-51',519),
+('2025-05-17','N-50',586),('2025-05-17','N-51',534),
+('2025-05-18','N-50',611),('2025-05-18','N-51',549),
+('2025-05-19','N-50',617),('2025-05-19','N-51',629),
+('2025-05-20','N-50',639),('2025-05-20','N-51',756),
+('2025-05-21','N-50',653),('2025-05-21','N-51',846),
+('2025-05-22','N-50',671),('2025-05-22','N-51',983),
+('2025-05-23','N-50',689),('2025-05-23','N-51',1138),
+('2025-05-24','N-50',713),('2025-05-24','N-51',1314),
+('2025-05-25','N-50',723),('2025-05-25','N-51',1516),
+('2025-05-26','N-50',737),('2025-05-26','N-51',1703),
+('2025-05-27','N-50',747),('2025-05-27','N-51',1754),
+('2025-05-28','N-50',762),('2025-05-28','N-51',1919),
+('2025-05-29','N-50',805),('2025-05-29','N-51',2070),
+('2025-05-30','N-50',824),('2025-05-30','N-51',2186),
+('2025-05-31','N-50',901),('2025-05-31','N-51',2323),
+('2025-06-01','N-50',926),('2025-06-01','N-51',2455),
+('2025-06-02','N-50',932),('2025-06-02','N-51',2465),
+('2025-06-03','N-50',949),('2025-06-03','N-51',2651),
+('2025-06-04','N-50',964),('2025-06-04','N-51',2812),
+('2025-06-05','N-50',983),('2025-06-05','N-51',2957),
+('2025-06-06','N-50',1028),('2025-06-06','N-51',3124),
+('2025-06-07','N-50',1098),('2025-06-07','N-51',3235),
+('2025-06-08','N-50',1175),('2025-06-08','N-51',3507),
+('2025-06-09','N-50',1207),('2025-06-09','N-51',3563),
+('2025-06-10','N-50',1224),('2025-06-10','N-51',3639),
+('2025-06-11','N-50',1327),('2025-06-11','N-51',3659),
+('2025-06-12','N-50',1428),('2025-06-12','N-51',3718),
+('2025-06-13','N-50',1470),('2025-06-13','N-51',3859),
+('2025-06-14','N-50',1528),('2025-06-14','N-51',3969),
+('2025-06-15','N-50',1594),('2025-06-15','N-51',4112),
+('2025-06-16','N-50',1608),('2025-06-16','N-51',4257),
+('2025-06-17','N-50',1647),('2025-06-17','N-51',4394),
+('2025-06-18','N-50',1659),('2025-06-18','N-51',4428),
+('2025-06-19','N-50',1691),('2025-06-19','N-51',4602),
+('2025-06-20','N-50',1728),('2025-06-20','N-51',4758),
+('2025-06-21','N-50',1770),('2025-06-21','N-51',4887),
+('2025-06-22','N-50',1805),('2025-06-22','N-51',5048),
+('2025-06-23','N-50',1880),('2025-06-23','N-51',5132),
+('2025-06-24','N-50',1897),('2025-06-24','N-51',5291),
+('2025-06-25','N-50',1952),('2025-06-25','N-51',5444),
+('2025-06-26','N-50',1995),('2025-06-26','N-51',5545),
+('2025-06-27','N-50',2008),('2025-06-27','N-51',5687),
+('2025-06-28','N-50',2094),('2025-06-28','N-51',5837),
+('2025-06-29','N-50',2168),('2025-06-29','N-51',5960),
+('2025-06-30','N-50',2260),('2025-06-30','N-51',6020),
+('2025-07-01','N-50',2343),('2025-07-01','N-51',6154),
+('2025-07-02','N-50',2360),('2025-07-02','N-51',6232),
+('2025-07-03','N-50',2413),('2025-07-03','N-51',6474),
+('2025-07-04','N-50',2426),('2025-07-04','N-51',6609),
+('2025-07-05','N-50',2456),('2025-07-05','N-51',6715),
+('2025-07-06','N-50',2554),('2025-07-06','N-51',6846),
+('2025-07-07','N-50',2575),('2025-07-07','N-51',7035),
+('2025-07-08','N-50',2660),('2025-07-08','N-51',7266),
+('2025-07-09','N-50',2711),('2025-07-09','N-51',7389),
+('2025-07-10','N-50',2759),('2025-07-10','N-51',7496),
+('2025-07-11','N-50',2771),('2025-07-11','N-51',7533),
+('2025-07-12','N-50',2782),('2025-07-12','N-51',7675),
+('2025-07-13','N-50',2804),('2025-07-13','N-51',7825),
+('2025-07-14','N-50',2847),('2025-07-14','N-51',7982),
+('2025-07-15','N-50',2874),('2025-07-15','N-51',8018),
+('2025-07-16','N-50',2903),('2025-07-16','N-51',8201),
+('2025-07-17','N-50',2950),('2025-07-17','N-51',8227),
+('2025-07-18','N-50',3007),('2025-07-18','N-51',8386),
+('2025-07-19','N-50',3027),('2025-07-19','N-51',8631),
+('2025-07-20','N-50',3049),('2025-07-20','N-51',8804),
+('2025-07-21','N-50',3104),('2025-07-21','N-51',9000),
+('2025-07-22','N-50',3152),('2025-07-22','N-51',9130),
+('2025-07-23','N-50',3187),('2025-07-23','N-51',9320),
+('2025-07-24','N-50',3264),('2025-07-24','N-51',9392),
+('2025-07-25','N-50',3346),('2025-07-25','N-51',9437),
+('2025-07-26','N-50',3368),('2025-07-26','N-51',9569),
+('2025-07-27','N-50',3398),('2025-07-27','N-51',9792),
+('2025-07-28','N-50',3414),('2025-07-28','N-51',9841),
+('2025-07-29','N-50',3451),('2025-07-29','N-51',9945),
+('2025-07-30','N-50',3516),('2025-07-30','N-51',10082),
+('2025-07-31','N-50',3532),('2025-07-31','N-51',10096),
+('2025-08-01','N-50',3563),('2025-08-01','N-51',10216),
+('2025-08-02','N-50',3630),('2025-08-02','N-51',10380),
+('2025-08-03','N-50',3680),('2025-08-03','N-51',10510),
+('2025-08-04','N-50',3718),('2025-08-04','N-51',10699),
+('2025-08-05','N-50',3764),('2025-08-05','N-51',10708),
+('2025-08-06','N-50',3789),('2025-08-06','N-51',10877),
+('2025-08-07','N-50',3875),('2025-08-07','N-51',11076),
+('2025-08-08','N-50',3928),('2025-08-08','N-51',11204),
+('2025-08-09','N-50',4029),('2025-08-09','N-51',11402),
+('2025-08-10','N-50',4044),('2025-08-10','N-51',11579),
+('2025-08-11','N-50',4081),('2025-08-11','N-51',11823),
+('2025-08-12','N-50',4098),('2025-08-12','N-51',12000),
+('2025-08-13','N-50',4147),('2025-08-13','N-51',12110),
+('2025-08-14','N-50',4163),('2025-08-14','N-51',12264),
+('2025-08-15','N-50',4200),('2025-08-15','N-51',12402),
+('2025-08-16','N-50',4230),('2025-08-16','N-51',12522),
+('2025-08-17','N-50',4285),('2025-08-17','N-51',12539),
+('2025-08-18','N-50',4309),('2025-08-18','N-51',12663),
+('2025-08-19','N-50',4365),('2025-08-19','N-51',12851),
+('2025-08-20','N-50',4395),('2025-08-20','N-51',12978),
+('2025-08-21','N-50',4451),('2025-08-21','N-51',13119),
+('2025-08-22','N-50',4482),('2025-08-22','N-51',13212),
+('2025-08-23','N-50',4603),('2025-08-23','N-51',13376),
+('2025-08-24','N-50',4639),('2025-08-24','N-51',13450),
+('2025-08-25','N-50',4644),('2025-08-25','N-51',13624),
+('2025-08-26','N-50',4649),('2025-08-26','N-51',13758),
+('2025-08-27','N-50',4654),('2025-08-27','N-51',13957),
+('2025-08-28','N-50',4659),('2025-08-28','N-51',14186),
+('2025-08-29','N-50',4667),('2025-08-29','N-51',14377),
+('2025-08-30','N-50',4672),('2025-08-30','N-51',14509),
+('2025-08-31','N-50',4682),('2025-08-31','N-51',14694),
+('2025-09-01','N-50',4687),('2025-09-01','N-51',14907),
+('2025-09-02','N-50',4698),('2025-09-02','N-51',15099),
+('2025-09-03','N-50',4706),('2025-09-03','N-51',15256),
+('2025-09-04','N-50',4721),('2025-09-04','N-51',15419),
+('2025-09-05','N-50',4779),('2025-09-05','N-51',15581),
+('2025-09-06','N-50',4807),('2025-09-06','N-51',15732),
+('2025-09-07','N-50',4841),('2025-09-07','N-51',15907),
+('2025-09-08','N-50',4847),('2025-09-08','N-51',16080),
+('2025-09-09','N-50',4915),('2025-09-09','N-51',16173),
+('2025-09-10','N-50',4925),('2025-09-10','N-51',16308),
+('2025-09-11','N-50',4962),('2025-09-11','N-51',16514),
+('2025-09-12','N-50',4980),('2025-09-12','N-51',16662),
+('2025-09-13','N-50',4993),('2025-09-13','N-51',16831),
+('2025-09-14','N-50',5008),('2025-09-14','N-51',16983),
+('2025-09-15','N-50',5037),('2025-09-15','N-51',17086),
+('2025-09-16','N-50',5054),('2025-09-16','N-51',17183),
+('2025-09-17','N-50',5087),('2025-09-17','N-51',17288),
+('2025-09-18','N-50',5135),('2025-09-18','N-51',17444),
+('2025-09-19','N-50',5222),('2025-09-19','N-51',17535),
+('2025-09-20','N-50',5276),('2025-09-20','N-51',17651),
+('2025-09-21','N-50',5286),('2025-09-21','N-51',17776),
+('2025-09-22','N-50',5336),('2025-09-22','N-51',17960),
+('2025-09-23','N-50',5381),('2025-09-23','N-51',18164),
+('2025-09-24','N-50',5402),('2025-09-24','N-51',18314),
+('2025-09-25','N-50',5457),('2025-09-25','N-51',18435),
+('2025-09-26','N-50',5474),('2025-09-26','N-51',18530),
+('2025-09-27','N-50',5513),('2025-09-27','N-51',18647),
+('2025-09-28','N-50',5558),('2025-09-28','N-51',18763),
+('2025-09-29','N-50',5622),('2025-09-29','N-51',18878),
+('2025-09-30','N-50',5689),('2025-09-30','N-51',18930),
+('2025-10-01','N-50',5763),('2025-10-01','N-51',19039),
+('2025-10-02','N-50',5810),('2025-10-02','N-51',19168),
+('2025-10-03','N-50',5870),('2025-10-03','N-51',19284),
+('2025-10-04','N-50',5957),('2025-10-04','N-51',19383),
+('2025-10-05','N-50',6000),('2025-10-05','N-51',19531),
+('2025-10-06','N-50',6022),('2025-10-06','N-51',19705),
+('2025-10-07','N-50',6055),('2025-10-07','N-51',19861),
+('2025-10-08','N-50',6079),('2025-10-08','N-51',19998),
+('2025-10-09','N-50',6101),('2025-10-09','N-51',20119),
+('2025-10-10','N-50',6111),('2025-10-10','N-51',20244),
+('2025-10-11','N-50',6157),('2025-10-11','N-51',20402),
+('2025-10-12','N-50',6170),('2025-10-12','N-51',20559),
+('2025-10-13','N-50',6204),('2025-10-13','N-51',20724),
+('2025-10-14','N-50',6224),('2025-10-14','N-51',20829),
+('2025-10-15','N-50',6255),('2025-10-15','N-51',20925),
+('2025-10-16','N-50',6311),('2025-10-16','N-51',20997),
+('2025-10-17','N-50',6400),('2025-10-17','N-51',21087),
+('2025-10-18','N-50',6431),('2025-10-18','N-51',21176),
+('2025-10-19','N-50',6449),('2025-10-19','N-51',21407),
+('2025-10-20','N-50',6518),('2025-10-20','N-51',21564),
+('2025-10-21','N-50',6524),('2025-10-21','N-51',21659),
+('2025-10-22','N-50',6573),('2025-10-22','N-51',21788),
+('2025-10-23','N-50',6624),('2025-10-23','N-51',21916),
+('2025-10-24','N-50',6737),('2025-10-24','N-51',22053),
+('2025-10-25','N-50',6747),('2025-10-25','N-51',22282),
+('2025-10-26','N-50',6793),('2025-10-26','N-51',22377),
+('2025-10-27','N-50',6840),('2025-10-27','N-51',22537),
+('2025-10-28','N-50',6862),('2025-10-28','N-51',22631),
+('2025-10-29','N-50',6867),('2025-10-29','N-51',22645),
+('2025-10-30','N-50',6919),('2025-10-30','N-51',22827),
+('2025-10-31','N-50',6933),('2025-10-31','N-51',23036),
+('2025-11-01','N-50',6950),('2025-11-01','N-51',23089),
+('2025-11-02','N-50',7021),('2025-11-02','N-51',23256),
+('2025-11-03','N-50',7037),('2025-11-03','N-51',23426),
+('2025-11-04','N-50',7082),('2025-11-04','N-51',23606),
+('2025-11-05','N-50',7105),('2025-11-05','N-51',23732),
+('2025-11-06','N-50',7153),('2025-11-06','N-51',23892),
+('2025-11-07','N-50',7170),('2025-11-07','N-51',24030),
+('2025-11-08','N-50',7252),('2025-11-08','N-51',24168),
+('2025-11-09','N-50',7399),('2025-11-09','N-51',24178),
+('2025-11-10','N-50',7432),('2025-11-10','N-51',24357),
+('2025-11-11','N-50',7491),('2025-11-11','N-51',24483),
+('2025-11-12','N-50',7535),('2025-11-12','N-51',24659),
+('2025-11-13','N-50',7573),('2025-11-13','N-51',24772),
+('2025-11-14','N-50',7680),('2025-11-14','N-51',24950),
+('2025-11-15','N-50',7707),('2025-11-15','N-51',25057),
+('2025-11-16','N-50',7742),('2025-11-16','N-51',25385),
+('2025-11-17','N-50',7768),('2025-11-17','N-51',25548),
+('2025-11-18','N-50',7794),('2025-11-18','N-51',25689),
+('2025-11-19','N-50',7822),('2025-11-19','N-51',25882),
+('2025-11-20','N-50',7968),('2025-11-20','N-51',25957),
+('2025-11-21','N-50',7994),('2025-11-21','N-51',26069),
+('2025-11-22','N-50',8030),('2025-11-22','N-51',26256),
+('2025-11-23','N-50',8061),('2025-11-23','N-51',26389),
+('2025-11-24','N-50',8096),('2025-11-24','N-51',26599),
+('2025-11-25','N-50',8128),('2025-11-25','N-51',26712),
+('2025-11-26','N-50',8233),('2025-11-26','N-51',26859),
+('2025-11-27','N-50',8301),('2025-11-27','N-51',26901),
+('2025-11-28','N-50',8342),('2025-11-28','N-51',27027),
+('2025-11-29','N-50',8428),('2025-11-29','N-51',27203),
+('2025-11-30','N-50',8508),('2025-11-30','N-51',27344),
+('2025-12-01','N-50',8525),('2025-12-01','N-51',27452),
+('2025-12-02','N-50',8563),('2025-12-02','N-51',27650),
+('2025-12-03','N-50',8706),('2025-12-03','N-51',27710),
+('2025-12-04','N-50',8732),('2025-12-04','N-51',27879),
+('2025-12-05','N-50',8796),('2025-12-05','N-51',28005),
+('2025-12-06','N-50',8851),('2025-12-06','N-51',28187),
+('2025-12-07','N-50',8886),('2025-12-07','N-51',28310),
+('2025-12-08','N-50',8940),('2025-12-08','N-51',28470),
+('2025-12-09','N-50',8962),('2025-12-09','N-51',28585),
+('2025-12-10','N-50',8986),('2025-12-10','N-51',28872),
+('2025-12-11','N-50',9065),('2025-12-11','N-51',29011),
+('2025-12-12','N-50',9087),('2025-12-12','N-51',29129),
+('2025-12-13','N-50',9111),('2025-12-13','N-51',29172),
+('2025-12-14','N-50',9190),('2025-12-14','N-51',29372),
+('2025-12-15','N-50',9205),('2025-12-15','N-51',29501),
+('2025-12-16','N-50',9233),('2025-12-16','N-51',29639),
+('2025-12-17','N-50',9238),('2025-12-17','N-51',29671),
+('2025-12-18','N-50',9326),('2025-12-18','N-51',29844),
+('2025-12-19','N-50',9362),('2025-12-19','N-51',29978),
+('2025-12-20','N-50',9414),('2025-12-20','N-51',30126),
+('2025-12-21','N-50',9432),('2025-12-21','N-51',30285),
+('2025-12-22','N-50',9513),('2025-12-22','N-51',30422),
+('2025-12-23','N-50',9522),('2025-12-23','N-51',30536),
+('2025-12-24','N-50',9591),('2025-12-24','N-51',30735),
+('2025-12-25','N-50',9623),('2025-12-25','N-51',30869),
+('2025-12-26','N-50',9702),('2025-12-26','N-51',31005),
+('2025-12-27','N-50',9752),('2025-12-27','N-51',31101),
+('2025-12-28','N-50',9800),('2025-12-28','N-51',31284),
+('2025-12-29','N-50',9828),('2025-12-29','N-51',31430),
+('2025-12-30','N-50',9863),('2025-12-30','N-51',31614),
+('2025-12-31','N-50',9892),('2025-12-31','N-51',31775),
+('2026-01-01','N-50',9916),('2026-01-01','N-51',31795),
+('2026-01-02','N-50',9958),('2026-01-02','N-51',31822),
+('2026-01-03','N-50',9981),('2026-01-03','N-51',31891),
+('2026-01-04','N-50',10020),('2026-01-04','N-51',32016),
+('2026-01-05','N-50',10054),('2026-01-05','N-51',32195),
+('2026-01-06','N-50',10077),('2026-01-06','N-51',32310),
+('2026-01-07','N-50',10130),('2026-01-07','N-51',32444),
+('2026-01-08','N-50',10185),('2026-01-08','N-51',32702),
+('2026-01-09','N-50',10281),('2026-01-09','N-51',32927),
+('2026-01-10','N-50',10326),('2026-01-10','N-51',33098),
+('2026-01-11','N-50',10364),('2026-01-11','N-51',33300),
+('2026-01-12','N-50',10378),('2026-01-12','N-51',33486),
+('2026-01-13','N-50',10445),('2026-01-13','N-51',33610),
+('2026-01-14','N-50',10499),('2026-01-14','N-51',33789),
+('2026-01-15','N-50',10518),('2026-01-15','N-51',34052),
+('2026-01-16','N-50',10541),('2026-01-16','N-51',34158),
+('2026-01-17','N-50',10564),('2026-01-17','N-51',34338),
+('2026-01-18','N-50',10647),('2026-01-18','N-51',34530),
+('2026-01-19','N-50',10674),('2026-01-19','N-51',34768),
+('2026-01-20','N-50',10758),('2026-01-20','N-51',34908),
+('2026-01-21','N-50',10805),('2026-01-21','N-51',35024),
+('2026-01-22','N-50',10879),('2026-01-22','N-51',35143),
+('2026-01-23','N-50',10930),('2026-01-23','N-51',35294),
+('2026-01-24','N-50',10961),('2026-01-24','N-51',35375),
+('2026-01-25','N-50',10981),('2026-01-25','N-51',35596),
+('2026-01-26','N-50',11000),('2026-01-26','N-51',35810),
+('2026-01-27','N-50',11031),('2026-01-27','N-51',36063),
+('2026-01-28','N-50',11057),('2026-01-28','N-51',36103),
+('2026-01-29','N-50',11113),('2026-01-29','N-51',36222),
+('2026-01-30','N-50',11135),('2026-01-30','N-51',36362),
+('2026-01-31','N-50',11171),('2026-01-31','N-51',36520),
+('2026-02-01','N-50',11189),('2026-02-01','N-51',36655),
+('2026-02-02','N-50',11222),('2026-02-02','N-51',36789),
+('2026-02-03','N-50',11234),('2026-02-03','N-51',36951),
+('2026-02-04','N-50',11258),('2026-02-04','N-51',37106),
+('2026-02-05','N-50',11307),('2026-02-05','N-51',37323),
+('2026-02-06','N-50',11361),('2026-02-06','N-51',37417),
+('2026-02-07','N-50',11427),('2026-02-07','N-51',37561),
+('2026-02-08','N-50',11510),('2026-02-08','N-51',37695),
+('2026-02-09','N-50',11556),('2026-02-09','N-51',37835),
+('2026-02-10','N-50',11571),('2026-02-10','N-51',37999),
+('2026-02-11','N-50',11584),('2026-02-11','N-51',38103),
+('2026-02-12','N-50',11629),('2026-02-12','N-51',38279),
+('2026-02-13','N-50',11644),('2026-02-13','N-51',38393),
+('2026-02-14','N-50',11691),('2026-02-14','N-51',38518),
+('2026-02-15','N-50',11756),('2026-02-15','N-51',38557),
+('2026-02-16','N-50',11770),('2026-02-16','N-51',38771),
+('2026-02-17','N-50',11792),('2026-02-17','N-51',38899),
+('2026-02-18','N-50',11846),('2026-02-18','N-51',39021),
+('2026-02-19','N-50',11882),('2026-02-19','N-51',39187),
+('2026-02-20','N-50',11901),('2026-02-20','N-51',39348),
+('2026-02-21','N-50',11925),('2026-02-21','N-51',39464),
+('2026-02-22','N-50',11988),('2026-02-22','N-51',39597),
+('2026-02-23','N-50',12007),('2026-02-23','N-51',39764),
+('2026-02-24','N-50',12019),('2026-02-24','N-51',39991),
+('2026-02-25','N-50',12050),('2026-02-25','N-51',40156),
+('2026-02-26','N-50',12093),('2026-02-26','N-51',40322),
+('2026-02-27','N-50',12147),('2026-02-27','N-51',40457),
+('2026-02-28','N-50',12215),('2026-02-28','N-51',40554),
+('2026-03-01','N-50',12234),('2026-03-01','N-51',40796),
+('2026-03-02','N-50',12271),('2026-03-02','N-51',40898),
+('2026-03-03','N-50',12291),('2026-03-03','N-51',41002),
+('2026-03-04','N-50',12359),('2026-03-04','N-51',41133),
+('2026-03-05','N-50',12402),('2026-03-05','N-51',41284),
+('2026-03-06','N-50',12425),('2026-03-06','N-51',41427),
+('2026-03-07','N-50',12468),('2026-03-07','N-51',41562),
+('2026-03-08','N-50',12506),('2026-03-08','N-51',41688),
+('2026-03-09','N-50',12533),('2026-03-09','N-51',41894),
+('2026-03-10','N-50',12552),('2026-03-10','N-51',42056),
+('2026-03-11','N-50',12582),('2026-03-11','N-51',42222),
+('2026-03-12','N-50',12616),('2026-03-12','N-51',42367),
+('2026-03-13','N-50',12624),('2026-03-13','N-51',42445),
+('2026-03-14','N-50',12637),('2026-03-14','N-51',42668),
+('2026-03-15','N-50',12713),('2026-03-15','N-51',42890),
+('2026-03-16','N-50',12718),('2026-03-16','N-51',43062),
+('2026-03-17','N-50',12748),('2026-03-17','N-51',43146),
+('2026-03-18','N-50',12761),('2026-03-18','N-51',43290),
+('2026-03-19','N-50',12816),('2026-03-19','N-51',43398),
+('2026-03-20','N-50',12852),('2026-03-20','N-51',43520),
+('2026-03-21','N-50',12884),('2026-03-21','N-51',43677),
+('2026-03-22','N-50',12884),('2026-03-22','N-51',43891),
+('2026-03-23','N-50',12884),('2026-03-23','N-51',44067),
+('2026-03-24','N-50',12902),('2026-03-24','N-51',44250),
+('2026-03-25','N-50',12922),('2026-03-25','N-51',44511),
+('2026-03-26','N-50',12960),('2026-03-26','N-51',44578),
+('2026-03-27','N-50',12980),('2026-03-27','N-51',44662),
+('2026-03-28','N-50',12988),('2026-03-28','N-51',44902),
+('2026-03-29','N-50',13022),('2026-03-29','N-51',45104),
+('2026-03-30','N-50',13048),('2026-03-30','N-51',45245),
+('2026-03-31','N-50',13107),('2026-03-31','N-51',45367),
+('2026-04-01','N-50',13131),('2026-04-01','N-51',45539),
+('2026-04-02','N-50',13162),('2026-04-02','N-51',45794);
+
+-- Transform cumulative readings into nozzle_inventory (open/close/sales via LAG)
+INSERT INTO nozzle_inventory (scid, date, nozzle_id, open_meter_reading, close_meter_reading, sales, created_at, updated_at)
+SELECT 1,
+    r.reading_date,
+    n.id,
+    LAG(r.close_meter_reading) OVER (PARTITION BY r.nozzle_name ORDER BY r.reading_date),
+    r.close_meter_reading,
+    r.close_meter_reading - COALESCE(LAG(r.close_meter_reading) OVER (PARTITION BY r.nozzle_name ORDER BY r.reading_date), r.close_meter_reading),
+    NOW(), NOW()
+FROM _nozzle_readings r
+JOIN nozzle n ON n.nozzle_name = r.nozzle_name
+WHERE NOT EXISTS (SELECT 1 FROM nozzle_inventory LIMIT 1)
+ORDER BY r.nozzle_name, r.reading_date;
+
+SELECT setval('nozzle_inventory_id_seq', (SELECT COALESCE(MAX(id),1) FROM nozzle_inventory));
+
+DROP TABLE IF EXISTS _nozzle_readings;
 
 -- ============================================================
 -- VERIFICATION
@@ -819,7 +1338,19 @@ UNION ALL SELECT '--- SHIFTS ---', ''
 UNION ALL SELECT 'shifts', COUNT(*)::text FROM shifts
 UNION ALL SELECT '--- INCENTIVES ---', ''
 UNION ALL SELECT 'incentive_payment (linked)', COUNT(*)::text FROM incentive_payment WHERE invoice_bill_id IS NOT NULL
-UNION ALL SELECT 'incentive_payment (unlinked)', COUNT(*)::text FROM incentive_payment WHERE invoice_bill_id IS NULL;
+UNION ALL SELECT 'incentive_payment (unlinked)', COUNT(*)::text FROM incentive_payment WHERE invoice_bill_id IS NULL
+UNION ALL SELECT '--- EXPENSES ---', ''
+UNION ALL SELECT 'expense_types', COUNT(*)::text FROM expense_type
+UNION ALL SELECT 'expenses', COUNT(*)::text FROM expense
+UNION ALL SELECT '--- PRICE HISTORY ---', ''
+UNION ALL SELECT 'product_price_history', COUNT(*)::text FROM product_price_history
+UNION ALL SELECT '--- INVENTORY ---', ''
+UNION ALL SELECT 'tank_inventory', COUNT(*)::text FROM tank_inventory
+UNION ALL SELECT 'nozzle_inventory', COUNT(*)::text FROM nozzle_inventory
+UNION ALL SELECT '--- SETUP ---', ''
+UNION ALL SELECT 'tanks', COUNT(*)::text FROM tank
+UNION ALL SELECT 'pumps', COUNT(*)::text FROM pump
+UNION ALL SELECT 'nozzles', COUNT(*)::text FROM nozzle;
 
 \echo ''
 \echo '--- PAYMENT STATUS DISTRIBUTION ---'

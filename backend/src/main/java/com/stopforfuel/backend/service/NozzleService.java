@@ -96,6 +96,7 @@ public class NozzleService {
 
     public void deleteNozzle(Long id) {
         Nozzle nozzle = getNozzleById(id);
-        nozzleRepository.delete(nozzle);
+        nozzle.setActive(false);
+        nozzleRepository.save(nozzle);
     }
 }
