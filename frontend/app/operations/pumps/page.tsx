@@ -80,13 +80,13 @@ export default function PumpsPage() {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this pump? This will fail if nozzles are attached.")) {
+        if (confirm("Are you sure you want to deactivate this pump? Connected nozzles will also be deactivated.")) {
             try {
                 await deletePump(id);
                 loadData();
             } catch (err) {
-                console.error("Failed to delete pump", err);
-                alert("Cannot delete pump. Please remove attached nozzles first.");
+                console.error("Failed to deactivate pump", err);
+                alert("Failed to deactivate pump.");
             }
         }
     };
