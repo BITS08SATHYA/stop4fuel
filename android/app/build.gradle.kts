@@ -17,8 +17,15 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        // API base URL — override in local.properties or per build type
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
+        // API base URL — override via api.base.url in local.properties
+        val localProps = rootProject.file("local.properties")
+        val apiBaseUrl = if (localProps.exists()) {
+            val props = java.util.Properties().apply { load(localProps.inputStream()) }
+            props.getProperty("api.base.url", "http://10.0.2.2:8080/")
+        } else {
+            "http://10.0.2.2:8080/"
+        }
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildTypes {
