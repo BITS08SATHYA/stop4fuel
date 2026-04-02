@@ -74,8 +74,12 @@ public class PumpService {
         }
     }
 
+    @Transactional
     public void deletePump(Long id) {
         Pump pump = getPumpById(id);
-        pumpRepository.delete(pump);
+        pump.setActive(false);
+        // Cascade: deactivate connected nozzles
+        deactivateConnectedNozzles(id);
+        pumpRepository.save(pump);
     }
 }
