@@ -101,13 +101,13 @@ export default function NozzlesPage() {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this nozzle?")) {
+        if (confirm("Are you sure you want to deactivate this nozzle?")) {
             try {
                 await deleteNozzle(id);
                 loadData();
             } catch (err) {
-                console.error("Failed to delete nozzle", err);
-                setApiError("Cannot delete nozzle.");
+                console.error("Failed to deactivate nozzle", err);
+                setApiError("Failed to deactivate nozzle.");
             }
         }
     };
