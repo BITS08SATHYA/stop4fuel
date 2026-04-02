@@ -1,9 +1,6 @@
 package com.stopforfuel.backend.service;
 
-import com.lowagie.text.Document;
-import com.lowagie.text.DocumentException;
-import com.lowagie.text.PageSize;
-import com.lowagie.text.Rectangle;
+import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.stopforfuel.backend.dto.ShiftReportPrintData;
@@ -12,6 +9,9 @@ import com.stopforfuel.backend.exception.ReportGenerationException;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+
+import static com.stopforfuel.backend.service.ShiftReportPdfUtils.*;
 
 /**
  * Orchestrates shift report PDF generation by delegating to focused section generators.
@@ -47,15 +47,25 @@ public class ShiftReportPdfGenerator {
             addPageOneBody(document, data, report);
             headerSection.addPageOneFooter(document, data);
 
-            // ===== PAGE 2: Advance details + Inventory =====
+            // ===== PAGE 2: Advance details (left) + Expenses/Inventory (right) =====
             document.newPage();
             headerSection.addPageTwoHeader(document, data);
-            financialSection.addPageTwoBody(document, data, report);
+            financialSection.addPageTwoBody(document, data, report, inventorySection);
 
-            // Inventory on same page 2 (below advance details)
-            if (!data.getStockSummary().isEmpty() || !data.getStockPosition().isEmpty()) {
-                inventorySection.addProductInventoryPage(document, data);
-            }
+            // Page 2 footer
+            PdfPTable pg2Footer = new PdfPTable(2);
+            pg2Footer.setWidthPercentage(100);
+            pg2Footer.setSpacingBefore(3);
+            PdfPCell genCell = new PdfPCell(new Phrase("Generated: " + LocalDateTime.now().format(DT_FMT), SMALL_FONT));
+            genCell.setBorder(Rectangle.TOP);
+            genCell.setPadding(2);
+            pg2Footer.addCell(genCell);
+            PdfPCell pgCell = new PdfPCell(new Phrase("Page 2 of 2", SMALL_FONT));
+            pgCell.setBorder(Rectangle.TOP);
+            pgCell.setPadding(2);
+            pgCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            pg2Footer.addCell(pgCell);
+            document.add(pg2Footer);
 
             document.close();
         } catch (DocumentException e) {

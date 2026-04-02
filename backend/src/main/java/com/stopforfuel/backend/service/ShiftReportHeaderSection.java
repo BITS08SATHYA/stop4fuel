@@ -63,8 +63,20 @@ public class ShiftReportHeaderSection {
 
         Paragraph info = new Paragraph(infoLine, NORMAL_FONT);
         info.setAlignment(Element.ALIGN_CENTER);
-        info.setSpacingAfter(1);
+        info.setSpacingAfter(2);
         doc.add(info);
+
+        // Separator line
+        PdfPTable sep = new PdfPTable(1);
+        sep.setWidthPercentage(100);
+        sep.setSpacingAfter(2);
+        PdfPCell sepCell = new PdfPCell();
+        sepCell.setBorder(Rectangle.BOTTOM);
+        sepCell.setBorderWidthBottom(1.5f);
+        sepCell.setBorderColor(java.awt.Color.BLACK);
+        sepCell.setFixedHeight(1);
+        sep.addCell(sepCell);
+        doc.add(sep);
     }
 
     public void addPageOneFooter(Document doc, ShiftReportPrintData data) throws DocumentException {
@@ -98,12 +110,19 @@ public class ShiftReportHeaderSection {
 
     public void addPageTwoHeader(Document doc, ShiftReportPrintData data) throws DocumentException {
         String shiftDate = data.getShiftStart() != null ? data.getShiftStart().format(DATE_FMT) : "-";
-        Paragraph header = new Paragraph(
-                data.getCompanyName().toUpperCase() + " — " + shiftDate + " Shift Report (Page 2) — CASHIER: " + data.getEmployeeName(),
-                SECTION_FONT);
-        header.setAlignment(Element.ALIGN_CENTER);
-        header.setSpacingAfter(1);
-        doc.add(header);
+        String text = data.getCompanyName().toUpperCase() + " \u2014 " + shiftDate + " Shift Report (Page 2) \u2014 CASHIER: " + data.getEmployeeName();
+
+        PdfPTable hdr = new PdfPTable(1);
+        hdr.setWidthPercentage(100);
+        hdr.setSpacingAfter(2);
+        PdfPCell cell = new PdfPCell(new Phrase(text, BOLD_FONT));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setBorder(Rectangle.BOTTOM);
+        cell.setBorderWidthBottom(1.5f);
+        cell.setBorderColor(java.awt.Color.BLACK);
+        cell.setPadding(3);
+        hdr.addCell(cell);
+        doc.add(hdr);
     }
 
     public void addPageThreeHeader(Document doc, ShiftReportPrintData data) throws DocumentException {

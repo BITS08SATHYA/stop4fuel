@@ -2,6 +2,8 @@ package com.stopforfuel.backend.service;
 
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
@@ -116,10 +118,10 @@ public class ShiftReportFinancialSection {
         }
 
         // TOTAL row
-        addCellLeft(table, "TOTAL", SMALL_BOLD);
-        addCellRight(table, "", SMALL_BOLD);
-        addCellRight(table, "", SMALL_BOLD);
-        addCellRight(table, fmtComma(totalRevenue), SMALL_BOLD);
+        addTotalCellLeft(table, "TOTAL");
+        addTotalCellRight(table, "");
+        addTotalCellRight(table, "");
+        addTotalCellRight(table, fmtComma(totalRevenue));
 
         container.addElement(table);
     }
@@ -157,40 +159,49 @@ public class ShiftReportFinancialSection {
             totalAdvances = totalAdvances.add(entry.getValue());
         }
 
-        addCellLeft(table, "TOTAL", SMALL_BOLD);
-        addCellRight(table, fmtComma(totalAdvances), SMALL_BOLD);
+        addTotalCellLeft(table, "TOTAL");
+        addTotalCellRight(table, fmtComma(totalAdvances));
 
         container.addElement(table);
     }
 
     public void addTurnoverBalanceBox(PdfPCell container, ShiftClosingReport report) {
+        Font BOX_LABEL = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
+        Font BOX_VALUE = new Font(Font.HELVETICA, 9, Font.BOLD);
+
         PdfPTable box = new PdfPTable(3);
         box.setWidthPercentage(100);
-        box.setSpacingBefore(1);
-        box.setSpacingAfter(1);
+        box.setSpacingBefore(3);
+        box.setSpacingAfter(3);
 
         // Turnover
         PdfPCell turnCell = new PdfPCell();
-        turnCell.setBorderColor(Color.DARK_GRAY);
-        turnCell.setPadding(2);
-        turnCell.addElement(new Paragraph("TURNOVER", SMALL_BOLD));
-        turnCell.addElement(new Paragraph("Rs." + fmtComma(report.getTotalRevenue()), TOTAL_FONT));
+        turnCell.setBorderWidth(2f);
+        turnCell.setBorderColor(Color.BLACK);
+        turnCell.setPadding(3);
+        turnCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        turnCell.addElement(new Paragraph("TURNOVER", BOX_LABEL));
+        turnCell.addElement(new Paragraph(fmtComma(report.getTotalRevenue()), BOX_VALUE));
         box.addCell(turnCell);
 
         // Balance
         PdfPCell balCell = new PdfPCell();
-        balCell.setBorderColor(Color.DARK_GRAY);
-        balCell.setPadding(2);
-        balCell.addElement(new Paragraph("BALANCE", SMALL_BOLD));
-        balCell.addElement(new Paragraph("Rs." + fmtComma(report.getBalance()), TOTAL_FONT));
+        balCell.setBorderWidth(2f);
+        balCell.setBorderColor(Color.BLACK);
+        balCell.setPadding(3);
+        balCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        balCell.addElement(new Paragraph("BALANCE", BOX_LABEL));
+        balCell.addElement(new Paragraph(fmtComma(report.getBalance()), BOX_VALUE));
         box.addCell(balCell);
 
         // Cash Bill
         PdfPCell cashCell = new PdfPCell();
-        cashCell.setBorderColor(Color.DARK_GRAY);
-        cashCell.setPadding(2);
-        cashCell.addElement(new Paragraph("CASH BILL", SMALL_BOLD));
-        cashCell.addElement(new Paragraph("Rs." + fmtComma(report.getCashBillAmount()), TOTAL_FONT));
+        cashCell.setBorderWidth(2f);
+        cashCell.setBorderColor(Color.BLACK);
+        cashCell.setPadding(3);
+        cashCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cashCell.addElement(new Paragraph("CASH BILL", BOX_LABEL));
+        cashCell.addElement(new Paragraph(fmtComma(report.getCashBillAmount()), BOX_VALUE));
         box.addCell(cashCell);
 
         container.addElement(box);
@@ -238,8 +249,8 @@ public class ShiftReportFinancialSection {
             creditTotal = creditTotal.add(cbd.getAmount() != null ? cbd.getAmount() : BigDecimal.ZERO);
         }
 
-        container.addElement(sectionHeader("CREDIT BILLS (" + data.getCreditBillDetails().size() + ") — Rs." + fmtComma(creditTotal)));
-        PdfPTable table = new PdfPTable(new float[]{0.4f, 2f, 1.2f, 1.8f, 1.5f, 1.5f});
+        container.addElement(sectionHeader("CREDIT BILLS (" + data.getCreditBillDetails().size() + ") — \u20B9" + fmtComma(creditTotal)));
+        PdfPTable table = new PdfPTable(new float[]{0.4f, 1.8f, 1f, 1.6f, 0.8f, 0.8f, 1.2f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
 
@@ -248,16 +259,32 @@ public class ShiftReportFinancialSection {
         addHeaderCell(table, "BILL");
         addHeaderCell(table, "VEHICLE");
         addHeaderCell(table, "PROD");
+        addHeaderCell(table, "QTY");
         addHeaderCell(table, "AMT");
 
         int idx = 1;
+        double totalQty = 0;
         for (CreditBillDetail cbd : data.getCreditBillDetails()) {
             addCellRight(table, String.valueOf(idx++), SMALL_FONT);
             addCellLeft(table, cbd.getCustomerName(), SMALL_FONT);
             addCellLeft(table, cbd.getBillNo(), SMALL_FONT);
             addCellLeft(table, cbd.getVehicleNo(), SMALL_FONT);
-            addCellLeft(table, cbd.getProducts(), SMALL_FONT);
+            // Parse product abbreviation and quantity from "MS:500 HSD:200"
+            String prodAbbr = "";
+            double qty = 0;
+            if (cbd.getProducts() != null && !cbd.getProducts().isBlank()) {
+                for (String part : cbd.getProducts().split("\\s+")) {
+                    String[] kv = part.split(":");
+                    if (kv.length == 2) {
+                        if (prodAbbr.isEmpty()) prodAbbr = kv[0]; else prodAbbr += "+" + kv[0];
+                        try { qty += Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+            addCellLeft(table, prodAbbr, SMALL_FONT);
+            addCellRight(table, fmt0(qty), SMALL_FONT);
             addCellRight(table, fmtComma(cbd.getAmount()), SMALL_FONT);
+            totalQty += qty;
         }
 
         // Total row
@@ -266,12 +293,14 @@ public class ShiftReportFinancialSection {
         addCellLeft(table, "", SMALL_BOLD);
         addCellLeft(table, "", SMALL_BOLD);
         addCellLeft(table, "", SMALL_BOLD);
+        addCellRight(table, fmt0(totalQty), SMALL_BOLD);
         addCellRight(table, fmtComma(creditTotal), SMALL_BOLD);
 
         container.addElement(table);
     }
 
-    public void addPageTwoBody(Document doc, ShiftReportPrintData data, ShiftClosingReport report) throws DocumentException {
+    public void addPageTwoBody(Document doc, ShiftReportPrintData data, ShiftClosingReport report,
+                               ShiftReportInventorySection inventorySection) throws DocumentException {
         // Two-column layout for page 2 details
         PdfPTable outer = new PdfPTable(2);
         outer.setWidthPercentage(100);
@@ -293,20 +322,25 @@ public class ShiftReportFinancialSection {
             advByType.computeIfAbsent(ae.getType(), k -> new ArrayList<>()).add(ae);
         }
 
-        // LEFT: Card, UPI, CCMS, Cheque, Bank Transfer advances
-        for (String type : List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER")) {
+        // LEFT: Card, UPI, CCMS, Cash Advance, Home Advance (matching mockup layout)
+        for (String type : List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER", "CASH_ADVANCE", "HOME_ADVANCE")) {
             List<AdvanceEntryDetail> entries = advByType.get(type);
             if (entries != null && !entries.isEmpty()) {
                 addAdvanceDetailTable(leftCell, getAdvanceLabel(type), entries);
             }
         }
 
-        // RIGHT: Cash Advance, Home Advance, Salary Advance, Expenses, Incentive, Repayment
-        for (String type : List.of("CASH_ADVANCE", "HOME_ADVANCE", "SALARY_ADVANCE", "EXPENSE", "INCENTIVE", "REPAYMENT")) {
+        // RIGHT: Expenses, Salary, Incentive, Repayment + Product Inventory
+        for (String type : List.of("SALARY_ADVANCE", "EXPENSE", "INCENTIVE", "REPAYMENT")) {
             List<AdvanceEntryDetail> entries = advByType.get(type);
             if (entries != null && !entries.isEmpty()) {
                 addAdvanceDetailTable(rightCell, getAdvanceLabel(type), entries);
             }
+        }
+
+        // Product Inventory in the right column
+        if (!data.getStockSummary().isEmpty() || !data.getStockPosition().isEmpty()) {
+            inventorySection.addProductInventory(rightCell, data);
         }
 
         outer.addCell(leftCell);
