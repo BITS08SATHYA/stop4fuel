@@ -1,0 +1,45 @@
+LOAD DATABASE
+    FROM mysql://root:mypassword@localhost:3307/bunkdb
+    INTO postgresql://postgres:myPassword@localhost:5435/stopforfuel
+
+WITH include drop, create tables, no truncate,
+     create indexes, reset sequences,
+     workers = 4, concurrency = 2
+
+SET maintenance_work_mem to '128MB',
+    work_mem to '12MB'
+
+CAST type datetime to timestamptz drop default drop not null using zero-dates-to-null,
+     type date to date drop default drop not null using zero-dates-to-null
+
+INCLUDING ONLY TABLE NAMES MATCHING
+    -- Master data
+    'customergroups', 'customer_data', 'vehicle_new', 'vehicle_type', 'employee',
+    -- Products & pricing
+    'gst_oil_prices', 'productprice',
+    -- Invoices
+    'creditbill_test', 'creditbill_products_test', 'cashbill', 'cashbill_products',
+    -- Statements & payments
+    'credit_statement', 'statement_association_1',
+    'incomebill', 'intermediatebills',
+    'income_creditbill_statement', 'intermediate_creditbill_statement',
+    -- Payment details
+    'cheque_incomebill', 'card_incomebill', 'ccms_incomebill', 'bank_transfer_incomebill',
+    'card_incomebill_statement', 'ccms_incomebill_statement', 'cheque_incomebill_statement',
+    -- Advances & shifts
+    'card_advances', 'cheque_advance', 'ccms_advance', 'bank_transfer_advance',
+    'home_advances', 'cash_advances',
+    'shift_closing_timings',
+    -- Expenses
+    'expense', 'expensetype',
+    -- Incentives
+    'incentive_table',
+    -- Tank inventory (tank-wise)
+    'e_book_tw_ms', 'e_book_tw_xp', 'e_book_tw_hsd_1',
+    'e_book_tw_hsd_2', 'e_book_tw_hsd_3',
+    -- Nozzle inventory (meter-wise)
+    'e_book_mw_ms', 'e_book_mw_xp',
+    'e_book_mw_hsd_1', 'e_book_mw_hsd_2', 'e_book_mw_hsd_3'
+
+ALTER SCHEMA 'bunkdb' RENAME TO 'raw'
+;
