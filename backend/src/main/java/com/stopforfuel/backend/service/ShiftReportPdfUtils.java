@@ -2,7 +2,6 @@ package com.stopforfuel.backend.service;
 
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
-import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
@@ -24,7 +23,7 @@ public final class ShiftReportPdfUtils {
     public static final Font COMPANY_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
     public static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
     public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
-    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 6, Font.BOLD);
+    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 6, Font.BOLD, Color.WHITE);
     public static final Font HEADER_FONT = new Font(Font.HELVETICA, 5, Font.BOLD);
     public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
     public static final Font BOLD_FONT = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
@@ -34,20 +33,33 @@ public final class ShiftReportPdfUtils {
     public static final Font FOOTER_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
     public static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
 
-    public static final Color HEADER_BG = new Color(230, 230, 230);
+    public static final Color HEADER_BG = new Color(224, 224, 224);   // #e0e0e0
     public static final Color LIGHT_BG = new Color(245, 245, 245);
-    public static final Color SECTION_BG = new Color(60, 60, 60);
+    public static final Color SECTION_BG = new Color(34, 34, 34);    // #222
+    public static final Color TOTAL_BG = new Color(208, 208, 208);   // #d0d0d0
     public static final Color WHITE = Color.WHITE;
+    public static final Color DIFF_RED = new Color(204, 0, 0);       // negative differences
 
     public static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     public static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     public static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
-    public static Paragraph sectionHeader(String text) {
-        Paragraph p = new Paragraph(text, SECTION_FONT);
-        p.setSpacingBefore(1);
-        p.setSpacingAfter(0);
-        return p;
+    /**
+     * Returns a dark-background section header as a single-cell table (matches mockup .st class).
+     */
+    public static PdfPTable sectionHeader(String text) {
+        PdfPTable t = new PdfPTable(1);
+        t.setWidthPercentage(100);
+        t.setSpacingBefore(3);
+        t.setSpacingAfter(1);
+        PdfPCell c = new PdfPCell(new Phrase(text.toUpperCase(), SECTION_FONT));
+        c.setBackgroundColor(SECTION_BG);
+        c.setPadding(2);
+        c.setPaddingLeft(4);
+        c.setHorizontalAlignment(Element.ALIGN_LEFT);
+        c.setBorderWidth(0);
+        t.addCell(c);
+        return t;
     }
 
     public static void addHeaderCell(PdfPTable table, String text) {
@@ -75,6 +87,28 @@ public final class ShiftReportPdfUtils {
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         cell.setBorderWidth(0.25f);
         cell.setBorderColor(Color.LIGHT_GRAY);
+        table.addCell(cell);
+    }
+
+    public static void addTotalCellLeft(PdfPTable table, String text) {
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", SMALL_BOLD));
+        cell.setBackgroundColor(TOTAL_BG);
+        cell.setPadding(1.5f);
+        cell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        cell.setBorderWidthTop(1f);
+        cell.setBorderWidthBottom(1f);
+        cell.setBorderColor(Color.BLACK);
+        table.addCell(cell);
+    }
+
+    public static void addTotalCellRight(PdfPTable table, String text) {
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", SMALL_BOLD));
+        cell.setBackgroundColor(TOTAL_BG);
+        cell.setPadding(1.5f);
+        cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        cell.setBorderWidthTop(1f);
+        cell.setBorderWidthBottom(1f);
+        cell.setBorderColor(Color.BLACK);
         table.addCell(cell);
     }
 
@@ -151,7 +185,7 @@ public final class ShiftReportPdfUtils {
             case "BANK_TRANSFER" -> "Bank Transfer";
             case "CASH_ADVANCE", "CASH" -> "Cash Advance";
             case "HOME_ADVANCE", "HOME" -> "Home Advance";
-            case "SALARY_ADVANCE" -> "Salary Advance";
+            case "SALARY_ADVANCE", "SALARY" -> "Salary Advance";
             case "EXPENSE" -> "Expenses";
             case "INCENTIVE" -> "Incentive";
             case "REPAYMENT" -> "Inflow Repayment";
