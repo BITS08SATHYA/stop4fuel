@@ -13,4 +13,6 @@ public interface ScidRepository<T extends BaseEntity> extends JpaRepository<T, L
     List<T> findAllByScid(Long scid);
 
     Optional<T> findByIdAndScid(Long id, Long scid);
+
+    long countByScid(Long scid);
 }

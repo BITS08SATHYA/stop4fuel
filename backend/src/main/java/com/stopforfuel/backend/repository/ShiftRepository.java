@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface ShiftRepository extends ScidRepository<Shift> {
     Optional<Shift> findByStatus(ShiftStatus status);
     Optional<Shift> findByStatusAndScid(ShiftStatus status, Long scid);
+    long countByScidAndStatus(Long scid, ShiftStatus status);
 }
