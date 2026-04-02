@@ -2,6 +2,8 @@ package com.stopforfuel.app.ui.home
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,7 +37,7 @@ fun HomeScreen(
                         viewModel.logout()
                         onLogout()
                     }) {
-                        Icon(Icons.Default.Logout, contentDescription = "Logout")
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout")
                     }
                 }
             )
@@ -111,7 +113,7 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .height(56.dp)
                 ) {
-                    Icon(Icons.Default.List, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Shift Bills")
                 }
