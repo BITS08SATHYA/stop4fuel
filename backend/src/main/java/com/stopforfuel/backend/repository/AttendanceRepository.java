@@ -13,4 +13,5 @@ public interface AttendanceRepository extends ScidRepository<Attendance> {
     List<Attendance> findByDateOrderByEmployeeNameAsc(LocalDate date);
     Optional<Attendance> findByEmployeeIdAndDate(Long employeeId, LocalDate date);
     List<Attendance> findByEmployeeIdAndDateBetween(Long employeeId, LocalDate from, LocalDate to);
+    long countByDate(LocalDate date);
 }
