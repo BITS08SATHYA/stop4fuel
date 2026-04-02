@@ -112,13 +112,13 @@ export default function TanksPage() {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this tank? This may affect connected nozzles.")) {
+        if (confirm("Are you sure you want to deactivate this tank? Connected nozzles will also be deactivated.")) {
             try {
                 await deleteTank(id);
                 loadData();
             } catch (err) {
-                console.error("Failed to delete tank", err);
-                alert("Cannot delete tank. It might be in use by nozzles.");
+                console.error("Failed to deactivate tank", err);
+                alert("Failed to deactivate tank.");
             }
         }
     };
@@ -402,11 +402,11 @@ export default function TanksPage() {
                         <select
                             value={productId}
                             onChange={(e) => { setProductId(e.target.value); clearError("productId"); }}
-                            className={`w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.productId)}`}
+                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.productId)}`}
                         >
-                            <option value="">Select a product...</option>
+                            <option value="" className="bg-background text-foreground">Select a product...</option>
                             {products.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
+                                <option key={p.id} value={p.id} className="bg-background text-foreground">{p.name}</option>
                             ))}
                         </select>
                         <FieldError error={errors.productId} />

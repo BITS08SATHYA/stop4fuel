@@ -124,8 +124,18 @@ public class TankService {
                 .toList();
     }
 
+    @Transactional
     public void deleteTank(Long id) {
         Tank tank = getTankById(id);
-        tankRepository.delete(tank);
+        tank.setActive(false);
+        // Cascade: deactivate connected nozzles
+        List<Nozzle> connectedNozzles = nozzleRepository.findByTankIdAndScid(id, SecurityUtils.getScid());
+        for (Nozzle nozzle : connectedNozzles) {
+            if (nozzle.isActive()) {
+                nozzle.setActive(false);
+                nozzleRepository.save(nozzle);
+            }
+        }
+        tankRepository.save(tank);
     }
 }
