@@ -8,6 +8,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { StatementAutocomplete } from "@/components/ui/statement-autocomplete";
 import { PermissionGate } from "@/components/permission-gate";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     IndianRupee, Percent, FileClock, FileCheck2, TrendingUp,
     Search, Calendar, ChevronDown, ChevronRight, FileText,
@@ -983,16 +984,12 @@ function PaymentsTab({
                         </div>
                         <div>
                             <label className="text-xs text-muted-foreground mb-1 block">Payment Mode *</label>
-                            <select
-                                value={paymentModeId}
-                                onChange={(e) => onModeChange(e.target.value ? Number(e.target.value) : "")}
-                                className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 [&>option]:bg-card [&>option]:text-foreground"
-                            >
-                                <option value="">Select mode</option>
-                                {paymentModes.map(m => (
-                                    <option key={m.id} value={m.id}>{m.name}</option>
-                                ))}
-                            </select>
+                            <StyledSelect
+                                value={String(paymentModeId)}
+                                onChange={(val) => onModeChange(val ? Number(val) : "")}
+                                placeholder="Select mode"
+                                options={[{ value: "", label: "Select mode" }, ...paymentModes.map(m => ({ value: String(m.id), label: m.name }))]}
+                            />
                         </div>
                     </div>
                     <div>
