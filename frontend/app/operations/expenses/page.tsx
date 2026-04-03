@@ -304,7 +304,7 @@ export default function ExpensesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Category</label>
-                            <select value={expenseTypeId} onChange={(e) => setExpenseTypeId(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
+                            <select value={expenseTypeId} onChange={(e) => setExpenseTypeId(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 [&>option]:bg-background [&>option]:text-foreground">
                                 <option value="">Select Category</option>
                                 {expenseTypes.map((et) => (
                                     <option key={et.id} value={et.id}>{et.name}</option>
@@ -321,7 +321,7 @@ export default function ExpensesPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Payment Mode</label>
-                            <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
+                            <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 [&>option]:bg-background [&>option]:text-foreground">
                                 <option value="CASH">Cash</option>
                                 <option value="UPI">UPI</option>
                                 <option value="NEFT">NEFT</option>
@@ -335,7 +335,7 @@ export default function ExpensesPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Recurring Type</label>
-                            <select value={recurringType} onChange={(e) => setRecurringType(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
+                            <select value={recurringType} onChange={(e) => setRecurringType(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 [&>option]:bg-background [&>option]:text-foreground">
                                 {recurringOptions.map((opt) => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}

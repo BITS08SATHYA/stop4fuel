@@ -38,6 +38,7 @@ export interface EAdvance {
     ccmsNumber?: string;
     // Source references
     invoiceBill?: { id: number; billNo?: string; billType?: string; netAmount?: number; customer?: { id: number; name: string } | null } | null;
+    statement?: { id: number; statementNo?: string } | null;
     payment?: { id: number; amount?: number; customer?: { id: number; name: string } | null } | null;
 }
 
