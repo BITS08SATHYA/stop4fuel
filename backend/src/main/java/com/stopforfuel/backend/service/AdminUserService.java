@@ -137,6 +137,7 @@ public class AdminUserService {
     /**
      * Reset passcode for a user. Returns the new plain-text passcode.
      */
+    @Transactional
     public String resetPasscode(Long userId) {
         User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
