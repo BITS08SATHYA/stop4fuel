@@ -387,7 +387,7 @@ export default function OperationalDashboardPage() {
                                                 {ni.nozzle?.pump?.name || "—"}
                                             </td>
                                             <td className="py-3 px-3 text-muted-foreground">
-                                                {ni.nozzle?.tank?.product?.name || "—"}
+                                                {ni.nozzle?.tank?.productName || "—"}
                                             </td>
                                             <td className="py-3 px-3 text-right text-foreground">
                                                 {formatNumber(ni.openMeterReading)}

@@ -12,7 +12,7 @@ interface CustomerFormProps {
 }
 
 export function CustomerForm({ onSave, onCancel }: CustomerFormProps) {
-    const [formData, setFormData] = useState<any>({
+    const [formData, setFormData] = useState<Record<string, unknown>>({
         emails: [""],
         phoneNumbers: [""],
     });

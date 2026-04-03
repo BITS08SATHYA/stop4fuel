@@ -3,22 +3,25 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.NotificationConfig;
 import com.stopforfuel.backend.repository.NotificationConfigRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class NotificationConfigService {
 
-    @Autowired
-    private NotificationConfigRepository repository;
+    private final NotificationConfigRepository repository;
 
+    @Transactional(readOnly = true)
     public List<NotificationConfig> getAll() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Optional<NotificationConfig> getByAlertType(String alertType) {
         return repository.findByAlertTypeAndScid(alertType, SecurityUtils.getScid());
     }

@@ -7,7 +7,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import {
     getIncentivesByCustomer, createIncentive, updateIncentive, deleteIncentive,
-    getActiveProducts, type Incentive, type Product
+    getActiveProducts, type Incentive, type Product, type Vehicle, type CustomerCategoryType
 } from "@/lib/api/station";
 
 import { API_BASE_URL } from "@/lib/api/station";
@@ -15,6 +15,37 @@ import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 
 const API = API_BASE_URL;
+
+interface CustomerDetail {
+    id: number;
+    name: string;
+    username?: string;
+    address?: string;
+    emails: string[] | string;
+    phoneNumbers: string[] | string;
+    active: boolean;
+    status?: string;
+    joinDate?: string;
+    creditLimitAmount?: number | null;
+    creditLimitLiters?: number | null;
+    consumedLiters?: number;
+    ledgerBalance?: number;
+    statementGrouping?: string | null;
+    statementFrequency?: string | null;
+    gstNumber?: string | null;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+    party?: { id: number; partyType?: string } | null;
+    group?: { id: number; groupName?: string } | null;
+    customerCategory?: { id: number; categoryName?: string; categoryType?: string } | null;
+    role?: { id: number; roleType?: string } | null;
+    // Allow additional dynamic API fields
+    [key: string]: unknown;
+}
+
+interface GroupRef { id: number; groupName?: string; description?: string }
+interface PartyRef { id: number; partyType?: string }
+interface VehicleTypeRef { id: number; name?: string }
 
 function statusVariant(status: string): "success" | "danger" | "warning" | "default" {
     if (status === "ACTIVE") return "success";
@@ -33,17 +64,17 @@ function statusLabel(status: string) {
 export default function CustomerProfilePage() {
     const params = useParams();
     const router = useRouter();
-    const [customer, setCustomer] = useState<any>(null);
-    const [vehicles, setVehicles] = useState<any[]>([]);
+    const [customer, setCustomer] = useState<CustomerDetail | null>(null);
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
 
     // Dropdowns data
-    const [groups, setGroups] = useState<any[]>([]);
-    const [parties, setParties] = useState<any[]>([]);
-    const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
-    const [products, setProducts] = useState<any[]>([]);
-    const [categories, setCategories] = useState<any[]>([]);
+    const [groups, setGroups] = useState<GroupRef[]>([]);
+    const [parties, setParties] = useState<PartyRef[]>([]);
+    const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeRef[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<CustomerCategoryType[]>([]);
     const [editCustomerType, setEditCustomerType] = useState<string>("");
 
     // Incentives
@@ -118,11 +149,12 @@ export default function CustomerProfilePage() {
     }, [params.id]);
 
     const handleSave = async () => {
+        if (!customer) return;
         try {
             const updatedCustomer = {
                 ...customer,
-                emails: Array.isArray(customer.emails) ? customer.emails : customer.emails.split(',').map((s: string) => s.trim()),
-                phoneNumbers: Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers : customer.phoneNumbers.split(',').map((s: string) => s.trim()),
+                emails: Array.isArray(customer.emails) ? customer.emails : (customer.emails as string).split(',').map((s: string) => s.trim()),
+                phoneNumbers: Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers : (customer.phoneNumbers as string).split(',').map((s: string) => s.trim()),
             };
             const res = await fetchWithAuth(`${API}/customers/${params.id}`, {
                 method: "PUT",
@@ -175,6 +207,7 @@ export default function CustomerProfilePage() {
     };
 
     const handleAddVehicle = async () => {
+        if (!customer) return;
         setVehicleError("");
         try {
             const payload: any = {
@@ -356,7 +389,7 @@ export default function CustomerProfilePage() {
                                         placeholder="Comma separated emails"
                                     />
                                 ) : (
-                                    (customer.emails || []).map((email: string, i: number) => (
+                                    (Array.isArray(customer.emails) ? customer.emails : []).map((email: string, i: number) => (
                                         <span key={i} className="text-foreground pl-6">{email}</span>
                                     ))
                                 )}
@@ -374,7 +407,7 @@ export default function CustomerProfilePage() {
                                         placeholder="Comma separated phones"
                                     />
                                 ) : (
-                                    (customer.phoneNumbers || []).map((phone: string, i: number) => (
+                                    (Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers : []).map((phone: string, i: number) => (
                                         <span key={i} className="text-foreground pl-6">{phone}</span>
                                     ))
                                 )}
@@ -773,7 +806,7 @@ export default function CustomerProfilePage() {
                                 return (
                                     <tr key={vehicle.id} className="group hover:bg-muted/30 transition-colors">
                                         <td className="py-4 text-sm font-medium text-foreground uppercase">{vehicle.vehicleNumber}</td>
-                                        <td className="py-4 text-sm text-muted-foreground">{vehicle.vehicleType?.typeName || "-"}</td>
+                                        <td className="py-4 text-sm text-muted-foreground">{vehicle.vehicleType?.name || "-"}</td>
                                         <td className="py-4 text-sm text-muted-foreground">{vehicle.preferredProduct?.name || "-"}</td>
                                         <td className="py-4 text-sm text-muted-foreground">{vehicle.maxCapacity ? `${vehicle.maxCapacity} L` : "-"}</td>
                                         <td className="py-4 text-sm text-muted-foreground">{vLimit > 0 ? `${vLimit} L` : "No limit"}</td>
@@ -1025,7 +1058,7 @@ export default function CustomerProfilePage() {
                                 >
                                     <option value="" className="bg-card text-foreground">Select Type</option>
                                     {vehicleTypes.map(vt => (
-                                        <option key={vt.id} value={vt.id} className="bg-card text-foreground">{vt.typeName}</option>
+                                        <option key={vt.id} value={vt.id} className="bg-card text-foreground">{vt.name}</option>
                                     ))}
                                 </select>
                             </div>

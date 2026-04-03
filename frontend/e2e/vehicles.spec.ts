@@ -18,9 +18,9 @@ const DEV_USER = {
 };
 
 const mockVehicleTypes = [
-  { id: 1, typeName: "Car", description: "Standard passenger car" },
-  { id: 2, typeName: "Bus", description: "Public or private bus" },
-  { id: 3, typeName: "Truck", description: "Heavy transport truck" },
+  { id: 1, name: "Car", description: "Standard passenger car" },
+  { id: 2, name: "Bus", description: "Public or private bus" },
+  { id: 3, name: "Truck", description: "Heavy transport truck" },
 ];
 
 // The vehicles page uses vehicleNumber (not registrationNumber)

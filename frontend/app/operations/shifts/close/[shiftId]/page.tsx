@@ -101,6 +101,31 @@ export default function ShiftClosingWorkspace() {
 
     useEffect(() => { loadData(); }, [loadData]);
 
+    // Pre-fill close readings from existing data (when editing a previously submitted shift)
+    useEffect(() => {
+        if (!data) return;
+        const closeR: Record<number, string> = {};
+        const testQ: Record<number, string> = {};
+        for (const r of data.nozzleReadings) {
+            if (r.closeMeterReading != null) closeR[r.nozzleId] = String(r.closeMeterReading);
+            if (r.testQuantity != null) testQ[r.nozzleId] = String(r.testQuantity);
+        }
+        if (Object.keys(closeR).length > 0) setNozzleCloseReadings(closeR);
+        if (Object.keys(testQ).length > 0) setNozzleTestQty(testQ);
+
+        const incS: Record<number, string> = {};
+        const clD: Record<number, string> = {};
+        const clS: Record<number, string> = {};
+        for (const t of data.tankDips) {
+            if (t.incomeStock != null) incS[t.tankId] = String(t.incomeStock);
+            if (t.closeDip != null) clD[t.tankId] = t.closeDip;
+            if (t.closeStock != null) clS[t.tankId] = String(t.closeStock);
+        }
+        if (Object.keys(incS).length > 0) setTankIncomeStock(incS);
+        if (Object.keys(clD).length > 0) setTankCloseDip(clD);
+        if (Object.keys(clS).length > 0) setTankCloseStock(clS);
+    }, [data]);
+
     // Lazy-load invoices when section is expanded
     useEffect(() => {
         if (showInvoices && invoices.length === 0 && !invoicesLoading) {
@@ -568,7 +593,7 @@ export default function ShiftClosingWorkspace() {
                                                             <td className="py-1 px-2">{inv.vehicle?.vehicleNumber || "-"}</td>
                                                             <td className="py-1 px-2">{inv.driverName || "-"}</td>
                                                             <td className="py-1 px-2">
-                                                                {inv.products?.map(p => `${p.product?.name || "?"}: ${p.quantity}`).join(", ") || "-"}
+                                                                {inv.products?.map(p => `${p.productName || "?"}: ${p.quantity}`).join(", ") || "-"}
                                                             </td>
                                                             <td className="py-1 px-2">
                                                                 <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-medium">{inv.paymentMode || "CASH"}</span>
@@ -612,7 +637,7 @@ export default function ShiftClosingWorkspace() {
                                                             <td className="py-1 px-2">{inv.customer?.name || "-"}</td>
                                                             <td className="py-1 px-2">{inv.vehicle?.vehicleNumber || "-"}</td>
                                                             <td className="py-1 px-2">
-                                                                {inv.products?.map(p => `${p.product?.name || "?"}: ${p.quantity}`).join(", ") || "-"}
+                                                                {inv.products?.map(p => `${p.productName || "?"}: ${p.quantity}`).join(", ") || "-"}
                                                             </td>
                                                             <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCur(inv.netAmount)}</td>
                                                         </tr>
@@ -678,7 +703,7 @@ export default function ShiftClosingWorkspace() {
                                                 <td className="py-1 px-2">
                                                     {p.invoiceBill?.billNo || p.statement?.statementNo || p.referenceNo || "-"}
                                                 </td>
-                                                <td className="py-1 px-2">{p.paymentMode?.modeName || "-"}</td>
+                                                <td className="py-1 px-2">{p.paymentMode?.name || "-"}</td>
                                                 <td className="py-1 px-2 text-muted-foreground">{p.remarks || "-"}</td>
                                                 <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCur(p.amount)}</td>
                                             </tr>

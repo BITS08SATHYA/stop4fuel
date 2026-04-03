@@ -17,7 +17,7 @@ configurations {
 	}
 }
 
-ext['spring-security.version'] = '6.4.6'
+ext['spring-security.version'] = '6.5.9'
 
 repositories {
 	mavenCentral()

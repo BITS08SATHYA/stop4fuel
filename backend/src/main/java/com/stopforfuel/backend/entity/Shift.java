@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.entity;
 
+import com.stopforfuel.backend.enums.ShiftStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,6 +24,7 @@ public class Shift extends BaseEntity {
     @JoinColumn(name = "attendant_id")
     private User attendant;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status; // OPEN, CLOSED, RECONCILED
+    private ShiftStatus status;
 }

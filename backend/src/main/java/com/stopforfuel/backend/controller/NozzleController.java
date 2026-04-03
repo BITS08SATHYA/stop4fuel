@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.NozzleDTO;
 import com.stopforfuel.backend.entity.Nozzle;
 import com.stopforfuel.backend.service.NozzleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,50 +20,50 @@ public class NozzleController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Nozzle> getAllNozzles() {
-        return nozzleService.getAllNozzles();
+    public List<NozzleDTO> getAllNozzles() {
+        return nozzleService.getAllNozzles().stream().map(NozzleDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Nozzle> getActiveNozzles() {
-        return nozzleService.getActiveNozzles();
+    public List<NozzleDTO> getActiveNozzles() {
+        return nozzleService.getActiveNozzles().stream().map(NozzleDTO::from).toList();
     }
 
     @GetMapping("/tank/{tankId}")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Nozzle> getNozzlesByTank(@PathVariable Long tankId) {
-        return nozzleService.getNozzlesByTank(tankId);
+    public List<NozzleDTO> getNozzlesByTank(@PathVariable Long tankId) {
+        return nozzleService.getNozzlesByTank(tankId).stream().map(NozzleDTO::from).toList();
     }
 
     @GetMapping("/pump/{pumpId}")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Nozzle> getNozzlesByPump(@PathVariable Long pumpId) {
-        return nozzleService.getNozzlesByPump(pumpId);
+    public List<NozzleDTO> getNozzlesByPump(@PathVariable Long pumpId) {
+        return nozzleService.getNozzlesByPump(pumpId).stream().map(NozzleDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public Nozzle getNozzleById(@PathVariable Long id) {
-        return nozzleService.getNozzleById(id);
+    public NozzleDTO getNozzleById(@PathVariable Long id) {
+        return NozzleDTO.from(nozzleService.getNozzleById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Nozzle createNozzle(@Valid @RequestBody Nozzle nozzle) {
-        return nozzleService.createNozzle(nozzle);
+    public NozzleDTO createNozzle(@Valid @RequestBody Nozzle nozzle) {
+        return NozzleDTO.from(nozzleService.createNozzle(nozzle));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Nozzle updateNozzle(@PathVariable Long id, @Valid @RequestBody Nozzle nozzle) {
-        return nozzleService.updateNozzle(id, nozzle);
+    public NozzleDTO updateNozzle(@PathVariable Long id, @Valid @RequestBody Nozzle nozzle) {
+        return NozzleDTO.from(nozzleService.updateNozzle(id, nozzle));
     }
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Nozzle toggleStatus(@PathVariable Long id) {
-        return nozzleService.toggleStatus(id);
+    public NozzleDTO toggleStatus(@PathVariable Long id) {
+        return NozzleDTO.from(nozzleService.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")

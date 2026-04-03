@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.NozzleInventoryDTO;
 import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.service.NozzleInventoryService;
 import com.stopforfuel.backend.service.NozzleInventoryReportService;
@@ -26,26 +27,27 @@ public class NozzleInventoryController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
-    public List<NozzleInventory> getAll(
+    public List<NozzleInventoryDTO> getAll(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Long nozzleId,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        List<NozzleInventory> result;
         if (fromDate != null && toDate != null) {
-            if (nozzleId != null) return service.getByNozzleAndDateRange(nozzleId, fromDate, toDate);
-            if (productId != null) return service.getByProductAndDateRange(productId, fromDate, toDate);
-            return service.getByDateRange(fromDate, toDate);
-        }
-        if (date != null) return service.getByDate(date);
-        if (nozzleId != null) return service.getByNozzleId(nozzleId);
-        return service.getAll();
+            if (nozzleId != null) result = service.getByNozzleAndDateRange(nozzleId, fromDate, toDate);
+            else if (productId != null) result = service.getByProductAndDateRange(productId, fromDate, toDate);
+            else result = service.getByDateRange(fromDate, toDate);
+        } else if (date != null) result = service.getByDate(date);
+        else if (nozzleId != null) result = service.getByNozzleId(nozzleId);
+        else result = service.getAll();
+        return result.stream().map(NozzleInventoryDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
-    public NozzleInventory getById(@PathVariable Long id) {
-        return service.getById(id);
+    public NozzleInventoryDTO getById(@PathVariable Long id) {
+        return NozzleInventoryDTO.from(service.getById(id));
     }
 
     @GetMapping("/report")
@@ -101,14 +103,14 @@ public class NozzleInventoryController {
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
-    public NozzleInventory create(@Valid @RequestBody NozzleInventory inventory) {
-        return service.save(inventory);
+    public NozzleInventoryDTO create(@Valid @RequestBody NozzleInventory inventory) {
+        return NozzleInventoryDTO.from(service.save(inventory));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
-    public NozzleInventory update(@PathVariable Long id, @Valid @RequestBody NozzleInventory inventory) {
-        return service.update(id, inventory);
+    public NozzleInventoryDTO update(@PathVariable Long id, @Valid @RequestBody NozzleInventory inventory) {
+        return NozzleInventoryDTO.from(service.update(id, inventory));
     }
 
     @DeleteMapping("/{id}")

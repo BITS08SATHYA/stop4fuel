@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.enums.*;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.config.SecurityUtils;
@@ -37,6 +38,8 @@ public class ShiftTestDataSeeder {
     private final ExpenseRepository expenseRepository;
     private final ExpenseTypeRepository expenseTypeRepository;
     private final IncentivePaymentRepository incentivePaymentRepository;
+    private final VehicleRepository vehicleRepository;
+    private final ProductInventoryRepository productInventoryRepository;
 
     @Transactional
     public Map<String, Object> seedTestData(Long shiftId) {
@@ -89,6 +92,10 @@ public class ShiftTestDataSeeder {
         // 8. Incentive Payments
         int incentiveCount = seedIncentives(shiftId, scid, shiftStart);
         summary.put("incentives", incentiveCount);
+
+        // 9. Product Inventory for non-fuel products (lubricants, accessories)
+        int productInvCount = seedProductInventory(shiftId, scid);
+        summary.put("productInventories", productInvCount);
 
         summary.put("message", "Test data seeded successfully");
         return summary;
@@ -182,7 +189,7 @@ public class ShiftTestDataSeeder {
             EAdvance ea = new EAdvance();
             ea.setScid(scid);
             ea.setShiftId(shiftId);
-            ea.setAdvanceType("CARD");
+            ea.setAdvanceType(EAdvanceType.CARD);
             ea.setAmount(BigDecimal.valueOf(cardAmounts[i]));
             ea.setTransactionDate(shiftStart.plusMinutes(30 + i * 45));
             ea.setBatchId(cardData[i][0]);
@@ -201,7 +208,7 @@ public class ShiftTestDataSeeder {
                 EAdvance ea = new EAdvance();
                 ea.setScid(scid);
                 ea.setShiftId(shiftId);
-                ea.setAdvanceType("UPI");
+                ea.setAdvanceType(EAdvanceType.UPI);
                 ea.setAmount(BigDecimal.valueOf(upiAmounts[i]));
                 ea.setTransactionDate(shiftStart.plusMinutes(60 + i * 40));
                 ea.setUpiCompany(upiCompanies.get(i % upiCompanies.size()));
@@ -217,7 +224,7 @@ public class ShiftTestDataSeeder {
             EAdvance ea = new EAdvance();
             ea.setScid(scid);
             ea.setShiftId(shiftId);
-            ea.setAdvanceType("CCMS");
+            ea.setAdvanceType(EAdvanceType.CCMS);
             ea.setAmount(BigDecimal.valueOf(ccmsAmounts[i]));
             ea.setTransactionDate(shiftStart.plusMinutes(90 + i * 60));
             ea.setCcmsNumber("CCMS-" + LocalDate.now() + "-00" + (i + 1));
@@ -230,7 +237,7 @@ public class ShiftTestDataSeeder {
         EAdvance cheque = new EAdvance();
         cheque.setScid(scid);
         cheque.setShiftId(shiftId);
-        cheque.setAdvanceType("CHEQUE");
+        cheque.setAdvanceType(EAdvanceType.CHEQUE);
         cheque.setAmount(BigDecimal.valueOf(12000));
         cheque.setTransactionDate(shiftStart.plusMinutes(120));
         cheque.setChequeNo("456789");
@@ -245,7 +252,7 @@ public class ShiftTestDataSeeder {
         EAdvance bank = new EAdvance();
         bank.setScid(scid);
         bank.setShiftId(shiftId);
-        bank.setAdvanceType("BANK_TRANSFER");
+        bank.setAdvanceType(EAdvanceType.BANK_TRANSFER);
         bank.setAmount(BigDecimal.valueOf(9500));
         bank.setTransactionDate(shiftStart.plusMinutes(150));
         bank.setBankName("HDFC");
@@ -268,10 +275,10 @@ public class ShiftTestDataSeeder {
         OperationalAdvance oa1 = new OperationalAdvance();
         oa1.setScid(scid);
         oa1.setShiftId(shiftId);
-        oa1.setAdvanceType("CASH");
+        oa1.setAdvanceType(AdvanceType.CASH);
         oa1.setAmount(BigDecimal.valueOf(2000));
         oa1.setAdvanceDate(shiftStart.plusMinutes(45));
-        oa1.setStatus("GIVEN");
+        oa1.setStatus(AdvanceStatus.GIVEN);
         oa1.setPurpose("Petty cash for station supplies");
         oa1.setRecipientName(employees.get(0).getName());
         oa1.setEmployee(employees.get(0));
@@ -284,10 +291,10 @@ public class ShiftTestDataSeeder {
         OperationalAdvance oa2 = new OperationalAdvance();
         oa2.setScid(scid);
         oa2.setShiftId(shiftId);
-        oa2.setAdvanceType("CASH");
+        oa2.setAdvanceType(AdvanceType.CASH);
         oa2.setAmount(BigDecimal.valueOf(3500));
         oa2.setAdvanceDate(shiftStart.plusMinutes(100));
-        oa2.setStatus("GIVEN");
+        oa2.setStatus(AdvanceStatus.GIVEN);
         oa2.setPurpose("Vehicle repair");
         oa2.setRecipientName(emp2.getName());
         oa2.setEmployee(emp2);
@@ -299,10 +306,10 @@ public class ShiftTestDataSeeder {
         OperationalAdvance oa3 = new OperationalAdvance();
         oa3.setScid(scid);
         oa3.setShiftId(shiftId);
-        oa3.setAdvanceType("SALARY");
+        oa3.setAdvanceType(AdvanceType.SALARY);
         oa3.setAmount(BigDecimal.valueOf(5000));
         oa3.setAdvanceDate(shiftStart.plusMinutes(180));
-        oa3.setStatus("GIVEN");
+        oa3.setStatus(AdvanceStatus.GIVEN);
         oa3.setPurpose("Salary advance");
         oa3.setRecipientName(employees.get(0).getName());
         oa3.setEmployee(employees.get(0));
@@ -341,7 +348,7 @@ public class ShiftTestDataSeeder {
                 if (nozzle == null) continue;
 
                 InvoiceBill bill = createFuelBill(shiftId, scid, fuel, nozzle, cashQuantities[i],
-                        "CASH", "CASH", "TEST-C-" + (i + 1), null,
+                        BillType.CASH, "CASH", "TEST-C-" + (i + 1), null,
                         shiftStart.plusMinutes(20 + i * 50));
                 invoiceBillRepository.save(bill);
                 cashCount++;
@@ -356,9 +363,15 @@ public class ShiftTestDataSeeder {
                 Nozzle nozzle = productNozzleMap.get(fuel.getId());
                 if (nozzle == null) continue;
 
+                Customer cust = customers.get(i);
                 InvoiceBill bill = createFuelBill(shiftId, scid, fuel, nozzle, creditQuantities[i],
-                        "CREDIT", null, "TEST-A-" + (i + 1), customers.get(i),
+                        BillType.CREDIT, null, "TEST-A-" + (i + 1), cust,
                         shiftStart.plusMinutes(40 + i * 60));
+                // Assign first vehicle of customer
+                List<Vehicle> custVehicles = vehicleRepository.findByCustomerId(cust.getId());
+                if (!custVehicles.isEmpty()) {
+                    bill.setVehicle(custVehicles.get(0));
+                }
                 invoiceBillRepository.save(bill);
                 creditCount++;
             }
@@ -370,7 +383,7 @@ public class ShiftTestDataSeeder {
             InvoiceBill oilCashBill = new InvoiceBill();
             oilCashBill.setScid(scid);
             oilCashBill.setShiftId(shiftId);
-            oilCashBill.setBillType("CASH");
+            oilCashBill.setBillType(BillType.CASH);
             oilCashBill.setPaymentMode("CASH");
             oilCashBill.setDate(shiftStart.plusMinutes(75));
             oilCashBill.setBillNo("TEST-C-OIL-1");
@@ -415,7 +428,7 @@ public class ShiftTestDataSeeder {
                 InvoiceBill oilCash2 = new InvoiceBill();
                 oilCash2.setScid(scid);
                 oilCash2.setShiftId(shiftId);
-                oilCash2.setBillType("CASH");
+                oilCash2.setBillType(BillType.CASH);
                 oilCash2.setPaymentMode("CASH");
                 oilCash2.setDate(shiftStart.plusMinutes(200));
                 oilCash2.setBillNo("TEST-C-OIL-2");
@@ -447,7 +460,7 @@ public class ShiftTestDataSeeder {
             InvoiceBill accBill = new InvoiceBill();
             accBill.setScid(scid);
             accBill.setShiftId(shiftId);
-            accBill.setBillType("CASH");
+            accBill.setBillType(BillType.CASH);
             accBill.setPaymentMode("CASH");
             accBill.setDate(shiftStart.plusMinutes(130));
             accBill.setBillNo("TEST-C-ACC-1");
@@ -494,7 +507,7 @@ public class ShiftTestDataSeeder {
             InvoiceBill oilCreditBill = new InvoiceBill();
             oilCreditBill.setScid(scid);
             oilCreditBill.setShiftId(shiftId);
-            oilCreditBill.setBillType("CREDIT");
+            oilCreditBill.setBillType(BillType.CREDIT);
             oilCreditBill.setDate(shiftStart.plusMinutes(160));
             oilCreditBill.setBillNo("TEST-A-OIL-1");
             oilCreditBill.setCustomer(cust);
@@ -516,6 +529,11 @@ public class ShiftTestDataSeeder {
             ip.setInvoiceBill(oilCreditBill);
             oilCreditBill.getProducts().add(ip);
 
+            // Assign first vehicle of customer
+            List<Vehicle> custVehicles = vehicleRepository.findByCustomerId(cust.getId());
+            if (!custVehicles.isEmpty()) {
+                oilCreditBill.setVehicle(custVehicles.get(0));
+            }
             invoiceBillRepository.save(oilCreditBill);
             creditCount++;
         }
@@ -531,7 +549,7 @@ public class ShiftTestDataSeeder {
     }
 
     private InvoiceBill createFuelBill(Long shiftId, Long scid, Product fuel, Nozzle nozzle,
-                                        double quantity, String billType, String paymentMode,
+                                        double quantity, BillType billType, String paymentMode,
                                         String billNo, Customer customer, LocalDateTime date) {
         BigDecimal qty = BigDecimal.valueOf(quantity);
         BigDecimal price = fuel.getPrice();
@@ -548,7 +566,7 @@ public class ShiftTestDataSeeder {
         bill.setGrossAmount(amount);
         bill.setTotalDiscount(BigDecimal.ZERO);
         bill.setNetAmount(amount);
-        bill.setBillDesc("Test " + billType.toLowerCase() + " bill - " + fuel.getName());
+        bill.setBillDesc("Test " + billType.name().toLowerCase() + " bill - " + fuel.getName());
 
         InvoiceProduct ip = new InvoiceProduct();
         ip.setScid(scid);
@@ -720,6 +738,52 @@ public class ShiftTestDataSeeder {
             count++;
         }
 
+        return count;
+    }
+
+    // ========== 9. Product Inventory for non-fuel products ==========
+
+    private int seedProductInventory(Long shiftId, Long scid) {
+        // Calculate sales per non-fuel product from the invoices we just created
+        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+        Map<Long, Double> salesByProduct = new HashMap<>();
+
+        for (InvoiceBill inv : invoices) {
+            if (inv.getProducts() != null) {
+                for (InvoiceProduct ip : inv.getProducts()) {
+                    if (ip.getProduct() != null && !"FUEL".equalsIgnoreCase(ip.getProduct().getCategory())) {
+                        double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
+                        salesByProduct.merge(ip.getProduct().getId(), qty, Double::sum);
+                    }
+                }
+            }
+        }
+
+        int count = 0;
+        for (Map.Entry<Long, Double> entry : salesByProduct.entrySet()) {
+            Product product = productRepository.findById(entry.getKey()).orElse(null);
+            if (product == null) continue;
+
+            double sales = entry.getValue();
+            double openStock = sales + 10; // simulate having more stock than sold
+
+            ProductInventory pi = new ProductInventory();
+            pi.setScid(scid);
+            pi.setShiftId(shiftId);
+            pi.setDate(LocalDate.now());
+            pi.setProduct(product);
+            pi.setOpenStock(openStock);
+            pi.setIncomeStock(0.0);
+            pi.setTotalStock(openStock);
+            pi.setCloseStock(openStock - sales);
+            pi.setSales(sales);
+            pi.setRate(product.getPrice());
+            pi.setAmount(product.getPrice() != null
+                    ? product.getPrice().multiply(BigDecimal.valueOf(sales)).setScale(2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO);
+            productInventoryRepository.save(pi);
+            count++;
+        }
         return count;
     }
 }

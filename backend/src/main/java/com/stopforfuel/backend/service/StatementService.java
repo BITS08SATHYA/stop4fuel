@@ -1,15 +1,13 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.dto.StatementStats;
-import com.stopforfuel.backend.entity.Company;
-import com.stopforfuel.backend.entity.Customer;
-import com.stopforfuel.backend.entity.InvoiceBill;
-import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
+import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -33,10 +31,12 @@ public class StatementService {
     private final InvoiceBillRepository invoiceBillRepository;
     private final CustomerRepository customerRepository;
     private final CompanyRepository companyRepository;
+    private final PaymentRepository paymentRepository;
     private final BillSequenceService billSequenceService;
     private final StatementPdfGenerator pdfGenerator;
     private final S3StorageService s3StorageService;
 
+    @Transactional(readOnly = true)
     public Page<Statement> getStatements(Long customerId, String status, String categoryType, LocalDate fromDate, LocalDate toDate, String search, Pageable pageable) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         if (search != null && !search.isBlank()) {
@@ -45,28 +45,34 @@ public class StatementService {
         return statementRepository.findWithFilters(customerId, status, ct, fromDate, toDate, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Statement> getAllStatements() {
         return statementRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Statement getStatementById(Long id) {
         return statementRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public Statement getStatementByNo(String statementNo) {
         return statementRepository.findByStatementNo(statementNo)
                 .orElseThrow(() -> new RuntimeException("Statement not found with no: " + statementNo));
     }
 
+    @Transactional(readOnly = true)
     public List<Statement> getStatementsByCustomer(Long customerId) {
         return statementRepository.findByCustomerId(customerId);
     }
 
+    @Transactional(readOnly = true)
     public List<Statement> getOutstandingStatements() {
         return statementRepository.findByStatus("NOT_PAID");
     }
 
+    @Transactional(readOnly = true)
     public List<Statement> getOutstandingByCustomer(Long customerId) {
         return statementRepository.findByCustomerIdAndStatus(customerId, "NOT_PAID");
     }
@@ -129,7 +135,7 @@ public class StatementService {
         BigDecimal roundingAmount = netAmount.subtract(totalAmount);
 
         // Get next statement number
-        String nextStatementNo = billSequenceService.getNextBillNo("STMT");
+        String nextStatementNo = billSequenceService.getNextBillNo(com.stopforfuel.backend.enums.BillType.STMT);
 
         // Create statement
         Statement statement = new Statement();
@@ -159,8 +165,24 @@ public class StatementService {
     }
 
     /**
+     * Approve a DRAFT statement: set status to NOT_PAID and auto-generate PDF.
+     */
+    @Transactional
+    public Statement approveStatement(Long id) {
+        Statement stmt = getStatementById(id);
+        if (!"DRAFT".equals(stmt.getStatus())) {
+            throw new BusinessException("Only DRAFT statements can be approved");
+        }
+        stmt.setStatus("NOT_PAID");
+        Statement saved = statementRepository.save(stmt);
+        generateAndStorePdf(saved.getId());
+        return saved;
+    }
+
+    /**
      * Preview unlinked credit bills matching the given filters (without creating a statement).
      */
+    @Transactional(readOnly = true)
     public List<InvoiceBill> previewBills(Long customerId, LocalDate fromDate, LocalDate toDate,
                                           Long vehicleId, Long productId) {
         LocalDateTime fromDateTime = fromDate.atStartOfDay();
@@ -226,7 +248,7 @@ public class StatementService {
             statement.setBalanceAmount(BigDecimal.ZERO);
             // Mark remaining bills as PAID
             for (InvoiceBill remaining : remainingBills) {
-                remaining.setPaymentStatus("PAID");
+                remaining.setPaymentStatus(com.stopforfuel.backend.enums.PaymentStatus.PAID);
                 invoiceBillRepository.save(remaining);
             }
         }
@@ -237,6 +259,7 @@ public class StatementService {
     /**
      * Get all bills linked to a statement, useful for statement detail/print view.
      */
+    @Transactional(readOnly = true)
     public List<InvoiceBill> getStatementBills(Long statementId) {
         return invoiceBillRepository.findByStatementId(statementId);
     }
@@ -252,7 +275,9 @@ public class StatementService {
                 statement.getScid() != null ? statement.getScid() : SecurityUtils.getScid());
         Company company = !companies.isEmpty() ? companies.get(0) : null;
 
-        byte[] pdfBytes = pdfGenerator.generate(statement, bills, company);
+        List<Payment> payments = paymentRepository.findByStatementId(id);
+
+        byte[] pdfBytes = pdfGenerator.generate(statement, bills, company, payments);
 
         LocalDate date = statement.getStatementDate() != null ? statement.getStatementDate() : LocalDate.now();
         Long scid = statement.getScid() != null ? statement.getScid() : SecurityUtils.getScid();
@@ -272,6 +297,7 @@ public class StatementService {
         return statementRepository.save(statement);
     }
 
+    @Transactional(readOnly = true)
     public String getStatementPdfUrl(Long id) {
         Statement statement = statementRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + id));
@@ -295,6 +321,7 @@ public class StatementService {
         statementRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public StatementStats getStats() {
         LocalDate startOfThisMonth = LocalDate.now().withDayOfMonth(1);
         LocalDate startOfLastMonth = startOfThisMonth.minusMonths(1);

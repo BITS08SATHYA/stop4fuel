@@ -7,6 +7,7 @@ import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ public class LedgerService {
      * Calculate opening balance for a customer at a given date.
      * Opening Balance = Total Credit Billed (before date) - Total Payments Received (before date)
      */
+    @Transactional(readOnly = true)
     public BigDecimal getOpeningBalance(Long customerId, LocalDate asOfDate) {
         LocalDateTime beforeDate = asOfDate.atStartOfDay();
 
@@ -41,6 +43,7 @@ public class LedgerService {
      * Returns chronological list of all credit bills (debits) and payments (credits)
      * with running balance.
      */
+    @Transactional(readOnly = true)
     public CustomerLedger getCustomerLedger(Long customerId, LocalDate fromDate, LocalDate toDate) {
         LocalDateTime fromDateTime = fromDate.atStartOfDay();
         LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
@@ -50,7 +53,7 @@ public class LedgerService {
         // Fetch all credit bills in period (both linked and unlinked to statements)
         List<InvoiceBill> allCreditBills = invoiceBillRepository.findAllByScid(SecurityUtils.getScid()).stream()
                 .filter(b -> b.getCustomer() != null && b.getCustomer().getId().equals(customerId))
-                .filter(b -> "CREDIT".equals(b.getBillType()))
+                .filter(b -> com.stopforfuel.backend.enums.BillType.CREDIT.equals(b.getBillType()))
                 .filter(b -> b.getDate() != null
                         && !b.getDate().isBefore(fromDateTime)
                         && !b.getDate().isAfter(toDateTime))
@@ -118,8 +121,9 @@ public class LedgerService {
     /**
      * Get outstanding (unpaid) credit bills for a customer.
      */
+    @Transactional(readOnly = true)
     public List<InvoiceBill> getOutstandingBills(Long customerId) {
-        return invoiceBillRepository.findByCustomerIdAndPaymentStatus(customerId, "NOT_PAID");
+        return invoiceBillRepository.findByCustomerIdAndPaymentStatus(customerId, com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID);
     }
 
     // DTOs

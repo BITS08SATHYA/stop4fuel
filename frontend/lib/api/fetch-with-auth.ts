@@ -10,7 +10,15 @@ export async function fetchWithAuth(
 ): Promise<Response> {
     const headers = new Headers(options.headers || {});
 
-    if (!DEV_MODE) {
+    if (DEV_MODE) {
+        // In dev mode, use stored token from passcode login
+        if (typeof window !== "undefined") {
+            const storedToken = localStorage.getItem("sff-token");
+            if (storedToken) {
+                headers.set("Authorization", `Bearer ${storedToken}`);
+            }
+        }
+    } else {
         try {
             const session = await fetchAuthSession();
             const token = session.tokens?.accessToken?.toString();

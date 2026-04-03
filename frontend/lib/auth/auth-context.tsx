@@ -16,7 +16,9 @@ interface AuthUser {
     username?: string;
     name: string;
     email?: string;
+    phone?: string;
     role: string;
+    designation?: string;
     permissions: string[];
 }
 
@@ -33,6 +35,13 @@ interface AuthContextType {
         error?: string;
         challengeName?: string;
     }>;
+    loginWithPasscode: (
+        phone: string,
+        passcode: string,
+    ) => Promise<{
+        success: boolean;
+        error?: string;
+    }>;
     logout: () => Promise<void>;
     hasPermission: (code: string) => boolean;
 }
@@ -43,6 +52,7 @@ const AuthContext = createContext<AuthContextType>({
     isAuthenticated: false,
     accessToken: null,
     login: async () => ({ success: false }),
+    loginWithPasscode: async () => ({ success: false }),
     logout: async () => {},
     hasPermission: () => false,
 });
@@ -54,7 +64,8 @@ export function useAuth() {
 const DEV_MODE = !process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
 
 function setAuthCookie(token: string) {
-    document.cookie = `sff-auth-session=${token}; path=/; max-age=3600; SameSite=Lax; Secure`;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `sff-auth-session=${token}; path=/; max-age=3600; SameSite=Lax${secure}`;
 }
 
 function clearAuthCookie() {
@@ -63,13 +74,30 @@ function clearAuthCookie() {
 
 const getApiBaseUrl = () => {
     if (typeof window !== "undefined") {
+        const host = window.location.hostname;
+        // devapp.stopforfuel.com → devapi.stopforfuel.com
+        if (host.startsWith("devapp.")) {
+            return `${window.location.protocol}//devapi.${host.slice(7)}/api`;
+        }
         return (
             process.env.NEXT_PUBLIC_API_URL ||
-            `${window.location.protocol}//${window.location.hostname}:8080/api`
+            `${window.location.protocol}//${host}:8080/api`
         );
     }
     return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 };
+
+export function getDashboardType(designation?: string, role?: string): "owner" | "cashier" | "employee" | "customer" {
+    if (role === "CUSTOMER") return "customer";
+    if (role === "OWNER" || role === "ADMIN") return "owner";
+
+    const designationMap: Record<string, "owner" | "cashier" | "employee"> = {
+        "Manager": "owner",
+        "Supervisor": "owner",
+        "Cashier": "cashier",
+    };
+    return designationMap[designation || ""] || "employee";
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
@@ -78,22 +106,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const loadUser = useCallback(async () => {
         try {
-            if (DEV_MODE) {
-                const res = await fetchWithAuth(
+            // Always check for passcode token first (works in both dev and prod)
+            const storedToken = localStorage.getItem("sff-token");
+            if (storedToken) {
+                const res = await fetch(
                     `${getApiBaseUrl()}/auth/me`,
+                    { headers: { Authorization: `Bearer ${storedToken}` } }
                 );
                 if (res.ok) {
                     const data = await res.json();
                     setUser({
-                        cognitoId: data.cognitoId || "dev-user-001",
-                        name: data.name || "Dev Owner",
-                        email: data.email || "owner@stopforfuel.com",
-                        role: data.role || "OWNER",
-                        permissions: data.permissions || [],
                         id: data.id,
+                        cognitoId: data.cognitoId || "",
                         username: data.username,
+                        name: data.name || "User",
+                        email: data.email,
+                        phone: data.phone,
+                        role: data.role || "EMPLOYEE",
+                        designation: data.designation,
+                        permissions: data.permissions || [],
                     });
+                    setAccessToken(storedToken);
+                    setAuthCookie(storedToken);
+                    setIsLoading(false);
+                    return;
+                } else {
+                    // Token expired or invalid, clear it
+                    localStorage.removeItem("sff-token");
+                    clearAuthCookie();
                 }
+            }
+
+            if (DEV_MODE) {
+                // No token and no Cognito: send to login page
+                setUser(null);
                 setIsLoading(false);
                 return;
             }
@@ -136,7 +182,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     email:
                         data.email ||
                         (idToken?.payload?.email as string),
+                    phone: data.phone,
                     role: data.role || role,
+                    designation: data.designation,
                     permissions: data.permissions || [],
                 });
             } else {
@@ -199,6 +247,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         [loadUser],
     );
 
+    const loginWithPasscode = useCallback(
+        async (
+            phone: string,
+            passcode: string,
+        ): Promise<{ success: boolean; error?: string }> => {
+            try {
+                const res = await fetch(
+                    `${getApiBaseUrl()}/auth/login`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone, passcode }),
+                    }
+                );
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    return { success: false, error: data.error || "Sign in failed" };
+                }
+
+                const data = await res.json();
+                const token = data.token;
+
+                setAccessToken(token);
+                setAuthCookie(token);
+                localStorage.setItem("sff-token", token);
+
+                const userData = data.user;
+                setUser({
+                    id: userData.id,
+                    cognitoId: userData.cognitoId || "",
+                    username: userData.username,
+                    name: userData.name || "User",
+                    email: userData.email,
+                    phone: userData.phone,
+                    role: userData.role || "EMPLOYEE",
+                    designation: userData.designation,
+                    permissions: userData.permissions || [],
+                });
+
+                return { success: true };
+            } catch (err: unknown) {
+                const error = err as Error;
+                return {
+                    success: false,
+                    error: error.message || "Sign in failed",
+                };
+            }
+        },
+        [],
+    );
+
     const logout = useCallback(async () => {
         try {
             if (!DEV_MODE) {
@@ -207,10 +307,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setAccessToken(null);
             clearAuthCookie();
-            window.location.href = "/";
+            localStorage.removeItem("sff-token");
+            window.location.href = "/login";
         } catch {
             clearAuthCookie();
-            window.location.href = "/";
+            localStorage.removeItem("sff-token");
+            window.location.href = "/login";
         }
     }, []);
 
@@ -231,6 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 isAuthenticated: !!user,
                 accessToken,
                 login,
+                loginWithPasscode,
                 logout,
                 hasPermission,
             }}

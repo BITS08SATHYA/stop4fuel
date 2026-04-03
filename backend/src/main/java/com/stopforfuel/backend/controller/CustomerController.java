@@ -95,14 +95,18 @@ public class CustomerController {
 
     @PatchMapping("/{id}/block")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public CustomerDetailDTO blockCustomer(@PathVariable Long id) {
-        return CustomerDetailDTO.from(customerService.blockCustomer(id));
+    public CustomerDetailDTO blockCustomer(@PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        String notes = body != null ? body.get("notes") : null;
+        return CustomerDetailDTO.from(customerService.blockCustomer(id, notes));
     }
 
     @PatchMapping("/{id}/unblock")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public CustomerDetailDTO unblockCustomer(@PathVariable Long id) {
-        return CustomerDetailDTO.from(customerService.unblockCustomer(id));
+    public CustomerDetailDTO unblockCustomer(@PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        String notes = body != null ? body.get("notes") : null;
+        return CustomerDetailDTO.from(customerService.unblockCustomer(id, notes));
     }
 
     @GetMapping("/{id}/credit-info")

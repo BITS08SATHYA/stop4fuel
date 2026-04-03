@@ -16,6 +16,9 @@ interface Company {
     site: string;
     type: string;
     address: string;
+    phone: string;
+    email: string;
+    ownerName: string;
 }
 
 export default function CompanyListPage() {

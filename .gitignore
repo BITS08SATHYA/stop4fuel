@@ -36,6 +36,7 @@ Thumbs.db
 uploads/
 
 # === Deploy ===
+deploy.sh
 deploy/
 
 # === Test Results ===
@@ -65,3 +66,7 @@ models/
 todos
 yet_to_do.txt
 landing_page/
+CODEBASE_ANALYSIS.md
+SECURITY_AUDIT.md
+migration_bunkdb.txt
+start_services.sh

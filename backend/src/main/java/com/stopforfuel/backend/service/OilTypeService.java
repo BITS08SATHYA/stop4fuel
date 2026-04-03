@@ -4,6 +4,7 @@ import com.stopforfuel.backend.entity.OilType;
 import com.stopforfuel.backend.repository.OilTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -13,14 +14,17 @@ public class OilTypeService {
 
     private final OilTypeRepository repository;
 
+    @Transactional(readOnly = true)
     public List<OilType> getAllOilTypes() {
         return repository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public List<OilType> getActiveOilTypes() {
         return repository.findByActiveTrue();
     }
 
+    @Transactional(readOnly = true)
     public OilType getOilTypeById(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("OilType not found with id: " + id));

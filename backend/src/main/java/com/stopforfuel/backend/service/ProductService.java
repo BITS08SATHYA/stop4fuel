@@ -7,36 +7,41 @@ import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.GradeTypeRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
 
-    @Autowired
-    private GradeTypeRepository gradeTypeRepository;
+    private final GradeTypeRepository gradeTypeRepository;
 
+    @Transactional(readOnly = true)
     public List<Product> getAllProducts() {
         return productRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Product> getActiveProducts() {
         return productRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Product> getProductsByCategory(String category) {
         return productRepository.findByCategoryIgnoreCaseAndActiveAndScid(category, true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Product> getActiveNonFuelProducts() {
         return productRepository.findByCategoryNotIgnoreCaseAndActiveAndScid("FUEL", true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Product getProductById(Long id) {
         return productRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
@@ -60,6 +65,7 @@ public class ProductService {
         product.setSupplier(productDetails.getSupplier());
         product.setOilType(productDetails.getOilType());
         product.setGrade(productDetails.getGrade());
+        product.setDiscountRate(productDetails.getDiscountRate());
         return productRepository.save(product);
     }
 

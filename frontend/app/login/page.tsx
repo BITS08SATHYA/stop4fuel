@@ -2,16 +2,15 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Fuel, Eye, EyeOff } from "lucide-react";
+import { Fuel, Phone } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 
 function LoginContent() {
-    const { isAuthenticated, isLoading, login } = useAuth();
+    const { isAuthenticated, isLoading, loginWithPasscode } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
+    const [phone, setPhone] = useState("");
+    const [passcode, setPasscode] = useState("");
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,16 +32,21 @@ function LoginContent() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        setIsSubmitting(true);
 
+        if (!/^[6-9]\d{9}$/.test(phone)) {
+            setError("Enter a valid 10-digit mobile number");
+            return;
+        }
+        if (!/^\d{4}$/.test(passcode)) {
+            setError("Enter a valid 4-digit passcode");
+            return;
+        }
+
+        setIsSubmitting(true);
         try {
-            const result = await login(email, password);
+            const result = await loginWithPasscode(phone, passcode);
             if (!result.success) {
-                if (result.challengeName === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
-                    setError("You need to set a new password. Please contact your admin.");
-                } else {
-                    setError(result.error || "Sign in failed. Please check your credentials.");
-                }
+                setError(result.error || "Sign in failed. Check your credentials.");
             }
         } catch {
             setError("An unexpected error occurred. Please try again.");
@@ -80,45 +84,50 @@ function LoginContent() {
                     )}
 
                     <div className="space-y-2">
-                        <label htmlFor="email" className="text-sm font-medium text-foreground">
-                            Email
+                        <label htmlFor="phone" className="text-sm font-medium text-foreground">
+                            Mobile Number
                         </label>
-                        <input
-                            id="email"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="name@host.com"
-                            required
-                            autoComplete="email"
-                            className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                        />
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm flex items-center gap-1">
+                                <Phone className="w-4 h-4" />
+                                +91
+                            </span>
+                            <input
+                                id="phone"
+                                type="tel"
+                                inputMode="numeric"
+                                value={phone}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                    setPhone(val);
+                                }}
+                                placeholder="9840011111"
+                                required
+                                autoComplete="tel"
+                                className="w-full pl-20 pr-3 py-2 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label htmlFor="password" className="text-sm font-medium text-foreground">
-                            Password
+                        <label htmlFor="passcode" className="text-sm font-medium text-foreground">
+                            Passcode
                         </label>
-                        <div className="relative">
-                            <input
-                                id="password"
-                                type={showPassword ? "text" : "password"}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
-                                required
-                                autoComplete="current-password"
-                                className="w-full px-3 py-2 pr-10 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                tabIndex={-1}
-                            >
-                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                        </div>
+                        <input
+                            id="passcode"
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={passcode}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                setPasscode(val);
+                            }}
+                            placeholder="4-digit passcode"
+                            required
+                            autoComplete="current-password"
+                            className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary tracking-[0.5em] text-center text-lg"
+                        />
                     </div>
 
                     <button
@@ -129,9 +138,14 @@ function LoginContent() {
                         {isSubmitting ? "Signing in..." : "Sign In"}
                     </button>
 
-                    <p className="text-center text-sm text-muted-foreground">
-                        Contact your station admin for an account
-                    </p>
+                    <div className="flex items-center justify-between text-sm">
+                        <a href="/forgot-passcode" className="text-primary hover:underline">
+                            Forgot Passcode?
+                        </a>
+                        <span className="text-muted-foreground">
+                            Contact admin for an account
+                        </span>
+                    </div>
                     <a
                         href={process.env.NEXT_PUBLIC_LANDING_URL || '/'}
                         className="text-center text-sm text-muted-foreground hover:text-foreground transition-colors block"

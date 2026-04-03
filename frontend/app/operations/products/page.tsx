@@ -47,6 +47,7 @@ export default function ProductsPage() {
     const [oilTypeId, setOilTypeId] = useState("");
     const [gradeTypeId, setGradeTypeId] = useState("");
     const [fuelFamily, setFuelFamily] = useState("");
+    const [discountRate, setDiscountRate] = useState("");
     const [active, setActive] = useState(true);
     const [apiError, setApiError] = useState("");
 
@@ -97,6 +98,7 @@ export default function ProductsPage() {
             setOilTypeId(product.oilType?.id.toString() || "");
             setGradeTypeId(product.gradeType?.id.toString() || "");
             setFuelFamily(product.fuelFamily || "");
+            setDiscountRate(product.discountRate ? product.discountRate.toString() : "");
             setActive(product.active);
         } else {
             setEditingProduct(null);
@@ -111,6 +113,7 @@ export default function ProductsPage() {
             setOilTypeId("");
             setGradeTypeId("");
             setFuelFamily("");
+            setDiscountRate("");
             setActive(true);
         }
         clearAllErrors();
@@ -135,6 +138,7 @@ export default function ProductsPage() {
                 oilType: oilTypeId ? { id: Number(oilTypeId) } : undefined,
                 gradeType: gradeTypeId ? { id: Number(gradeTypeId) } : undefined,
                 fuelFamily: category === 'Fuel' && fuelFamily ? fuelFamily : undefined,
+                discountRate: discountRate ? Number(discountRate) : undefined,
                 active
             };
 
@@ -320,6 +324,9 @@ export default function ProductsPage() {
                                             <td className="px-6 py-4 text-right">
                                                 <span className="text-sm font-bold text-primary">₹{(product.price || 0).toFixed(2)}</span>
                                                 <span className="text-[10px] text-muted-foreground block">per {product.unit}</span>
+                                                {product.discountRate != null && product.discountRate > 0 && (
+                                                    <span className="text-[10px] text-emerald-500 font-bold block">-₹{product.discountRate.toFixed(2)}/{product.unit} discount</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
@@ -444,6 +451,24 @@ export default function ProductsPage() {
                                 placeholder="0.00"
                             />
                             <FieldError error={errors.price} />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
+                                Discount Rate (₹/unit) <span className="text-muted-foreground font-normal text-xs">(Optional)</span>
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={discountRate}
+                                onChange={(e) => setDiscountRate(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
+                                placeholder="0.00"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Per-unit discount for cash invoices (e.g., ₹2.50/liter)
+                            </p>
                         </div>
 
                         <div>

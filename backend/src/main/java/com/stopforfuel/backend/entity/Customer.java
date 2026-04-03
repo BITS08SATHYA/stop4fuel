@@ -52,6 +52,13 @@ public class Customer extends User {
     @Column(name = "longitude", precision = 10, scale = 7)
     private BigDecimal longitude;
 
+    /** Credit monitoring fields */
+    @Column(name = "last_blocked_at")
+    private java.time.LocalDateTime lastBlockedAt;
+
+    @Column(name = "block_count", nullable = false, columnDefinition = "integer default 0")
+    private Integer blockCount = 0;
+
     /** Statement preferences */
     @Column(name = "statement_frequency", length = 20)
     private String statementFrequency; // MONTHLY, BIWEEKLY, WEEKLY, CUSTOM
@@ -69,16 +76,16 @@ public class Customer extends User {
      */
     @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     public boolean isActive() {
-        String s = getStatus();
-        return s == null || "ACTIVE".equals(s);
+        com.stopforfuel.backend.enums.EntityStatus s = getStatus();
+        return s == null || s == com.stopforfuel.backend.enums.EntityStatus.ACTIVE;
     }
 
     public boolean isBlocked() {
-        return "BLOCKED".equals(getStatus());
+        return getStatus() == com.stopforfuel.backend.enums.EntityStatus.BLOCKED;
     }
 
     public boolean canRaiseInvoice() {
-        String s = getStatus();
-        return s == null || "ACTIVE".equals(s);
+        com.stopforfuel.backend.enums.EntityStatus s = getStatus();
+        return s == null || s == com.stopforfuel.backend.enums.EntityStatus.ACTIVE;
     }
 }

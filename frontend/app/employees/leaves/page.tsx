@@ -183,7 +183,7 @@ export default function LeaveManagementPage() {
         if (!validateType({ typeName, maxDaysPerYear })) return;
         try {
             const data = {
-                typeName,
+                name: typeName,
                 maxDaysPerYear: parseInt(maxDaysPerYear),
                 carryForward,
                 maxCarryForwardDays: parseInt(maxCarryForwardDays),
@@ -211,7 +211,7 @@ export default function LeaveManagementPage() {
 
     const handleEditType = (lt: LeaveType) => {
         setEditingType(lt);
-        setTypeName(lt.typeName);
+        setTypeName(lt.name);
         setMaxDaysPerYear(lt.maxDaysPerYear?.toString() || "");
         setCarryForward(lt.carryForward || false);
         setMaxCarryForwardDays(lt.maxCarryForwardDays?.toString() || "0");
@@ -368,7 +368,7 @@ export default function LeaveManagementPage() {
                                                 <tr key={r.id} className="hover:bg-white/5 transition-colors group">
                                                     <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                                     <td className="px-6 py-4 font-medium text-foreground">{r.employee?.name}</td>
-                                                    <td className="px-6 py-4 text-muted-foreground">{r.leaveType?.typeName}</td>
+                                                    <td className="px-6 py-4 text-muted-foreground">{r.leaveType?.name}</td>
                                                     <td className="px-6 py-4 text-sm">{r.fromDate}</td>
                                                     <td className="px-6 py-4 text-sm">{r.toDate}</td>
                                                     <td className="px-6 py-4 text-center font-bold text-primary">{r.numberOfDays}</td>
@@ -435,7 +435,7 @@ export default function LeaveManagementPage() {
                                 {leaveTypes.map((lt) => (
                                     <GlassCard key={lt.id} className="p-5">
                                         <div className="flex justify-between items-start mb-3">
-                                            <h3 className="text-lg font-semibold text-foreground">{lt.typeName}</h3>
+                                            <h3 className="text-lg font-semibold text-foreground">{lt.name}</h3>
                                             <PermissionGate permission="EMPLOYEE_MANAGE">
                                                 <div className="flex gap-1">
                                                     <button onClick={() => handleEditType(lt)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground">
@@ -511,7 +511,7 @@ export default function LeaveManagementPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {leaveBalances.map((bal) => (
                                     <GlassCard key={bal.id} className="p-5">
-                                        <h3 className="text-lg font-semibold text-foreground mb-3">{bal.leaveType?.typeName}</h3>
+                                        <h3 className="text-lg font-semibold text-foreground mb-3">{bal.leaveType?.name}</h3>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between">
                                                 <span className="text-muted-foreground">Allotted</span>
@@ -573,7 +573,7 @@ export default function LeaveManagementPage() {
                             >
                                 <option value="">Select Type</option>
                                 {leaveTypes.map((lt) => (
-                                    <option key={lt.id} value={lt.id}>{lt.typeName}</option>
+                                    <option key={lt.id} value={lt.id}>{lt.name}</option>
                                 ))}
                             </select>
                             <FieldError error={reqErrors.leaveTypeId} />

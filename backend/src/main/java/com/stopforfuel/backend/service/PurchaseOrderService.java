@@ -4,6 +4,7 @@ import com.stopforfuel.backend.dto.ReceiveItemDTO;
 import com.stopforfuel.backend.entity.GodownStock;
 import com.stopforfuel.backend.entity.PurchaseOrder;
 import com.stopforfuel.backend.entity.PurchaseOrderItem;
+import com.stopforfuel.backend.enums.PurchaseOrderStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.GodownStockRepository;
@@ -23,19 +24,23 @@ public class PurchaseOrderService {
     private final PurchaseOrderRepository repository;
     private final GodownStockRepository godownStockRepository;
 
+    @Transactional(readOnly = true)
     public List<PurchaseOrder> getAll() {
         return repository.findByScidOrderByOrderDateDesc(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public PurchaseOrder getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("PurchaseOrder not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseOrder> getByStatus(String status) {
-        return repository.findByStatusAndScid(status, SecurityUtils.getScid());
+        return repository.findByStatusAndScid(PurchaseOrderStatus.valueOf(status), SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseOrder> getBySupplier(Long supplierId) {
         return repository.findBySupplierIdAndScid(supplierId, SecurityUtils.getScid());
     }
@@ -43,7 +48,7 @@ public class PurchaseOrderService {
     public PurchaseOrder save(PurchaseOrder order) {
         if (order.getScid() == null) order.setScid(SecurityUtils.getScid());
         if (order.getOrderDate() == null) order.setOrderDate(LocalDate.now());
-        if (order.getStatus() == null) order.setStatus("DRAFT");
+        if (order.getStatus() == null) order.setStatus(PurchaseOrderStatus.DRAFT);
         // Link items back to order
         if (order.getItems() != null) {
             for (PurchaseOrderItem item : order.getItems()) {
@@ -55,7 +60,7 @@ public class PurchaseOrderService {
 
     public PurchaseOrder update(Long id, PurchaseOrder details) {
         PurchaseOrder existing = getById(id);
-        if (!"DRAFT".equals(existing.getStatus())) {
+        if (existing.getStatus() != PurchaseOrderStatus.DRAFT) {
             throw new BusinessException("Can only edit purchase orders in DRAFT status");
         }
         existing.setSupplier(details.getSupplier());
@@ -77,7 +82,7 @@ public class PurchaseOrderService {
     @Transactional
     public PurchaseOrder receiveDelivery(Long id, List<ReceiveItemDTO> receivedItems) {
         PurchaseOrder order = getById(id);
-        if ("CANCELLED".equals(order.getStatus()) || "RECEIVED".equals(order.getStatus())) {
+        if (order.getStatus() == PurchaseOrderStatus.CANCELLED || order.getStatus() == PurchaseOrderStatus.RECEIVED) {
             throw new BusinessException("Cannot receive delivery for a " + order.getStatus() + " order");
         }
 
@@ -113,9 +118,9 @@ public class PurchaseOrderService {
                 .anyMatch(i -> i.getReceivedQty() != null && i.getReceivedQty() > 0);
 
         if (allReceived) {
-            order.setStatus("RECEIVED");
+            order.setStatus(PurchaseOrderStatus.RECEIVED);
         } else if (anyReceived) {
-            order.setStatus("PARTIALLY_RECEIVED");
+            order.setStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED);
         }
 
         return repository.save(order);
@@ -123,10 +128,10 @@ public class PurchaseOrderService {
 
     public PurchaseOrder cancel(Long id) {
         PurchaseOrder order = getById(id);
-        if (!"DRAFT".equals(order.getStatus()) && !"ORDERED".equals(order.getStatus())) {
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.ORDERED) {
             throw new BusinessException("Can only cancel DRAFT or ORDERED purchase orders");
         }
-        order.setStatus("CANCELLED");
+        order.setStatus(PurchaseOrderStatus.CANCELLED);
         return repository.save(order);
     }
 }

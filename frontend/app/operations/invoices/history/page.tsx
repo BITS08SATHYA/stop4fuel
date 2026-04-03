@@ -14,7 +14,7 @@ import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
     type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
-    type Product, type Nozzle, type Vehicle
+    type Product, type Nozzle, type Vehicle, type Customer
 } from "@/lib/api/station";
 
 interface EditLine {
@@ -66,11 +66,11 @@ export default function InvoiceHistoryPage() {
     const [editPaymentMode, setEditPaymentMode] = useState("");
     const [editVehicleKM, setEditVehicleKM] = useState("");
     const [editBillType, setEditBillType] = useState<"CASH" | "CREDIT">("CASH");
-    const [editCustomer, setEditCustomer] = useState<any>(null);
-    const [editVehicle, setEditVehicle] = useState<any>(null);
+    const [editCustomer, setEditCustomer] = useState<{ id: number; name: string; username?: string } | null>(null);
+    const [editVehicle, setEditVehicle] = useState<{ id: number; vehicleNumber: string } | null>(null);
     const [editCustomerSearch, setEditCustomerSearch] = useState("");
-    const [editCustomerSuggestions, setEditCustomerSuggestions] = useState<any[]>([]);
-    const [editCustomerVehicles, setEditCustomerVehicles] = useState<any[]>([]);
+    const [editCustomerSuggestions, setEditCustomerSuggestions] = useState<Customer[]>([]);
+    const [editCustomerVehicles, setEditCustomerVehicles] = useState<Vehicle[]>([]);
     const [editVehicleSearch, setEditVehicleSearch] = useState("");
     const [editVehicleResults, setEditVehicleResults] = useState<Vehicle[]>([]);
     const [saving, setSaving] = useState(false);
@@ -195,8 +195,8 @@ export default function InvoiceHistoryPage() {
         setEditLines(
             (inv.products || []).map(ip => ({
                 id: ip.id,
-                product: ip.product || null,
-                nozzle: ip.nozzle || null,
+                product: ip.productId ? (allProducts.find(p => p.id === ip.productId) || { id: ip.productId, name: ip.productName } as any) : null,
+                nozzle: ip.nozzleId ? (allNozzles.find(n => n.id === ip.nozzleId) || { id: ip.nozzleId, nozzleName: ip.nozzleName } as any) : null,
                 quantity: ip.quantity != null ? String(ip.quantity) : "",
                 unitPrice: ip.unitPrice != null ? String(ip.unitPrice) : "",
                 discountRate: ip.discountRate != null ? String(ip.discountRate) : "",
@@ -273,7 +273,7 @@ export default function InvoiceHistoryPage() {
                     unitPrice: parseFloat(l.unitPrice) || 0,
                     amount: l.amount,
                     discountRate: parseFloat(l.discountRate) || undefined,
-                })) as InvoiceProduct[],
+                })) as any[],
             });
             setEditModal(false);
             refresh();
@@ -535,8 +535,8 @@ export default function InvoiceHistoryPage() {
                                                                     <tbody>
                                                                         {inv.products.map((ip, idx) => (
                                                                             <tr key={idx} className="border-t border-border/20">
-                                                                                <td className="py-1.5 pr-4 text-foreground">{ip.product?.name || "—"}</td>
-                                                                                <td className="py-1.5 pr-4 font-mono text-muted-foreground">{ip.nozzle?.nozzleName || "—"}</td>
+                                                                                <td className="py-1.5 pr-4 text-foreground">{ip.productName || "—"}</td>
+                                                                                <td className="py-1.5 pr-4 font-mono text-muted-foreground">{ip.nozzleName || "—"}</td>
                                                                                 <td className="py-1.5 pr-4 text-right font-mono">{ip.quantity?.toFixed(2)}</td>
                                                                                 <td className="py-1.5 pr-4 text-right font-mono">₹{ip.unitPrice?.toFixed(2)}</td>
                                                                                 <td className="py-1.5 pr-4 text-right font-mono">₹{(ip.grossAmount || 0).toFixed(2)}</td>

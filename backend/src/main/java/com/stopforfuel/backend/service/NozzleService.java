@@ -7,39 +7,43 @@ import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.backend.repository.TankRepository;
 import com.stopforfuel.backend.repository.PumpRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class NozzleService {
 
-    @Autowired
-    private NozzleRepository nozzleRepository;
+    private final NozzleRepository nozzleRepository;
 
-    @Autowired
-    private TankRepository tankRepository;
+    private final TankRepository tankRepository;
 
-    @Autowired
-    private PumpRepository pumpRepository;
+    private final PumpRepository pumpRepository;
 
+    @Transactional(readOnly = true)
     public List<Nozzle> getAllNozzles() {
         return nozzleRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Nozzle> getActiveNozzles() {
         return nozzleRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Nozzle> getNozzlesByTank(Long tankId) {
         return nozzleRepository.findByTankIdAndScid(tankId, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Nozzle> getNozzlesByPump(Long pumpId) {
         return nozzleRepository.findByPumpIdAndScid(pumpId, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Nozzle getNozzleById(Long id) {
         return nozzleRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Nozzle not found with id: " + id));
@@ -92,6 +96,7 @@ public class NozzleService {
 
     public void deleteNozzle(Long id) {
         Nozzle nozzle = getNozzleById(id);
-        nozzleRepository.delete(nozzle);
+        nozzle.setActive(false);
+        nozzleRepository.save(nozzle);
     }
 }

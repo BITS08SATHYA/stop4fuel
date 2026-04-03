@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.EAdvanceDTO;
 import com.stopforfuel.backend.entity.EAdvance;
 import com.stopforfuel.backend.service.EAdvanceService;
 import lombok.RequiredArgsConstructor;
@@ -23,20 +24,20 @@ public class EAdvanceController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<EAdvance> getAll() {
-        return service.getAll();
+    public List<EAdvanceDTO> getAll() {
+        return service.getAll().stream().map(EAdvanceDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public EAdvance getById(@PathVariable Long id) {
-        return service.getById(id);
+    public EAdvanceDTO getById(@PathVariable Long id) {
+        return EAdvanceDTO.from(service.getById(id));
     }
 
     @GetMapping("/shift/{shiftId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<EAdvance> getByShift(@PathVariable Long shiftId) {
-        return service.getByShift(shiftId);
+    public List<EAdvanceDTO> getByShift(@PathVariable Long shiftId) {
+        return service.getByShift(shiftId).stream().map(EAdvanceDTO::from).toList();
     }
 
     @GetMapping("/shift/{shiftId}/summary")
@@ -47,29 +48,29 @@ public class EAdvanceController {
 
     @GetMapping("/type/{advanceType}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<EAdvance> getByType(@PathVariable String advanceType) {
-        return service.getByType(advanceType);
+    public List<EAdvanceDTO> getByType(@PathVariable String advanceType) {
+        return service.getByType(advanceType).stream().map(EAdvanceDTO::from).toList();
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<EAdvance> search(
+    public List<EAdvanceDTO> search(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String type) {
-        return service.getByDateRange(fromDate, toDate, type);
+        return service.getByDateRange(fromDate, toDate, type).stream().map(EAdvanceDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public EAdvance create(@Valid @RequestBody EAdvance eAdvance) {
-        return service.create(eAdvance);
+    public EAdvanceDTO create(@Valid @RequestBody EAdvance eAdvance) {
+        return EAdvanceDTO.from(service.create(eAdvance));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public EAdvance update(@PathVariable Long id, @Valid @RequestBody EAdvance eAdvance) {
-        return service.update(id, eAdvance);
+    public EAdvanceDTO update(@PathVariable Long id, @Valid @RequestBody EAdvance eAdvance) {
+        return EAdvanceDTO.from(service.update(id, eAdvance));
     }
 
     @DeleteMapping("/{id}")

@@ -2,6 +2,8 @@ package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
+import com.stopforfuel.backend.enums.BillType;
+import com.stopforfuel.backend.enums.PaymentStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +27,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     List<InvoiceBill> findByScid(Long scid);
     @EntityGraph(attributePaths = {"customer", "products", "products.product", "products.nozzle"})
     List<InvoiceBill> findByShiftId(Long shiftId);
-    List<InvoiceBill> findByBillType(String billType);
+    List<InvoiceBill> findByBillType(BillType billType);
 
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CASH'")
     BigDecimal sumCashBillsByShift(@Param("shiftId") Long shiftId);
@@ -35,10 +37,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     List<InvoiceBill> findByStatementId(Long statementId);
 
-    // Find credit bills for a customer in a date range that are not yet linked to a statement
+    // Find unpaid credit bills for a customer in a date range that are not yet linked to a statement
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "ORDER BY ib.date ASC")
     List<InvoiceBill> findUnlinkedCreditBills(
@@ -46,10 +49,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
-    // Find unlinked credit bills filtered by vehicle
+    // Find unlinked unpaid credit bills filtered by vehicle
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ib.vehicle.id = :vehicleId " +
            "ORDER BY ib.date ASC")
@@ -59,11 +63,12 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("toDate") LocalDateTime toDate,
             @Param("vehicleId") Long vehicleId);
 
-    // Find unlinked credit bills containing a specific product
+    // Find unlinked unpaid credit bills containing a specific product
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT DISTINCT ib FROM InvoiceBill ib JOIN ib.products ip " +
            "WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ip.product.id = :productId " +
            "ORDER BY ib.date ASC")
@@ -73,11 +78,12 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("toDate") LocalDateTime toDate,
             @Param("productId") Long productId);
 
-    // Find unlinked credit bills by vehicle AND product
+    // Find unlinked unpaid credit bills by vehicle AND product
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT DISTINCT ib FROM InvoiceBill ib JOIN ib.products ip " +
            "WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ib.vehicle.id = :vehicleId " +
            "AND ip.product.id = :productId " +
@@ -89,10 +95,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("vehicleId") Long vehicleId,
             @Param("productId") Long productId);
 
-    // Find specific unlinked credit bills by IDs (for bill-wise selection)
+    // Find specific unlinked unpaid credit bills by IDs (for bill-wise selection)
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.id IN :billIds " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
            "ORDER BY ib.date ASC")
     List<InvoiceBill> findUnlinkedCreditBillsByIds(
             @Param("billIds") List<Long> billIds);
@@ -104,9 +111,9 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("customerId") Long customerId,
             @Param("beforeDate") LocalDateTime beforeDate);
 
-    List<InvoiceBill> findByCustomerIdAndPaymentStatus(Long customerId, String paymentStatus);
+    List<InvoiceBill> findByCustomerIdAndPaymentStatus(Long customerId, PaymentStatus paymentStatus);
 
-    List<InvoiceBill> findByBillTypeAndPaymentStatus(String billType, String paymentStatus);
+    List<InvoiceBill> findByBillTypeAndPaymentStatus(BillType billType, PaymentStatus paymentStatus);
 
     // Sum of all credit bills for a customer (total credit ever billed)
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
@@ -128,17 +135,17 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
 
     // Paginated customer invoices — with billType filter only
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndBillTypeOrderByDateDesc(
-            Long customerId, String billType,
+            Long customerId, BillType billType,
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated customer invoices — with paymentStatus filter only
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndPaymentStatusOrderByDateDesc(
-            Long customerId, String paymentStatus,
+            Long customerId, PaymentStatus paymentStatus,
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated customer invoices — with both billType and paymentStatus
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(
-            Long customerId, String billType, String paymentStatus,
+            Long customerId, BillType billType, PaymentStatus paymentStatus,
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated with date range
@@ -155,7 +162,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.billType = :billType AND ib.date >= :fromDate AND ib.date <= :toDate ORDER BY ib.date DESC")
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndBillTypeAndDateRange(
             @Param("customerId") Long customerId,
-            @Param("billType") String billType,
+            @Param("billType") BillType billType,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             org.springframework.data.domain.Pageable pageable);
@@ -165,7 +172,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus = :paymentStatus AND ib.date >= :fromDate AND ib.date <= :toDate ORDER BY ib.date DESC")
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndPaymentStatusAndDateRange(
             @Param("customerId") Long customerId,
-            @Param("paymentStatus") String paymentStatus,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             org.springframework.data.domain.Pageable pageable);
@@ -176,15 +183,16 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.date >= :fromDate AND ib.date <= :toDate ORDER BY ib.date DESC")
     org.springframework.data.domain.Page<InvoiceBill> findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(
             @Param("customerId") Long customerId,
-            @Param("billType") String billType,
-            @Param("paymentStatus") String paymentStatus,
+            @Param("billType") BillType billType,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated filtered history query (all invoices, not customer-specific)
-    @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN FETCH ib.customer c LEFT JOIN FETCH ib.vehicle v "
-         + "LEFT JOIN FETCH ib.products ip LEFT JOIN FETCH ip.product LEFT JOIN FETCH ip.nozzle "
+    // Note: no JOIN FETCH on collections (products) — causes Hibernate to load ALL rows in memory with pagination
+    @EntityGraph(attributePaths = {"customer", "vehicle", "customer.customerCategory"})
+    @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v "
          + "LEFT JOIN c.customerCategory cc WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
@@ -206,8 +214,8 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
          + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%')) "
          + "    OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%')))")
     Page<InvoiceBill> findAllFiltered(
-            @Param("billType") String billType,
-            @Param("paymentStatus") String paymentStatus,
+            @Param("billType") BillType billType,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("categoryType") String categoryType,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
@@ -248,6 +256,26 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
+    // Aggregate credit outstanding: total unpaid credit amount
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus = 'NOT_PAID'")
+    BigDecimal sumUnpaidCreditAmount();
+
+    // Count distinct customers with unpaid credit
+    @Query("SELECT COUNT(DISTINCT ib.customer.id) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus = 'NOT_PAID'")
+    long countCustomersWithUnpaidCredit();
+
+    // Aging buckets for unpaid credit bills (native query for PostgreSQL date math)
+    @Query(value = "SELECT " +
+           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 <= 30 THEN ib.net_amount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 > 30 AND EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 <= 60 THEN ib.net_amount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 > 60 AND EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 <= 90 THEN ib.net_amount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 > 90 THEN ib.net_amount ELSE 0 END), 0) " +
+           "FROM invoice_bill ib WHERE ib.bill_type = 'CREDIT' AND ib.payment_status = 'NOT_PAID'",
+           nativeQuery = true)
+    Object[] getUnpaidCreditAgingBuckets();
+
     // Invoice count summary
     @Query("SELECT ib.billType, ib.paymentStatus, COUNT(ib), COALESCE(SUM(ib.netAmount), 0) " +
            "FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
@@ -267,14 +295,96 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
          + "AND ib.date <= :toDate "
          + "GROUP BY ip.product.id, p.name")
     List<ProductSalesSummary> getProductSalesSummary(
-            @Param("billType") String billType,
-            @Param("paymentStatus") String paymentStatus,
+            @Param("billType") BillType billType,
+            @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("categoryType") String categoryType,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
     // Count unpaid bills for a vehicle under a specific customer
-    long countByVehicleIdAndCustomerIdAndPaymentStatus(Long vehicleId, Long customerId, String paymentStatus);
+    long countByVehicleIdAndCustomerIdAndPaymentStatus(Long vehicleId, Long customerId, PaymentStatus paymentStatus);
+
+    // Dashboard: invoices in date range with products eagerly loaded
+    @EntityGraph(attributePaths = {"customer", "products", "products.product"})
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    List<InvoiceBill> findByDateBetween(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's revenue
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    BigDecimal sumRevenueByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's invoice count
+    @Query("SELECT COUNT(ib) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    long countByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's cash invoice count
+    @Query("SELECT COUNT(ib) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate AND ib.billType = 'CASH'")
+    long countCashByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's credit invoice count
+    @Query("SELECT COUNT(ib) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate AND ib.billType = 'CREDIT'")
+    long countCreditByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: today's fuel volume
+    @Query("SELECT COALESCE(SUM(ip.quantity), 0) FROM InvoiceProduct ip " +
+           "JOIN ip.invoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate")
+    BigDecimal sumFuelVolumeByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: daily revenue for last N days
+    @Query("SELECT CAST(ib.date AS LocalDate), COALESCE(SUM(ib.netAmount), 0), COUNT(ib) " +
+           "FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY CAST(ib.date AS LocalDate) ORDER BY CAST(ib.date AS LocalDate)")
+    List<Object[]> getDailyRevenueSummary(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Dashboard aggregate: product sales for today
+    @Query("SELECT p.name, COALESCE(SUM(ip.quantity), 0), COALESCE(SUM(ip.amount), 0) " +
+           "FROM InvoiceProduct ip JOIN ip.product p JOIN ip.invoiceBill ib " +
+           "WHERE ib.date >= :fromDate AND ib.date <= :toDate " +
+           "GROUP BY p.id, p.name")
+    List<Object[]> getProductSalesToday(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    // Credit overview aggregates
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID'")
+    BigDecimal sumTotalOutstanding();
+
+    @Query("SELECT COUNT(DISTINCT ib.customer.id) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID'")
+    long countCreditCustomersWithOutstanding();
+
+    // Credit aging — separate queries per bucket (safe, no Object[] casting)
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID' AND ib.date >= :fromDate")
+    BigDecimal sumOutstandingAfter(@Param("fromDate") LocalDateTime fromDate);
+
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID' AND ib.date >= :fromDate AND ib.date < :toDate")
+    BigDecimal sumOutstandingBetween(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID' AND ib.date < :beforeDate")
+    BigDecimal sumOutstandingBefore(@Param("beforeDate") LocalDateTime beforeDate);
+
+    // Dashboard: recent invoices (top N by date desc) — full entity
+    @EntityGraph(attributePaths = {"customer", "products", "products.product"})
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.date IS NOT NULL ORDER BY ib.date DESC")
+    List<InvoiceBill> findRecentInvoices(Pageable pageable);
+
+    // Dashboard: recent invoices lightweight (no entity graph, just scalars)
+    @Query("SELECT ib.id, ib.date, c.name, ib.billType, ib.netAmount, ib.paymentStatus " +
+           "FROM InvoiceBill ib LEFT JOIN ib.customer c WHERE ib.date IS NOT NULL ORDER BY ib.date DESC")
+    List<Object[]> findRecentInvoicesLight(Pageable pageable);
+
+    // Oldest unpaid credit bill date for a customer (for aging calculation)
+    @Query("SELECT MIN(ib.date) FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
+           "AND ib.billType = 'CREDIT' AND ib.paymentStatus = 'NOT_PAID'")
+    Optional<LocalDateTime> findOldestUnpaidBillDate(@Param("customerId") Long customerId);
 
     // Operational advance linked invoices
     List<InvoiceBill> findByOperationalAdvanceId(Long operationalAdvanceId);

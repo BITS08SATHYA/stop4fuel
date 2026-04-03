@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.PumpDTO;
 import com.stopforfuel.backend.entity.Pump;
 import com.stopforfuel.backend.service.PumpService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,38 +20,38 @@ public class PumpController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Pump> getAllPumps() {
-        return pumpService.getAllPumps();
+    public List<PumpDTO> getAllPumps() {
+        return pumpService.getAllPumps().stream().map(PumpDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Pump> getActivePumps() {
-        return pumpService.getActivePumps();
+    public List<PumpDTO> getActivePumps() {
+        return pumpService.getActivePumps().stream().map(PumpDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public Pump getPumpById(@PathVariable Long id) {
-        return pumpService.getPumpById(id);
+    public PumpDTO getPumpById(@PathVariable Long id) {
+        return PumpDTO.from(pumpService.getPumpById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Pump createPump(@Valid @RequestBody Pump pump) {
-        return pumpService.createPump(pump);
+    public PumpDTO createPump(@Valid @RequestBody Pump pump) {
+        return PumpDTO.from(pumpService.createPump(pump));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Pump updatePump(@PathVariable Long id, @Valid @RequestBody Pump pump) {
-        return pumpService.updatePump(id, pump);
+    public PumpDTO updatePump(@PathVariable Long id, @Valid @RequestBody Pump pump) {
+        return PumpDTO.from(pumpService.updatePump(id, pump));
     }
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Pump toggleStatus(@PathVariable Long id) {
-        return pumpService.toggleStatus(id);
+    public PumpDTO toggleStatus(@PathVariable Long id) {
+        return PumpDTO.from(pumpService.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
