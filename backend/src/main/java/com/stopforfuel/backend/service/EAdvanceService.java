@@ -83,6 +83,7 @@ public class EAdvanceService {
         existing.setInFavorOf(updated.getInFavorOf());
         existing.setCcmsNumber(updated.getCcmsNumber());
         existing.setUpiCompany(updated.getUpiCompany());
+        existing.setStatement(updated.getStatement());
         return repository.save(existing);
     }
 
