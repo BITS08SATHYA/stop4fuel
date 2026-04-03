@@ -1,20 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-const API_BASE = "http://localhost:8080/api";
-
-const DEV_USER = {
-    id: 1,
-    cognitoId: "dev-user-001",
-    username: "owner",
-    name: "Dev Owner",
-    email: "owner@stopforfuel.com",
-    role: "OWNER",
-    permissions: [
-        "DASHBOARD_VIEW", "CUSTOMER_VIEW", "EMPLOYEE_VIEW", "PRODUCT_VIEW",
-        "STATION_VIEW", "INVENTORY_VIEW", "SHIFT_VIEW", "INVOICE_VIEW",
-        "PAYMENT_VIEW", "FINANCE_VIEW", "SETTINGS_VIEW",
-    ],
-};
+import { mockApiRoutes, API_BASE, DEV_USER } from "./fixtures/test-helpers";
 
 const mockProducts = [
     { id: 1, name: "Petrol (MS)", hsnCode: "2710", price: 109.92, category: "FUEL", unit: "L", active: true },
@@ -39,15 +24,10 @@ const mockCreatedInvoice = {
 };
 
 async function mockRoutes(page: import("@playwright/test").Page) {
-    // Auth must be registered first (specific) before the catch-all
-    await page.route(`${API_BASE}/auth/me`, async (route) => {
-        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) });
-    });
+    await mockApiRoutes(page);
     await page.route(`${API_BASE}/**`, async (route) => {
         const url = route.request().url();
         const method = route.request().method();
-
-        if (url.includes("/auth/me")) return;
 
         if (url.includes("/products/active") && method === "GET") {
             await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockProducts) });
@@ -77,35 +57,22 @@ async function mockRoutes(page: import("@playwright/test").Page) {
             await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ content: [], totalPages: 0, totalElements: 0 }) });
             return;
         }
-        if (method === "GET") {
-            await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-        } else {
-            await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
-        }
+        // Fall through to mockApiRoutes handler for auth and other routes
+        await route.fallback();
     });
 }
 
 async function navigateToUploadStep(page: import("@playwright/test").Page) {
     await page.goto("/operations/invoices");
-    // Step 1: Click Walk-in Bill button
     await page.getByRole("button", { name: "Walk-in Bill" }).click();
-    // Step 3: Products — "Add Products" heading should be visible
     await expect(page.getByText("Add Products")).toBeVisible();
-    // Click "Add Line" to add a product line
     await page.getByRole("button", { name: /Add Line/ }).click();
-    // Select product from dropdown (the first select in the product line)
-    // Product options look like "Petrol (MS) (FUEL - L)"
     await page.locator("select").last().selectOption({ index: 1 });
-    // Fill quantity
     const qtyInput = page.locator("input[type='number']").first();
     await qtyInput.fill("45.5");
-    // Click Next to go to Payment step (step 4)
     await page.getByRole("button", { name: /Next/ }).click();
-    // Step 4: Payment & Driver — click Review to go to Confirm step (step 5)
     await page.getByRole("button", { name: /Review/ }).click();
-    // Step 5: Review & Confirm — click create
     await page.getByRole("button", { name: /Confirm & Create Invoice/ }).click();
-    // Wait for step 6 to appear
     await expect(page.getByText("Invoice Created")).toBeVisible({ timeout: 10000 });
 }
 
@@ -117,11 +84,8 @@ test.describe("Invoice File Upload", () => {
     test("after creating invoice, shows upload step with bill fields", async ({ page }) => {
         await navigateToUploadStep(page);
         await expect(page.getByText("Invoice Created")).toBeVisible();
-        // Bill No is shown in format: "Bill No: C26/1 — ₹5000.00"
         await expect(page.getByText(/Bill No: C26\/1/)).toBeVisible();
-        // "Attach Documents (Optional)" heading
         await expect(page.getByText("Attach Documents")).toBeVisible();
-        // FileUploadField renders the label as button text when no file uploaded
         await expect(page.getByText("Upload Bill Photo")).toBeVisible();
         await expect(page.getByText("Upload Pump Bill Photo")).toBeVisible();
         await expect(page.getByText("Upload Indent Photo")).toBeVisible();
@@ -130,7 +94,6 @@ test.describe("Invoice File Upload", () => {
     test("Done button navigates to history tab", async ({ page }) => {
         await navigateToUploadStep(page);
         await page.getByRole("button", { name: /Done/ }).click();
-        // History tab shows "Recent Invoices" in an h3 (not a heading role)
         await expect(page.getByText("Recent Invoices")).toBeVisible();
     });
 
@@ -143,7 +106,6 @@ test.describe("Invoice File Upload", () => {
             await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...mockCreatedInvoice, billPic: "s3://bucket/bill.jpg" }) });
         });
 
-        // Use the hidden file input for bill-pic-upload
         const fileInput = page.locator("#bill-pic-upload");
         await fileInput.setInputFiles({
             name: "test-bill.jpg",

@@ -1,21 +1,8 @@
 import { Page, expect } from "@playwright/test";
+import { API_BASE, DEV_USER } from "./mock-data/users";
 
-const API_BASE = "http://localhost:8080/api";
-
-/** Dev-mode user returned by /api/auth/me so AuthProvider loads correctly */
-const DEV_USER = {
-  id: 1,
-  cognitoId: "dev-user-001",
-  username: "owner",
-  name: "Dev Owner",
-  email: "owner@stopforfuel.com",
-  role: "OWNER",
-  permissions: [
-    "DASHBOARD_VIEW", "CUSTOMER_VIEW", "EMPLOYEE_VIEW", "PRODUCT_VIEW",
-    "STATION_VIEW", "INVENTORY_VIEW", "SHIFT_VIEW", "INVOICE_VIEW",
-    "PAYMENT_VIEW", "FINANCE_VIEW", "SETTINGS_VIEW",
-  ],
-};
+// Re-export for convenience
+export { API_BASE, DEV_USER } from "./mock-data/users";
 
 /**
  * Mock API routes to prevent real backend calls during tests.
@@ -23,6 +10,12 @@ const DEV_USER = {
  * Always mocks /auth/me with a valid dev user.
  */
 export async function mockApiRoutes(page: Page) {
+  // Set a fake auth token so AuthProvider loads the user via /auth/me
+  await page.addInitScript(() => {
+    localStorage.setItem("sff-token", "mock-test-token");
+    document.cookie = "sff-auth-session=mock-test-token; path=/";
+  });
+
   // Block all API calls with mock responses
   await page.route(`${API_BASE}/**`, async (route) => {
     const url = route.request().url();
@@ -31,6 +24,13 @@ export async function mockApiRoutes(page: Page) {
     // Auth endpoint must return a valid user
     if (url.includes("/auth/me") && method === "GET") {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) });
+      return;
+    }
+
+    // Endpoints that return objects (not arrays) — return empty object to prevent crashes
+    const objectEndpoints = ["/dashboard/stats", "/credit/overview", "/summary"];
+    if (method === "GET" && objectEndpoints.some(ep => url.includes(ep))) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
       return;
     }
 

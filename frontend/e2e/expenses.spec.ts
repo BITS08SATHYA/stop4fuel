@@ -1,20 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-const API_BASE = "http://localhost:8080/api";
-
-const DEV_USER = {
-  id: 1,
-  cognitoId: "dev-user-001",
-  username: "owner",
-  name: "Dev Owner",
-  email: "owner@stopforfuel.com",
-  role: "OWNER",
-  permissions: [
-    "DASHBOARD_VIEW", "CUSTOMER_VIEW", "EMPLOYEE_VIEW", "PRODUCT_VIEW",
-    "STATION_VIEW", "INVENTORY_VIEW", "SHIFT_VIEW", "INVOICE_VIEW",
-    "PAYMENT_VIEW", "FINANCE_VIEW", "SETTINGS_VIEW",
-  ],
-};
+import { mockApiRoutes, API_BASE } from "./fixtures/test-helpers";
 
 const mockExpenseTypes = [
   { id: 1, name: "Electricity", description: "TNEB bills" },
@@ -22,7 +7,6 @@ const mockExpenseTypes = [
   { id: 3, name: "Salary", description: "Employee salaries" },
 ];
 
-// The page fetches from /station-expenses (not /expenses)
 const mockExpenses = [
   {
     id: 1,
@@ -56,10 +40,7 @@ const mockSummary = {
 
 test.describe("Expenses Page", () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(`${API_BASE}/auth/me`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) })
-    );
-    // The page calls getStationExpenses, getExpenseTypes, and getExpenseSummary
+    await mockApiRoutes(page);
     await page.route(`${API_BASE}/station-expenses/summary*`, (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockSummary) })
     );
@@ -72,28 +53,21 @@ test.describe("Expenses Page", () => {
     await page.route(`${API_BASE}/expense-types*`, (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockExpenseTypes) })
     );
-    await page.route(`${API_BASE}/**`, (route) => {
-      const url = route.request().url();
-      if (url.includes("/auth/me") || url.includes("/station-expenses") || url.includes("/expense-types")) return;
-      route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-    });
+    // catch-all already handled by mockApiRoutes
   });
 
   test("loads expenses page", async ({ page }) => {
     await page.goto("/operations/expenses");
-    // Heading is "Station Expenses"
     await expect(page.getByText(/expense/i).first()).toBeVisible();
   });
 
   test("displays expense records", async ({ page }) => {
     await page.goto("/operations/expenses");
-    // Table shows expense type names and descriptions
     await expect(page.getByText("Electricity").first()).toBeVisible();
   });
 
   test("has add expense button", async ({ page }) => {
     await page.goto("/operations/expenses");
-    // Button text is "Add Expense"
     const addBtn = page.getByRole("button", { name: /add/i });
     await expect(addBtn.first()).toBeVisible();
   });
@@ -101,14 +75,7 @@ test.describe("Expenses Page", () => {
 
 test.describe("Utility Bills Page", () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(`${API_BASE}/auth/me`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) })
-    );
-    await page.route(`${API_BASE}/**`, (route) => {
-      const url = route.request().url();
-      if (url.includes("/auth/me")) return;
-      route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-    });
+    await mockApiRoutes(page);
   });
 
   test("loads utility bills page", async ({ page }) => {
