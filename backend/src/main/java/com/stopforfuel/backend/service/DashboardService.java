@@ -206,8 +206,8 @@ public class DashboardService {
         BigDecimal paidAmount = BigDecimal.ZERO, unpaidAmount = BigDecimal.ZERO;
 
         for (Object[] row : summary) {
-            String billType = (String) row[0];
-            String paymentStatus = (String) row[1];
+            String billType = row[0].toString();
+            String paymentStatus = row[1].toString();
             long count = ((Number) row[2]).longValue();
             BigDecimal amount = (BigDecimal) row[3];
 
@@ -254,7 +254,7 @@ public class DashboardService {
         }
         for (Object[] row : dailyRaw) {
             LocalDate date = (LocalDate) row[0];
-            String billType = (String) row[1];
+            String billType = row[1].toString();
             long count = ((Number) row[2]).longValue();
             BigDecimal amount = (BigDecimal) row[3];
             InvoiceDailyTrend t = dailyMap.get(date);
