@@ -7,6 +7,7 @@ import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -84,6 +85,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(TransactionSystemException.class)
+    public ResponseEntity<Map<String, Object>> handleTransactionException(TransactionSystemException ex) {
+        Throwable cause = ex.getRootCause();
+        if (cause instanceof jakarta.validation.ConstraintViolationException cve) {
+            List<String> errors = cve.getConstraintViolations().stream()
+                    .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                    .toList();
+            return buildResponse(HttpStatus.BAD_REQUEST, String.join("; ", errors));
+        }
+        String message = cause != null ? cause.getMessage() : ex.getMessage();
+        if (message != null && (message.contains("duplicate key") || message.contains("unique constraint"))) {
+            return buildResponse(HttpStatus.CONFLICT, "A record with this value already exists");
+        }
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, message != null ? message : "Transaction failed");
     }
 
     @ExceptionHandler(RuntimeException.class)
