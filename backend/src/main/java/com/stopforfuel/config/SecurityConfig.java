@@ -71,6 +71,7 @@ public class SecurityConfig {
             http
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/actuator/health").permitAll()
+                    .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/signup-callback").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/**").authenticated()
@@ -79,6 +80,7 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                     .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 )
+                .addFilterBefore(devJwtAuthFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterAfter(cognitoUserSyncFilter, BearerTokenAuthenticationFilter.class);
         }
 
