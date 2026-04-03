@@ -64,7 +64,8 @@ export function useAuth() {
 const DEV_MODE = !process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
 
 function setAuthCookie(token: string) {
-    document.cookie = `sff-auth-session=${token}; path=/; max-age=3600; SameSite=Lax; Secure`;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `sff-auth-session=${token}; path=/; max-age=3600; SameSite=Lax${secure}`;
 }
 
 function clearAuthCookie() {
@@ -105,39 +106,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const loadUser = useCallback(async () => {
         try {
-            if (DEV_MODE) {
-                // Check if we have a stored token from passcode login
-                const storedToken = localStorage.getItem("sff-token");
-                if (storedToken) {
-                    const res = await fetch(
-                        `${getApiBaseUrl()}/auth/me`,
-                        { headers: { Authorization: `Bearer ${storedToken}` } }
-                    );
-                    if (res.ok) {
-                        const data = await res.json();
-                        setUser({
-                            id: data.id,
-                            cognitoId: data.cognitoId || "",
-                            username: data.username,
-                            name: data.name || "User",
-                            email: data.email,
-                            phone: data.phone,
-                            role: data.role || "EMPLOYEE",
-                            designation: data.designation,
-                            permissions: data.permissions || [],
-                        });
-                        setAccessToken(storedToken);
-                        setAuthCookie(storedToken);
-                        setIsLoading(false);
-                        return;
-                    } else {
-                        // Token expired or invalid, clear it
-                        localStorage.removeItem("sff-token");
-                        clearAuthCookie();
-                    }
+            // Always check for passcode token first (works in both dev and prod)
+            const storedToken = localStorage.getItem("sff-token");
+            if (storedToken) {
+                const res = await fetch(
+                    `${getApiBaseUrl()}/auth/me`,
+                    { headers: { Authorization: `Bearer ${storedToken}` } }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    setUser({
+                        id: data.id,
+                        cognitoId: data.cognitoId || "",
+                        username: data.username,
+                        name: data.name || "User",
+                        email: data.email,
+                        phone: data.phone,
+                        role: data.role || "EMPLOYEE",
+                        designation: data.designation,
+                        permissions: data.permissions || [],
+                    });
+                    setAccessToken(storedToken);
+                    setAuthCookie(storedToken);
+                    setIsLoading(false);
+                    return;
+                } else {
+                    // Token expired or invalid, clear it
+                    localStorage.removeItem("sff-token");
+                    clearAuthCookie();
                 }
+            }
 
-                // No token: don't auto-login, send to login page
+            if (DEV_MODE) {
+                // No token and no Cognito: send to login page
                 setUser(null);
                 setIsLoading(false);
                 return;
