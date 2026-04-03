@@ -84,6 +84,11 @@ public class EAdvance extends BaseEntity {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "statement", "invoiceBill"})
     private Payment payment;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "statement_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "invoiceBills", "payments"})
+    private Statement statement;
+
     @PrePersist
     @Override
     protected void onCreate() {

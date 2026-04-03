@@ -103,6 +103,7 @@ export default function InvoicesPage() {
     const [vehicleKM, setVehicleKM] = useState("");
     const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
     const [lastCreatedInvoice, setLastCreatedInvoice] = useState<InvoiceBill | null>(null);
+    const [manualDiscount, setManualDiscount] = useState("");
 
     const loadInvoices = async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);
@@ -289,7 +290,9 @@ export default function InvoicesPage() {
     };
 
     const calculateTotal = () => {
-        return selectedProducts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        const subtotal = selectedProducts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        const discount = billType === 'CASH' && manualDiscount ? parseFloat(manualDiscount) || 0 : 0;
+        return Math.max(subtotal - discount, 0);
     };
 
     // --- Vehicle fuel validation ---
@@ -396,6 +399,7 @@ export default function InvoicesPage() {
         setWalkInGST("");
         setVehicleSearchQuery("");
         setVehicleSearchResults([]);
+        setManualDiscount("");
     };
 
     const handleSave = async () => {
@@ -408,6 +412,7 @@ export default function InvoicesPage() {
                 paymentMode: billType === 'CASH' ? paymentMode : undefined,
                 indentNo: (billType === 'CREDIT' && indentNo) ? indentNo : undefined,
                 netAmount: calculateTotal(),
+                totalDiscount: (billType === 'CASH' && manualDiscount) ? parseFloat(manualDiscount) || 0 : undefined,
                 status: 'PAID',
                 products: selectedProducts.map((p: any) => ({
                     product: p.product ? { id: p.product.id } : undefined,
@@ -1041,7 +1046,7 @@ export default function InvoicesPage() {
                             <div>
                                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Payment Method</label>
                                 <div className="grid grid-cols-3 gap-2">
-                                    {["CASH", "CARD", "UPI", "CHEQUE", "BANK", "CCMS"].map(mode => (
+                                    {["CASH", "CARD", "UPI", "CCMS"].map(mode => (
                                         <button
                                             key={mode}
                                             onClick={() => setPaymentMode(mode)}
@@ -1053,6 +1058,21 @@ export default function InvoicesPage() {
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {billType === "CASH" && (
+                            <div>
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Discount (Optional)</label>
+                                <input
+                                    type="number"
+                                    value={manualDiscount}
+                                    onChange={(e) => setManualDiscount(e.target.value)}
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-bold"
+                                    placeholder="₹0.00"
+                                    min="0"
+                                    step="0.01"
+                                />
                             </div>
                         )}
 
@@ -1221,6 +1241,12 @@ export default function InvoicesPage() {
                                                     <td className="px-4 py-2 text-right font-bold text-emerald-500">-₹{totalDiscount.toFixed(2)}</td>
                                                 </tr>
                                             </>
+                                        )}
+                                        {billType === "CASH" && manualDiscount && parseFloat(manualDiscount) > 0 && (
+                                            <tr className="border-t border-border/50">
+                                                <td colSpan={hasAnyDiscount ? 4 : 3} className="px-4 py-2 text-right text-xs text-emerald-500 font-bold uppercase">Manual Discount</td>
+                                                <td className="px-4 py-2 text-right font-bold text-emerald-500">-₹{parseFloat(manualDiscount).toFixed(2)}</td>
+                                            </tr>
                                         )}
                                         <tr className="bg-primary/5 border-t border-primary/20">
                                             <td colSpan={hasAnyDiscount ? 4 : 3} className="px-4 py-4 text-right font-black uppercase text-sm">Net Total</td>
