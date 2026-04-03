@@ -114,7 +114,7 @@ public class DailySalesReportService {
             long cashCount = 0, creditCount = 0;
 
             for (Object[] row : invoiceSummary) {
-                String billType = (String) row[0];
+                String billType = row[0].toString();
                 long count = ((Number) row[2]).longValue();
                 BigDecimal amount = (BigDecimal) row[3];
                 if ("CASH".equals(billType)) {
@@ -340,7 +340,7 @@ public class DailySalesReportService {
             BigDecimal totalCash = BigDecimal.ZERO, totalCredit = BigDecimal.ZERO;
             long cashCount = 0, creditCount = 0;
             for (Object[] row : invoiceSummary) {
-                String billType = (String) row[0];
+                String billType = row[0].toString();
                 long count = ((Number) row[2]).longValue();
                 BigDecimal amount = (BigDecimal) row[3];
                 if ("CASH".equals(billType)) { totalCash = totalCash.add(amount); cashCount += count; }
