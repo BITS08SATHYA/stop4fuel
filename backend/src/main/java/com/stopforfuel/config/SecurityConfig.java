@@ -70,7 +70,7 @@ public class SecurityConfig {
         } else {
             http
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/actuator/health").permitAll()
+                    .requestMatchers("/actuator/health", "/health").permitAll()
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/signup-callback").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
