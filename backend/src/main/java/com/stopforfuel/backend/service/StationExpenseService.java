@@ -1,6 +1,8 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.StationExpense;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.StationExpenseRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import java.util.Map;
 public class StationExpenseService {
 
     private final StationExpenseRepository stationExpenseRepository;
+    private final ShiftService shiftService;
 
     @Transactional(readOnly = true)
     public List<StationExpense> getAllExpenses() {
@@ -28,7 +31,13 @@ public class StationExpenseService {
         return stationExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(from, to);
     }
 
+    @Transactional
     public StationExpense createExpense(StationExpense expense) {
+        Shift activeShift = shiftService.getActiveShift();
+        if (activeShift == null) {
+            throw new BusinessException("No active shift. Open a shift before recording expenses.");
+        }
+        expense.setShiftId(activeShift.getId());
         return stationExpenseRepository.save(expense);
     }
 
@@ -49,6 +58,16 @@ public class StationExpenseService {
 
     public void deleteExpense(Long id) {
         stationExpenseRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StationExpense> getByShift(Long shiftId) {
+        return stationExpenseRepository.findByShiftId(shiftId);
+    }
+
+    @Transactional(readOnly = true)
+    public Double sumByShift(Long shiftId) {
+        return stationExpenseRepository.sumAmountByShift(shiftId);
     }
 
     @Transactional(readOnly = true)

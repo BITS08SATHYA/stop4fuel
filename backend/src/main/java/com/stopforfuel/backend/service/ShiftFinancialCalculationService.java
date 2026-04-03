@@ -23,6 +23,7 @@ public class ShiftFinancialCalculationService {
     private final EAdvanceRepository eAdvanceRepository;
     private final OperationalAdvanceRepository operationalAdvanceRepository;
     private final ExpenseRepository expenseRepository;
+    private final StationExpenseRepository stationExpenseRepository;
     private final IncentivePaymentRepository incentivePaymentRepository;
     private final CashInflowRepaymentRepository repaymentRepository;
     private final PaymentRepository paymentRepository;
@@ -83,8 +84,12 @@ public class ShiftFinancialCalculationService {
             }
         }
 
-        // 12. Expenses (from expense table)
+        // 12. Expenses (from expense + station_expenses tables)
         BigDecimal expenseTotal = expenseRepository.sumByShift(shiftId);
+        Double stationExpenseTotal = stationExpenseRepository.sumAmountByShift(shiftId);
+        if (stationExpenseTotal != null && stationExpenseTotal > 0) {
+            expenseTotal = expenseTotal.add(BigDecimal.valueOf(stationExpenseTotal));
+        }
         if (expenseTotal.compareTo(BigDecimal.ZERO) > 0) {
             ReportLineItem item = new ReportLineItem();
             item.setReport(report);
