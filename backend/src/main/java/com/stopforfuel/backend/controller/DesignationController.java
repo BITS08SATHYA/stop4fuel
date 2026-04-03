@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.DesignationDTO;
 import com.stopforfuel.backend.entity.Designation;
 import com.stopforfuel.backend.repository.DesignationRepository;
 import lombok.RequiredArgsConstructor;

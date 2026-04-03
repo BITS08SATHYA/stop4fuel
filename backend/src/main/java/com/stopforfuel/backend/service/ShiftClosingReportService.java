@@ -11,10 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,29 +25,20 @@ public class ShiftClosingReportService {
     private final ShiftRepository shiftRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final PaymentRepository paymentRepository;
-    private final OperationalAdvanceRepository operationalAdvanceRepository;
-    private final ExternalCashInflowRepository inflowRepository;
-    private final CashInflowRepaymentRepository repaymentRepository;
     private final EAdvanceRepository eAdvanceRepository;
-    private final ExpenseRepository expenseRepository;
-    private final IncentivePaymentRepository incentivePaymentRepository;
     private final StatementRepository statementRepository;
-    private final NozzleInventoryRepository nozzleInventoryRepository;
-    private final TankInventoryRepository tankInventoryRepository;
-    private final ProductInventoryRepository productInventoryRepository;
-    private final ProductRepository productRepository;
     private final CompanyRepository companyRepository;
-    private final GodownStockRepository godownStockRepository;
-    private final CashierStockRepository cashierStockRepository;
     private final ShiftReportPdfGenerator pdfGenerator;
     private final S3StorageService s3StorageService;
+    private final ShiftSalesCalculationService salesCalculationService;
+    private final ShiftFinancialCalculationService financialCalculationService;
 
     @Transactional
     public ShiftClosingReport generateReport(Long shiftId) {
         Shift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new RuntimeException("Shift not found"));
 
-        if (!"REVIEW".equals(shift.getStatus()) && !"CLOSED".equals(shift.getStatus()) && !"RECONCILED".equals(shift.getStatus())) {
+        if (shift.getStatus() != com.stopforfuel.backend.enums.ShiftStatus.REVIEW && shift.getStatus() != com.stopforfuel.backend.enums.ShiftStatus.CLOSED && shift.getStatus() != com.stopforfuel.backend.enums.ShiftStatus.RECONCILED) {
             throw new BusinessException("Shift must be in REVIEW or CLOSED state before generating a report");
         }
 
@@ -80,11 +69,13 @@ public class ShiftClosingReportService {
         return report;
     }
 
+    @Transactional(readOnly = true)
     public ShiftClosingReport getReportById(Long reportId) {
         return reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found: " + reportId));
     }
 
+    @Transactional(readOnly = true)
     public List<ShiftClosingReport> getAllReports(String status) {
         if (status != null && !status.isEmpty()) {
             return reportRepository.findByStatusOrderByReportDateDesc(status);
@@ -217,7 +208,7 @@ public class ShiftClosingReportService {
         // Mark the shift as RECONCILED
         Shift shift = report.getShift();
         if (shift != null) {
-            shift.setStatus("RECONCILED");
+            shift.setStatus(com.stopforfuel.backend.enums.ShiftStatus.RECONCILED);
             shiftRepository.save(shift);
         }
 
@@ -281,6 +272,7 @@ public class ShiftClosingReportService {
         return reportRepository.save(report);
     }
 
+    @Transactional(readOnly = true)
     public String getReportPdfUrl(Long shiftId) {
         ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
                 .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
@@ -290,6 +282,7 @@ public class ShiftClosingReportService {
         return s3StorageService.getPresignedUrl(report.getReportPdfUrl());
     }
 
+    @Transactional(readOnly = true)
     public List<ReportAuditLog> getAuditLog(Long reportId) {
         return auditLogRepository.findByReportIdOrderByPerformedAtDesc(reportId);
     }
@@ -298,284 +291,33 @@ public class ShiftClosingReportService {
 
     private void populateReportData(ShiftClosingReport report, Shift shift) {
         Long shiftId = shift.getId();
-        List<ReportLineItem> lineItems = new ArrayList<>();
-        int sortOrder = 0;
 
-        // === REVENUE SECTION ===
+        // === REVENUE SECTION (delegated to ShiftSalesCalculationService) ===
+        ShiftSalesCalculationService.SalesResult salesResult =
+                salesCalculationService.computeSalesLineItems(report, shiftId, 0);
+        List<ReportLineItem> allLineItems = new ArrayList<>(salesResult.getLineItems());
 
-        // 1. Fuel Sales: group ALL invoices by product
-        List<InvoiceBill> allInvoices = invoiceBillRepository.findByShiftId(shiftId);
-        Map<String, double[]> fuelSales = new LinkedHashMap<>(); // productName -> [litres, amount, rate]
-
-        BigDecimal cashBillTotal = BigDecimal.ZERO;
-        BigDecimal creditBillTotal = BigDecimal.ZERO;
-
-        for (InvoiceBill inv : allInvoices) {
-            if ("CASH".equals(inv.getBillType())) {
-                cashBillTotal = cashBillTotal.add(inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO);
-            } else if ("CREDIT".equals(inv.getBillType())) {
-                creditBillTotal = creditBillTotal.add(inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO);
-            }
-
-            if (inv.getProducts() != null) {
-                for (InvoiceProduct ip : inv.getProducts()) {
-                    String productName = ip.getProduct() != null ? ip.getProduct().getName() : "Unknown";
-                    String category = ip.getProduct() != null ? ip.getProduct().getCategory() : "FUEL";
-                    double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
-                    double amt = ip.getAmount() != null ? ip.getAmount().doubleValue() : 0;
-                    double rate = ip.getUnitPrice() != null ? ip.getUnitPrice().doubleValue() : 0;
-
-                    if ("FUEL".equalsIgnoreCase(category)) {
-                        fuelSales.merge(productName, new double[]{qty, amt, rate},
-                                (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2]});
-                    } else {
-                        // Oil/lubricant sales grouped separately
-                        fuelSales.merge("OIL:" + productName, new double[]{qty, amt, rate},
-                                (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2]});
-                    }
-                }
-            }
-        }
-
-        // Add fuel product lines
-        for (Map.Entry<String, double[]> entry : fuelSales.entrySet()) {
-            String key = entry.getKey();
-            double[] vals = entry.getValue();
-            boolean isOil = key.startsWith("OIL:");
-            String name = isOil ? key.substring(4) : key;
-
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("REVENUE");
-            item.setCategory(isOil ? "OIL_SALES" : "FUEL_SALES");
-            item.setLabel(name);
-            item.setQuantity(vals[0]);
-            item.setRate(BigDecimal.valueOf(vals[2]).setScale(4, RoundingMode.HALF_UP));
-            item.setAmount(BigDecimal.valueOf(vals[1]).setScale(4, RoundingMode.HALF_UP));
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        // 2. Bill Payments (payments against individual invoices in this shift)
-        List<Payment> shiftPayments = paymentRepository.findByShiftIdEager(shiftId);
-        BigDecimal billPaymentTotal = BigDecimal.ZERO;
-        BigDecimal statementPaymentTotal = BigDecimal.ZERO;
-
-        for (Payment p : shiftPayments) {
-            if (p.getInvoiceBill() != null) {
-                billPaymentTotal = billPaymentTotal.add(p.getAmount());
-            } else if (p.getStatement() != null) {
-                statementPaymentTotal = statementPaymentTotal.add(p.getAmount());
-            }
-        }
-
-        if (billPaymentTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("REVENUE");
-            item.setCategory("BILL_PAYMENT");
-            item.setLabel("Bill Payments");
-            item.setAmount(billPaymentTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        // 3. Statement Payments
-        if (statementPaymentTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("REVENUE");
-            item.setCategory("STATEMENT_PAYMENT");
-            item.setLabel("Statement Payments");
-            item.setAmount(statementPaymentTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        // 4. External Cash Inflows
-        List<ExternalCashInflow> inflows = inflowRepository.findByShiftIdOrderByInflowDateDesc(shiftId);
-        BigDecimal inflowTotal = BigDecimal.ZERO;
-        for (ExternalCashInflow inflow : inflows) {
-            inflowTotal = inflowTotal.add(inflow.getAmount());
-        }
-        if (inflowTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("REVENUE");
-            item.setCategory("EXTERNAL_INFLOW");
-            item.setLabel("External Cash Inflow");
-            item.setAmount(inflowTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        // === ADVANCE SECTION ===
-
-        // 5. Credit Bills
-        if (creditBillTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("ADVANCE");
-            item.setCategory("CREDIT_BILLS");
-            item.setLabel("Credit Bills");
-            item.setAmount(creditBillTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        // 6-10. Electronic payment advances (from e_advance table)
-        addTransactionLineItem(lineItems, report, shiftId, "CARD",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "CARD"), "Card Advance", ++sortOrder);
-        addTransactionLineItem(lineItems, report, shiftId, "CCMS",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "CCMS"), "CCMS Advance", ++sortOrder);
-        addTransactionLineItem(lineItems, report, shiftId, "UPI",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "UPI"), "UPI Advance", ++sortOrder);
-        addTransactionLineItem(lineItems, report, shiftId, "BANK",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "BANK_TRANSFER"), "Bank Transfer Advance", ++sortOrder);
-        addTransactionLineItem(lineItems, report, shiftId, "CHEQUE",
-                eAdvanceRepository.sumByShiftAndType(shiftId, "CHEQUE"), "Cheque Advance", ++sortOrder);
-
-        // 11. Operational Advances (Cash, Salary, Management)
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
-        Map<String, BigDecimal> opAdvanceTotals = new HashMap<>();
-        for (OperationalAdvance oa : opAdvances) {
-            if ("CANCELLED".equals(oa.getStatus())) continue;
-            String type = oa.getAdvanceType() != null ? oa.getAdvanceType() : "CASH";
-            opAdvanceTotals.merge(type, oa.getAmount(), BigDecimal::add);
-        }
-        for (Map.Entry<String, BigDecimal> entry : opAdvanceTotals.entrySet()) {
-            if (entry.getValue().compareTo(BigDecimal.ZERO) > 0) {
-                ReportLineItem item = new ReportLineItem();
-                item.setReport(report);
-                item.setSection("ADVANCE");
-                item.setCategory(entry.getKey() + "_ADVANCE");
-                item.setLabel(entry.getKey().substring(0, 1) + entry.getKey().substring(1).toLowerCase() + " Advance");
-                item.setAmount(entry.getValue());
-                item.setSortOrder(++sortOrder);
-                lineItems.add(item);
-            }
-        }
-
-        // 12. Expenses (from expense table)
-        BigDecimal expenseTotal = expenseRepository.sumByShift(shiftId);
-        if (expenseTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("ADVANCE");
-            item.setCategory("EXPENSES");
-            item.setLabel("Expenses");
-            item.setAmount(expenseTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        // 13. Incentive (from incentive_payment table)
-        BigDecimal incentiveTotal = incentivePaymentRepository.sumByShift(shiftId);
-        if (incentiveTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("ADVANCE");
-            item.setCategory("INCENTIVE");
-            item.setLabel("Incentive / Discount");
-            item.setAmount(incentiveTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
-
-        // 14. Inflow Repayments
-        List<CashInflowRepayment> repayments = repaymentRepository.findByShiftIdOrderByRepaymentDateDesc(shiftId);
-        BigDecimal repaymentTotal = BigDecimal.ZERO;
-        for (CashInflowRepayment r : repayments) {
-            repaymentTotal = repaymentTotal.add(r.getAmount());
-        }
-        if (repaymentTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("ADVANCE");
-            item.setCategory("INFLOW_REPAYMENT");
-            item.setLabel("Cash Inflow Repayment");
-            item.setAmount(repaymentTotal);
-            item.setSortOrder(++sortOrder);
-            lineItems.add(item);
-        }
+        // === ADVANCE SECTION (delegated to ShiftFinancialCalculationService) ===
+        int nextSortOrder = salesResult.getLineItems().stream()
+                .mapToInt(ReportLineItem::getSortOrder).max().orElse(0);
+        List<ReportLineItem> financialItems = financialCalculationService.computeFinancialLineItems(
+                report, shiftId, salesResult.getCreditBillTotal(), nextSortOrder);
+        allLineItems.addAll(financialItems);
 
         // Save all line items
-        lineItemRepository.saveAll(lineItems);
-        report.getLineItems().addAll(lineItems);
+        lineItemRepository.saveAll(allLineItems);
+        report.getLineItems().addAll(allLineItems);
 
         // === CASH BILL BREAKDOWN ===
-        List<ReportCashBillBreakdown> breakdowns = computeCashBillBreakdown(report, allInvoices);
+        List<ReportCashBillBreakdown> breakdowns =
+                salesCalculationService.computeCashBillBreakdown(report, salesResult.getAllInvoices());
         breakdownRepository.saveAll(breakdowns);
         report.getCashBillBreakdowns().addAll(breakdowns);
 
         // === COMPUTE TOTALS ===
-        report.setCashBillAmount(cashBillTotal);
-        report.setCreditBillAmount(creditBillTotal);
+        report.setCashBillAmount(salesResult.getCashBillTotal());
+        report.setCreditBillAmount(salesResult.getCreditBillTotal());
         recomputeTotals(report);
-    }
-
-    private void addTransactionLineItem(List<ReportLineItem> items, ShiftClosingReport report,
-                                         Long shiftId, String category, BigDecimal amount,
-                                         String label, int sortOrder) {
-        if (amount != null && amount.compareTo(BigDecimal.ZERO) > 0) {
-            ReportLineItem item = new ReportLineItem();
-            item.setReport(report);
-            item.setSection("ADVANCE");
-            item.setCategory(category);
-            item.setLabel(label);
-            item.setAmount(amount);
-            item.setSourceEntityType("EAdvance");
-            item.setSortOrder(sortOrder);
-            items.add(item);
-        }
-    }
-
-    private List<ReportCashBillBreakdown> computeCashBillBreakdown(ShiftClosingReport report,
-                                                                     List<InvoiceBill> allInvoices) {
-        // Only CASH invoices for breakdown
-        Map<String, ReportCashBillBreakdown> productBreakdowns = new LinkedHashMap<>();
-
-        for (InvoiceBill inv : allInvoices) {
-            if (!"CASH".equals(inv.getBillType())) continue;
-
-            String paymentMode = inv.getPaymentMode() != null ? inv.getPaymentMode().toUpperCase() : "CASH";
-
-            if (inv.getProducts() != null) {
-                for (InvoiceProduct ip : inv.getProducts()) {
-                    String productName = ip.getProduct() != null ? ip.getProduct().getName() : "Unknown";
-                    double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
-
-                    ReportCashBillBreakdown bd = productBreakdowns.computeIfAbsent(productName, k -> {
-                        ReportCashBillBreakdown b = new ReportCashBillBreakdown();
-                        b.setReport(report);
-                        b.setProductName(k);
-                        return b;
-                    });
-
-                    switch (paymentMode) {
-                        case "CARD":
-                            bd.setCardLitres(bd.getCardLitres() + qty);
-                            break;
-                        case "CCMS":
-                            bd.setCcmsLitres(bd.getCcmsLitres() + qty);
-                            break;
-                        case "UPI":
-                            bd.setUpiLitres(bd.getUpiLitres() + qty);
-                            break;
-                        case "CHEQUE":
-                            bd.setChequeLitres(bd.getChequeLitres() + qty);
-                            break;
-                        default:
-                            bd.setCashLitres(bd.getCashLitres() + qty);
-                            break;
-                    }
-                    bd.setTotalLitres(bd.getCashLitres() + bd.getCardLitres() + bd.getCcmsLitres()
-                            + bd.getUpiLitres() + bd.getChequeLitres());
-                }
-            }
-        }
-
-        return new ArrayList<>(productBreakdowns.values());
     }
 
     private void recomputeTotals(ShiftClosingReport report) {
@@ -636,9 +378,9 @@ public class ShiftClosingReportService {
             InvoiceBill bill = payment.getInvoiceBill();
             BigDecimal totalReceived = paymentRepository.sumPaymentsByInvoiceBillId(bill.getId());
             if (totalReceived.compareTo(bill.getNetAmount()) >= 0) {
-                bill.setPaymentStatus("PAID");
+                bill.setPaymentStatus(com.stopforfuel.backend.enums.PaymentStatus.PAID);
             } else {
-                bill.setPaymentStatus("NOT_PAID");
+                bill.setPaymentStatus(com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID);
             }
             invoiceBillRepository.save(bill);
         }
@@ -670,6 +412,7 @@ public class ShiftClosingReportService {
 
     // === PRINT DATA ===
 
+    @Transactional(readOnly = true)
     public ShiftReportPrintData getPrintData(Long shiftId) {
         ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
                 .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
@@ -684,6 +427,8 @@ public class ShiftClosingReportService {
             data.setCompanyName(company.getName() != null ? company.getName() : "StopForFuel");
             data.setCompanyAddress(company.getAddress());
             data.setCompanyGstNo(company.getGstNo());
+            data.setCompanyPhone(company.getPhone());
+            data.setCompanyEmail(company.getEmail());
         } else {
             data.setCompanyName("StopForFuel");
         }
@@ -693,346 +438,18 @@ public class ShiftClosingReportService {
         data.setShiftEnd(shift.getEndTime());
         data.setReportStatus(report.getStatus());
 
-        // Meter Readings
-        List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
-        for (NozzleInventory ni : nozzleInvs) {
-            ShiftReportPrintData.MeterReading mr = new ShiftReportPrintData.MeterReading();
-            mr.setPumpName(ni.getNozzle().getPump() != null ? ni.getNozzle().getPump().getName() : "-");
-            mr.setNozzleName(ni.getNozzle().getNozzleName());
-            mr.setProductName(ni.getNozzle().getTank() != null && ni.getNozzle().getTank().getProduct() != null
-                    ? ni.getNozzle().getTank().getProduct().getName() : "-");
-            mr.setOpenReading(ni.getOpenMeterReading());
-            mr.setCloseReading(ni.getCloseMeterReading());
-            mr.setSales(ni.getSales());
-            mr.setTestQuantity(ni.getTestQuantity());
-            mr.setRate(ni.getRate());
-            mr.setAmount(ni.getAmount());
-            data.getMeterReadings().add(mr);
-        }
+        // Delegate sales-related print data sections
+        salesCalculationService.populateMeterReadings(data, shiftId);
+        salesCalculationService.populateTankReadings(data, shiftId);
+        salesCalculationService.populateSalesDifferences(data, shiftId);
+        salesCalculationService.populateBillDetails(data, shiftId);
+        salesCalculationService.populateStockData(data, shiftId);
 
-        // Tank Readings
-        List<TankInventory> tankInvs = tankInventoryRepository.findByShiftId(shiftId);
-        for (TankInventory ti : tankInvs) {
-            ShiftReportPrintData.TankReading tr = new ShiftReportPrintData.TankReading();
-            tr.setTankName(ti.getTank().getName());
-            tr.setProductName(ti.getTank().getProduct() != null ? ti.getTank().getProduct().getName() : "-");
-            tr.setOpenDip(ti.getOpenDip());
-            tr.setOpenStock(ti.getOpenStock());
-            tr.setIncomeStock(ti.getIncomeStock());
-            tr.setTotalStock(ti.getTotalStock());
-            tr.setCloseDip(ti.getCloseDip());
-            tr.setCloseStock(ti.getCloseStock());
-            tr.setSaleStock(ti.getSaleStock());
-            data.getTankReadings().add(tr);
-        }
-
-        // Sales Difference (tank sale vs meter sale by product)
-        Map<String, double[]> tankSalesByProduct = new LinkedHashMap<>();
-        for (TankInventory ti : tankInvs) {
-            String productName = ti.getTank().getProduct() != null ? ti.getTank().getProduct().getName() : "Unknown";
-            double sale = ti.getSaleStock() != null ? ti.getSaleStock() : 0;
-            tankSalesByProduct.merge(productName, new double[]{sale}, (o, n) -> new double[]{o[0] + n[0]});
-        }
-        Map<String, double[]> meterSalesByProduct = new LinkedHashMap<>();
-        for (NozzleInventory ni : nozzleInvs) {
-            String productName = ni.getNozzle().getTank() != null && ni.getNozzle().getTank().getProduct() != null
-                    ? ni.getNozzle().getTank().getProduct().getName() : "Unknown";
-            double sale = ni.getSales() != null ? ni.getSales() : 0;
-            meterSalesByProduct.merge(productName, new double[]{sale}, (o, n) -> new double[]{o[0] + n[0]});
-        }
-        Set<String> allProducts = new LinkedHashSet<>();
-        allProducts.addAll(tankSalesByProduct.keySet());
-        allProducts.addAll(meterSalesByProduct.keySet());
-        for (String product : allProducts) {
-            double tankSale = tankSalesByProduct.containsKey(product) ? tankSalesByProduct.get(product)[0] : 0;
-            double meterSale = meterSalesByProduct.containsKey(product) ? meterSalesByProduct.get(product)[0] : 0;
-            ShiftReportPrintData.SalesDifference sd = new ShiftReportPrintData.SalesDifference();
-            sd.setProductName(product);
-            sd.setTankSale(tankSale);
-            sd.setMeterSale(meterSale);
-            sd.setDifference(tankSale - meterSale);
-            data.getSalesDifferences().add(sd);
-        }
-
-        // All invoices for this shift
+        // Delegate financial print data sections
         List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
-
-        // Cash Bill Details
-        List<InvoiceBill> cashBills = invoices.stream()
-                .filter(inv -> "CASH".equals(inv.getBillType()))
-                .collect(Collectors.toList());
-        for (InvoiceBill bill : cashBills) {
-            ShiftReportPrintData.CashBillDetail cbd = new ShiftReportPrintData.CashBillDetail();
-            cbd.setBillNo(bill.getBillNo());
-            cbd.setVehicleNo(bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-");
-            cbd.setDriverName(bill.getDriverName());
-            cbd.setPaymentMode(bill.getPaymentMode() != null ? bill.getPaymentMode() : "CASH");
-            cbd.setAmount(bill.getNetAmount());
-            StringBuilder prodStr = new StringBuilder();
-            if (bill.getProducts() != null) {
-                for (InvoiceProduct ip : bill.getProducts()) {
-                    String pName = ip.getProduct() != null ? abbreviateProduct(ip.getProduct().getName()) : "?";
-                    double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
-                    if (prodStr.length() > 0) prodStr.append(" ");
-                    prodStr.append(pName).append(":").append(String.format("%.0f", qty));
-                }
-            }
-            cbd.setProducts(prodStr.toString());
-            data.getCashBillDetails().add(cbd);
-        }
-
-        // Credit Bill Details (grouped by customer)
-        List<InvoiceBill> creditBills = invoices.stream()
-                .filter(inv -> "CREDIT".equals(inv.getBillType()))
-                .sorted(Comparator.comparing(inv -> inv.getCustomer() != null ? inv.getCustomer().getName() : ""))
-                .collect(Collectors.toList());
-
-        for (InvoiceBill bill : creditBills) {
-            ShiftReportPrintData.CreditBillDetail cbd = new ShiftReportPrintData.CreditBillDetail();
-            cbd.setCustomerName(bill.getCustomer() != null ? bill.getCustomer().getName() : "-");
-            cbd.setBillNo(bill.getBillNo());
-            cbd.setVehicleNo(bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-");
-            cbd.setAmount(bill.getNetAmount());
-
-            // Compact products: "P:500 HSD:200"
-            StringBuilder prodStr = new StringBuilder();
-            if (bill.getProducts() != null) {
-                for (InvoiceProduct ip : bill.getProducts()) {
-                    String pName = ip.getProduct() != null ? abbreviateProduct(ip.getProduct().getName()) : "?";
-                    double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
-                    if (prodStr.length() > 0) prodStr.append(" ");
-                    prodStr.append(pName).append(":").append(String.format("%.0f", qty));
-                }
-            }
-            cbd.setProducts(prodStr.toString());
-            data.getCreditBillDetails().add(cbd);
-        }
-
-        // Payment Mode Breakdown (cash bill amounts by payment mode)
-        Map<String, BigDecimal> modeAmounts = new LinkedHashMap<>();
-        Map<String, Integer> modeCounts = new LinkedHashMap<>();
-        for (InvoiceBill inv : invoices) {
-            if (!"CASH".equals(inv.getBillType())) continue;
-            String mode = inv.getPaymentMode() != null ? inv.getPaymentMode().toUpperCase() : "CASH";
-            BigDecimal amt = inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO;
-            modeAmounts.merge(mode, amt, BigDecimal::add);
-            modeCounts.merge(mode, 1, Integer::sum);
-        }
-        // Fixed display order
-        for (String mode : List.of("CASH", "CARD", "UPI", "CCMS", "CHEQUE", "BANK")) {
-            if (modeAmounts.containsKey(mode)) {
-                ShiftReportPrintData.PaymentModeBreakdown pmb = new ShiftReportPrintData.PaymentModeBreakdown();
-                pmb.setMode(mode);
-                pmb.setAmount(modeAmounts.get(mode));
-                pmb.setBillCount(modeCounts.getOrDefault(mode, 0));
-                data.getPaymentModeBreakdown().add(pmb);
-            }
-        }
-        // Any remaining modes not in the fixed list
-        for (Map.Entry<String, BigDecimal> e : modeAmounts.entrySet()) {
-            if (!List.of("CASH", "CARD", "UPI", "CCMS", "CHEQUE", "BANK").contains(e.getKey())) {
-                ShiftReportPrintData.PaymentModeBreakdown pmb = new ShiftReportPrintData.PaymentModeBreakdown();
-                pmb.setMode(e.getKey());
-                pmb.setAmount(e.getValue());
-                pmb.setBillCount(modeCounts.getOrDefault(e.getKey(), 0));
-                data.getPaymentModeBreakdown().add(pmb);
-            }
-        }
-
-        // Stock Summary — only products with sales > 0
-        // Build a map of ProductInventory records for this shift by product ID
-        List<ProductInventory> shiftProductInvs = productInventoryRepository.findByShiftId(shiftId);
-        Map<Long, ProductInventory> productInvMap = new HashMap<>();
-        for (ProductInventory pi : shiftProductInvs) {
-            productInvMap.put(pi.getProduct().getId(), pi);
-        }
-
-        List<Product> allProductEntities = productRepository.findByActive(true);
-        for (Product product : allProductEntities) {
-            ShiftReportPrintData.StockSummaryRow row = new ShiftReportPrintData.StockSummaryRow();
-            row.setProductName(product.getName());
-            row.setRate(product.getPrice());
-
-            if ("FUEL".equalsIgnoreCase(product.getCategory())) {
-                // For fuel products, use tank data
-                double open = 0, receipt = 0, total = 0, sales = 0;
-                for (TankInventory ti : tankInvs) {
-                    if (ti.getTank().getProduct() != null && ti.getTank().getProduct().getId().equals(product.getId())) {
-                        open += ti.getOpenStock() != null ? ti.getOpenStock() : 0;
-                        receipt += ti.getIncomeStock() != null ? ti.getIncomeStock() : 0;
-                        total += ti.getTotalStock() != null ? ti.getTotalStock() : 0;
-                        sales += ti.getSaleStock() != null ? ti.getSaleStock() : 0;
-                    }
-                }
-                if (sales == 0) continue; // skip fuel with zero sales
-                row.setOpenStock(open);
-                row.setReceipt(receipt);
-                row.setTotalStock(total);
-                row.setSales(sales);
-            } else {
-                // Non-fuel: use ProductInventory records from the shift
-                ProductInventory pi = productInvMap.get(product.getId());
-                if (pi != null) {
-                    double sales = pi.getSales() != null ? pi.getSales() : 0;
-                    if (sales == 0) continue; // skip non-fuel with zero sales
-                    row.setOpenStock(pi.getOpenStock() != null ? pi.getOpenStock() : 0);
-                    row.setReceipt(pi.getIncomeStock() != null ? pi.getIncomeStock() : 0);
-                    row.setTotalStock(pi.getTotalStock() != null ? pi.getTotalStock() : 0);
-                    row.setSales(sales);
-                } else {
-                    // Fallback: calculate from invoices (if no ProductInventory exists)
-                    double sales = 0;
-                    for (InvoiceBill inv : invoices) {
-                        if (inv.getProducts() != null) {
-                            for (InvoiceProduct ip : inv.getProducts()) {
-                                if (ip.getProduct() != null && ip.getProduct().getId().equals(product.getId())) {
-                                    sales += ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
-                                }
-                            }
-                        }
-                    }
-                    if (sales == 0) continue;
-                    row.setSales(sales);
-                    row.setOpenStock(0.0);
-                    row.setReceipt(0.0);
-                    row.setTotalStock(0.0);
-                }
-            }
-
-            BigDecimal salesAmt = product.getPrice() != null && row.getSales() != null
-                    ? product.getPrice().multiply(BigDecimal.valueOf(row.getSales()))
-                    : BigDecimal.ZERO;
-            row.setAmount(salesAmt.setScale(2, RoundingMode.HALF_UP));
-            data.getStockSummary().add(row);
-        }
-
-        // Stock Position — godown + cashier balances for non-fuel products
-        List<GodownStock> godownStocks = godownStockRepository.findByScid(SecurityUtils.getScid());
-        Map<Long, GodownStock> godownMap = new HashMap<>();
-        for (GodownStock gs : godownStocks) {
-            godownMap.put(gs.getProduct().getId(), gs);
-        }
-        List<CashierStock> cashierStocks = cashierStockRepository.findByScid(SecurityUtils.getScid());
-        Map<Long, CashierStock> cashierMap = new HashMap<>();
-        for (CashierStock cs : cashierStocks) {
-            cashierMap.put(cs.getProduct().getId(), cs);
-        }
-        for (Product product : allProductEntities) {
-            if ("FUEL".equalsIgnoreCase(product.getCategory())) continue;
-            GodownStock gs = godownMap.get(product.getId());
-            CashierStock cs = cashierMap.get(product.getId());
-            double godownQty = (gs != null && gs.getCurrentStock() != null) ? gs.getCurrentStock() : 0.0;
-            double cashierQty = (cs != null && cs.getCurrentStock() != null) ? cs.getCurrentStock() : 0.0;
-            if (godownQty == 0 && cashierQty == 0) continue;
-            ShiftReportPrintData.StockPositionRow posRow = new ShiftReportPrintData.StockPositionRow();
-            posRow.setProductName(product.getName());
-            posRow.setGodownStock(godownQty);
-            posRow.setCashierStock(cashierQty);
-            posRow.setTotalStock(godownQty + cashierQty);
-            posRow.setLowStock(gs != null && gs.getReorderLevel() != null
-                    && gs.getReorderLevel() > 0 && godownQty <= gs.getReorderLevel());
-            data.getStockPosition().add(posRow);
-        }
-
-        // Advance Entry Details — EAdvance entries (Card, UPI, Cheque, CCMS, Bank)
-        List<EAdvance> eAdvances = eAdvanceRepository.findByShiftIdOrderByTransactionDateDesc(shiftId);
-        for (EAdvance eAdv : eAdvances) {
-            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            entry.setType(eAdv.getAdvanceType() != null ? eAdv.getAdvanceType() : "OTHER");
-            entry.setDescription(eAdv.getRemarks() != null ? eAdv.getRemarks() : "-");
-            entry.setAmount(eAdv.getAmount());
-            data.getAdvanceEntries().add(entry);
-        }
-
-        // Add operational advances as advance entries
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
-        for (OperationalAdvance oa : opAdvances) {
-            if ("CANCELLED".equals(oa.getStatus())) continue;
-            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            entry.setType(oa.getAdvanceType() != null ? oa.getAdvanceType() : "CASH");
-            String desc = oa.getRecipientName() != null ? oa.getRecipientName() : "-";
-            StringBuilder linkInfo = new StringBuilder();
-            if (oa.getInvoiceBills() != null && !oa.getInvoiceBills().isEmpty()) {
-                for (InvoiceBill ib : oa.getInvoiceBills()) {
-                    if (linkInfo.length() > 0) linkInfo.append(", ");
-                    linkInfo.append(ib.getBillNo() != null ? ib.getBillNo() : "#" + ib.getId());
-                    linkInfo.append("(").append(ib.getBillType()).append(")");
-                }
-            }
-            if (oa.getStatement() != null) {
-                if (linkInfo.length() > 0) linkInfo.append(", ");
-                linkInfo.append("Stmt#").append(oa.getStatement().getStatementNo());
-            }
-            if (linkInfo.length() > 0) {
-                desc += " [" + linkInfo + "]";
-            }
-            if (oa.getUtilizedAmount() != null && oa.getUtilizedAmount().compareTo(BigDecimal.ZERO) > 0) {
-                desc += " Util:" + oa.getUtilizedAmount().setScale(2, RoundingMode.HALF_UP);
-            }
-            entry.setDescription(desc);
-            entry.setAmount(oa.getAmount());
-            entry.setReference(oa.getPurpose());
-            data.getAdvanceEntries().add(entry);
-        }
-
-        // Add inflow repayments
-        List<CashInflowRepayment> repayments = repaymentRepository.findByShiftIdOrderByRepaymentDateDesc(shiftId);
-        for (CashInflowRepayment r : repayments) {
-            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            entry.setType("REPAYMENT");
-            entry.setDescription(r.getCashInflow() != null ? r.getCashInflow().getSource() : "-");
-            entry.setAmount(r.getAmount());
-            data.getAdvanceEntries().add(entry);
-        }
-
-        // Add incentive from invoices
-        BigDecimal incentiveTotal = BigDecimal.ZERO;
-        for (InvoiceBill inv : invoices) {
-            if (inv.getTotalDiscount() != null && inv.getTotalDiscount().compareTo(BigDecimal.ZERO) > 0) {
-                incentiveTotal = incentiveTotal.add(inv.getTotalDiscount());
-            }
-        }
-        if (incentiveTotal.compareTo(BigDecimal.ZERO) > 0) {
-            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
-            entry.setType("INCENTIVE");
-            entry.setDescription("Discounts given");
-            entry.setAmount(incentiveTotal);
-            data.getAdvanceEntries().add(entry);
-        }
-
-        // (Employee advances are now covered by Operational Advances above)
-
-        // Payment Entries (bill and statement payments)
-        List<Payment> shiftPayments = paymentRepository.findByShiftIdEager(shiftId);
-        for (Payment p : shiftPayments) {
-            ShiftReportPrintData.PaymentEntryDetail pe = new ShiftReportPrintData.PaymentEntryDetail();
-            pe.setCustomerName(p.getCustomer() != null ? p.getCustomer().getName() : "-");
-            pe.setPaymentMode(p.getPaymentMode() != null ? p.getPaymentMode().getModeName() : "CASH");
-            pe.setAmount(p.getAmount());
-
-            if (p.getInvoiceBill() != null) {
-                pe.setType("BILL");
-                pe.setReference(p.getInvoiceBill().getBillNo());
-            } else if (p.getStatement() != null) {
-                pe.setType("STMT");
-                pe.setReference(p.getStatement().getStatementNo());
-            } else {
-                pe.setType("OTHER");
-                pe.setReference("-");
-            }
-            data.getPaymentEntries().add(pe);
-        }
+        financialCalculationService.populateAdvanceEntries(data, shiftId, invoices);
+        financialCalculationService.populatePaymentEntries(data, shiftId);
 
         return data;
-    }
-
-    private String abbreviateProduct(String name) {
-        if (name == null) return "?";
-        String upper = name.toUpperCase();
-        if (upper.contains("PETROL") || upper.equals("MS")) return "P";
-        if (upper.contains("XTRA") || upper.contains("XP") || upper.contains("PREMIUM")) return "XP";
-        if (upper.contains("DIESEL") || upper.equals("HSD") || upper.contains("HIGH SPEED")) return "HSD";
-        // For non-fuel, return first 3 chars
-        return name.length() > 4 ? name.substring(0, 4) : name;
     }
 }

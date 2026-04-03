@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.ProductInventoryDTO;
 import com.stopforfuel.backend.entity.ProductInventory;
 import com.stopforfuel.backend.service.ProductInventoryService;
 import com.stopforfuel.backend.service.ProductInventoryReportService;
@@ -26,24 +27,25 @@ public class ProductInventoryController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
-    public List<ProductInventory> getAll(
+    public List<ProductInventoryDTO> getAll(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        List<ProductInventory> result;
         if (fromDate != null && toDate != null) {
-            if (productId != null) return service.getByProductAndDateRange(productId, fromDate, toDate);
-            return service.getByDateRange(fromDate, toDate);
-        }
-        if (date != null) return service.getByDate(date);
-        if (productId != null) return service.getByProductId(productId);
-        return service.getAll();
+            if (productId != null) result = service.getByProductAndDateRange(productId, fromDate, toDate);
+            else result = service.getByDateRange(fromDate, toDate);
+        } else if (date != null) result = service.getByDate(date);
+        else if (productId != null) result = service.getByProductId(productId);
+        else result = service.getAll();
+        return result.stream().map(ProductInventoryDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
-    public ProductInventory getById(@PathVariable Long id) {
-        return service.getById(id);
+    public ProductInventoryDTO getById(@PathVariable Long id) {
+        return ProductInventoryDTO.from(service.getById(id));
     }
 
     @GetMapping("/report")
@@ -78,14 +80,14 @@ public class ProductInventoryController {
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
-    public ProductInventory create(@Valid @RequestBody ProductInventory inventory) {
-        return service.save(inventory);
+    public ProductInventoryDTO create(@Valid @RequestBody ProductInventory inventory) {
+        return ProductInventoryDTO.from(service.save(inventory));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
-    public ProductInventory update(@PathVariable Long id, @Valid @RequestBody ProductInventory inventory) {
-        return service.update(id, inventory);
+    public ProductInventoryDTO update(@PathVariable Long id, @Valid @RequestBody ProductInventory inventory) {
+        return ProductInventoryDTO.from(service.update(id, inventory));
     }
 
     @DeleteMapping("/{id}")

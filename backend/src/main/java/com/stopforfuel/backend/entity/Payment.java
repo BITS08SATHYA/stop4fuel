@@ -79,7 +79,7 @@ public class Payment extends BaseEntity {
             return "NOT_PAID";
         }
         if (invoiceBill != null) {
-            if ("PAID".equals(invoiceBill.getPaymentStatus())) return "PAID";
+            if (com.stopforfuel.backend.enums.PaymentStatus.PAID.equals(invoiceBill.getPaymentStatus())) return "PAID";
             return "NOT_PAID";
         }
         return null;

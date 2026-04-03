@@ -1,5 +1,7 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.CustomerListDTO;
+import com.stopforfuel.backend.dto.VehicleDTO;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.service.MappingService;

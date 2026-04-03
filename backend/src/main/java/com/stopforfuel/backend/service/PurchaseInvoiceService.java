@@ -8,6 +8,7 @@ import com.stopforfuel.backend.repository.PurchaseInvoiceRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -21,27 +22,33 @@ public class PurchaseInvoiceService {
     private final PurchaseInvoiceRepository repository;
     private final S3StorageService s3StorageService;
 
+    @Transactional(readOnly = true)
     public List<PurchaseInvoice> getAll() {
         return repository.findAllWithDetails(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public PurchaseInvoice getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("PurchaseInvoice not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseInvoice> getByStatus(String status) {
         return repository.findByStatusWithDetails(status, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseInvoice> getBySupplier(Long supplierId) {
         return repository.findBySupplierWithDetails(supplierId, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseInvoice> getByType(String invoiceType) {
         return repository.findByTypeWithDetails(invoiceType, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<PurchaseInvoice> getByDateRange(LocalDate fromDate, LocalDate toDate) {
         return repository.findByDateRangeWithDetails(SecurityUtils.getScid(), fromDate, toDate);
     }
@@ -114,6 +121,7 @@ public class PurchaseInvoiceService {
         return repository.save(invoice);
     }
 
+    @Transactional(readOnly = true)
     public String getPdfPresignedUrl(Long id) {
         PurchaseInvoice invoice = getById(id);
         if (invoice.getPdfFilePath() == null || invoice.getPdfFilePath().isEmpty()) {

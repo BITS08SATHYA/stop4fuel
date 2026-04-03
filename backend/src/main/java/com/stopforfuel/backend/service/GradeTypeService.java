@@ -5,6 +5,7 @@ import com.stopforfuel.backend.repository.GradeTypeRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,18 +15,22 @@ public class GradeTypeService {
 
     private final GradeTypeRepository repository;
 
+    @Transactional(readOnly = true)
     public List<GradeType> getAllGrades() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<GradeType> getActiveGrades() {
         return repository.findByActiveTrueAndScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<GradeType> getActiveGradesByOilType(Long oilTypeId) {
         return repository.findByOilTypeIdAndActiveTrueAndScid(oilTypeId, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public GradeType getGradeById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("GradeType not found with id: " + id));

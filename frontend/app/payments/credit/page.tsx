@@ -15,6 +15,8 @@ import {
     type InvoiceBill, type Statement, type Payment
 } from "@/lib/api/station";
 import { CustomerProfileOverlay } from "@/components/customers/CustomerProfileOverlay";
+import { CreditHealthBadge } from "@/components/customers/CreditHealthBadge";
+import Link from "next/link";
 
 type DetailTab = "bills" | "statements" | "payments";
 type ListFilter = "all" | "outstanding" | "current" | "30+" | "60+" | "90+" | "zero";
@@ -139,12 +141,21 @@ export default function CreditOverviewPage() {
                             {overview.totalCustomers} total customers &middot; {overview.totalCreditCustomers} with outstanding
                         </p>
                     </div>
-                    <button
-                        onClick={loadOverview}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
-                    >
-                        Refresh
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href="/payments/credit/watchlist"
+                            className="text-xs px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition-colors flex items-center gap-1.5"
+                        >
+                            <ShieldAlert className="w-3 h-3" />
+                            Watchlist
+                        </Link>
+                        <button
+                            onClick={loadOverview}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+                        >
+                            Refresh
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -258,7 +269,14 @@ export default function CreditOverviewPage() {
                                                     }`}>
                                                         {cust.customerName || "Unnamed"}
                                                     </span>
-                                                    {flag && (
+                                                    {cust.riskLevel && cust.riskLevel !== "LOW" && (
+                                                        <CreditHealthBadge
+                                                            riskLevel={cust.riskLevel}
+                                                            utilizationPercent={cust.utilizationPercent}
+                                                            oldestUnpaidDays={cust.oldestUnpaidDays}
+                                                        />
+                                                    )}
+                                                    {(!cust.riskLevel || cust.riskLevel === "LOW") && flag && (
                                                         <span className={`text-[9px] px-1 py-0 rounded border ${flag.color}`}>
                                                             {flag.label}
                                                         </span>
@@ -545,7 +563,7 @@ function BillsTable({ unpaidBills, paidBills }: { unpaidBills: InvoiceBill[]; pa
                                 </td>
                                 <td className="py-1.5 px-3 font-medium">{bill.vehicle?.vehicleNumber || "-"}</td>
                                 <td className="py-1.5 px-3 text-muted-foreground max-w-[140px] truncate">
-                                    {bill.products?.map(p => p.product?.name).filter(Boolean).join(", ") || "-"}
+                                    {bill.products?.map(p => p.productName).filter(Boolean).join(", ") || "-"}
                                 </td>
                                 <td className="py-1.5 px-3">{bill.indentNo || "-"}</td>
                                 <td className="py-1.5 px-3 text-muted-foreground">{bill.driverName || "-"}</td>
@@ -693,7 +711,7 @@ function PaymentsTable({ payments }: { payments: Payment[] }) {
                         </td>
                         <td className="py-1.5 px-3">
                             <Badge variant="default" className="text-[9px] px-1 py-0">
-                                {pmt.paymentMode?.modeName || "-"}
+                                {pmt.paymentMode?.name || "-"}
                             </Badge>
                         </td>
                         <td className="py-1.5 px-3 text-muted-foreground">{pmt.referenceNo || "-"}</td>

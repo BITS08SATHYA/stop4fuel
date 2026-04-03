@@ -3,6 +3,7 @@ package com.stopforfuel.backend.controller;
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
 import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
+import com.stopforfuel.backend.dto.ShiftDTO;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.service.ShiftService;
 import com.stopforfuel.backend.service.ShiftTestDataSeeder;
@@ -30,26 +31,27 @@ public class ShiftController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<Shift> getAll() {
-        return service.getAllShifts();
+    public List<ShiftDTO> getAll() {
+        return service.getAllShifts().stream().map(ShiftDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public Shift getActive() {
-        return service.getActiveShift();
+    public ShiftDTO getActive() {
+        Shift active = service.getActiveShift();
+        return active != null ? ShiftDTO.from(active) : null;
     }
 
     @PostMapping("/open")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public Shift open(@Valid @RequestBody Shift shift) {
-        return service.openShift(shift);
+    public ShiftDTO open(@Valid @RequestBody Shift shift) {
+        return ShiftDTO.from(service.openShift(shift));
     }
 
     @PostMapping("/{id}/close")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public Shift close(@PathVariable Long id) {
-        return service.closeShift(id);
+    public ShiftDTO close(@PathVariable Long id) {
+        return ShiftDTO.from(service.closeShift(id));
     }
 
     // ========== Shift Closing Workspace ==========
@@ -62,20 +64,26 @@ public class ShiftController {
 
     @PostMapping("/{id}/submit-for-review")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public Shift submitForReview(@PathVariable Long id, @Valid @RequestBody ShiftClosingSubmitDTO dto) {
-        return service.submitForReview(id, dto);
+    public ShiftDTO submitForReview(@PathVariable Long id, @Valid @RequestBody ShiftClosingSubmitDTO dto) {
+        return ShiftDTO.from(service.submitForReview(id, dto));
     }
 
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public Shift approve(@PathVariable Long id) {
-        return service.approveAndClose(id);
+    public ShiftDTO approve(@PathVariable Long id) {
+        return ShiftDTO.from(service.approveAndClose(id));
     }
 
     @PostMapping("/{id}/reopen")
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public Shift reopen(@PathVariable Long id) {
-        return service.reopenForReview(id);
+    public ShiftDTO reopen(@PathVariable Long id) {
+        return ShiftDTO.from(service.reopenForReview(id));
+    }
+
+    @PostMapping("/{id}/reopen-to-edit")
+    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    public ShiftDTO reopenToEdit(@PathVariable Long id) {
+        return ShiftDTO.from(service.reopenToEdit(id));
     }
 
     @PostMapping("/{id}/seed-test-data")

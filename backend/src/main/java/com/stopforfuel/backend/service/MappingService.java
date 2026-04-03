@@ -3,6 +3,8 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
+import com.stopforfuel.backend.enums.PaymentStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
@@ -12,7 +14,7 @@ import com.stopforfuel.backend.repository.VehicleRepository;
 import com.stopforfuel.config.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,26 +22,25 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class MappingService {
 
     private static final Logger log = LoggerFactory.getLogger(MappingService.class);
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
-    @Autowired
-    private VehicleRepository vehicleRepository;
+    private final VehicleRepository vehicleRepository;
 
-    @Autowired
-    private GroupRepository groupRepository;
+    private final GroupRepository groupRepository;
 
-    @Autowired
-    private InvoiceBillRepository invoiceBillRepository;
+    private final InvoiceBillRepository invoiceBillRepository;
 
+    @Transactional(readOnly = true)
     public List<Customer> getUnassignedCustomers() {
         return customerRepository.findByGroupIsNull();
     }
 
+    @Transactional(readOnly = true)
     public List<Vehicle> getUnassignedVehicles() {
         return vehicleRepository.findByCustomerIsNull();
     }
@@ -74,7 +75,7 @@ public class MappingService {
             if (oldCustomer != null && !oldCustomer.getId().equals(customerId)) {
                 // Check for unpaid credit bills before reassigning
                 long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
-                        vehicle.getId(), oldCustomer.getId(), "NOT_PAID");
+                        vehicle.getId(), oldCustomer.getId(), PaymentStatus.NOT_PAID);
                 if (unpaidCount > 0) {
                     throw new BusinessException(
                             "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +
@@ -96,7 +97,7 @@ public class MappingService {
 
             // Reset consumed liters for the new assignment cycle
             vehicle.setConsumedLiters(BigDecimal.ZERO);
-            vehicle.setStatus("ACTIVE");
+            vehicle.setStatus(EntityStatus.ACTIVE);
             vehicle.setCustomer(customer);
         }
         return vehicleRepository.saveAll(vehicles);
@@ -110,7 +111,7 @@ public class MappingService {
             if (oldCustomer != null) {
                 // Check for unpaid credit bills
                 long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
-                        vehicle.getId(), oldCustomer.getId(), "NOT_PAID");
+                        vehicle.getId(), oldCustomer.getId(), PaymentStatus.NOT_PAID);
                 if (unpaidCount > 0) {
                     throw new BusinessException(
                             "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +

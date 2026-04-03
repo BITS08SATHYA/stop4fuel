@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.Expense;
 import com.stopforfuel.backend.entity.Shift;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.ExpenseRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -21,15 +22,18 @@ public class ExpenseService {
     private final ExpenseRepository repository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<Expense> getAll() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Expense getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Expense not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<Expense> getByShift(Long shiftId) {
         return repository.findByShiftIdOrderByExpenseDateDesc(shiftId);
     }
@@ -37,9 +41,10 @@ public class ExpenseService {
     @Transactional
     public Expense create(Expense expense) {
         Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null) {
-            expense.setShiftId(activeShift.getId());
+        if (activeShift == null) {
+            throw new BusinessException("No active shift. Please open a shift before recording an expense.");
         }
+        expense.setShiftId(activeShift.getId());
         return repository.save(expense);
     }
 
@@ -48,10 +53,12 @@ public class ExpenseService {
         repository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal sumByShift(Long shiftId) {
         return repository.sumByShift(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<Expense> getByDateRange(LocalDate fromDate, LocalDate toDate) {
         LocalDateTime from = fromDate.atStartOfDay();
         LocalDateTime to = toDate.atTime(LocalTime.MAX);

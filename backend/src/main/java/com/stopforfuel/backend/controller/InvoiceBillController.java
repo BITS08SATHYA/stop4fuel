@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.InvoiceBillDTO;
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.service.InvoiceBillService;
@@ -27,19 +28,19 @@ public class InvoiceBillController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
-    public List<InvoiceBill> getAll() {
-        return service.getAllInvoices();
+    public List<InvoiceBillDTO> getAll() {
+        return service.getAllInvoices().stream().map(InvoiceBillDTO::from).toList();
     }
 
     @GetMapping("/shift/{shiftId}")
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
-    public List<InvoiceBill> getByShift(@PathVariable Long shiftId) {
-        return service.getInvoicesByShift(shiftId);
+    public List<InvoiceBillDTO> getByShift(@PathVariable Long shiftId) {
+        return service.getInvoicesByShift(shiftId).stream().map(InvoiceBillDTO::from).toList();
     }
 
     @GetMapping("/history")
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
-    public Page<InvoiceBill> getHistory(
+    public Page<InvoiceBillDTO> getHistory(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String billType,
@@ -48,7 +49,8 @@ public class InvoiceBillController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String categoryType) {
-        return service.getInvoiceHistory(billType, paymentStatus, categoryType, fromDate, toDate, search, PageRequest.of(page, size));
+        return service.getInvoiceHistory(billType, paymentStatus, categoryType, fromDate, toDate, search, PageRequest.of(page, size))
+                .map(InvoiceBillDTO::from);
     }
 
     @GetMapping("/history/product-summary")
@@ -64,25 +66,25 @@ public class InvoiceBillController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
-    public InvoiceBill getById(@PathVariable Long id) {
-        return service.getInvoiceById(id);
+    public InvoiceBillDTO getById(@PathVariable Long id) {
+        return InvoiceBillDTO.from(service.getInvoiceById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
-    public InvoiceBill create(@Valid @RequestBody InvoiceBill invoice) {
-        return service.createInvoice(invoice);
+    public InvoiceBillDTO create(@Valid @RequestBody InvoiceBill invoice) {
+        return InvoiceBillDTO.from(service.createInvoice(invoice));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
-    public InvoiceBill update(@PathVariable Long id, @Valid @RequestBody InvoiceBill invoice) {
-        return service.updateInvoice(id, invoice);
+    public InvoiceBillDTO update(@PathVariable Long id, @Valid @RequestBody InvoiceBill invoice) {
+        return InvoiceBillDTO.from(service.updateInvoice(id, invoice));
     }
 
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
-    public Page<InvoiceBill> getByCustomer(
+    public Page<InvoiceBillDTO> getByCustomer(
             @PathVariable Long customerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -90,7 +92,8 @@ public class InvoiceBillController {
             @RequestParam(required = false) String paymentStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate) {
-        return service.getInvoicesByCustomer(customerId, billType, paymentStatus, fromDate, toDate, PageRequest.of(page, size));
+        return service.getInvoicesByCustomer(customerId, billType, paymentStatus, fromDate, toDate, PageRequest.of(page, size))
+                .map(InvoiceBillDTO::from);
     }
 
     @DeleteMapping("/{id}")
@@ -101,12 +104,12 @@ public class InvoiceBillController {
 
     @PostMapping("/{id}/upload/{type}")
     @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
-    public ResponseEntity<InvoiceBill> uploadFile(@PathVariable Long id,
+    public ResponseEntity<InvoiceBillDTO> uploadFile(@PathVariable Long id,
                                                    @PathVariable String type,
                                                    @RequestParam("file") MultipartFile file) {
         try {
             InvoiceBill updated = service.uploadFile(id, type, file);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(InvoiceBillDTO.from(updated));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }

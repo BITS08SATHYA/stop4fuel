@@ -1,7 +1,8 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
-import com.stopforfuel.backend.entity.Customer;
+import com.stopforfuel.backend.dto.GroupDTO;
+import com.stopforfuel.backend.dto.CustomerListDTO;
 import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.service.CustomerService;
 import com.stopforfuel.backend.service.GroupService;
@@ -25,20 +26,20 @@ public class GroupController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
-    public List<Group> getAllGroups() {
-        return groupService.getAllGroups();
+    public List<GroupDTO> getAllGroups() {
+        return groupService.getAllGroups().stream().map(GroupDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public Group createGroup(@Valid @RequestBody Group group) {
-        return groupService.createGroup(group);
+    public GroupDTO createGroup(@Valid @RequestBody Group group) {
+        return GroupDTO.from(groupService.createGroup(group));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
-    public Group updateGroup(@PathVariable Long id, @Valid @RequestBody Group group) {
-        return groupService.updateGroup(id, group);
+    public GroupDTO updateGroup(@PathVariable Long id, @Valid @RequestBody Group group) {
+        return GroupDTO.from(groupService.updateGroup(id, group));
     }
 
     @DeleteMapping("/{id}")
@@ -49,10 +50,11 @@ public class GroupController {
 
     @GetMapping("/{id}/customers")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
-    public Page<Customer> getCustomersByGroupId(
+    public Page<CustomerListDTO> getCustomersByGroupId(
             @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return customerService.getCustomersByGroupId(id, PageRequest.of(page, size));
+        return customerService.getCustomersByGroupId(id, PageRequest.of(page, size))
+                .map(CustomerListDTO::from);
     }
 }

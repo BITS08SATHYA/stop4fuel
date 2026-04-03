@@ -49,6 +49,7 @@ import {
     Bell,
     ClipboardList,
     MapPin,
+    Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -115,12 +116,15 @@ const invoiceManagementNav = [
     { name: "Invoice Dashboard", href: "/operations/invoices/dashboard", icon: BarChart3 },
     { name: "Invoices", href: "/operations/invoices", icon: FileText },
     { name: "Invoice History", href: "/operations/invoices/history", icon: History },
+    { name: "Invoice Explorer", href: "/operations/invoices/explorer", icon: Search },
 ];
 
 const paymentManagementNav = [
     { name: "Payment Dashboard", href: "/payments/dashboard", icon: PieChart },
     { name: "Credit Overview", href: "/payments/credit", icon: Eye },
+    { name: "Watchlist", href: "/payments/credit/watchlist", icon: Shield },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
+    { name: "Explorer", href: "/payments/explorer", icon: Search },
     { name: "Payments", href: "/payments", icon: CreditCard },
     { name: "Customer Ledger", href: "/payments/ledger", icon: BookOpen },
 ];
@@ -143,8 +147,82 @@ const analyticsNav = [
 ];
 
 const systemNav = [
+    { name: "Users", href: "/settings/users", icon: UserCog },
+    { name: "Permissions", href: "/settings/permissions", icon: Shield },
     { name: "Configurations", href: "/settings", icon: Settings },
     { name: "Notifications", href: "/settings/notifications", icon: Bell },
+];
+
+// Cashier-specific restricted navigation
+const cashierSections: NavSection[] = [
+    {
+        label: "Main",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        ],
+    },
+    {
+        label: "Shift Operations",
+        permission: "SHIFT_VIEW",
+        items: [
+            { name: "Invoice Bills", href: "/operations/invoices", icon: FileText },
+            { name: "View Invoices", href: "/operations/invoices/history", icon: Eye },
+            { name: "Payments", href: "/payments", icon: CreditCard },
+            { name: "Expenses", href: "/operations/expenses", icon: Receipt },
+            { name: "Incentive Payments", href: "/operations/incentive-payments", icon: Gift },
+            { name: "Operational Advances", href: "/operations/advances", icon: Wallet },
+            { name: "E-Advances", href: "/operations/e-advances", icon: CreditCard },
+            { name: "Shift Closing", href: "/operations/shifts", icon: Clock },
+        ],
+    },
+];
+
+// Customer-specific portal navigation
+const customerSections: NavSection[] = [
+    {
+        label: "My Account",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        ],
+    },
+    {
+        label: "Financial",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "Statements", href: "/customer/statements", icon: Receipt },
+            { name: "Payments", href: "/customer/payments", icon: CreditCard },
+            { name: "Invoices", href: "/customer/invoices", icon: FileText },
+        ],
+    },
+    {
+        label: "Vehicles",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "My Vehicles", href: "/customer/vehicles", icon: Truck },
+        ],
+    },
+];
+
+// Employee-specific restricted navigation
+const employeeSections: NavSection[] = [
+    {
+        label: "Main",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        ],
+    },
+    {
+        label: "My Info",
+        permission: "DASHBOARD_VIEW",
+        items: [
+            { name: "My Attendance", href: "/employees/attendance", icon: CalendarCheck },
+            { name: "My Leaves", href: "/employees/leaves", icon: CalendarDays },
+            { name: "My Salary", href: "/employees/salary", icon: IndianRupee },
+        ],
+    },
 ];
 
 type NavSection = {
@@ -178,7 +256,11 @@ export function AppSidebar() {
         return pathname === href || pathname.startsWith(href + "/");
     };
 
-    const filteredSections = sections.filter(section => hasPermission(section.permission));
+    const isCustomer = user?.role === "CUSTOMER";
+    const isCashier = user?.designation === "Cashier" && user?.role !== "OWNER" && user?.role !== "ADMIN";
+    const isEmployee = user?.role === "EMPLOYEE" && !isCashier;
+    const activeSections = isCustomer ? customerSections : isCashier ? cashierSections : isEmployee ? employeeSections : sections;
+    const filteredSections = activeSections.filter(section => hasPermission(section.permission));
 
     return (
         <aside className="w-64 border-r border-border bg-card text-card-foreground flex flex-col h-screen sticky top-0 transition-colors duration-300">

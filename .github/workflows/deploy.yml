@@ -2,21 +2,95 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
-
-env:
-  AWS_REGION: ap-south-1
-  ECR_REGISTRY: 607856468014.dkr.ecr.ap-south-1.amazonaws.com
-  ECS_CLUSTER: stopforfuel-cluster
+    branches: [main, dev]
 
 jobs:
+  # ============================================================
+  # Step 1: Determine environment and fetch config from SSM
+  # ============================================================
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      deploy_target: ${{ steps.config.outputs.deploy_target }}
+      ecr_registry: ${{ steps.config.outputs.ecr_registry }}
+      api_url: ${{ steps.config.outputs.api_url }}
+      cognito_pool_id: ${{ steps.config.outputs.cognito_pool_id }}
+      cognito_client_id: ${{ steps.config.outputs.cognito_client_id }}
+      cognito_domain: ${{ steps.config.outputs.cognito_domain }}
+      cognito_region: ${{ steps.config.outputs.cognito_region }}
+      landing_url: ${{ steps.config.outputs.landing_url }}
+      ecs_cluster: ${{ steps.config.outputs.ecs_cluster }}
+      ecs_backend_service: ${{ steps.config.outputs.ecs_backend_service }}
+      ecs_frontend_service: ${{ steps.config.outputs.ecs_frontend_service }}
+      ec2_host: ${{ steps.config.outputs.ec2_host }}
+    steps:
+      - id: env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+
+      # Dev environment
+      - name: Configure AWS credentials (dev)
+        if: steps.env.outputs.environment == 'dev'
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Production environment
+      - name: Configure AWS credentials (production)
+        if: steps.env.outputs.environment == 'production'
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - id: config
+        name: Fetch config from SSM Parameter Store
+        run: |
+          fetch_param() {
+            aws ssm get-parameter --name "$1" --query "Parameter.Value" --output text
+          }
+
+          echo "deploy_target=$(fetch_param /stopforfuel/deploy-target)" >> $GITHUB_OUTPUT
+          echo "ecr_registry=$(fetch_param /stopforfuel/ecr-registry)" >> $GITHUB_OUTPUT
+          echo "api_url=$(fetch_param /stopforfuel/api-url)" >> $GITHUB_OUTPUT
+          echo "cognito_pool_id=$(fetch_param /stopforfuel/cognito/user-pool-id)" >> $GITHUB_OUTPUT
+          echo "cognito_client_id=$(fetch_param /stopforfuel/cognito/client-id)" >> $GITHUB_OUTPUT
+          echo "cognito_domain=$(fetch_param /stopforfuel/cognito/domain)" >> $GITHUB_OUTPUT
+          echo "cognito_region=$(fetch_param /stopforfuel/region)" >> $GITHUB_OUTPUT
+          echo "landing_url=$(fetch_param /stopforfuel/landing-url)" >> $GITHUB_OUTPUT
+
+          # ECS-specific params (only exist in prod)
+          if [ "${{ steps.env.outputs.environment }}" = "production" ]; then
+            echo "ecs_cluster=$(fetch_param /stopforfuel/ecs-cluster)" >> $GITHUB_OUTPUT
+            echo "ecs_backend_service=$(fetch_param /stopforfuel/ecs-backend-service)" >> $GITHUB_OUTPUT
+            echo "ecs_frontend_service=$(fetch_param /stopforfuel/ecs-frontend-service)" >> $GITHUB_OUTPUT
+          fi
+
+          # EC2-specific params (only exist in dev)
+          if [ "${{ steps.env.outputs.environment }}" = "dev" ]; then
+            echo "ec2_host=$(fetch_param /stopforfuel/ec2-host)" >> $GITHUB_OUTPUT
+          fi
+
+  # ============================================================
+  # Step 2: Build & Push Backend
+  # ============================================================
   deploy-backend:
     name: Deploy Backend
+    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin
           java-version: "21"
@@ -25,104 +99,196 @@ jobs:
         working-directory: backend
         run: ./gradlew bootJar
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials (dev)
+        if: needs.setup.outputs.environment == 'dev'
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configure AWS credentials (production)
+        if: needs.setup.outputs.environment == 'production'
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
 
       - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2
 
-      - name: Build Docker Image
+      - name: Build & Push Docker Image
         working-directory: backend
         run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
-          docker build -t $ECR_REGISTRY/stopforfuel-backend:$IMAGE_TAG -t $ECR_REGISTRY/stopforfuel-backend:latest .
+          TAG=${GITHUB_SHA::8}
+          ECR=${{ needs.setup.outputs.ecr_registry }}
+          docker build \
+            -t $ECR/stopforfuel-backend:$TAG \
+            -t $ECR/stopforfuel-backend:latest .
+          docker push $ECR/stopforfuel-backend:$TAG
+          docker push $ECR/stopforfuel-backend:latest
 
       - name: Scan Backend Image (Trivy)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
-          image-ref: "${{ env.ECR_REGISTRY }}/stopforfuel-backend:latest"
+          image-ref: "${{ needs.setup.outputs.ecr_registry }}/stopforfuel-backend:latest"
           format: "table"
           exit-code: "1"
           severity: "CRITICAL"
           ignore-unfixed: true
 
-      - name: Push Docker Image
-        run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
-          docker push $ECR_REGISTRY/stopforfuel-backend:$IMAGE_TAG
-          docker push $ECR_REGISTRY/stopforfuel-backend:latest
-
       - name: Deploy to ECS
+        if: needs.setup.outputs.deploy_target == 'ecs'
         run: |
           aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service stopforfuel-backend-service \
+            --cluster ${{ needs.setup.outputs.ecs_cluster }} \
+            --service ${{ needs.setup.outputs.ecs_backend_service }} \
             --force-new-deployment
 
+  # ============================================================
+  # Step 3: Build & Push Frontend
+  # ============================================================
   deploy-frontend:
     name: Deploy Frontend
+    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@v4
+      - name: Configure AWS credentials (dev)
+        if: needs.setup.outputs.environment == 'dev'
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-      - name: Build Frontend
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials (production)
+        if: needs.setup.outputs.environment == 'production'
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
 
       - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2
 
-      - name: Build Docker Image
+      - name: Build & Push Docker Image
         working-directory: frontend
         run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
+          TAG=${GITHUB_SHA::8}
+          ECR=${{ needs.setup.outputs.ecr_registry }}
           docker build \
-            --build-arg NEXT_PUBLIC_API_URL=https://api.stopforfuel.com/api \
-            --build-arg NEXT_PUBLIC_COGNITO_USER_POOL_ID=ap-south-1_1jBWQOLC2 \
-            --build-arg NEXT_PUBLIC_COGNITO_CLIENT_ID=4mgdk5ld0hfc5hglc3tvklr5li \
-            --build-arg NEXT_PUBLIC_COGNITO_DOMAIN=stopforfuel-prod.auth.ap-south-1.amazoncognito.com \
-            --build-arg NEXT_PUBLIC_AWS_REGION=ap-south-1 \
-            --build-arg NEXT_PUBLIC_LANDING_URL=https://stopforfuel.com \
-            -t $ECR_REGISTRY/stopforfuel-frontend:$IMAGE_TAG \
-            -t $ECR_REGISTRY/stopforfuel-frontend:latest .
+            --build-arg NEXT_PUBLIC_API_URL=${{ needs.setup.outputs.api_url }} \
+            --build-arg NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ needs.setup.outputs.cognito_pool_id }} \
+            --build-arg NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ needs.setup.outputs.cognito_client_id }} \
+            --build-arg NEXT_PUBLIC_COGNITO_DOMAIN=${{ needs.setup.outputs.cognito_domain }} \
+            --build-arg NEXT_PUBLIC_AWS_REGION=${{ needs.setup.outputs.cognito_region }} \
+            --build-arg NEXT_PUBLIC_LANDING_URL=${{ needs.setup.outputs.landing_url }} \
+            -t $ECR/stopforfuel-frontend:$TAG \
+            -t $ECR/stopforfuel-frontend:latest .
+          docker push $ECR/stopforfuel-frontend:$TAG
+          docker push $ECR/stopforfuel-frontend:latest
 
       - name: Scan Frontend Image (Trivy)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
-          image-ref: "${{ env.ECR_REGISTRY }}/stopforfuel-frontend:latest"
+          image-ref: "${{ needs.setup.outputs.ecr_registry }}/stopforfuel-frontend:latest"
           format: "table"
           exit-code: "1"
           severity: "CRITICAL"
           ignore-unfixed: true
 
-      - name: Push Docker Image
-        run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
-          docker push $ECR_REGISTRY/stopforfuel-frontend:$IMAGE_TAG
-          docker push $ECR_REGISTRY/stopforfuel-frontend:latest
-
       - name: Deploy to ECS
+        if: needs.setup.outputs.deploy_target == 'ecs'
         run: |
           aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service stopforfuel-frontend-service \
+            --cluster ${{ needs.setup.outputs.ecs_cluster }} \
+            --service ${{ needs.setup.outputs.ecs_frontend_service }} \
             --force-new-deployment
+
+  # ============================================================
+  # Step 4: Deploy to EC2 (dev only)
+  # ============================================================
+  deploy-ec2:
+    name: Deploy to EC2
+    needs: [setup, deploy-backend, deploy-frontend]
+    if: needs.setup.outputs.deploy_target == 'ec2'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ needs.setup.outputs.ec2_host }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Fetch secrets and deploy
+        run: |
+          EC2_HOST=${{ needs.setup.outputs.ec2_host }}
+          ECR=${{ needs.setup.outputs.ecr_registry }}
+          TAG=${GITHUB_SHA::8}
+          SSH="ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no ubuntu@$EC2_HOST"
+
+          # Fetch DB password from Secrets Manager
+          DB_PASSWORD=$(aws secretsmanager get-secret-value \
+            --secret-id stopforfuel/db-credentials \
+            --query "SecretString" --output text | python3 -c "import sys, json; print(json.loads(sys.stdin.read())['password'])")
+
+          # Upload docker-compose and nginx config
+          scp -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no \
+            docker-compose.prod.yml ubuntu@$EC2_HOST:/home/ubuntu/docker-compose.prod.yml
+          ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "mkdir -p /home/ubuntu/nginx"
+          scp -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no \
+            nginx/default.conf ubuntu@$EC2_HOST:/home/ubuntu/nginx/default.conf
+
+          # Deploy on EC2
+          $SSH << REMOTE_EOF
+          set -e
+
+          # Write .env file
+          cat > /home/ubuntu/.env << 'ENVEOF'
+          SPRING_PROFILES_ACTIVE=dev
+          DB_PASSWORD=$DB_PASSWORD
+          AUTH_ENABLED=true
+          COGNITO_USER_POOL_ID=${{ needs.setup.outputs.cognito_pool_id }}
+          COGNITO_CLIENT_ID=${{ needs.setup.outputs.cognito_client_id }}
+          COGNITO_ISSUER_URI=https://cognito-idp.${{ needs.setup.outputs.cognito_region }}.amazonaws.com/${{ needs.setup.outputs.cognito_pool_id }}
+          COGNITO_JWK_URI=https://cognito-idp.${{ needs.setup.outputs.cognito_region }}.amazonaws.com/${{ needs.setup.outputs.cognito_pool_id }}/.well-known/jwks.json
+          AWS_REGION=${{ needs.setup.outputs.cognito_region }}
+          CORS_ALLOWED_ORIGINS=https://devapp.stopforfuel.com,http://$EC2_HOST:3000,http://localhost:3000
+          ENVEOF
+          chmod 600 /home/ubuntu/.env
+
+          # ECR login
+          aws ecr get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin $ECR
+
+          # Pull latest images
+          docker pull $ECR/stopforfuel-backend:$TAG
+          docker pull $ECR/stopforfuel-frontend:$TAG
+
+          # Update image tags in compose file
+          sed -i "s|stopforfuel-backend:.*|stopforfuel-backend:$TAG|g" /home/ubuntu/docker-compose.prod.yml
+          sed -i "s|stopforfuel-frontend:.*|stopforfuel-frontend:$TAG|g" /home/ubuntu/docker-compose.prod.yml
+
+          # Deploy — only recreate app containers, never touch postgres to preserve data
+          cd /home/ubuntu
+          docker compose -f docker-compose.prod.yml --env-file .env up -d --no-deps --force-recreate backend frontend nginx
+          docker compose -f docker-compose.prod.yml --env-file .env up -d postgres
+
+          sleep 5
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo "Deployed build: $TAG"
+          REMOTE_EOF

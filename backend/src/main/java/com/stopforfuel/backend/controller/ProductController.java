@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.ProductDTO;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,50 +20,50 @@ public class ProductController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<Product> getAllProducts() {
-        return productService.getAllProducts();
+    public List<ProductDTO> getAllProducts() {
+        return productService.getAllProducts().stream().map(ProductDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<Product> getActiveProducts() {
-        return productService.getActiveProducts();
+    public List<ProductDTO> getActiveProducts() {
+        return productService.getActiveProducts().stream().map(ProductDTO::from).toList();
     }
 
     @GetMapping("/active/non-fuel")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<Product> getActiveNonFuelProducts() {
-        return productService.getActiveNonFuelProducts();
+    public List<ProductDTO> getActiveNonFuelProducts() {
+        return productService.getActiveNonFuelProducts().stream().map(ProductDTO::from).toList();
     }
 
     @GetMapping("/category/{category}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<Product> getProductsByCategory(@PathVariable String category) {
-        return productService.getProductsByCategory(category);
+    public List<ProductDTO> getProductsByCategory(@PathVariable String category) {
+        return productService.getProductsByCategory(category).stream().map(ProductDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public Product getProductById(@PathVariable Long id) {
-        return productService.getProductById(id);
+    public ProductDTO getProductById(@PathVariable Long id) {
+        return ProductDTO.from(productService.getProductById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public Product createProduct(@Valid @RequestBody Product product) {
-        return productService.createProduct(product);
+    public ProductDTO createProduct(@Valid @RequestBody Product product) {
+        return ProductDTO.from(productService.createProduct(product));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public Product updateProduct(@PathVariable Long id, @Valid @RequestBody Product product) {
-        return productService.updateProduct(id, product);
+    public ProductDTO updateProduct(@PathVariable Long id, @Valid @RequestBody Product product) {
+        return ProductDTO.from(productService.updateProduct(id, product));
     }
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public Product toggleStatus(@PathVariable Long id) {
-        return productService.toggleStatus(id);
+    public ProductDTO toggleStatus(@PathVariable Long id) {
+        return ProductDTO.from(productService.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")

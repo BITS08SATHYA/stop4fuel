@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.ExternalCashInflowDTO;
 import com.stopforfuel.backend.entity.CashInflowRepayment;
 import com.stopforfuel.backend.entity.ExternalCashInflow;
 import com.stopforfuel.backend.service.ExternalCashInflowService;
@@ -19,26 +20,26 @@ public class ExternalCashInflowController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<ExternalCashInflow> getAll() {
-        return service.getAll();
+    public List<ExternalCashInflowDTO> getAll() {
+        return service.getAll().stream().map(ExternalCashInflowDTO::from).toList();
     }
 
     @GetMapping("/shift/{shiftId}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<ExternalCashInflow> getByShift(@PathVariable Long shiftId) {
-        return service.getByShift(shiftId);
+    public List<ExternalCashInflowDTO> getByShift(@PathVariable Long shiftId) {
+        return service.getByShift(shiftId).stream().map(ExternalCashInflowDTO::from).toList();
     }
 
     @GetMapping("/status/{status}")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
-    public List<ExternalCashInflow> getByStatus(@PathVariable String status) {
-        return service.getByStatus(status);
+    public List<ExternalCashInflowDTO> getByStatus(@PathVariable String status) {
+        return service.getByStatus(status).stream().map(ExternalCashInflowDTO::from).toList();
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
-    public ExternalCashInflow create(@Valid @RequestBody ExternalCashInflow inflow) {
-        return service.create(inflow);
+    public ExternalCashInflowDTO create(@Valid @RequestBody ExternalCashInflow inflow) {
+        return ExternalCashInflowDTO.from(service.create(inflow));
     }
 
     @PostMapping("/{id}/repay")

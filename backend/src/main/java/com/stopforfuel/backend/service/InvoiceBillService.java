@@ -39,10 +39,12 @@ public class InvoiceBillService {
     private final IncentivePaymentService incentivePaymentService;
     private final BillSequenceService billSequenceService;
 
+    @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<InvoiceBill> getInvoicesByShift(Long shiftId) {
         return repository.findByShiftId(shiftId);
     }
@@ -77,7 +79,7 @@ public class InvoiceBillService {
         }
 
         // --- Pre-invoice credit limit validation (CREDIT invoices only) ---
-        if ("CREDIT".equals(invoice.getBillType()) && invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+        if (com.stopforfuel.backend.enums.BillType.CREDIT.equals(invoice.getBillType()) && invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
             // Calculate total liters and amount for this invoice
             BigDecimal preLiters = BigDecimal.ZERO;
             BigDecimal preAmount = BigDecimal.ZERO;
@@ -236,27 +238,42 @@ public class InvoiceBillService {
                 totalGross = totalGross.add(gross);
 
                 // Apply incentive discount if applicable
+                boolean discountApplied = false;
                 if (custId != null && product.getProduct() != null && product.getProduct().getId() != null) {
-                    incentiveService.getActiveIncentive(custId, product.getProduct().getId())
-                            .ifPresent(incentive -> {
-                                boolean meetsMin = incentive.getMinQuantity() == null
-                                        || qty.compareTo(incentive.getMinQuantity()) >= 0;
-                                if (meetsMin) {
-                                    product.setDiscountRate(incentive.getDiscountRate());
-                                    BigDecimal discAmt = incentive.getDiscountRate().multiply(qty);
-                                    product.setDiscountAmount(discAmt);
-                                    product.setAmount(gross.subtract(discAmt));
-                                }
-                            });
+                    var incentiveOpt = incentiveService.getActiveIncentive(custId, product.getProduct().getId());
+                    if (incentiveOpt.isPresent()) {
+                        Incentive incentive = incentiveOpt.get();
+                        boolean meetsMin = incentive.getMinQuantity() == null
+                                || qty.compareTo(incentive.getMinQuantity()) >= 0;
+                        if (meetsMin) {
+                            product.setDiscountRate(incentive.getDiscountRate());
+                            BigDecimal discAmt = incentive.getDiscountRate().multiply(qty);
+                            product.setDiscountAmount(discAmt);
+                            product.setAmount(gross.subtract(discAmt));
+                            discountApplied = true;
+                        }
+                    }
+                }
+
+                // Fallback: apply product-level discount if no customer incentive found
+                if (!discountApplied && product.getProduct() != null && product.getProduct().getId() != null) {
+                    Product prod = productRepository.findById(product.getProduct().getId()).orElse(null);
+                    if (prod != null && prod.getDiscountRate() != null
+                            && prod.getDiscountRate().compareTo(BigDecimal.ZERO) > 0
+                            && product.getDiscountRate() != null
+                            && product.getDiscountRate().compareTo(prod.getDiscountRate()) == 0) {
+                        BigDecimal discAmt = prod.getDiscountRate().multiply(qty);
+                        product.setDiscountRate(prod.getDiscountRate());
+                        product.setDiscountAmount(discAmt);
+                        product.setAmount(gross.subtract(discAmt));
+                        discountApplied = true;
+                    }
                 }
 
                 // If no discount was applied, set amount = gross
-                if (product.getAmount() == null || product.getDiscountRate() != null) {
-                    // already set above if discount applied
-                } else {
-                    product.setAmount(gross);
-                }
-                if (product.getAmount() == null) {
+                if (!discountApplied) {
+                    product.setDiscountRate(null);
+                    product.setDiscountAmount(null);
                     product.setAmount(gross);
                 }
 
@@ -280,9 +297,10 @@ public class InvoiceBillService {
         // --- Assign active shift ---
         if (invoice.getShiftId() == null) {
             Shift activeShift = shiftService.getActiveShift();
-            if (activeShift != null) {
-                invoice.setShiftId(activeShift.getId());
+            if (activeShift == null) {
+                throw new BusinessException("No active shift. Please open a shift before creating an invoice.");
             }
+            invoice.setShiftId(activeShift.getId());
         }
 
         // --- Generate bill number ---
@@ -323,7 +341,7 @@ public class InvoiceBillService {
      * Cash payments need no separate record — the InvoiceBill itself is the source of truth.
      */
     private void autoCreateShiftTransaction(InvoiceBill invoice) {
-        if (!"CASH".equals(invoice.getBillType())) {
+        if (!com.stopforfuel.backend.enums.BillType.CASH.equals(invoice.getBillType())) {
             return;
         }
 
@@ -357,7 +375,7 @@ public class InvoiceBillService {
                 eAdv.setRemarks(remark);
                 eAdv.setShiftId(activeShift.getId());
                 eAdv.setScid(invoice.getScid());
-                String type = "BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode;
+                com.stopforfuel.backend.enums.EAdvanceType type = com.stopforfuel.backend.enums.EAdvanceType.valueOf("BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode);
                 eAdv.setAdvanceType(type);
                 eAdv.setInvoiceBill(invoice);
                 if ("CARD".equals(upperMode) && customerName != null) {
@@ -375,7 +393,7 @@ public class InvoiceBillService {
      * Auto-creates an IncentivePayment entry when a CASH invoice has a discount applied.
      */
     private void autoCreateIncentivePayment(InvoiceBill invoice) {
-        if (!"CASH".equals(invoice.getBillType())) {
+        if (!com.stopforfuel.backend.enums.BillType.CASH.equals(invoice.getBillType())) {
             return;
         }
 
@@ -415,8 +433,8 @@ public class InvoiceBillService {
 
                 if (v.getMaxLitersPerMonth() != null
                         && newConsumed.compareTo(v.getMaxLitersPerMonth()) >= 0
-                        && "ACTIVE".equals(v.getStatus())) {
-                    v.setStatus("BLOCKED");
+                        && v.getStatus() == com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
+                    v.setStatus(com.stopforfuel.backend.enums.EntityStatus.BLOCKED);
                 }
                 vehicleRepository.save(v);
             }
@@ -431,8 +449,8 @@ public class InvoiceBillService {
 
                 if (c.getCreditLimitLiters() != null
                         && newConsumed.compareTo(c.getCreditLimitLiters()) >= 0
-                        && "ACTIVE".equals(c.getStatus())) {
-                    c.setStatus("BLOCKED");
+                        && c.getStatus() == com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
+                    c.setStatus(com.stopforfuel.backend.enums.EntityStatus.BLOCKED);
                 }
                 customerRepository.save(c);
             }
@@ -510,6 +528,7 @@ public class InvoiceBillService {
         }
     }
 
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<InvoiceBill> getInvoicesByCustomer(
             Long customerId, String billType, String paymentStatus,
             java.time.LocalDateTime fromDate, java.time.LocalDateTime toDate,
@@ -518,34 +537,37 @@ public class InvoiceBillService {
         boolean hasBillType = billType != null && !billType.isEmpty();
         boolean hasPaymentStatus = paymentStatus != null && !paymentStatus.isEmpty();
         boolean hasDateRange = fromDate != null && toDate != null;
+        com.stopforfuel.backend.enums.BillType bt = hasBillType ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
+        com.stopforfuel.backend.enums.PaymentStatus ps = hasPaymentStatus ? com.stopforfuel.backend.enums.PaymentStatus.valueOf(paymentStatus) : null;
 
         if (hasDateRange) {
             if (hasBillType && hasPaymentStatus) {
-                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, billType, paymentStatus, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, bt, ps, fromDate, toDate, pageable);
             } else if (hasBillType) {
-                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, billType, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, bt, fromDate, toDate, pageable);
             } else if (hasPaymentStatus) {
-                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, paymentStatus, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, ps, fromDate, toDate, pageable);
             } else {
                 return repository.findByCustomerIdAndDateRange(customerId, fromDate, toDate, pageable);
             }
         } else {
             if (hasBillType && hasPaymentStatus) {
-                return repository.findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(customerId, billType, paymentStatus, pageable);
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(customerId, bt, ps, pageable);
             } else if (hasBillType) {
-                return repository.findByCustomerIdAndBillTypeOrderByDateDesc(customerId, billType, pageable);
+                return repository.findByCustomerIdAndBillTypeOrderByDateDesc(customerId, bt, pageable);
             } else if (hasPaymentStatus) {
-                return repository.findByCustomerIdAndPaymentStatusOrderByDateDesc(customerId, paymentStatus, pageable);
+                return repository.findByCustomerIdAndPaymentStatusOrderByDateDesc(customerId, ps, pageable);
             } else {
                 return repository.findByCustomerIdOrderByDateDesc(customerId, pageable);
             }
         }
     }
 
+    @Transactional(readOnly = true)
     public Page<InvoiceBill> getInvoiceHistory(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate, String search, Pageable pageable) {
-        String bt = (billType != null && !billType.isEmpty()) ? billType : null;
-        String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
+        com.stopforfuel.backend.enums.BillType bt = (billType != null && !billType.isEmpty()) ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
+        com.stopforfuel.backend.enums.PaymentStatus ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? com.stopforfuel.backend.enums.PaymentStatus.valueOf(paymentStatus) : null;
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         String s = (search != null && !search.isEmpty()) ? search : "";
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
@@ -553,10 +575,11 @@ public class InvoiceBillService {
         return repository.findAllFiltered(bt, ps, ct, fd, td, s, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate) {
-        String bt = (billType != null && !billType.isEmpty()) ? billType : null;
-        String ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? paymentStatus : null;
+        com.stopforfuel.backend.enums.BillType bt = (billType != null && !billType.isEmpty()) ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
+        com.stopforfuel.backend.enums.PaymentStatus ps = (paymentStatus != null && !paymentStatus.isEmpty()) ? com.stopforfuel.backend.enums.PaymentStatus.valueOf(paymentStatus) : null;
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
@@ -628,6 +651,7 @@ public class InvoiceBillService {
         return repository.save(existing);
     }
 
+    @Transactional(readOnly = true)
     public InvoiceBill getInvoiceById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
@@ -678,6 +702,7 @@ public class InvoiceBillService {
         return repository.save(invoice);
     }
 
+    @Transactional(readOnly = true)
     public String getFilePresignedUrl(Long id, String type) {
         InvoiceBill invoice = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));

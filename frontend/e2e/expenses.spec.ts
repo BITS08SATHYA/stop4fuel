@@ -17,9 +17,9 @@ const DEV_USER = {
 };
 
 const mockExpenseTypes = [
-  { id: 1, typeName: "Electricity", description: "TNEB bills" },
-  { id: 2, typeName: "Maintenance", description: "Station maintenance" },
-  { id: 3, typeName: "Salary", description: "Employee salaries" },
+  { id: 1, name: "Electricity", description: "TNEB bills" },
+  { id: 2, name: "Maintenance", description: "Station maintenance" },
+  { id: 3, name: "Salary", description: "Employee salaries" },
 ];
 
 // The page fetches from /station-expenses (not /expenses)

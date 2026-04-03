@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.TankDTO;
 import com.stopforfuel.backend.entity.Tank;
 import com.stopforfuel.backend.service.TankService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,50 +20,50 @@ public class TankController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Tank> getAllTanks() {
-        return tankService.getAllTanks();
+    public List<TankDTO> getAllTanks() {
+        return tankService.getAllTanks().stream().map(TankDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Tank> getActiveTanks() {
-        return tankService.getActiveTanks();
+    public List<TankDTO> getActiveTanks() {
+        return tankService.getActiveTanks().stream().map(TankDTO::from).toList();
     }
 
     @GetMapping("/low-stock")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Tank> getLowStockTanks() {
-        return tankService.getLowStockTanks();
+    public List<TankDTO> getLowStockTanks() {
+        return tankService.getLowStockTanks().stream().map(TankDTO::from).toList();
     }
 
     @GetMapping("/product/{productId}")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public List<Tank> getTanksByProduct(@PathVariable Long productId) {
-        return tankService.getTanksByProduct(productId);
+    public List<TankDTO> getTanksByProduct(@PathVariable Long productId) {
+        return tankService.getTanksByProduct(productId).stream().map(TankDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'STATION_VIEW')")
-    public Tank getTankById(@PathVariable Long id) {
-        return tankService.getTankById(id);
+    public TankDTO getTankById(@PathVariable Long id) {
+        return TankDTO.from(tankService.getTankById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Tank createTank(@Valid @RequestBody Tank tank) {
-        return tankService.createTank(tank);
+    public TankDTO createTank(@Valid @RequestBody Tank tank) {
+        return TankDTO.from(tankService.createTank(tank));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Tank updateTank(@PathVariable Long id, @Valid @RequestBody Tank tank) {
-        return tankService.updateTank(id, tank);
+    public TankDTO updateTank(@PathVariable Long id, @Valid @RequestBody Tank tank) {
+        return TankDTO.from(tankService.updateTank(id, tank));
     }
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
-    public Tank toggleStatus(@PathVariable Long id) {
-        return tankService.toggleStatus(id);
+    public TankDTO toggleStatus(@PathVariable Long id) {
+        return TankDTO.from(tankService.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")

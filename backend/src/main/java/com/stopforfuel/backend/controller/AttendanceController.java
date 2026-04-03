@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.AttendanceDTO;
 import com.stopforfuel.backend.entity.Attendance;
 import com.stopforfuel.backend.service.AttendanceService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,33 +22,33 @@ public class AttendanceController {
 
     @GetMapping("/attendance/daily")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<Attendance> getDailyAttendance(
+    public List<AttendanceDTO> getDailyAttendance(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return attendanceService.getDailyAttendance(date);
+        return attendanceService.getDailyAttendance(date).stream().map(AttendanceDTO::from).toList();
     }
 
     @GetMapping("/employees/{employeeId}/attendance")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_VIEW')")
-    public List<Attendance> getEmployeeAttendance(
+    public List<AttendanceDTO> getEmployeeAttendance(
             @PathVariable Long employeeId,
             @RequestParam Integer month,
             @RequestParam Integer year) {
-        return attendanceService.getEmployeeAttendance(employeeId, month, year);
+        return attendanceService.getEmployeeAttendance(employeeId, month, year).stream().map(AttendanceDTO::from).toList();
     }
 
     @PostMapping("/employees/{employeeId}/attendance")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public Attendance markAttendance(@PathVariable Long employeeId, @Valid @RequestBody Attendance attendance) {
+    public AttendanceDTO markAttendance(@PathVariable Long employeeId, @Valid @RequestBody Attendance attendance) {
         com.stopforfuel.backend.entity.Employee employee = new com.stopforfuel.backend.entity.Employee();
         employee.setId(employeeId);
         attendance.setEmployee(employee);
-        return attendanceService.markAttendance(attendance);
+        return AttendanceDTO.from(attendanceService.markAttendance(attendance));
     }
 
     @PostMapping("/attendance/bulk")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
-    public List<Attendance> markBulkAttendance(@Valid @RequestBody List<Attendance> attendances) {
-        return attendanceService.markBulkAttendance(attendances);
+    public List<AttendanceDTO> markBulkAttendance(@Valid @RequestBody List<Attendance> attendances) {
+        return attendanceService.markBulkAttendance(attendances).stream().map(AttendanceDTO::from).toList();
     }
 
     @DeleteMapping("/attendance/{id}")

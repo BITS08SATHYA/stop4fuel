@@ -12,7 +12,7 @@ import { TablePagination, useClientPagination } from "@/components/ui/table-pagi
 export default function CategoriesPage() {
     const [categories, setCategories] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [formData, setFormData] = useState<any>({});
+    const [formData, setFormData] = useState<{ id?: number; categoryName?: string; categoryType?: string; description?: string }>({});
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [error, setError] = useState("");

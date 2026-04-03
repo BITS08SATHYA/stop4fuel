@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.SupplierDTO;
 import com.stopforfuel.backend.entity.Supplier;
 import com.stopforfuel.backend.service.SupplierService;
 import lombok.RequiredArgsConstructor;
@@ -18,38 +19,38 @@ public class SupplierController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<Supplier> getAll() {
-        return service.getAllSuppliers();
+    public List<SupplierDTO> getAll() {
+        return service.getAllSuppliers().stream().map(SupplierDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<Supplier> getActive() {
-        return service.getActiveSuppliers();
+    public List<SupplierDTO> getActive() {
+        return service.getActiveSuppliers().stream().map(SupplierDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public Supplier getById(@PathVariable Long id) {
-        return service.getSupplierById(id);
+    public SupplierDTO getById(@PathVariable Long id) {
+        return SupplierDTO.from(service.getSupplierById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public Supplier create(@Valid @RequestBody Supplier supplier) {
-        return service.createSupplier(supplier);
+    public SupplierDTO create(@Valid @RequestBody Supplier supplier) {
+        return SupplierDTO.from(service.createSupplier(supplier));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public Supplier update(@PathVariable Long id, @Valid @RequestBody Supplier supplier) {
-        return service.updateSupplier(id, supplier);
+    public SupplierDTO update(@PathVariable Long id, @Valid @RequestBody Supplier supplier) {
+        return SupplierDTO.from(service.updateSupplier(id, supplier));
     }
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public Supplier toggleStatus(@PathVariable Long id) {
-        return service.toggleStatus(id);
+    public SupplierDTO toggleStatus(@PathVariable Long id) {
+        return SupplierDTO.from(service.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")

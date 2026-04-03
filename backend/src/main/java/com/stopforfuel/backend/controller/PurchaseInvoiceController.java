@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.PurchaseInvoiceDTO;
 import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.service.PurchaseInvoiceService;
 import com.stopforfuel.backend.service.PurchaseInvoiceReportService;
@@ -29,17 +30,19 @@ public class PurchaseInvoiceController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'PURCHASE_VIEW')")
-    public List<PurchaseInvoice> getAll(
+    public List<PurchaseInvoiceDTO> getAll(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long supplierId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        if (fromDate != null && toDate != null) return service.getByDateRange(fromDate, toDate);
-        if (status != null) return service.getByStatus(status);
-        if (supplierId != null) return service.getBySupplier(supplierId);
-        if (type != null) return service.getByType(type);
-        return service.getAll();
+        List<PurchaseInvoice> result;
+        if (fromDate != null && toDate != null) result = service.getByDateRange(fromDate, toDate);
+        else if (status != null) result = service.getByStatus(status);
+        else if (supplierId != null) result = service.getBySupplier(supplierId);
+        else if (type != null) result = service.getByType(type);
+        else result = service.getAll();
+        return result.stream().map(PurchaseInvoiceDTO::from).toList();
     }
 
     @GetMapping("/report")
@@ -69,20 +72,20 @@ public class PurchaseInvoiceController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PURCHASE_VIEW')")
-    public PurchaseInvoice getById(@PathVariable Long id) {
-        return service.getById(id);
+    public PurchaseInvoiceDTO getById(@PathVariable Long id) {
+        return PurchaseInvoiceDTO.from(service.getById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
-    public PurchaseInvoice create(@Valid @RequestBody PurchaseInvoice invoice) {
-        return service.save(invoice);
+    public PurchaseInvoiceDTO create(@Valid @RequestBody PurchaseInvoice invoice) {
+        return PurchaseInvoiceDTO.from(service.save(invoice));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
-    public PurchaseInvoice update(@PathVariable Long id, @Valid @RequestBody PurchaseInvoice invoice) {
-        return service.update(id, invoice);
+    public PurchaseInvoiceDTO update(@PathVariable Long id, @Valid @RequestBody PurchaseInvoice invoice) {
+        return PurchaseInvoiceDTO.from(service.update(id, invoice));
     }
 
     @DeleteMapping("/{id}")
@@ -94,16 +97,16 @@ public class PurchaseInvoiceController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
-    public PurchaseInvoice updateStatus(@PathVariable Long id, @RequestParam String status) {
-        return service.updateStatus(id, status);
+    public PurchaseInvoiceDTO updateStatus(@PathVariable Long id, @RequestParam String status) {
+        return PurchaseInvoiceDTO.from(service.updateStatus(id, status));
     }
 
     @PostMapping("/{id}/upload-pdf")
     @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
-    public ResponseEntity<PurchaseInvoice> uploadPdf(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<PurchaseInvoiceDTO> uploadPdf(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try {
             PurchaseInvoice updated = service.uploadPdf(id, file);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(PurchaseInvoiceDTO.from(updated));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
