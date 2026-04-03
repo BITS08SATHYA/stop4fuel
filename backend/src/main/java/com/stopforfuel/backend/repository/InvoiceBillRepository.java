@@ -268,10 +268,10 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
 
     // Aging buckets for unpaid credit bills (native query for PostgreSQL date math)
     @Query(value = "SELECT " +
-           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.date)) / 86400 <= 30 THEN ib.net_amount ELSE 0 END), 0), " +
-           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.date)) / 86400 > 30 AND EXTRACT(EPOCH FROM (NOW() - ib.date)) / 86400 <= 60 THEN ib.net_amount ELSE 0 END), 0), " +
-           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.date)) / 86400 > 60 AND EXTRACT(EPOCH FROM (NOW() - ib.date)) / 86400 <= 90 THEN ib.net_amount ELSE 0 END), 0), " +
-           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.date)) / 86400 > 90 THEN ib.net_amount ELSE 0 END), 0) " +
+           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 <= 30 THEN ib.net_amount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 > 30 AND EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 <= 60 THEN ib.net_amount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 > 60 AND EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 <= 90 THEN ib.net_amount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN EXTRACT(EPOCH FROM (NOW() - ib.bill_date)) / 86400 > 90 THEN ib.net_amount ELSE 0 END), 0) " +
            "FROM invoice_bill ib WHERE ib.bill_type = 'CREDIT' AND ib.payment_status = 'NOT_PAID'",
            nativeQuery = true)
     Object[] getUnpaidCreditAgingBuckets();
