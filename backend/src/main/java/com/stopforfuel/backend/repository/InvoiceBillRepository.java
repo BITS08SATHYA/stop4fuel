@@ -190,8 +190,9 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             org.springframework.data.domain.Pageable pageable);
 
     // Paginated filtered history query (all invoices, not customer-specific)
-    @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN FETCH ib.customer c LEFT JOIN FETCH ib.vehicle v "
-         + "LEFT JOIN FETCH ib.products ip LEFT JOIN FETCH ip.product LEFT JOIN FETCH ip.nozzle "
+    // Note: no JOIN FETCH on collections (products) — causes Hibernate to load ALL rows in memory with pagination
+    @EntityGraph(attributePaths = {"customer", "vehicle", "customer.customerCategory"})
+    @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v "
          + "LEFT JOIN c.customerCategory cc WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
          + "AND (:paymentStatus IS NULL OR ib.paymentStatus = :paymentStatus) "
@@ -254,6 +255,25 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     List<Object[]> getHourlyDistribution(
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
+
+    // Aggregate credit outstanding: total unpaid credit amount
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus = 'NOT_PAID'")
+    BigDecimal sumUnpaidCreditAmount();
+
+    // Count distinct customers with unpaid credit
+    @Query("SELECT COUNT(DISTINCT ib.customer.id) FROM InvoiceBill ib " +
+           "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus = 'NOT_PAID'")
+    long countCustomersWithUnpaidCredit();
+
+    // Aging buckets for unpaid credit bills
+    @Query("SELECT " +
+           "COALESCE(SUM(CASE WHEN FUNCTION('DATE_PART', 'day', CURRENT_TIMESTAMP - ib.date) <= 30 THEN ib.netAmount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN FUNCTION('DATE_PART', 'day', CURRENT_TIMESTAMP - ib.date) > 30 AND FUNCTION('DATE_PART', 'day', CURRENT_TIMESTAMP - ib.date) <= 60 THEN ib.netAmount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN FUNCTION('DATE_PART', 'day', CURRENT_TIMESTAMP - ib.date) > 60 AND FUNCTION('DATE_PART', 'day', CURRENT_TIMESTAMP - ib.date) <= 90 THEN ib.netAmount ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN FUNCTION('DATE_PART', 'day', CURRENT_TIMESTAMP - ib.date) > 90 THEN ib.netAmount ELSE 0 END), 0) " +
+           "FROM InvoiceBill ib WHERE ib.billType = 'CREDIT' AND ib.paymentStatus = 'NOT_PAID'")
+    Object[] getUnpaidCreditAgingBuckets();
 
     // Invoice count summary
     @Query("SELECT ib.billType, ib.paymentStatus, COUNT(ib), COALESCE(SUM(ib.netAmount), 0) " +

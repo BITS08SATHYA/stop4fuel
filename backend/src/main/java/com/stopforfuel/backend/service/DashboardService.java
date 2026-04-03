@@ -30,7 +30,6 @@ public class DashboardService {
     private final ShiftService shiftService;
     private final EAdvanceService eAdvanceService;
     private final ExpenseService expenseService;
-    private final CreditManagementService creditManagementService;
     private final OperationalAdvanceRepository operationalAdvanceRepository;
     private final IncentivePaymentRepository incentivePaymentRepository;
     private final CustomerRepository customerRepository;
@@ -339,15 +338,17 @@ public class DashboardService {
                 ? totalCollected.divide(BigDecimal.valueOf(totalPayments), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO);
 
-        // Credit outstanding
+        // Credit outstanding (lightweight aggregate queries instead of loading all entities)
         try {
-            CreditManagementService.CreditOverview creditOverview = creditManagementService.getCreditOverview(null);
-            analytics.setTotalOutstanding(creditOverview.getTotalOutstanding());
-            analytics.setCreditCustomers(creditOverview.getTotalCreditCustomers());
-            analytics.setAging0to30(creditOverview.getTotalAging0to30());
-            analytics.setAging31to60(creditOverview.getTotalAging31to60());
-            analytics.setAging61to90(creditOverview.getTotalAging61to90());
-            analytics.setAging90Plus(creditOverview.getTotalAging90Plus());
+            analytics.setTotalOutstanding(invoiceBillRepository.sumUnpaidCreditAmount());
+            analytics.setCreditCustomers((int) invoiceBillRepository.countCustomersWithUnpaidCredit());
+            Object[] aging = invoiceBillRepository.getUnpaidCreditAgingBuckets();
+            if (aging != null) {
+                analytics.setAging0to30((BigDecimal) aging[0]);
+                analytics.setAging31to60((BigDecimal) aging[1]);
+                analytics.setAging61to90((BigDecimal) aging[2]);
+                analytics.setAging90Plus((BigDecimal) aging[3]);
+            }
         } catch (Exception e) {
             analytics.setTotalOutstanding(BigDecimal.ZERO);
             analytics.setAging0to30(BigDecimal.ZERO);
@@ -463,9 +464,9 @@ public class DashboardService {
         List<InvoiceBill> shiftInvoices = invoiceBillRepository.findByShiftId(sid);
         dashboard.setTotalInvoiceCount(shiftInvoices.size());
         dashboard.setCashInvoiceCount((int) shiftInvoices.stream()
-                .filter(inv -> "CASH".equals(inv.getBillType())).count());
+                .filter(inv -> com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())).count());
         dashboard.setCreditInvoiceCount((int) shiftInvoices.stream()
-                .filter(inv -> "CREDIT".equals(inv.getBillType())).count());
+                .filter(inv -> com.stopforfuel.backend.enums.BillType.CREDIT.equals(inv.getBillType())).count());
 
         // Recent invoices (last 10)
         List<CashierInvoiceItem> recentInvoices = shiftInvoices.stream()
