@@ -65,7 +65,7 @@ public class CreditManagementService {
 
         // Unpaid bills for aging (only NOT_PAID bills age)
         Map<Long, List<InvoiceBill>> unpaidByCustomer = allCreditBills.stream()
-                .filter(b -> b.getCustomer() != null && "NOT_PAID".equals(b.getPaymentStatus()))
+                .filter(b -> b.getCustomer() != null && com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID.equals(b.getPaymentStatus()))
                 .collect(Collectors.groupingBy(b -> b.getCustomer().getId()));
 
         LocalDate today = LocalDate.now();
@@ -247,11 +247,11 @@ public class CreditManagementService {
                 .toList();
 
         List<InvoiceBill> unpaidBills = allBills.stream()
-                .filter(b -> "NOT_PAID".equals(b.getPaymentStatus()))
+                .filter(b -> com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID.equals(b.getPaymentStatus()))
                 .toList();
 
         List<InvoiceBill> paidBills = allBills.stream()
-                .filter(b -> "PAID".equals(b.getPaymentStatus()))
+                .filter(b -> com.stopforfuel.backend.enums.PaymentStatus.PAID.equals(b.getPaymentStatus()))
                 .toList();
 
         // All statements (both outstanding and paid)

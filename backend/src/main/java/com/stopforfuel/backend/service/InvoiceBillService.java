@@ -79,7 +79,7 @@ public class InvoiceBillService {
         }
 
         // --- Pre-invoice credit limit validation (CREDIT invoices only) ---
-        if ("CREDIT".equals(invoice.getBillType()) && invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+        if (com.stopforfuel.backend.enums.BillType.CREDIT.equals(invoice.getBillType()) && invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
             // Calculate total liters and amount for this invoice
             BigDecimal preLiters = BigDecimal.ZERO;
             BigDecimal preAmount = BigDecimal.ZERO;
@@ -341,7 +341,7 @@ public class InvoiceBillService {
      * Cash payments need no separate record — the InvoiceBill itself is the source of truth.
      */
     private void autoCreateShiftTransaction(InvoiceBill invoice) {
-        if (!"CASH".equals(invoice.getBillType())) {
+        if (!com.stopforfuel.backend.enums.BillType.CASH.equals(invoice.getBillType())) {
             return;
         }
 
@@ -393,7 +393,7 @@ public class InvoiceBillService {
      * Auto-creates an IncentivePayment entry when a CASH invoice has a discount applied.
      */
     private void autoCreateIncentivePayment(InvoiceBill invoice) {
-        if (!"CASH".equals(invoice.getBillType())) {
+        if (!com.stopforfuel.backend.enums.BillType.CASH.equals(invoice.getBillType())) {
             return;
         }
 
