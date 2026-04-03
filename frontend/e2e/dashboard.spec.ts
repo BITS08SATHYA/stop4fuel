@@ -1,20 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-const API_BASE = "http://localhost:8080/api";
-
-const DEV_USER = {
-  id: 1,
-  cognitoId: "dev-user-001",
-  username: "owner",
-  name: "Dev Owner",
-  email: "owner@stopforfuel.com",
-  role: "OWNER",
-  permissions: [
-    "DASHBOARD_VIEW", "CUSTOMER_VIEW", "EMPLOYEE_VIEW", "PRODUCT_VIEW",
-    "STATION_VIEW", "INVENTORY_VIEW", "SHIFT_VIEW", "INVOICE_VIEW",
-    "PAYMENT_VIEW", "FINANCE_VIEW", "SETTINGS_VIEW",
-  ],
-};
+import { API_BASE, DEV_USER } from "./fixtures/mock-data/users";
 
 const mockDashboardStats = {
   todayRevenue: 45000,
@@ -69,42 +54,46 @@ const mockDashboardStats = {
 
 test.describe("Dashboard Page", () => {
   test.beforeEach(async ({ page }) => {
-    // Mock auth endpoint
-    await page.route(`${API_BASE}/auth/me`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) })
-    );
-    await page.route(`${API_BASE}/dashboard/stats`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockDashboardStats) })
-    );
-    // Mock any other API calls
-    await page.route(`${API_BASE}/**`, (route) => {
+    // Set fake auth token so AuthProvider loads the user
+    await page.addInitScript(() => {
+      localStorage.setItem("sff-token", "mock-test-token");
+      document.cookie = "sff-auth-session=mock-test-token; path=/";
+    });
+    // Single catch-all handler for all API routes
+    await page.route(`${API_BASE}/**`, async (route) => {
       const url = route.request().url();
-      if (url.includes("/auth/me") || url.includes("/dashboard/stats")) {
-        return;
+      const method = route.request().method();
+      if (url.includes("/auth/me") && method === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) });
       }
-      route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      if (url.includes("/dashboard/stats") && method === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockDashboardStats) });
+      }
+      if (method === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      }
+      return route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
     });
   });
 
   test("loads dashboard page with heading", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
   });
 
   test("displays KPI cards", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/dashboard");
     await expect(page.getByText(/today's revenue/i).first()).toBeVisible();
     await expect(page.getByText(/fuel volume sold/i).first()).toBeVisible();
   });
 
   test("shows active shift banner when shift is open", async ({ page }) => {
-    await page.goto("/");
-    // The banner shows "Shift #1" (activeShiftId), not a shift number string
+    await page.goto("/dashboard");
     await expect(page.getByText(/Shift #1/)).toBeVisible();
   });
 
   test("displays recent invoices table", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/dashboard");
     await expect(page.getByText("ABC Transport")).toBeVisible();
   });
 });

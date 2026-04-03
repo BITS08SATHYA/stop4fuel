@@ -1,20 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-const API_BASE = "http://localhost:8080/api";
-
-const DEV_USER = {
-  id: 1,
-  cognitoId: "dev-user-001",
-  username: "owner",
-  name: "Dev Owner",
-  email: "owner@stopforfuel.com",
-  role: "OWNER",
-  permissions: [
-    "DASHBOARD_VIEW", "CUSTOMER_VIEW", "EMPLOYEE_VIEW", "PRODUCT_VIEW",
-    "STATION_VIEW", "INVENTORY_VIEW", "SHIFT_VIEW", "INVOICE_VIEW",
-    "PAYMENT_VIEW", "FINANCE_VIEW", "SETTINGS_VIEW",
-  ],
-};
+import { mockApiRoutes, API_BASE } from "./fixtures/test-helpers";
 
 const mockCreditOverview = {
   totalOutstanding: 250000,
@@ -104,29 +89,20 @@ const mockPayments = {
 
 test.describe("Credit Overview Page", () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(`${API_BASE}/auth/me`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) })
-    );
-    // The page fetches /credit/overview via fetchWithAuth
+    await mockApiRoutes(page);
     await page.route(`${API_BASE}/credit/overview`, (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockCreditOverview) })
     );
-    await page.route(`${API_BASE}/**`, (route) => {
-      const url = route.request().url();
-      if (url.includes("/auth/me") || url.includes("/credit/overview")) return;
-      route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-    });
+    // catch-all already handled by mockApiRoutes
   });
 
   test("loads credit overview page", async ({ page }) => {
     await page.goto("/payments/credit");
-    // Heading is "Credit Overview"
     await expect(page.getByText(/credit/i).first()).toBeVisible();
   });
 
   test("displays customer balances", async ({ page }) => {
     await page.goto("/payments/credit");
-    // Customers are rendered via cust.customerName in the list
     await expect(page.getByText("ABC Transport")).toBeVisible();
     await expect(page.getByText("XYZ Logistics")).toBeVisible();
   });
@@ -134,10 +110,7 @@ test.describe("Credit Overview Page", () => {
 
 test.describe("Payments Page", () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(`${API_BASE}/auth/me`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) })
-    );
-    // The page calls getPayments (paginated) and getPaymentModes
+    await mockApiRoutes(page);
     await page.route(`${API_BASE}/payments?*`, (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockPayments) })
     );
@@ -153,22 +126,16 @@ test.describe("Payments Page", () => {
         { id: 2, name: "UPI" },
       ]) })
     );
-    await page.route(`${API_BASE}/**`, (route) => {
-      const url = route.request().url();
-      if (url.includes("/auth/me") || url.includes("/payments") || url.includes("/payment-modes")) return;
-      route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-    });
+    // catch-all already handled by mockApiRoutes
   });
 
   test("loads payments page", async ({ page }) => {
     await page.goto("/payments");
-    // Heading is "Payment Tracking"
     await expect(page.getByText(/payment/i).first()).toBeVisible();
   });
 
   test("displays payment records", async ({ page }) => {
     await page.goto("/payments");
-    // The table shows customer names and reference numbers
     await expect(page.getByText("ABC Transport")).toBeVisible();
     await expect(page.getByText("XYZ Logistics")).toBeVisible();
   });
@@ -176,14 +143,8 @@ test.describe("Payments Page", () => {
 
 test.describe("Customer Ledger Page", () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(`${API_BASE}/auth/me`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) })
-    );
-    await page.route(`${API_BASE}/**`, (route) => {
-      const url = route.request().url();
-      if (url.includes("/auth/me")) return;
-      route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-    });
+    await mockApiRoutes(page);
+    // catch-all already handled by mockApiRoutes
   });
 
   test("loads ledger page", async ({ page }) => {
