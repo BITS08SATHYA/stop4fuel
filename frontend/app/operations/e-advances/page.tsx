@@ -30,6 +30,7 @@ import {
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
+import { StatementAutocomplete } from "@/components/ui/statement-autocomplete";
 import { PermissionGate } from "@/components/permission-gate";
 
 // --- Constants ---
@@ -144,8 +145,9 @@ export default function EAdvancesPage() {
     const [bankName, setBankName] = useState("");
     // CCMS
     const [ccmsNumber, setCcmsNumber] = useState("");
-    // Invoice linking
+    // Invoice / Statement linking
     const [linkedInvoice, setLinkedInvoice] = useState<{ id: number; billNo?: string; billType?: string; netAmount?: number; customer?: { id: number; name: string } | null } | null>(null);
+    const [linkedStatement, setLinkedStatement] = useState<any>(null);
 
     const loadData = useCallback(async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);
@@ -244,6 +246,7 @@ export default function EAdvancesPage() {
         setBankName("");
         setCcmsNumber("");
         setLinkedInvoice(null);
+        setLinkedStatement(null);
     };
 
     const handleOpenAdd = async () => {
@@ -287,6 +290,7 @@ export default function EAdvancesPage() {
             setCcmsNumber(entry.ccmsNumber || "");
         }
         setLinkedInvoice(entry.invoiceBill || null);
+        setLinkedStatement(entry.statement || null);
         setIsModalOpen(true);
     };
 
@@ -326,6 +330,9 @@ export default function EAdvancesPage() {
 
             if (linkedInvoice) {
                 payload.invoiceBill = { id: linkedInvoice.id };
+            }
+            if (linkedStatement) {
+                (payload as any).statement = { id: linkedStatement.id };
             }
 
             if (editingId) {
@@ -675,13 +682,21 @@ export default function EAdvancesPage() {
                         <InputField label="CCMS Number" value={ccmsNumber} onChange={setCcmsNumber} placeholder="CCMS ref number" />
                     )}
 
-                    {/* Link to Invoice */}
+                    {/* Link to Invoice / Statement */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Link to Invoice (Optional)</label>
                         <InvoiceAutocomplete
                             value={linkedInvoice}
                             onChange={setLinkedInvoice}
                             placeholder="Search by bill #..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">Link to Statement (Optional)</label>
+                        <StatementAutocomplete
+                            value={linkedStatement}
+                            onChange={setLinkedStatement}
+                            placeholder="Search by statement #..."
                         />
                     </div>
 
