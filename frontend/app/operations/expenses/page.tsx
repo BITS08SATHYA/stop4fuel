@@ -27,6 +27,7 @@ import {
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 const formatRupees = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
@@ -304,12 +305,12 @@ export default function ExpensesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Category</label>
-                            <select value={expenseTypeId} onChange={(e) => setExpenseTypeId(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 [&>option]:bg-background [&>option]:text-foreground">
-                                <option value="">Select Category</option>
-                                {expenseTypes.map((et) => (
-                                    <option key={et.id} value={et.id}>{et.name}</option>
-                                ))}
-                            </select>
+                            <StyledSelect
+                                value={expenseTypeId}
+                                onChange={setExpenseTypeId}
+                                placeholder="Select Category"
+                                options={[{ value: "", label: "Select Category" }, ...expenseTypes.map((et) => ({ value: String(et.id), label: et.name }))]}
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Amount <span className="text-red-500">*</span></label>
@@ -321,13 +322,17 @@ export default function ExpensesPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Payment Mode</label>
-                            <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 [&>option]:bg-background [&>option]:text-foreground">
-                                <option value="CASH">Cash</option>
-                                <option value="UPI">UPI</option>
-                                <option value="NEFT">NEFT</option>
-                                <option value="CHEQUE">Cheque</option>
-                                <option value="CARD">Card</option>
-                            </select>
+                            <StyledSelect
+                                value={paymentMode}
+                                onChange={setPaymentMode}
+                                options={[
+                                    { value: "CASH", label: "Cash" },
+                                    { value: "UPI", label: "UPI" },
+                                    { value: "NEFT", label: "NEFT" },
+                                    { value: "CHEQUE", label: "Cheque" },
+                                    { value: "CARD", label: "Card" },
+                                ]}
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Paid To</label>
@@ -335,11 +340,11 @@ export default function ExpensesPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Recurring Type</label>
-                            <select value={recurringType} onChange={(e) => setRecurringType(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 [&>option]:bg-background [&>option]:text-foreground">
-                                {recurringOptions.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                            </select>
+                            <StyledSelect
+                                value={recurringType}
+                                onChange={setRecurringType}
+                                options={recurringOptions}
+                            />
                         </div>
                     </div>
                     <div>
