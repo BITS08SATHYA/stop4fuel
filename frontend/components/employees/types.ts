@@ -53,7 +53,7 @@ export interface EmployeeAdvance {
 
 export const emptyEmployee: Omit<Employee, "id"> = {
     name: "", designation: "", email: "", phone: "", salary: 0, salaryDay: 1, joinDate: "",
-    status: "ACTIVE", aadharNumber: "", additionalPhones: "", address: "",
+    monthlyLeaveThreshold: 4, status: "ACTIVE", aadharNumber: "", additionalPhones: "", address: "",
     city: "", state: "", pincode: "", photoUrl: "", bankAccountNumber: "",
     bankName: "", bankIfsc: "", bankBranch: "", panNumber: "", department: "",
     employeeCode: "", emergencyContact: "", emergencyPhone: "", bloodGroup: "",
