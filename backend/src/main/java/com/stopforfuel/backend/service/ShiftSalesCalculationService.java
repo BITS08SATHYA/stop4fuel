@@ -72,9 +72,9 @@ public class ShiftSalesCalculationService {
         BigDecimal creditBillTotal = BigDecimal.ZERO;
 
         for (InvoiceBill inv : allInvoices) {
-            if ("CASH".equals(inv.getBillType())) {
+            if (com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())) {
                 cashBillTotal = cashBillTotal.add(inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO);
-            } else if ("CREDIT".equals(inv.getBillType())) {
+            } else if (com.stopforfuel.backend.enums.BillType.CREDIT.equals(inv.getBillType())) {
                 creditBillTotal = creditBillTotal.add(inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO);
             }
 
@@ -181,7 +181,7 @@ public class ShiftSalesCalculationService {
         Map<String, ReportCashBillBreakdown> productBreakdowns = new LinkedHashMap<>();
 
         for (InvoiceBill inv : allInvoices) {
-            if (!"CASH".equals(inv.getBillType())) continue;
+            if (!com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())) continue;
 
             String paymentMode = inv.getPaymentMode() != null ? inv.getPaymentMode().toUpperCase() : "CASH";
 
@@ -317,7 +317,7 @@ public class ShiftSalesCalculationService {
 
         // Cash Bill Details
         List<InvoiceBill> cashBills = invoices.stream()
-                .filter(inv -> "CASH".equals(inv.getBillType()))
+                .filter(inv -> com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType()))
                 .collect(Collectors.toList());
         for (InvoiceBill bill : cashBills) {
             ShiftReportPrintData.CashBillDetail cbd = new ShiftReportPrintData.CashBillDetail();
@@ -341,7 +341,7 @@ public class ShiftSalesCalculationService {
 
         // Credit Bill Details (grouped by customer)
         List<InvoiceBill> creditBills = invoices.stream()
-                .filter(inv -> "CREDIT".equals(inv.getBillType()))
+                .filter(inv -> com.stopforfuel.backend.enums.BillType.CREDIT.equals(inv.getBillType()))
                 .sorted(Comparator.comparing(inv -> inv.getCustomer() != null ? inv.getCustomer().getName() : ""))
                 .collect(Collectors.toList());
 
@@ -369,7 +369,7 @@ public class ShiftSalesCalculationService {
         Map<String, BigDecimal> modeAmounts = new LinkedHashMap<>();
         Map<String, Integer> modeCounts = new LinkedHashMap<>();
         for (InvoiceBill inv : invoices) {
-            if (!"CASH".equals(inv.getBillType())) continue;
+            if (!com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())) continue;
             String mode = inv.getPaymentMode() != null ? inv.getPaymentMode().toUpperCase() : "CASH";
             BigDecimal amt = inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO;
             modeAmounts.merge(mode, amt, BigDecimal::add);
