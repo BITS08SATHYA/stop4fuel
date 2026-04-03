@@ -4,6 +4,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,8 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class DevJwtAuthFilter extends OncePerRequestFilter {
@@ -51,6 +51,22 @@ public class DevJwtAuthFilter extends OncePerRequestFilter {
                     );
 
                     SecurityContextHolder.getContext().setAuthentication(auth);
+
+                    // Strip Authorization header so Cognito's BearerTokenAuthenticationFilter
+                    // doesn't try to validate this passcode JWT as a Cognito token
+                    filterChain.doFilter(new HttpServletRequestWrapper(request) {
+                        @Override
+                        public String getHeader(String name) {
+                            if ("Authorization".equalsIgnoreCase(name)) return null;
+                            return super.getHeader(name);
+                        }
+                        @Override
+                        public Enumeration<String> getHeaders(String name) {
+                            if ("Authorization".equalsIgnoreCase(name)) return Collections.emptyEnumeration();
+                            return super.getHeaders(name);
+                        }
+                    }, response);
+                    return;
                 } catch (java.text.ParseException ignored) {
                 }
             }
