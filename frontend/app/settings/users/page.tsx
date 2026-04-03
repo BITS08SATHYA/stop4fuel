@@ -122,9 +122,12 @@ export default function UsersPage() {
             if (res.ok) {
                 const data = await res.json();
                 setPasscodeResult({ name: userName, passcode: data.passcode });
+            } else {
+                const data = await res.json().catch(() => ({}));
+                alert(`Failed to reset passcode: ${data.error || data.message || res.statusText}`);
             }
-        } catch (err) {
-            console.error("Failed to reset passcode", err);
+        } catch (err: any) {
+            alert(`Failed to reset passcode: ${err?.message || "Unknown error"}`);
         } finally {
             setResetingId(null);
         }
