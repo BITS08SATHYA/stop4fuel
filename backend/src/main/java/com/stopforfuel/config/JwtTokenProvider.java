@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import java.util.Date;
 
 @Component
-@ConditionalOnProperty(name = "app.auth.enabled", havingValue = "false")
 public class JwtTokenProvider {
 
     @Value("${app.jwt.secret:stopforfuel-dev-secret-key-min-32-chars!!}")
