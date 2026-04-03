@@ -15,4 +15,7 @@ public interface StationExpenseRepository extends ScidRepository<StationExpense>
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM StationExpense e WHERE e.expenseDate BETWEEN :from AND :to")
     Double sumAmountBetween(LocalDate from, LocalDate to);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM StationExpense e WHERE e.shiftId = :shiftId")
+    Double sumAmountByShift(Long shiftId);
 }
