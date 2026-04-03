@@ -10,15 +10,16 @@ export async function fetchWithAuth(
 ): Promise<Response> {
     const headers = new Headers(options.headers || {});
 
-    if (DEV_MODE) {
-        // In dev mode, use stored token from passcode login
-        if (typeof window !== "undefined") {
-            const storedToken = localStorage.getItem("sff-token");
-            if (storedToken) {
-                headers.set("Authorization", `Bearer ${storedToken}`);
-            }
+    // Always check for passcode token first (works in both dev and prod)
+    if (typeof window !== "undefined") {
+        const storedToken = localStorage.getItem("sff-token");
+        if (storedToken) {
+            headers.set("Authorization", `Bearer ${storedToken}`);
         }
-    } else {
+    }
+
+    // If no passcode token and Cognito is configured, try Cognito session
+    if (!headers.has("Authorization") && !DEV_MODE) {
         try {
             const session = await fetchAuthSession();
             const token = session.tokens?.accessToken?.toString();
@@ -26,7 +27,6 @@ export async function fetchWithAuth(
                 headers.set("Authorization", `Bearer ${token}`);
             }
         } catch {
-            // If session fetch fails, redirect to login
             if (typeof window !== "undefined") {
                 window.location.href = "/login";
             }
@@ -37,7 +37,7 @@ export async function fetchWithAuth(
     const response = await fetch(url, { ...options, headers });
 
     if (response.status === 401) {
-        if (typeof window !== "undefined" && !DEV_MODE) {
+        if (typeof window !== "undefined" && !DEV_MODE && !localStorage.getItem("sff-token")) {
             window.location.href = "/login";
         }
         throw new Error("Unauthorized");
