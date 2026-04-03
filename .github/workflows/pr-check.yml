@@ -51,6 +51,19 @@ jobs:
         run: |
           npm ci
           npm run build
+      - name: Install Playwright Browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Run Mock E2E Tests
+        working-directory: frontend
+        run: npx playwright test --project=mock
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-mock-report
+          path: frontend/playwright-report/
+          retention-days: 7
 
   container-scan:
     name: Container Security Scan
