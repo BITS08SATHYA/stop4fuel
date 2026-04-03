@@ -5,28 +5,31 @@ import com.stopforfuel.backend.entity.Pump;
 import com.stopforfuel.backend.repository.NozzleRepository;
 import com.stopforfuel.backend.repository.PumpRepository;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class PumpService {
 
-    @Autowired
-    private PumpRepository pumpRepository;
+    private final PumpRepository pumpRepository;
 
-    @Autowired
-    private NozzleRepository nozzleRepository;
+    private final NozzleRepository nozzleRepository;
 
+    @Transactional(readOnly = true)
     public List<Pump> getAllPumps() {
         return pumpRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Pump> getActivePumps() {
         return pumpRepository.findByActiveAndScid(true, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Pump getPumpById(Long id) {
         return pumpRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Pump not found with id: " + id));
@@ -71,8 +74,12 @@ public class PumpService {
         }
     }
 
+    @Transactional
     public void deletePump(Long id) {
         Pump pump = getPumpById(id);
-        pumpRepository.delete(pump);
+        pump.setActive(false);
+        // Cascade: deactivate connected nozzles
+        deactivateConnectedNozzles(id);
+        pumpRepository.save(pump);
     }
 }

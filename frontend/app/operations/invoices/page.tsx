@@ -24,6 +24,16 @@ import {
     getCustomerCreditInfo
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
+
+interface CustomerWithCredit extends Customer {
+    creditLimitAmount?: number | null;
+    creditLimitLiters?: number | null;
+    consumedLiters?: number;
+    ledgerBalance?: number;
+    status?: string;
+    phoneNumbers?: string;
+    [key: string]: unknown;
+}
 import { FileUploadField } from "@/components/ui/file-upload-field";
 import {
     Receipt,
@@ -66,10 +76,10 @@ export default function InvoicesPage() {
 
     // Customer & Vehicle
     const [customerSearch, setCustomerSearch] = useState("");
-    const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
-    const [selectedCustomer, setSelectedCustomer] = useState<any>(undefined);
-    const [customerVehicles, setCustomerVehicles] = useState<any[]>([]);
-    const [selectedVehicle, setSelectedVehicle] = useState<any>(undefined);
+    const [customerSuggestions, setCustomerSuggestions] = useState<CustomerWithCredit[]>([]);
+    const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithCredit | undefined>(undefined);
+    const [customerVehicles, setCustomerVehicles] = useState<Vehicle[]>([]);
+    const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>(undefined);
     const [isSaving, setIsSaving] = useState(false);
     const [isWalkIn, setIsWalkIn] = useState(false);
     const [walkInCustomerName, setWalkInCustomerName] = useState("");
@@ -139,6 +149,11 @@ export default function InvoicesPage() {
                     setActiveShiftId(shift.id);
                     const invData = await getInvoicesByShift(shift.id);
                     setInvoices(invData.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+                    // Pre-fill date filters with shift start time
+                    if (shift.startTime) {
+                        setHistoryFromDate(shift.startTime.split("T")[0]);
+                        setHistoryToDate(new Date().toISOString().split("T")[0]);
+                    }
                 } else {
                     setIsLoading(false);
                 }
@@ -241,17 +256,28 @@ export default function InvoicesPage() {
         const gross = qty * price;
         line.grossAmount = gross;
 
-        // Auto-apply incentive discount
+        // Auto-apply incentive discount (customer-specific takes priority)
         const productId = line.product?.id;
         const incentive = productId ? incentives.find((i: Incentive) => (i.product as any)?.id === productId || (i.product as any) === productId) : null;
         if (incentive && (incentive.minQuantity == null || qty >= incentive.minQuantity)) {
             line.discountRate = incentive.discountRate;
             line.discountAmount = incentive.discountRate * qty;
             line.amount = gross - line.discountAmount;
+            line.discountSource = 'incentive';
+        } else if (line.product?.discountRate > 0 && line.applyProductDiscount !== false) {
+            // Product-level discount fallback (cashier can toggle off)
+            line.discountRate = line.product.discountRate;
+            line.discountAmount = line.product.discountRate * qty;
+            line.amount = gross - line.discountAmount;
+            line.discountSource = 'product';
+            if (line.applyProductDiscount === undefined) {
+                line.applyProductDiscount = true;
+            }
         } else {
             line.discountRate = null;
             line.discountAmount = null;
             line.amount = gross;
+            line.discountSource = null;
         }
 
         newLines[index] = line;
@@ -388,7 +414,10 @@ export default function InvoicesPage() {
                     nozzle: p.nozzle ? { id: p.nozzle.id } : undefined,
                     quantity: parseFloat(p.quantity) || 0,
                     unitPrice: parseFloat(p.unitPrice) || 0,
-                    amount: p.amount || 0
+                    amount: p.amount || 0,
+                    grossAmount: p.grossAmount || undefined,
+                    discountRate: p.discountRate || undefined,
+                    discountAmount: p.discountAmount || undefined,
                 })),
                 customer: selectedCustomer ? { id: selectedCustomer.id } : undefined,
                 vehicle: selectedVehicle ? { id: selectedVehicle.id } : undefined,
@@ -607,12 +636,12 @@ export default function InvoicesPage() {
                             </p>
                             <p className="text-foreground font-black text-2xl">{selectedCustomer.name}</p>
                             <p className="text-sm text-muted-foreground">{selectedCustomer.phoneNumbers}</p>
-                            {(selectedCustomer.creditLimitAmount > 0 || selectedCustomer.creditLimitLiters > 0) && (
+                            {((selectedCustomer.creditLimitAmount ?? 0) > 0 || (selectedCustomer.creditLimitLiters ?? 0) > 0) && (
                                 <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                                    {selectedCustomer.creditLimitAmount > 0 && (
+                                    {(selectedCustomer.creditLimitAmount ?? 0) > 0 && (
                                         <p>Credit: ₹{Number(selectedCustomer.ledgerBalance || 0).toLocaleString("en-IN")} / ₹{Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")} used</p>
                                     )}
-                                    {selectedCustomer.creditLimitLiters > 0 && (
+                                    {(selectedCustomer.creditLimitLiters ?? 0) > 0 && (
                                         <p>Liters: {selectedCustomer.consumedLiters || 0} / {Number(selectedCustomer.creditLimitLiters)} L used</p>
                                     )}
                                 </div>
@@ -748,7 +777,7 @@ export default function InvoicesPage() {
                     <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3">
                         <Info size={20} className="text-blue-500 shrink-0 mt-0.5" />
                         <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                            This vehicle belongs to <span className="font-bold">{selectedVehicle.customer.name}</span>. The bill will be charged to <span className="font-bold">{selectedCustomer?.name}</span>.
+                            This vehicle belongs to <span className="font-bold">{selectedVehicle.customer?.name}</span>. The bill will be charged to <span className="font-bold">{selectedCustomer?.name}</span>.
                         </p>
                     </div>
                 )}
@@ -844,7 +873,7 @@ export default function InvoicesPage() {
                                         >
                                             <option value="">Select Nozzle...</option>
                                             {nozzles
-                                                .filter(n => n.tank?.product?.id === line.product?.id)
+                                                .filter(n => n.tank?.productId === line.product?.id)
                                                 .map(n => (
                                                     <option key={n.id} value={n.id}>
                                                         {n.nozzleName} ({n.pump.name})
@@ -886,9 +915,25 @@ export default function InvoicesPage() {
                                 </div>
                             </div>
                             <div className="text-right">
+                                {/* Product discount toggle (only when no customer incentive) */}
+                                {line.product?.discountRate > 0 && line.discountSource !== 'incentive' && (
+                                    <div className="flex items-center justify-end gap-2 mb-1">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={line.applyProductDiscount !== false}
+                                                onChange={(e) => updateProductLine(idx, { applyProductDiscount: e.target.checked })}
+                                                className="rounded border-border accent-emerald-500"
+                                            />
+                                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                                Apply Discount (₹{line.product.discountRate}/{line.product.unit || 'unit'})
+                                            </span>
+                                        </label>
+                                    </div>
+                                )}
                                 {line.discountRate > 0 && (
                                     <div className="text-[10px] text-emerald-500 font-bold mb-0.5">
-                                        Discount: ₹{line.discountRate}/unit &times; {parseFloat(line.quantity) || 0} = -₹{(line.discountAmount || 0).toFixed(2)}
+                                        {line.discountSource === 'incentive' ? 'Incentive' : 'Discount'}: ₹{line.discountRate}/unit &times; {parseFloat(line.quantity) || 0} = -₹{(line.discountAmount || 0).toFixed(2)}
                                     </div>
                                 )}
                                 <span className="text-primary font-black text-lg">
@@ -1125,35 +1170,66 @@ export default function InvoicesPage() {
 
                     {/* Product lines */}
                     <div className="border border-border rounded-xl overflow-hidden">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-muted/50 border-b border-border">
-                                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-muted-foreground">Product</th>
-                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Qty</th>
-                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Rate</th>
-                                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/50">
-                                {selectedProducts.map((line: any, idx: number) => (
-                                    <tr key={idx}>
-                                        <td className="px-4 py-3 font-medium">
-                                            {line.product?.name || "Unknown"}
-                                            {line.nozzle && <span className="text-xs text-muted-foreground ml-1">({line.nozzle.nozzleName})</span>}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono">{line.quantity}</td>
-                                        <td className="px-4 py-3 text-right font-mono">₹{parseFloat(line.unitPrice || 0).toFixed(2)}</td>
-                                        <td className="px-4 py-3 text-right font-bold">₹{(line.amount || 0).toFixed(2)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="bg-primary/5 border-t border-primary/20">
-                                    <td colSpan={3} className="px-4 py-4 text-right font-black uppercase text-sm">Total</td>
-                                    <td className="px-4 py-4 text-right font-black text-primary text-xl">₹{calculateTotal().toFixed(2)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                        {(() => {
+                            const hasAnyDiscount = selectedProducts.some((l: any) => l.discountRate > 0);
+                            const totalGross = selectedProducts.reduce((s: number, l: any) => s + (l.grossAmount || l.amount || 0), 0);
+                            const totalDiscount = selectedProducts.reduce((s: number, l: any) => s + (l.discountAmount || 0), 0);
+                            return (
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-muted/50 border-b border-border">
+                                            <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-muted-foreground">Product</th>
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Qty</th>
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Rate</th>
+                                            {hasAnyDiscount && (
+                                                <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Discount</th>
+                                            )}
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-muted-foreground">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/50">
+                                        {selectedProducts.map((line: any, idx: number) => (
+                                            <tr key={idx}>
+                                                <td className="px-4 py-3 font-medium">
+                                                    {line.product?.name || "Unknown"}
+                                                    {line.nozzle && <span className="text-xs text-muted-foreground ml-1">({line.nozzle.nozzleName})</span>}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-mono">{line.quantity}</td>
+                                                <td className="px-4 py-3 text-right font-mono">₹{parseFloat(line.unitPrice || 0).toFixed(2)}</td>
+                                                {hasAnyDiscount && (
+                                                    <td className="px-4 py-3 text-right">
+                                                        {line.discountRate > 0 ? (
+                                                            <span className="text-emerald-500 font-bold">-₹{(line.discountAmount || 0).toFixed(2)}</span>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">—</span>
+                                                        )}
+                                                    </td>
+                                                )}
+                                                <td className="px-4 py-3 text-right font-bold">₹{(line.amount || 0).toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        {hasAnyDiscount && (
+                                            <>
+                                                <tr className="border-t border-border/50">
+                                                    <td colSpan={hasAnyDiscount ? 4 : 3} className="px-4 py-2 text-right text-xs text-muted-foreground font-bold uppercase">Gross Total</td>
+                                                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">₹{totalGross.toFixed(2)}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td colSpan={hasAnyDiscount ? 4 : 3} className="px-4 py-2 text-right text-xs text-emerald-500 font-bold uppercase">Total Discount</td>
+                                                    <td className="px-4 py-2 text-right font-bold text-emerald-500">-₹{totalDiscount.toFixed(2)}</td>
+                                                </tr>
+                                            </>
+                                        )}
+                                        <tr className="bg-primary/5 border-t border-primary/20">
+                                            <td colSpan={hasAnyDiscount ? 4 : 3} className="px-4 py-4 text-right font-black uppercase text-sm">Net Total</td>
+                                            <td className="px-4 py-4 text-right font-black text-primary text-xl">₹{calculateTotal().toFixed(2)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            );
+                        })()}
                     </div>
 
                     {error && (

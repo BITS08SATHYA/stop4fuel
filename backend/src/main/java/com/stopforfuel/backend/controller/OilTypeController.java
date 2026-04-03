@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.OilTypeDTO;
 import com.stopforfuel.backend.entity.OilType;
 import com.stopforfuel.backend.service.OilTypeService;
 import lombok.RequiredArgsConstructor;
@@ -18,38 +19,38 @@ public class OilTypeController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<OilType> getAll() {
-        return service.getAllOilTypes();
+    public List<OilTypeDTO> getAll() {
+        return service.getAllOilTypes().stream().map(OilTypeDTO::from).toList();
     }
 
     @GetMapping("/active")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public List<OilType> getActive() {
-        return service.getActiveOilTypes();
+    public List<OilTypeDTO> getActive() {
+        return service.getActiveOilTypes().stream().map(OilTypeDTO::from).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
-    public OilType getById(@PathVariable Long id) {
-        return service.getOilTypeById(id);
+    public OilTypeDTO getById(@PathVariable Long id) {
+        return OilTypeDTO.from(service.getOilTypeById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public OilType create(@Valid @RequestBody OilType oilType) {
-        return service.createOilType(oilType);
+    public OilTypeDTO create(@Valid @RequestBody OilType oilType) {
+        return OilTypeDTO.from(service.createOilType(oilType));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public OilType update(@PathVariable Long id, @Valid @RequestBody OilType oilType) {
-        return service.updateOilType(id, oilType);
+    public OilTypeDTO update(@PathVariable Long id, @Valid @RequestBody OilType oilType) {
+        return OilTypeDTO.from(service.updateOilType(id, oilType));
     }
 
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
-    public OilType toggleStatus(@PathVariable Long id) {
-        return service.toggleStatus(id);
+    public OilTypeDTO toggleStatus(@PathVariable Long id) {
+        return OilTypeDTO.from(service.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")

@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.BillSequence;
+import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.repository.BillSequenceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,14 +16,14 @@ public class BillSequenceService {
 
     private final BillSequenceRepository billSequenceRepository;
 
-    private static final Map<String, String> PREFIX_MAP = Map.of(
-            "CASH", "C",
-            "CREDIT", "A",
-            "STMT", "S"
+    private static final Map<BillType, String> PREFIX_MAP = Map.of(
+            BillType.CASH, "C",
+            BillType.CREDIT, "A",
+            BillType.STMT, "S"
     );
 
     @Transactional
-    public String getNextBillNo(String billType) {
+    public String getNextBillNo(BillType billType) {
         int fyYear = getCurrentFyYear();
 
         BillSequence seq = billSequenceRepository.findByTypeAndFyYear(billType, fyYear)
@@ -37,7 +38,7 @@ public class BillSequenceService {
         seq.setLastNumber(seq.getLastNumber() + 1);
         billSequenceRepository.save(seq);
 
-        String prefix = PREFIX_MAP.getOrDefault(billType, billType.substring(0, 1));
+        String prefix = PREFIX_MAP.getOrDefault(billType, billType.name().substring(0, 1));
         return prefix + fyYear + "/" + seq.getLastNumber();
     }
 

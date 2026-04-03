@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.stopforfuel.backend.enums.PurchaseOrderStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,8 +27,9 @@ public class PurchaseOrder extends BaseEntity {
 
     private LocalDate expectedDeliveryDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status = "DRAFT"; // DRAFT, ORDERED, PARTIALLY_RECEIVED, RECEIVED, CANCELLED
+    private PurchaseOrderStatus status = PurchaseOrderStatus.DRAFT;
 
     private BigDecimal totalAmount;
 

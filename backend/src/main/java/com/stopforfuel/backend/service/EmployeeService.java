@@ -14,7 +14,7 @@ import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.SalaryHistoryRepository;
 import com.stopforfuel.config.SecurityUtils;
 import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,33 +31,29 @@ import java.util.Optional;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class EmployeeService {
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
-    @Autowired
-    private SalaryHistoryRepository salaryHistoryRepository;
+    private final SalaryHistoryRepository salaryHistoryRepository;
 
-    @Autowired
-    private OperationalAdvanceRepository operationalAdvanceRepository;
+    private final OperationalAdvanceRepository operationalAdvanceRepository;
 
-    @Autowired
-    private S3StorageService s3StorageService;
+    private final S3StorageService s3StorageService;
 
-    @Autowired
-    private DesignationRepository designationRepository;
+    private final DesignationRepository designationRepository;
 
-    @Autowired
-    private RolesRepository rolesRepository;
+    private final RolesRepository rolesRepository;
 
-    @Autowired
-    private EntityManager entityManager;
+    private final EntityManager entityManager;
 
+    @Transactional(readOnly = true)
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public Page<Employee> getEmployees(String search, String status, Pageable pageable) {
         return employeeRepository.findBySearchAndStatus(
                 search != null && !search.isEmpty() ? search : null,
@@ -65,12 +61,14 @@ public class EmployeeService {
                 pageable);
     }
 
+    @Transactional(readOnly = true)
     public Optional<Employee> getEmployeeById(Long id) {
         return employeeRepository.findByIdAndScid(id, SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public List<Employee> getActiveEmployees() {
-        return employeeRepository.findByStatus("ACTIVE");
+        return employeeRepository.findByStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
     }
 
     @Transactional
@@ -106,7 +104,7 @@ public class EmployeeService {
             employee.setJoinDate(LocalDate.now());
         }
         if (employee.getStatus() == null) {
-            employee.setStatus("Active");
+            employee.setStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
         }
 
         Employee saved = employeeRepository.save(employee);
@@ -177,6 +175,7 @@ public class EmployeeService {
     }
 
     // Salary History
+    @Transactional(readOnly = true)
     public List<SalaryHistory> getSalaryHistory(Long employeeId) {
         return salaryHistoryRepository.findByEmployeeIdOrderByEffectiveDateDesc(employeeId);
     }
@@ -194,12 +193,14 @@ public class EmployeeService {
     }
 
     // Advances
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getAdvances(Long employeeId) {
         return operationalAdvanceRepository.findByEmployeeIdOrderByAdvanceDateDesc(employeeId);
     }
 
+    @Transactional(readOnly = true)
     public List<OperationalAdvance> getPendingAdvances(Long employeeId) {
-        return operationalAdvanceRepository.findByEmployeeIdAndStatus(employeeId, "PENDING");
+        return operationalAdvanceRepository.findByEmployeeIdAndStatus(employeeId, com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
     }
 
     public OperationalAdvance addAdvance(OperationalAdvance advance) {
@@ -209,7 +210,7 @@ public class EmployeeService {
     public OperationalAdvance updateAdvanceStatus(Long advanceId, String status) {
         OperationalAdvance advance = operationalAdvanceRepository.findById(advanceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Advance not found"));
-        advance.setStatus(status);
+        advance.setStatus(com.stopforfuel.backend.enums.AdvanceStatus.valueOf(status));
         return operationalAdvanceRepository.save(advance);
     }
 
@@ -257,6 +258,7 @@ public class EmployeeService {
         return employeeRepository.save(employee);
     }
 
+    @Transactional(readOnly = true)
     public String getFilePresignedUrl(Long id, String type) {
         Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));

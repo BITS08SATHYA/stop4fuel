@@ -8,7 +8,6 @@ import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import {
     getActiveShift,
     openShift,
-
     getEAdvancesByShift,
     getEAdvanceSummary,
     createEAdvance,
@@ -21,13 +20,24 @@ import {
     createUpiCompany,
     getExpenseTypes,
     createExpenseType,
+    getInvoicesByShift,
+    getPaymentsByShift,
+    getIncentivePaymentsByShift,
+    getShiftClosingData,
+    getExternalCashInflowsByShift,
     Shift,
     EAdvance,
     ShiftExpense,
     EAdvanceSummary,
     UpiCompany,
     ExpenseType,
+    InvoiceBill,
+    Payment,
+    IncentivePayment,
+    ExternalCashInflow,
+    NozzleReadingRow,
 } from "@/lib/api/station";
+import { fetchAdvancesByShift, OperationalAdvance } from "@/app/operations/advances/advances-api";
 import {
     Clock,
     Play,
@@ -41,30 +51,16 @@ import {
     FileText,
     Receipt,
     Wallet,
-    Search,
+    ChevronDown,
+    ChevronUp,
+    DollarSign,
+    ArrowDownLeft,
+    ArrowUpRight,
+    TrendingDown,
 } from "lucide-react";
-import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { PermissionGate } from "@/components/permission-gate";
 
-// Unified row for display — merges EAdvance and Expense
-interface ShiftTxnRow {
-    id: number;
-    source: "EADVANCE" | "EXPENSE";
-    type: string;
-    amount: number;
-    date?: string;
-    remarks?: string;
-    // EAdvance detail fields
-    upiCompany?: UpiCompany;
-    bankName?: string;
-    cardLast4Digit?: string;
-    customerName?: string;
-    chequeNo?: string;
-    ccmsNumber?: string;
-    // Expense detail fields
-    description?: string;
-    expenseType?: ExpenseType;
-}
+// --- Constants ---
 
 const TXN_TYPES = [
     { value: "UPI", label: "UPI", icon: Smartphone, color: "text-purple-500 bg-purple-500/10" },
@@ -92,22 +88,47 @@ function formatCurrency(val?: number) {
     return val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-interface ShiftSummary {
-    upi: number;
-    card: number;
-    cheque: number;
-    ccms: number;
-    bankTransfer: number;
-    eAdvanceTotal: number;
-    expense: number;
+function abbreviateProducts(products: InvoiceBill["products"]): string {
+    if (!products || products.length === 0) return "-";
+    return products.map(p => {
+        const name = p.productName?.length > 6 ? p.productName.substring(0, 6) : p.productName;
+        return `${name}:${p.quantity}`;
+    }).join(" ");
+}
+
+// --- Types ---
+
+interface MeterReadingLocal {
+    nozzleId: number;
+    pumpName: string;
+    nozzleName: string;
+    productName: string;
+    productPrice: number;
+    openReading: number;
+    closeReading: string;
+    testQuantity: string;
 }
 
 export default function ShiftsPage() {
     const router = useRouter();
     const [activeShift, setActiveShift] = useState<Shift | null>(null);
-    const [transactions, setTransactions] = useState<ShiftTxnRow[]>([]);
-    const [summary, setSummary] = useState<ShiftSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    // All data
+    const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
+    const [eAdvances, setEAdvances] = useState<EAdvance[]>([]);
+    const [eAdvanceSummary, setEAdvanceSummary] = useState<EAdvanceSummary | null>(null);
+    const [expenses, setExpenses] = useState<ShiftExpense[]>([]);
+    const [expenseTotal, setExpenseTotal] = useState(0);
+    const [opAdvances, setOpAdvances] = useState<OperationalAdvance[]>([]);
+    const [payments, setPayments] = useState<Payment[]>([]);
+    const [incentivePayments, setIncentivePayments] = useState<IncentivePayment[]>([]);
+    const [cashInflows, setCashInflows] = useState<ExternalCashInflow[]>([]);
+    const [nozzleReadings, setNozzleReadings] = useState<NozzleReadingRow[]>([]);
+
+    // Meter readings (local only)
+    const [meterReadings, setMeterReadings] = useState<MeterReadingLocal[]>([]);
+    const [showMeterReadings, setShowMeterReadings] = useState(false);
 
     // Add transaction modal
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -140,81 +161,78 @@ export default function ShiftsPage() {
     const [selectedExpenseTypeId, setSelectedExpenseTypeId] = useState("");
     const [newExpenseTypeName, setNewExpenseTypeName] = useState("");
     // Invoice linking
-    const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
-
-    // Filter
-    const [typeFilter, setTypeFilter] = useState("ALL");
-    const [searchQuery, setSearchQuery] = useState("");
+    const [linkedInvoice, setLinkedInvoice] = useState<{ id: number; billNo?: string; billType?: string; netAmount?: number } | null>(null);
 
     const viewingShift = activeShift;
 
-    const loadTransactions = async (shiftId: number) => {
-        const [eAdvances, expenses, eAdvSummary, expenseTotal] = await Promise.all([
-            getEAdvancesByShift(shiftId),
-            getExpensesByShift(shiftId),
-            getEAdvanceSummary(shiftId),
-            getExpenseShiftTotal(shiftId),
-        ]);
+    const loadAllData = useCallback(async (shiftId: number) => {
+        try {
+            const [
+                invoicesData,
+                eAdvData,
+                eAdvSummaryData,
+                expensesData,
+                expTotalData,
+                opAdvData,
+                paymentsData,
+                incentivesData,
+                cashInflowsData,
+                closingData,
+            ] = await Promise.all([
+                getInvoicesByShift(shiftId),
+                getEAdvancesByShift(shiftId),
+                getEAdvanceSummary(shiftId),
+                getExpensesByShift(shiftId),
+                getExpenseShiftTotal(shiftId),
+                fetchAdvancesByShift(shiftId).catch(() => [] as OperationalAdvance[]),
+                getPaymentsByShift(shiftId),
+                getIncentivePaymentsByShift(shiftId),
+                getExternalCashInflowsByShift(shiftId).catch(() => [] as ExternalCashInflow[]),
+                getShiftClosingData(shiftId).catch(() => null),
+            ]);
 
-        // Merge into unified rows
-        const rows: ShiftTxnRow[] = [
-            ...eAdvances.map((ea): ShiftTxnRow => ({
-                id: ea.id!,
-                source: "EADVANCE",
-                type: ea.advanceType,
-                amount: ea.amount,
-                date: ea.transactionDate,
-                remarks: ea.remarks,
-                upiCompany: ea.upiCompany,
-                bankName: ea.bankName,
-                cardLast4Digit: ea.cardLast4Digit,
-                customerName: ea.customerName,
-                chequeNo: ea.chequeNo,
-                ccmsNumber: ea.ccmsNumber,
-            })),
-            ...expenses.map((exp): ShiftTxnRow => ({
-                id: exp.id!,
-                source: "EXPENSE",
-                type: "EXPENSE",
-                amount: exp.amount,
-                date: exp.expenseDate,
-                remarks: exp.remarks,
-                description: exp.description,
-                expenseType: exp.expenseType,
-            })),
-        ].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+            setInvoices(invoicesData);
+            setEAdvances(eAdvData);
+            setEAdvanceSummary(eAdvSummaryData);
+            setExpenses(expensesData);
+            setExpenseTotal(expTotalData);
+            setOpAdvances(opAdvData);
+            setPayments(paymentsData);
+            setIncentivePayments(incentivesData);
+            setCashInflows(cashInflowsData);
 
-        setTransactions(rows);
-        setSummary({
-            upi: eAdvSummary.upi || 0,
-            card: eAdvSummary.card || 0,
-            cheque: eAdvSummary.cheque || 0,
-            ccms: eAdvSummary.ccms || 0,
-            bankTransfer: eAdvSummary.bank_transfer || 0,
-            eAdvanceTotal: eAdvSummary.total || 0,
-            expense: expenseTotal || 0,
-        });
-    };
+            if (closingData?.nozzleReadings) {
+                setNozzleReadings(closingData.nozzleReadings);
+                setMeterReadings(closingData.nozzleReadings.map(nr => ({
+                    nozzleId: nr.nozzleId,
+                    pumpName: nr.pumpName || "",
+                    nozzleName: nr.nozzleName,
+                    productName: nr.productName || "",
+                    productPrice: nr.productPrice || 0,
+                    openReading: nr.openMeterReading,
+                    closeReading: "",
+                    testQuantity: "",
+                })));
+            }
+        } catch (err) {
+            console.error("Failed to load shift data", err);
+        }
+    }, []);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
             const active = await getActiveShift();
             setActiveShift(active);
-
-            const shiftToView = active;
-            if (shiftToView) {
-                await loadTransactions(shiftToView.id);
-            } else {
-                setTransactions([]);
-                setSummary(null);
+            if (active) {
+                await loadAllData(active.id);
             }
         } catch (err) {
             console.error("Failed to load shift data", err);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [loadAllData]);
 
     useEffect(() => {
         loadData();
@@ -224,8 +242,7 @@ export default function ShiftsPage() {
         try {
             const shift = await openShift({});
             setActiveShift(shift);
-
-            await loadTransactions(shift.id);
+            await loadAllData(shift.id);
         } catch (err: any) {
             alert(err.message || "Failed to open shift");
         }
@@ -264,7 +281,6 @@ export default function ShiftsPage() {
 
         try {
             if (txnType === "EXPENSE") {
-                // Create Expense
                 const payload: Partial<ShiftExpense> = {
                     shiftId: viewingShift.id,
                     amount: Number(txnAmount),
@@ -272,14 +288,13 @@ export default function ShiftsPage() {
                     remarks: txnRemarks || undefined,
                 };
                 if (newExpenseTypeName) {
-                    const created = await createExpenseType({ typeName: newExpenseTypeName });
+                    const created = await createExpenseType({ name: newExpenseTypeName });
                     payload.expenseType = created;
                 } else if (selectedExpenseTypeId) {
-                    payload.expenseType = { id: Number(selectedExpenseTypeId), typeName: "" };
+                    payload.expenseType = { id: Number(selectedExpenseTypeId), name: "" };
                 }
                 await createExpense(payload);
             } else {
-                // Create EAdvance
                 const payload: Partial<EAdvance> = {
                     advanceType: txnType,
                     shiftId: viewingShift.id,
@@ -320,53 +335,102 @@ export default function ShiftsPage() {
             }
 
             setIsAddModalOpen(false);
-            await loadTransactions(viewingShift.id);
+            await loadAllData(viewingShift.id);
         } catch (err: any) {
             alert(err.message || "Failed to add transaction");
         }
     };
 
-    const handleDeleteTransaction = async (row: ShiftTxnRow) => {
-        if (!confirm("Delete this transaction?")) return;
+    const handleDeleteEAdvance = async (id: number) => {
+        if (!confirm("Delete this entry?")) return;
         try {
-            if (row.source === "EADVANCE") {
-                await deleteEAdvance(row.id);
-            } else {
-                await deleteExpense(row.id);
-            }
-            if (viewingShift) await loadTransactions(viewingShift.id);
-        } catch (err) {
-            alert("Failed to delete transaction");
+            await deleteEAdvance(id);
+            if (viewingShift) await loadAllData(viewingShift.id);
+        } catch {
+            alert("Failed to delete entry");
         }
     };
 
-    const filtered = transactions.filter((t) => {
-        const matchType = typeFilter === "ALL" || t.type === typeFilter;
-        const q = searchQuery.toLowerCase();
-        const matchSearch = !searchQuery ||
-            t.remarks?.toLowerCase().includes(q) ||
-            t.customerName?.toLowerCase().includes(q) ||
-            t.bankName?.toLowerCase().includes(q) ||
-            t.upiCompany?.companyName?.toLowerCase().includes(q) ||
-            t.description?.toLowerCase().includes(q);
-        return matchType && matchSearch;
-    });
+    const handleDeleteExpense = async (id: number) => {
+        if (!confirm("Delete this expense?")) return;
+        try {
+            await deleteExpense(id);
+            if (viewingShift) await loadAllData(viewingShift.id);
+        } catch {
+            alert("Failed to delete expense");
+        }
+    };
 
-    const { page: txnPage, setPage: setTxnPage, totalPages: txnTotalPages, totalElements: txnTotalElements, pageSize: txnPageSize, paginatedData: pagedTxns } = useClientPagination(filtered);
+    // Computed values
+    const creditInvoices = invoices.filter(inv => inv.billType === "CREDIT");
+    const cashInvoices = invoices.filter(inv => inv.billType === "CASH");
+
+    const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.netAmount || 0), 0);
+    const creditBillTotal = creditInvoices.reduce((sum, inv) => sum + (inv.netAmount || 0), 0);
+
+    const eAdvanceTotal = eAdvanceSummary?.total || 0;
+    const opAdvanceTotal = opAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
+    const incentiveTotal = incentivePayments.reduce((sum, ip) => sum + (ip.amount || 0), 0);
+    const totalAdvances = eAdvanceTotal + opAdvanceTotal + expenseTotal + incentiveTotal;
+
+    const billPaymentTotal = payments.filter(p => p.invoiceBill).reduce((sum, p) => sum + (p.amount || 0), 0);
+    const statementPaymentTotal = payments.filter(p => p.statement).reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalPayments = billPaymentTotal + statementPaymentTotal;
+    const cashInflowTotal = cashInflows.reduce((sum, ci) => sum + (ci.amount || 0), 0);
+
+    const cashBalance = totalRevenue - creditBillTotal - totalAdvances + totalPayments + cashInflowTotal;
 
     const isViewingActive = viewingShift?.status === "OPEN";
 
+    // Meter reading handlers
+    const updateMeterReading = (index: number, field: "closeReading" | "testQuantity", value: string) => {
+        setMeterReadings(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], [field]: value };
+            return updated;
+        });
+    };
+
+    const computeSales = (mr: MeterReadingLocal) => {
+        const close = parseFloat(mr.closeReading);
+        if (isNaN(close)) return null;
+        const test = parseFloat(mr.testQuantity) || 0;
+        return close - mr.openReading - test;
+    };
+
+    const computeAmount = (mr: MeterReadingLocal) => {
+        const sales = computeSales(mr);
+        if (sales === null) return null;
+        return sales * mr.productPrice;
+    };
+
+    // Group meter readings by product for totals
+    const productTotals = meterReadings.reduce((acc, mr) => {
+        const sales = computeSales(mr);
+        const amount = computeAmount(mr);
+        if (sales !== null && amount !== null) {
+            if (!acc[mr.productName]) acc[mr.productName] = { sales: 0, amount: 0 };
+            acc[mr.productName].sales += sales;
+            acc[mr.productName].amount += amount;
+        }
+        return acc;
+    }, {} as Record<string, { sales: number; amount: number }>);
+
+    const meterGrandTotal = Object.values(productTotals).reduce((sum, pt) => sum + pt.amount, 0);
+
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
+        <div className="p-4 md:p-6 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
-                        <h1 className="text-4xl font-bold text-foreground tracking-tight">
+                        <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">
                             Shift <span className="text-gradient">Register</span>
                         </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Manage shifts and record advance entries during a shift.
+                        <p className="text-muted-foreground mt-1 text-sm">
+                            {activeShift
+                                ? `Shift #${activeShift.id} - Started ${formatDateTime(activeShift.startTime)}`
+                                : "No active shift"}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -375,7 +439,7 @@ export default function ShiftsPage() {
                                 <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-xl">
                                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                                     <span className="text-sm font-medium text-green-500">
-                                        Shift #{activeShift.id} - Active
+                                        Active
                                     </span>
                                 </div>
                                 <PermissionGate permission="SHIFT_MANAGE">
@@ -425,164 +489,484 @@ export default function ShiftsPage() {
                     </div>
                 ) : (
                     <>
-                        {/* Shift Info & Summary */}
-                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-                            <GlassCard className="lg:col-span-1">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className={`p-2.5 rounded-xl ${isViewingActive ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-500'}`}>
-                                        <Clock className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Shift #{viewingShift.id}</p>
-                                        <p className={`text-sm font-bold ${isViewingActive ? 'text-green-500' : 'text-muted-foreground'}`}>
-                                            {viewingShift.status}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5 text-xs text-muted-foreground">
-                                    <p>Start: <span className="text-foreground font-medium">{formatDateTime(viewingShift.startTime)}</span></p>
-                                    {viewingShift.endTime && (
-                                        <p>End: <span className="text-foreground font-medium">{formatDateTime(viewingShift.endTime)}</span></p>
-                                    )}
-                                </div>
-                            </GlassCard>
-
-                            {summary && (
-                                <>
-                                    <SummaryCard label="E-Advance Total" value={summary.eAdvanceTotal} color="text-blue-500" />
-                                    <SummaryCard label="Expenses" value={summary.expense} color="text-red-500" />
-                                    <SummaryCard label="Net Advance" value={summary.eAdvanceTotal - summary.expense} color="text-green-500" />
-                                </>
-                            )}
-                        </div>
-
-                        {/* Summary Breakdown */}
-                        {summary && (
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-                                <MiniStat label="UPI" value={summary.upi} icon={Smartphone} color="text-purple-500 bg-purple-500/10" />
-                                <MiniStat label="Card" value={summary.card} icon={CreditCard} color="text-blue-500 bg-blue-500/10" />
-                                <MiniStat label="Cheque" value={summary.cheque} icon={FileText} color="text-amber-500 bg-amber-500/10" />
-                                <MiniStat label="CCMS" value={summary.ccms} icon={Receipt} color="text-pink-500 bg-pink-500/10" />
-                                <MiniStat label="Expense" value={summary.expense} icon={Wallet} color="text-red-500 bg-red-500/10" />
-                            </div>
-                        )}
-
-                        {/* Filter Bar + Add Button */}
-                        <div className="mb-4 flex flex-wrap gap-3 items-center">
-                            <div className="relative flex-1 min-w-[200px] max-w-md">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="Search remarks, customer, bank..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                />
-                            </div>
-                            <select
-                                value={typeFilter}
-                                onChange={(e) => setTypeFilter(e.target.value)}
-                                className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="ALL">All Types</option>
-                                {TXN_TYPES.map((t) => (
-                                    <option key={t.value} value={t.value}>{t.label}</option>
-                                ))}
-                            </select>
-                            {isViewingActive && (
-                                <PermissionGate permission="SHIFT_MANAGE">
-                                    <button
-                                        onClick={handleOpenAddModal}
-                                        className="btn-gradient px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        Add Entry
-                                    </button>
-                                </PermissionGate>
-                            )}
-                        </div>
-
-                        {/* Transactions Table */}
-                        <GlassCard className="overflow-hidden border-none p-0 mb-6">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-white/5 border-b border-border/50">
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-12">#</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Amount</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Details</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Remarks</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
-                                            {isViewingActive && (
-                                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-20">Actions</th>
-                                            )}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border/30">
-                                        {filtered.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={isViewingActive ? 7 : 6} className="px-6 py-12 text-center text-muted-foreground">
-                                                    No entries found
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            pagedTxns.map((txn, idx) => {
-                                                const meta = getTxnMeta(txn.type);
-                                                const Icon = meta.icon;
-                                                return (
-                                                    <tr key={`${txn.source}-${txn.id}`} className="hover:bg-white/5 transition-colors group">
-                                                        <td className="px-6 py-3 text-xs font-mono text-muted-foreground text-center">{txnPage * txnPageSize + idx + 1}</td>
-                                                        <td className="px-6 py-3">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`p-1.5 rounded-lg ${meta.color}`}>
-                                                                    <Icon className="w-3.5 h-3.5" />
-                                                                </div>
-                                                                <span className="text-sm font-medium text-foreground">{meta.label}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-3 text-right">
-                                                            <span className={`text-sm font-bold ${txn.source === 'EXPENSE' ? 'text-red-500' : 'text-green-500'}`}>
-                                                                {txn.source === 'EXPENSE' ? '-' : '+'}
-                                                                {formatCurrency(txn.amount)}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-3">
-                                                            <TxnDetails txn={txn} />
-                                                        </td>
-                                                        <td className="px-6 py-3 text-xs text-muted-foreground max-w-[200px] truncate">
-                                                            {txn.remarks || "-"}
-                                                        </td>
-                                                        <td className="px-6 py-3 text-xs text-muted-foreground">
-                                                            {formatDateTime(txn.date)}
-                                                        </td>
-                                                        {isViewingActive && (
-                                                            <td className="px-6 py-3 text-center">
-                                                                <PermissionGate permission="SHIFT_MANAGE">
-                                                                    <button
-                                                                        onClick={() => handleDeleteTransaction(txn)}
-                                                                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
-                                                                    >
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                </PermissionGate>
-                                                            </td>
-                                                        )}
-                                                    </tr>
-                                                );
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <TablePagination
-                                page={txnPage}
-                                totalPages={txnTotalPages}
-                                totalElements={txnTotalElements}
-                                pageSize={txnPageSize}
-                                onPageChange={setTxnPage}
+                        {/* Summary Row - 4 cards */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                            <SummaryCard
+                                label="Total Revenue"
+                                value={totalRevenue}
+                                color="text-green-500"
+                                bgColor="bg-green-500/10"
+                                icon={DollarSign}
                             />
-                        </GlassCard>
+                            <SummaryCard
+                                label="Total Advances"
+                                value={totalAdvances}
+                                color="text-orange-500"
+                                bgColor="bg-orange-500/10"
+                                icon={ArrowUpRight}
+                            />
+                            <SummaryCard
+                                label="Cash Balance"
+                                value={cashBalance}
+                                color="text-blue-500"
+                                bgColor="bg-blue-500/10"
+                                icon={Wallet}
+                            />
+                            <SummaryCard
+                                label="Credit Bills"
+                                value={creditBillTotal}
+                                color="text-red-500"
+                                bgColor="bg-red-500/10"
+                                icon={TrendingDown}
+                            />
+                        </div>
+
+                        {/* Two-Column Layout */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                            {/* LEFT COLUMN - Money OUT */}
+                            <div className="space-y-4">
+                                {/* Credit Invoices */}
+                                <GlassCard className="p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-semibold text-muted-foreground">CREDIT INVOICES ({creditInvoices.length})</h3>
+                                        <span className="text-sm font-bold text-red-500">{formatCurrency(creditBillTotal)}</span>
+                                    </div>
+                                    {creditInvoices.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground py-2">No credit invoices</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Customer</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Bill#</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Products</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {creditInvoices.map(inv => (
+                                                        <tr key={inv.id} className="hover:bg-white/5">
+                                                            <td className="py-1.5 text-foreground">{inv.customer?.name || "-"}</td>
+                                                            <td className="py-1.5 text-foreground font-mono">{inv.billNo || "-"}</td>
+                                                            <td className="py-1.5 text-muted-foreground">{abbreviateProducts(inv.products)}</td>
+                                                            <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(inv.netAmount)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </GlassCard>
+
+                                {/* E-Advances */}
+                                <GlassCard className="p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-semibold text-muted-foreground">E-ADVANCES ({eAdvances.length})</h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-blue-500">{formatCurrency(eAdvanceTotal)}</span>
+                                            {isViewingActive && (
+                                                <PermissionGate permission="SHIFT_MANAGE">
+                                                    <button
+                                                        onClick={handleOpenAddModal}
+                                                        className="text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1"
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                        Add Entry
+                                                    </button>
+                                                </PermissionGate>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {eAdvances.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground py-2">No e-advance entries</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Type</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Details</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                        {isViewingActive && <th className="w-8"></th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {eAdvances.map(ea => {
+                                                        const meta = getTxnMeta(ea.advanceType);
+                                                        const Icon = meta.icon;
+                                                        const details = getEAdvanceDetails(ea);
+                                                        return (
+                                                            <tr key={ea.id} className="hover:bg-white/5 group">
+                                                                <td className="py-1.5">
+                                                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium ${meta.color}`}>
+                                                                        <Icon className="w-3 h-3" />
+                                                                        {meta.label}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-1.5 text-muted-foreground truncate max-w-[160px]">{details}</td>
+                                                                <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(ea.amount)}</td>
+                                                                {isViewingActive && (
+                                                                    <td className="py-1.5 text-center">
+                                                                        <PermissionGate permission="SHIFT_MANAGE">
+                                                                            <button
+                                                                                onClick={() => handleDeleteEAdvance(ea.id!)}
+                                                                                className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                                            >
+                                                                                <Trash2 className="w-3 h-3" />
+                                                                            </button>
+                                                                        </PermissionGate>
+                                                                    </td>
+                                                                )}
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </GlassCard>
+
+                                {/* Operational Advances */}
+                                <GlassCard className="p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-semibold text-muted-foreground">OPERATIONAL ADVANCES ({opAdvances.length})</h3>
+                                        <span className="text-sm font-bold text-purple-500">{formatCurrency(opAdvanceTotal)}</span>
+                                    </div>
+                                    {opAdvances.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground py-2">No operational advances</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Type</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Recipient</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {opAdvances.map(oa => (
+                                                        <tr key={oa.id} className="hover:bg-white/5">
+                                                            <td className="py-1.5">
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-500 font-medium">
+                                                                    {oa.advanceType?.replace(/_/g, " ") || "-"}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-1.5 text-foreground">{oa.recipientName || oa.employee?.name || "-"}</td>
+                                                            <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(oa.amount)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </GlassCard>
+
+                                {/* Expenses */}
+                                <GlassCard className="p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-semibold text-muted-foreground">EXPENSES ({expenses.length})</h3>
+                                        <span className="text-sm font-bold text-red-500">{formatCurrency(expenseTotal)}</span>
+                                    </div>
+                                    {expenses.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground py-2">No expenses</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Type</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Description</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                        {isViewingActive && <th className="w-8"></th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {expenses.map(exp => (
+                                                        <tr key={exp.id} className="hover:bg-white/5 group">
+                                                            <td className="py-1.5">
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 font-medium">
+                                                                    {exp.expenseType?.name || "Expense"}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-1.5 text-muted-foreground truncate max-w-[160px]">{exp.description || exp.remarks || "-"}</td>
+                                                            <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(exp.amount)}</td>
+                                                            {isViewingActive && (
+                                                                <td className="py-1.5 text-center">
+                                                                    <PermissionGate permission="SHIFT_MANAGE">
+                                                                        <button
+                                                                            onClick={() => handleDeleteExpense(exp.id!)}
+                                                                            className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                                        >
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        </button>
+                                                                    </PermissionGate>
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </GlassCard>
+
+                                {/* Incentives */}
+                                <GlassCard className="p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-semibold text-muted-foreground">INCENTIVES ({incentivePayments.length})</h3>
+                                        <span className="text-sm font-bold text-amber-500">{formatCurrency(incentiveTotal)}</span>
+                                    </div>
+                                    {incentivePayments.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground py-2">No incentive payments</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Customer</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Description</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {incentivePayments.map(ip => (
+                                                        <tr key={ip.id} className="hover:bg-white/5">
+                                                            <td className="py-1.5 text-foreground">{ip.customer?.name || "-"}</td>
+                                                            <td className="py-1.5 text-muted-foreground truncate max-w-[160px]">{ip.description || "-"}</td>
+                                                            <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(ip.amount)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </GlassCard>
+                            </div>
+
+                            {/* RIGHT COLUMN - Money IN */}
+                            <div className="space-y-4">
+                                {/* Cash Invoices */}
+                                <GlassCard className="p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-semibold text-muted-foreground">CASH INVOICES ({cashInvoices.length})</h3>
+                                        <span className="text-sm font-bold text-green-500">
+                                            {formatCurrency(cashInvoices.reduce((s, i) => s + (i.netAmount || 0), 0))}
+                                        </span>
+                                    </div>
+                                    {cashInvoices.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground py-2">No cash invoices</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Bill#</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Products</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Mode</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {cashInvoices.map(inv => (
+                                                        <tr key={inv.id} className="hover:bg-white/5">
+                                                            <td className="py-1.5 text-foreground font-mono">{inv.billNo || "-"}</td>
+                                                            <td className="py-1.5 text-muted-foreground">{abbreviateProducts(inv.products)}</td>
+                                                            <td className="py-1.5">
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 border border-border text-muted-foreground">
+                                                                    {inv.paymentMode || "CASH"}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(inv.netAmount)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </GlassCard>
+
+                                {/* Bill / Statement Payments */}
+                                <GlassCard className="p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-semibold text-muted-foreground">BILL/STATEMENT PAYMENTS ({payments.length})</h3>
+                                        <span className="text-sm font-bold text-emerald-500">{formatCurrency(totalPayments)}</span>
+                                    </div>
+                                    {payments.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground py-2">No payments received</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Type</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Customer</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Mode</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {payments.map(p => {
+                                                        const type = p.invoiceBill ? "BILL" : p.statement ? "STMT" : "OTHER";
+                                                        return (
+                                                            <tr key={p.id} className="hover:bg-white/5">
+                                                                <td className="py-1.5">
+                                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${
+                                                                        type === "BILL" ? "bg-blue-500/10 text-blue-500" : "bg-teal-500/10 text-teal-500"
+                                                                    }`}>
+                                                                        {type}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-1.5 text-foreground">{p.customer?.name || "-"}</td>
+                                                                <td className="py-1.5">
+                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 border border-border text-muted-foreground">
+                                                                        {p.paymentMode?.name || "-"}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(p.amount)}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </GlassCard>
+
+                                {/* Cash Inflows */}
+                                <GlassCard className="p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-semibold text-muted-foreground">CASH INFLOWS ({cashInflows.length})</h3>
+                                        <span className="text-sm font-bold text-cyan-500">{formatCurrency(cashInflowTotal)}</span>
+                                    </div>
+                                    {cashInflows.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground py-2">No external cash inflows</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Source</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {cashInflows.map(ci => (
+                                                        <tr key={ci.id} className="hover:bg-white/5">
+                                                            <td className="py-1.5 text-foreground">{ci.source || ci.purpose || "-"}</td>
+                                                            <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(ci.amount)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </GlassCard>
+                            </div>
+                        </div>
+
+                        {/* Collapsible Meter Readings */}
+                        {meterReadings.length > 0 && (
+                            <GlassCard className="p-4 mb-6">
+                                <button
+                                    onClick={() => setShowMeterReadings(!showMeterReadings)}
+                                    className="w-full flex justify-between items-center"
+                                >
+                                    <h3 className="text-sm font-semibold text-muted-foreground">
+                                        NOZZLE METER READINGS ({meterReadings.length})
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        {meterGrandTotal > 0 && (
+                                            <span className="text-sm font-bold text-foreground">{formatCurrency(meterGrandTotal)}</span>
+                                        )}
+                                        {showMeterReadings ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                                    </div>
+                                </button>
+
+                                {showMeterReadings && (
+                                    <div className="mt-4">
+                                        <p className="text-[10px] text-muted-foreground mb-3 italic">
+                                            Local calculator only -- values are not saved to the database.
+                                        </p>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-border/30">
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Pump</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Nozzle</th>
+                                                        <th className="text-left py-1.5 text-muted-foreground font-medium">Product</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Open</th>
+                                                        <th className="text-center py-1.5 text-muted-foreground font-medium">Close</th>
+                                                        <th className="text-center py-1.5 text-muted-foreground font-medium">Test</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Sales</th>
+                                                        <th className="text-right py-1.5 text-muted-foreground font-medium">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {meterReadings.map((mr, idx) => {
+                                                        const sales = computeSales(mr);
+                                                        const amount = computeAmount(mr);
+                                                        return (
+                                                            <tr key={mr.nozzleId}>
+                                                                <td className="py-1.5 text-foreground">{mr.pumpName}</td>
+                                                                <td className="py-1.5 text-foreground">{mr.nozzleName}</td>
+                                                                <td className="py-1.5 text-muted-foreground">{mr.productName}</td>
+                                                                <td className="py-1.5 text-right font-mono text-foreground">{mr.openReading.toFixed(2)}</td>
+                                                                <td className="py-1.5 text-center">
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        value={mr.closeReading}
+                                                                        onChange={(e) => updateMeterReading(idx, "closeReading", e.target.value)}
+                                                                        className="w-24 bg-background border border-border rounded px-2 py-1 text-foreground font-mono text-right focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                                                        placeholder="0.00"
+                                                                    />
+                                                                </td>
+                                                                <td className="py-1.5 text-center">
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        value={mr.testQuantity}
+                                                                        onChange={(e) => updateMeterReading(idx, "testQuantity", e.target.value)}
+                                                                        className="w-20 bg-background border border-border rounded px-2 py-1 text-foreground font-mono text-right focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                                                        placeholder="0"
+                                                                    />
+                                                                </td>
+                                                                <td className="py-1.5 text-right font-mono text-foreground">
+                                                                    {sales !== null ? sales.toFixed(2) : "-"}
+                                                                </td>
+                                                                <td className="py-1.5 text-right font-mono font-medium text-foreground">
+                                                                    {amount !== null ? formatCurrency(amount) : "-"}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                                {Object.keys(productTotals).length > 0 && (
+                                                    <tfoot className="border-t border-border">
+                                                        {Object.entries(productTotals).map(([product, totals]) => (
+                                                            <tr key={product} className="text-muted-foreground">
+                                                                <td colSpan={6} className="py-1.5 text-right text-xs font-medium">{product} Total:</td>
+                                                                <td className="py-1.5 text-right font-mono text-xs">{totals.sales.toFixed(2)}</td>
+                                                                <td className="py-1.5 text-right font-mono text-xs font-medium">{formatCurrency(totals.amount)}</td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr className="font-bold text-foreground">
+                                                            <td colSpan={6} className="py-2 text-right text-sm">Grand Total:</td>
+                                                            <td className="py-2 text-right font-mono text-sm">
+                                                                {Object.values(productTotals).reduce((s, pt) => s + pt.sales, 0).toFixed(2)}
+                                                            </td>
+                                                            <td className="py-2 text-right font-mono text-sm">{formatCurrency(meterGrandTotal)}</td>
+                                                        </tr>
+                                                    </tfoot>
+                                                )}
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </GlassCard>
+                        )}
                     </>
                 )}
 
@@ -597,7 +981,7 @@ export default function ShiftsPage() {
                 </div>
             </div>
 
-            {/* Add Transaction Modal */}
+            {/* Add Transaction Modal (preserved from original) */}
             <Modal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
@@ -720,7 +1104,7 @@ export default function ShiftsPage() {
                                 >
                                     <option value="">Select or add new...</option>
                                     {expenseTypes.map((et) => (
-                                        <option key={et.id} value={et.id}>{et.typeName}</option>
+                                        <option key={et.id} value={et.id}>{et.name}</option>
                                     ))}
                                 </select>
                                 {!selectedExpenseTypeId && (
@@ -783,26 +1167,21 @@ export default function ShiftsPage() {
 
 // --- Helper Components ---
 
-function SummaryCard({ label, value, color }: { label: string; value: number; color: string }) {
+function SummaryCard({ label, value, color, bgColor, icon: Icon }: {
+    label: string; value: number; color: string; bgColor: string; icon: any;
+}) {
     return (
-        <GlassCard>
-            <p className="text-xs text-muted-foreground mb-1">{label}</p>
-            <p className={`text-2xl font-bold ${color}`}>{formatCurrency(value)}</p>
+        <GlassCard className="p-4">
+            <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${bgColor}`}>
+                    <Icon className={`w-5 h-5 ${color}`} />
+                </div>
+                <div>
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                    <p className={`text-xl font-bold ${color}`}>{formatCurrency(value)}</p>
+                </div>
+            </div>
         </GlassCard>
-    );
-}
-
-function MiniStat({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) {
-    return (
-        <div className={`flex items-center gap-3 p-3 rounded-xl border border-border bg-card`}>
-            <div className={`p-2 rounded-lg ${color}`}>
-                <Icon className="w-4 h-4" />
-            </div>
-            <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-                <p className="text-sm font-bold text-foreground">{formatCurrency(value)}</p>
-            </div>
-        </div>
     );
 }
 
@@ -821,25 +1200,14 @@ function InputField({ label, value, onChange, placeholder }: { label: string; va
     );
 }
 
-function TxnDetails({ txn }: { txn: ShiftTxnRow }) {
-    const details: string[] = [];
-    if (txn.upiCompany?.companyName) details.push(txn.upiCompany.companyName);
-    if (txn.bankName) details.push(txn.bankName);
-    if (txn.cardLast4Digit) details.push(`****${txn.cardLast4Digit}`);
-    if (txn.customerName) details.push(txn.customerName);
-    if (txn.chequeNo) details.push(`Chq: ${txn.chequeNo}`);
-    if (txn.ccmsNumber) details.push(`CCMS: ${txn.ccmsNumber}`);
-    if (txn.description) details.push(txn.description);
-    if (txn.expenseType?.typeName) details.push(`[${txn.expenseType.typeName}]`);
-
-    if (details.length === 0) return <span className="text-xs text-muted-foreground">-</span>;
-    return (
-        <div className="flex flex-wrap gap-1.5">
-            {details.map((d, i) => (
-                <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-border text-muted-foreground">
-                    {d}
-                </span>
-            ))}
-        </div>
-    );
+function getEAdvanceDetails(ea: EAdvance): string {
+    const parts: string[] = [];
+    if (ea.upiCompany?.companyName) parts.push(ea.upiCompany.companyName);
+    if (ea.bankName) parts.push(ea.bankName);
+    if (ea.cardLast4Digit) parts.push(`****${ea.cardLast4Digit}`);
+    if (ea.customerName) parts.push(ea.customerName);
+    if (ea.chequeNo) parts.push(`Chq: ${ea.chequeNo}`);
+    if (ea.ccmsNumber) parts.push(`CCMS: ${ea.ccmsNumber}`);
+    if (ea.remarks) parts.push(ea.remarks);
+    return parts.join(" | ") || "-";
 }

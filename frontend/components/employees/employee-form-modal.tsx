@@ -15,14 +15,14 @@ import { inputClass, API_BASE } from "./types";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 interface EmployeeFormModalProps {
-    employee: any;
+    employee: Partial<Employee> | null;
     isEditing: boolean;
     onClose: () => void;
     onSaved: () => void;
 }
 
 export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClose, onSaved }: EmployeeFormModalProps) {
-    const [currentEmployee, setCurrentEmployee] = useState<any>(initialEmployee);
+    const [currentEmployee, setCurrentEmployee] = useState<Partial<Employee>>(initialEmployee || {});
     const [isLoading, setIsLoading] = useState(false);
     const [apiError, setApiError] = useState("");
     const [formTab, setFormTab] = useState<"personal" | "additional" | "address" | "bank" | "documents">("personal");
@@ -60,12 +60,13 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validateEmp(currentEmployee)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (!validateEmp(currentEmployee as any)) {
             // Auto-switch to the first tab that has errors
             const tabPriority: (typeof formTab)[] = ["personal", "additional", "address", "bank"];
             for (const tab of tabPriority) {
                 const fields = tabFields[tab] || [];
-                const hasError = fields.some(f => validateEmpField(f as any, currentEmployee[f]));
+                const hasError = fields.some(f => validateEmpField(f as any, (currentEmployee as Record<string, unknown>)[f]));
                 if (hasError) {
                     setFormTab(tab);
                     break;
@@ -343,8 +344,8 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                                     icon={Camera}
                                     accept="image/jpeg,image/png,image/webp"
                                     hint="JPG, PNG or WebP. Max 5MB."
-                                    employeeId={currentEmployee.id}
-                                    employeeName={currentEmployee.name}
+                                    employeeId={currentEmployee.id!}
+                                    employeeName={currentEmployee.name || ""}
                                     currentUrl={currentEmployee.photoUrl}
                                     variant="photo"
                                     onUpload={(file) => handleDocUpload(uploadEmployeePhoto, "photoUrl", file)}
@@ -355,8 +356,8 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                                     icon={FileText}
                                     accept="image/jpeg,image/png,image/webp,application/pdf"
                                     hint="JPG, PNG, WebP or PDF. Max 10MB."
-                                    employeeId={currentEmployee.id}
-                                    employeeName={currentEmployee.name}
+                                    employeeId={currentEmployee.id!}
+                                    employeeName={currentEmployee.name || ""}
                                     currentUrl={currentEmployee.aadharDocUrl}
                                     variant="document"
                                     onUpload={(file) => handleDocUpload(uploadEmployeeAadharDoc, "aadharDocUrl", file)}
@@ -367,8 +368,8 @@ export function EmployeeFormModal({ employee: initialEmployee, isEditing, onClos
                                     icon={FileText}
                                     accept="image/jpeg,image/png,image/webp,application/pdf"
                                     hint="JPG, PNG, WebP or PDF. Max 10MB."
-                                    employeeId={currentEmployee.id}
-                                    employeeName={currentEmployee.name}
+                                    employeeId={currentEmployee.id!}
+                                    employeeName={currentEmployee.name || ""}
                                     currentUrl={currentEmployee.panDocUrl}
                                     variant="document"
                                     onUpload={(file) => handleDocUpload(uploadEmployeePanDoc, "panDocUrl", file)}

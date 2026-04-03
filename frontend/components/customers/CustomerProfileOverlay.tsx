@@ -388,7 +388,7 @@ function InvoicesTabContent({
                                         </td>
                                         <td className="py-1.5 px-3 font-medium">{bill.vehicle?.vehicleNumber || "-"}</td>
                                         <td className="py-1.5 px-3 text-muted-foreground max-w-[180px] truncate">
-                                            {bill.products?.map(p => p.product?.name).filter(Boolean).join(", ") || "-"}
+                                            {bill.products?.map(p => p.productName).filter(Boolean).join(", ") || "-"}
                                         </td>
                                         <td className="py-1.5 px-3 text-right">
                                             {bill.grossAmount != null ? fmt(bill.grossAmount) : fmt(bill.netAmount)}
@@ -556,7 +556,7 @@ function PaymentsTabContent({ payments }: { payments: CreditCustomerDetail["paym
                         </td>
                         <td className="py-1.5 px-3">
                             <Badge variant="default" className="text-[9px] px-1 py-0">
-                                {pmt.paymentMode?.modeName || "-"}
+                                {pmt.paymentMode?.name || "-"}
                             </Badge>
                         </td>
                         <td className="py-1.5 px-3 text-muted-foreground">{pmt.referenceNo || "-"}</td>

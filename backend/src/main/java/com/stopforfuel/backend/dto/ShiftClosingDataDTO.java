@@ -40,6 +40,8 @@ public class ShiftClosingDataDTO {
         private String productName;
         private Double productPrice;
         private Double openMeterReading;
+        private Double closeMeterReading;
+        private Double testQuantity;
     }
 
     @Getter
@@ -51,5 +53,8 @@ public class ShiftClosingDataDTO {
         private Double capacity;
         private String openDip;
         private Double openStock;
+        private Double incomeStock;
+        private String closeDip;
+        private Double closeStock;
     }
 }

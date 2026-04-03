@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.IncentivePayment;
 import com.stopforfuel.backend.entity.Shift;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.IncentivePaymentRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -21,19 +22,23 @@ public class IncentivePaymentService {
     private final IncentivePaymentRepository repository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<IncentivePayment> getAll() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public IncentivePayment getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Incentive payment not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<IncentivePayment> getByShift(Long shiftId) {
         return repository.findByShiftIdOrderByPaymentDateDesc(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<IncentivePayment> getByCustomer(Long customerId) {
         return repository.findByCustomerIdOrderByPaymentDateDesc(customerId);
     }
@@ -41,9 +46,10 @@ public class IncentivePaymentService {
     @Transactional
     public IncentivePayment create(IncentivePayment payment) {
         Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null) {
-            payment.setShiftId(activeShift.getId());
+        if (activeShift == null) {
+            throw new BusinessException("No active shift. Please open a shift before recording an incentive payment.");
         }
+        payment.setShiftId(activeShift.getId());
         return repository.save(payment);
     }
 
@@ -52,10 +58,12 @@ public class IncentivePaymentService {
         repository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal sumByShift(Long shiftId) {
         return repository.sumByShift(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<IncentivePayment> getByDateRange(LocalDate fromDate, LocalDate toDate) {
         LocalDateTime from = fromDate.atStartOfDay();
         LocalDateTime to = toDate.atTime(LocalTime.MAX);

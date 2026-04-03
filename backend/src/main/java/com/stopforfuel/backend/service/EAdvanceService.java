@@ -2,6 +2,8 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.EAdvance;
 import com.stopforfuel.backend.entity.Shift;
+import com.stopforfuel.backend.enums.EAdvanceType;
+import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.EAdvanceRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -22,29 +24,34 @@ public class EAdvanceService {
     private final EAdvanceRepository repository;
     private final ShiftService shiftService;
 
+    @Transactional(readOnly = true)
     public List<EAdvance> getAll() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
     public EAdvance getById(Long id) {
         return repository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("E-Advance not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<EAdvance> getByShift(Long shiftId) {
         return repository.findByShiftIdOrderByTransactionDateDesc(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public List<EAdvance> getByType(String advanceType) {
-        return repository.findByAdvanceTypeOrderByTransactionDateDesc(advanceType);
+        return repository.findByAdvanceTypeOrderByTransactionDateDesc(EAdvanceType.valueOf(advanceType));
     }
 
+    @Transactional(readOnly = true)
     public List<EAdvance> getByDateRange(LocalDate fromDate, LocalDate toDate, String type) {
         LocalDateTime from = fromDate.atStartOfDay();
         LocalDateTime to = toDate.atTime(LocalTime.MAX);
         Long scid = SecurityUtils.getScid();
         if (type != null && !type.isBlank()) {
-            return repository.findByDateRangeAndType(scid, from, to, type);
+            return repository.findByDateRangeAndType(scid, from, to, EAdvanceType.valueOf(type));
         }
         return repository.findByDateRange(scid, from, to);
     }
@@ -52,9 +59,10 @@ public class EAdvanceService {
     @Transactional
     public EAdvance create(EAdvance eAdvance) {
         Shift activeShift = shiftService.getActiveShift();
-        if (activeShift != null) {
-            eAdvance.setShiftId(activeShift.getId());
+        if (activeShift == null) {
+            throw new BusinessException("No active shift. Open a shift before creating entries.");
         }
+        eAdvance.setShiftId(activeShift.getId());
         return repository.save(eAdvance);
     }
 
@@ -83,17 +91,19 @@ public class EAdvanceService {
         repository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal sumByShift(Long shiftId) {
         return repository.sumAllByShift(shiftId);
     }
 
+    @Transactional(readOnly = true)
     public Map<String, BigDecimal> getShiftSummary(Long shiftId) {
         return Map.of(
-            "card", repository.sumByShiftAndType(shiftId, "CARD"),
-            "upi", repository.sumByShiftAndType(shiftId, "UPI"),
-            "cheque", repository.sumByShiftAndType(shiftId, "CHEQUE"),
-            "ccms", repository.sumByShiftAndType(shiftId, "CCMS"),
-            "bank_transfer", repository.sumByShiftAndType(shiftId, "BANK_TRANSFER"),
+            "card", repository.sumByShiftAndType(shiftId, EAdvanceType.CARD),
+            "upi", repository.sumByShiftAndType(shiftId, EAdvanceType.UPI),
+            "cheque", repository.sumByShiftAndType(shiftId, EAdvanceType.CHEQUE),
+            "ccms", repository.sumByShiftAndType(shiftId, EAdvanceType.CCMS),
+            "bank_transfer", repository.sumByShiftAndType(shiftId, EAdvanceType.BANK_TRANSFER),
             "total", repository.sumAllByShift(shiftId)
         );
     }

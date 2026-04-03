@@ -23,7 +23,9 @@ import {
     StationExpense,
     ExpenseType,
     ExpenseSummary,
+    API_BASE_URL,
 } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 
 const formatRupees = (val: number) => `₹${val.toLocaleString("en-IN")}`;
@@ -44,12 +46,13 @@ export default function ExpensesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [summary, setSummary] = useState<ExpenseSummary | null>(null);
 
-    // Date filters
+    // Date filters — default to shift start time (fallback: first of month)
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
     const today = now.toISOString().split("T")[0];
     const [fromDate, setFromDate] = useState(firstOfMonth);
     const [toDate, setToDate] = useState(today);
+    const [shiftLoaded, setShiftLoaded] = useState(false);
 
     // Form state
     const [expenseTypeId, setExpenseTypeId] = useState("");
@@ -60,7 +63,26 @@ export default function ExpensesPage() {
     const [paymentMode, setPaymentMode] = useState("CASH");
     const [recurringType, setRecurringType] = useState("ONE_TIME");
 
-    useEffect(() => { loadData(); }, [fromDate, toDate]);
+    // Fetch active shift on mount and set fromDate to shift start time
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
+                if (res.ok) {
+                    const text = await res.text();
+                    if (text) {
+                        const shift = JSON.parse(text);
+                        if (shift.startTime) {
+                            setFromDate(shift.startTime.split("T")[0]);
+                        }
+                    }
+                }
+            } catch { /* ignore */ }
+            setShiftLoaded(true);
+        })();
+    }, []);
+
+    useEffect(() => { if (shiftLoaded) loadData(); }, [fromDate, toDate, shiftLoaded]);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -137,7 +159,7 @@ export default function ExpensesPage() {
         !searchQuery ||
         exp.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         exp.paidTo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        exp.expenseType?.typeName?.toLowerCase().includes(searchQuery.toLowerCase())
+        exp.expenseType?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const { page, setPage, totalPages, totalElements, pageSize, paginatedData } =
@@ -245,7 +267,7 @@ export default function ExpensesPage() {
                                             <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4 text-sm">{exp.expenseDate}</td>
                                             <td className="px-6 py-4">
-                                                <Badge variant="default">{exp.expenseType?.typeName || "Uncategorized"}</Badge>
+                                                <Badge variant="default">{exp.expenseType?.name || "Uncategorized"}</Badge>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-foreground">{exp.description || "-"}</td>
                                             <td className="px-6 py-4 text-sm text-muted-foreground">{exp.paidTo || "-"}</td>
@@ -285,7 +307,7 @@ export default function ExpensesPage() {
                             <select value={expenseTypeId} onChange={(e) => setExpenseTypeId(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
                                 <option value="">Select Category</option>
                                 {expenseTypes.map((et) => (
-                                    <option key={et.id} value={et.id}>{et.typeName}</option>
+                                    <option key={et.id} value={et.id}>{et.name}</option>
                                 ))}
                             </select>
                         </div>

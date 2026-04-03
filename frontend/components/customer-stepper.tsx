@@ -16,7 +16,7 @@ interface CustomerStepperProps {
 export function CustomerStepper({ onComplete, onCancel }: CustomerStepperProps) {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState<any>({});
+    const [formData, setFormData] = useState<Record<string, unknown>>({});
     const [createdIds, setCreatedIds] = useState<{ groupId?: number; customerId?: number }>({});
 
     const updateData = (data: any) => {

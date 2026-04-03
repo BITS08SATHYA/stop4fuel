@@ -59,7 +59,7 @@ async function fetchCustomers(): Promise<Customer[]> {
     }
 }
 
-async function fetchActiveShift(): Promise<{ id: number } | null> {
+async function fetchActiveShift(): Promise<{ id: number; startTime?: string } | null> {
     try {
         const res = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
         if (!res.ok) return null;
@@ -103,8 +103,8 @@ export default function IncentivePaymentsPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState("");
     const [amount, setAmount] = useState("");
     const [description, setDescription] = useState("");
-    const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
-    const [linkedStatement, setLinkedStatement] = useState<any>(null);
+    const [linkedInvoice, setLinkedInvoice] = useState<{ id: number; billNo?: string; billType?: string; netAmount?: number } | null>(null);
+    const [linkedStatement, setLinkedStatement] = useState<{ id: number; statementNo?: string } | null>(null);
 
     const loadData = useCallback(async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);
@@ -131,6 +131,11 @@ export default function IncentivePaymentsPage() {
             setActiveShiftId(shift?.id ?? null);
             if (shift?.id) {
                 loadData("shift", shift.id);
+                // Pre-fill date filters with shift start time
+                if (shift.startTime) {
+                    setFromDate(shift.startTime.split("T")[0]);
+                    setToDate(new Date().toISOString().split("T")[0]);
+                }
             } else {
                 setIsLoading(false);
             }

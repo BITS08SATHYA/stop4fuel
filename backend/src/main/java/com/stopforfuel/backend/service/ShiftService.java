@@ -4,6 +4,8 @@ import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
 import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
 import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.enums.AdvanceStatus;
+import com.stopforfuel.backend.enums.ShiftStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
@@ -40,6 +42,7 @@ public class ShiftService {
     private final ShiftReportPdfGenerator pdfGenerator;
     private final S3StorageService s3StorageService;
     private final ShiftClosingReportRepository shiftClosingReportRepository;
+    private final StatementAutoGenerationService statementAutoGenerationService;
 
     public ShiftService(ShiftRepository repository,
                         @Lazy ShiftClosingReportService shiftClosingReportService,
@@ -60,7 +63,8 @@ public class ShiftService {
                         CashInflowRepaymentRepository repaymentRepository,
                         ShiftReportPdfGenerator pdfGenerator,
                         S3StorageService s3StorageService,
-                        ShiftClosingReportRepository shiftClosingReportRepository) {
+                        ShiftClosingReportRepository shiftClosingReportRepository,
+                        @Lazy StatementAutoGenerationService statementAutoGenerationService) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
         this.productInventoryService = productInventoryService;
@@ -81,19 +85,21 @@ public class ShiftService {
         this.pdfGenerator = pdfGenerator;
         this.s3StorageService = s3StorageService;
         this.shiftClosingReportRepository = shiftClosingReportRepository;
+        this.statementAutoGenerationService = statementAutoGenerationService;
     }
 
+    @Transactional(readOnly = true)
     public List<Shift> getAllShifts() {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
     public Shift openShift(Shift shift) {
-        repository.findByStatusAndScid("OPEN", SecurityUtils.getScid()).ifPresent(s -> {
+        repository.findByStatusAndScid(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {
             throw new BusinessException("A shift is already open. Close it before opening a new one.");
         });
 
         shift.setStartTime(LocalDateTime.now());
-        shift.setStatus("OPEN");
+        shift.setStatus(ShiftStatus.OPEN);
         if (shift.getScid() == null) {
             shift.setScid(SecurityUtils.getScid());
         }
@@ -110,7 +116,7 @@ public class ShiftService {
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         shift.setEndTime(LocalDateTime.now());
-        shift.setStatus("REVIEW");
+        shift.setStatus(ShiftStatus.REVIEW);
         Shift closed = repository.save(shift);
 
         // Finalize rate/amount on ProductInventory records
@@ -122,24 +128,26 @@ public class ShiftService {
         return closed;
     }
 
+    @Transactional(readOnly = true)
     public Shift getActiveShift() {
-        return repository.findByStatusAndScid("OPEN", SecurityUtils.getScid()).orElse(null);
+        return repository.findByStatusAndScid(ShiftStatus.OPEN, SecurityUtils.getScid()).orElse(null);
     }
 
     // ========== NEW SHIFT CLOSING WORKSPACE METHODS ==========
 
+    @Transactional(readOnly = true)
     public ShiftClosingDataDTO getShiftClosingData(Long shiftId) {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"OPEN".equals(shift.getStatus()) && !"REVIEW".equals(shift.getStatus())) {
+        if (shift.getStatus() != ShiftStatus.OPEN && shift.getStatus() != ShiftStatus.REVIEW) {
             throw new BusinessException("Shift must be OPEN or in REVIEW to get closing data");
         }
 
         Long scid = shift.getScid();
         ShiftClosingDataDTO dto = new ShiftClosingDataDTO();
         dto.setShiftId(shiftId);
-        dto.setShiftStatus(shift.getStatus());
+        dto.setShiftStatus(shift.getStatus() != null ? shift.getStatus().name() : null);
         dto.setStartTime(shift.getStartTime());
         dto.setAttendantName(shift.getAttendant() != null ? shift.getAttendant().getName() : null);
 
@@ -157,14 +165,22 @@ public class ShiftService {
                     && nozzle.getTank().getProduct().getPrice() != null
                     ? nozzle.getTank().getProduct().getPrice().doubleValue() : null);
 
-            // Get last close reading as the open reading
-            NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
-            if (lastReading != null && lastReading.getCloseMeterReading() != null) {
-                row.setOpenMeterReading(lastReading.getCloseMeterReading());
-            } else if (lastReading != null && lastReading.getOpenMeterReading() != null) {
-                row.setOpenMeterReading(lastReading.getOpenMeterReading());
+            // Check for existing inventory record for THIS shift first
+            NozzleInventory currentShiftReading = nozzleInventoryRepository.findByShiftIdAndNozzleId(shiftId, nozzle.getId());
+            if (currentShiftReading != null) {
+                row.setOpenMeterReading(currentShiftReading.getOpenMeterReading());
+                row.setCloseMeterReading(currentShiftReading.getCloseMeterReading());
+                row.setTestQuantity(currentShiftReading.getTestQuantity());
             } else {
-                row.setOpenMeterReading(0.0);
+                // Fallback: get last close reading as the open reading
+                NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
+                if (lastReading != null && lastReading.getCloseMeterReading() != null) {
+                    row.setOpenMeterReading(lastReading.getCloseMeterReading());
+                } else if (lastReading != null && lastReading.getOpenMeterReading() != null) {
+                    row.setOpenMeterReading(lastReading.getOpenMeterReading());
+                } else {
+                    row.setOpenMeterReading(0.0);
+                }
             }
             nozzleRows.add(row);
         }
@@ -180,18 +196,29 @@ public class ShiftService {
             row.setProductName(tank.getProduct() != null ? tank.getProduct().getName() : null);
             row.setCapacity(tank.getCapacity());
 
-            TankInventory lastReading = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
-            if (lastReading != null && lastReading.getCloseDip() != null) {
-                row.setOpenDip(lastReading.getCloseDip());
-            } else if (lastReading != null && lastReading.getOpenDip() != null) {
-                row.setOpenDip(lastReading.getOpenDip());
-            }
-            if (lastReading != null && lastReading.getCloseStock() != null) {
-                row.setOpenStock(lastReading.getCloseStock());
-            } else if (lastReading != null && lastReading.getOpenStock() != null) {
-                row.setOpenStock(lastReading.getOpenStock());
+            // Check for existing inventory record for THIS shift first
+            TankInventory currentShiftReading = tankInventoryRepository.findByShiftIdAndTankId(shiftId, tank.getId());
+            if (currentShiftReading != null) {
+                row.setOpenDip(currentShiftReading.getOpenDip());
+                row.setOpenStock(currentShiftReading.getOpenStock());
+                row.setIncomeStock(currentShiftReading.getIncomeStock());
+                row.setCloseDip(currentShiftReading.getCloseDip());
+                row.setCloseStock(currentShiftReading.getCloseStock());
             } else {
-                row.setOpenStock(0.0);
+                // Fallback: get last close reading as the open reading
+                TankInventory lastReading = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
+                if (lastReading != null && lastReading.getCloseDip() != null) {
+                    row.setOpenDip(lastReading.getCloseDip());
+                } else if (lastReading != null && lastReading.getOpenDip() != null) {
+                    row.setOpenDip(lastReading.getOpenDip());
+                }
+                if (lastReading != null && lastReading.getCloseStock() != null) {
+                    row.setOpenStock(lastReading.getCloseStock());
+                } else if (lastReading != null && lastReading.getOpenStock() != null) {
+                    row.setOpenStock(lastReading.getOpenStock());
+                } else {
+                    row.setOpenStock(0.0);
+                }
             }
             tankRows.add(row);
         }
@@ -208,37 +235,43 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"OPEN".equals(shift.getStatus())) {
-            throw new BusinessException("Only an OPEN shift can be submitted for review");
+        if (shift.getStatus() != ShiftStatus.OPEN && shift.getStatus() != ShiftStatus.REVIEW) {
+            throw new BusinessException("Only an OPEN or REVIEW shift can be submitted for review");
         }
 
         Long scid = shift.getScid();
         LocalDate today = LocalDate.now();
 
-        // Save nozzle inventory readings
+        // Save nozzle inventory readings (upsert: update existing or create new)
         for (ShiftClosingSubmitDTO.NozzleReadingInput input : submitDTO.getNozzleReadings()) {
-            NozzleInventory ni = new NozzleInventory();
-            ni.setScid(scid);
-            ni.setShiftId(shiftId);
-            ni.setDate(today);
-            ni.setNozzle(nozzleRepository.findById(input.getNozzleId())
-                    .orElseThrow(() -> new RuntimeException("Nozzle not found: " + input.getNozzleId())));
+            NozzleInventory ni = nozzleInventoryRepository.findByShiftIdAndNozzleId(shiftId, input.getNozzleId());
+            if (ni == null) {
+                ni = new NozzleInventory();
+                ni.setScid(scid);
+                ni.setShiftId(shiftId);
+                ni.setDate(today);
+                ni.setNozzle(nozzleRepository.findById(input.getNozzleId())
+                        .orElseThrow(() -> new RuntimeException("Nozzle not found: " + input.getNozzleId())));
+            }
             ni.setOpenMeterReading(input.getOpenMeterReading());
             ni.setCloseMeterReading(input.getCloseMeterReading());
             ni.setTestQuantity(input.getTestQuantity());
             nozzleInventoryService.save(ni);
         }
 
-        // Save tank inventory readings and update tank available stock
+        // Save tank inventory readings and update tank available stock (upsert)
         for (ShiftClosingSubmitDTO.TankDipInput input : submitDTO.getTankDips()) {
             Tank tank = tankRepository.findById(input.getTankId())
                     .orElseThrow(() -> new RuntimeException("Tank not found: " + input.getTankId()));
 
-            TankInventory ti = new TankInventory();
-            ti.setScid(scid);
-            ti.setShiftId(shiftId);
-            ti.setDate(today);
-            ti.setTank(tank);
+            TankInventory ti = tankInventoryRepository.findByShiftIdAndTankId(shiftId, input.getTankId());
+            if (ti == null) {
+                ti = new TankInventory();
+                ti.setScid(scid);
+                ti.setShiftId(shiftId);
+                ti.setDate(today);
+                ti.setTank(tank);
+            }
             ti.setOpenDip(input.getOpenDip());
             ti.setOpenStock(input.getOpenStock());
             ti.setIncomeStock(input.getIncomeStock());
@@ -255,7 +288,7 @@ public class ShiftService {
 
         // Close the shift and move to REVIEW
         shift.setEndTime(LocalDateTime.now());
-        shift.setStatus("REVIEW");
+        shift.setStatus(ShiftStatus.REVIEW);
         Shift saved = repository.save(shift);
 
         // Finalize product inventory and generate report
@@ -270,11 +303,11 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"REVIEW".equals(shift.getStatus())) {
+        if (shift.getStatus() != ShiftStatus.REVIEW) {
             throw new BusinessException("Only a shift in REVIEW can be approved and closed");
         }
 
-        shift.setStatus("CLOSED");
+        shift.setStatus(ShiftStatus.CLOSED);
         Shift saved = repository.save(shift);
 
         // Finalize report and generate PDF → upload to S3
@@ -303,6 +336,13 @@ public class ShiftService {
             System.err.println("Failed to generate/upload shift report PDF: " + e.getMessage());
         }
 
+        // Auto-generate DRAFT statements if shift crosses a statement boundary
+        try {
+            statementAutoGenerationService.onShiftClosed(saved);
+        } catch (Exception e) {
+            System.err.println("Failed to auto-generate statement drafts: " + e.getMessage());
+        }
+
         return saved;
     }
 
@@ -311,11 +351,11 @@ public class ShiftService {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
-        if (!"CLOSED".equals(shift.getStatus())) {
+        if (shift.getStatus() != ShiftStatus.CLOSED) {
             throw new BusinessException("Only a CLOSED shift can be reopened for review");
         }
 
-        shift.setStatus("REVIEW");
+        shift.setStatus(ShiftStatus.REVIEW);
         Shift saved = repository.save(shift);
 
         // Set report back to DRAFT so it's editable
@@ -331,6 +371,20 @@ public class ShiftService {
         return saved;
     }
 
+    @Transactional
+    public Shift reopenToEdit(Long shiftId) {
+        Shift shift = repository.findById(shiftId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
+
+        if (shift.getStatus() != ShiftStatus.REVIEW) {
+            throw new BusinessException("Only a REVIEW shift can be reopened for editing");
+        }
+
+        shift.setStatus(ShiftStatus.OPEN);
+        shift.setEndTime(null);
+        return repository.save(shift);
+    }
+
     private void computeShiftTotals(ShiftClosingDataDTO dto, Long shiftId) {
         // Credit bill total
         dto.setCreditBillTotal(invoiceBillRepository.sumCreditBillsByShift(shiftId));
@@ -341,19 +395,19 @@ public class ShiftService {
 
         // E-Advance totals by type
         Map<String, BigDecimal> eAdvTotals = new LinkedHashMap<>();
-        eAdvTotals.put("CARD", eAdvanceRepository.sumByShiftAndType(shiftId, "CARD"));
-        eAdvTotals.put("UPI", eAdvanceRepository.sumByShiftAndType(shiftId, "UPI"));
-        eAdvTotals.put("CCMS", eAdvanceRepository.sumByShiftAndType(shiftId, "CCMS"));
-        eAdvTotals.put("CHEQUE", eAdvanceRepository.sumByShiftAndType(shiftId, "CHEQUE"));
-        eAdvTotals.put("BANK_TRANSFER", eAdvanceRepository.sumByShiftAndType(shiftId, "BANK_TRANSFER"));
+        eAdvTotals.put("CARD", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CARD));
+        eAdvTotals.put("UPI", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.UPI));
+        eAdvTotals.put("CCMS", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CCMS));
+        eAdvTotals.put("CHEQUE", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CHEQUE));
+        eAdvTotals.put("BANK_TRANSFER", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.BANK_TRANSFER));
         dto.setEAdvanceTotals(eAdvTotals);
 
         // Operational advance totals by type
         List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
         Map<String, BigDecimal> opAdvTotals = new LinkedHashMap<>();
         for (OperationalAdvance oa : opAdvances) {
-            if ("CANCELLED".equals(oa.getStatus())) continue;
-            String type = oa.getAdvanceType() != null ? oa.getAdvanceType() : "CASH";
+            if (oa.getStatus() == AdvanceStatus.CANCELLED) continue;
+            String type = oa.getAdvanceType() != null ? oa.getAdvanceType().name() : "CASH";
             opAdvTotals.merge(type, oa.getAmount(), BigDecimal::add);
         }
         dto.setOpAdvanceTotals(opAdvTotals);
