@@ -831,8 +831,7 @@ function InvoicePaymentsTab({
                             <select
                                 value={paymentModeId}
                                 onChange={(e) => onModeChange(e.target.value ? Number(e.target.value) : "")}
-                                className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                style={{ colorScheme: "dark" }}
+                                className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 [&>option]:bg-card [&>option]:text-foreground"
                             >
                                 <option value="">Select mode</option>
                                 {paymentModes.map(m => (
