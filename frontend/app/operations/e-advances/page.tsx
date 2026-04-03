@@ -763,6 +763,10 @@ function EntryDetails({ entry }: { entry: EAdvance }) {
         const inv = entry.invoiceBill;
         details.push(`Bill: ${inv.billNo || '#' + inv.id}${inv.customer?.name ? ' - ' + inv.customer.name : ''}`);
     }
+    if (entry.statement) {
+        const stmt = entry.statement;
+        details.push(`Stmt: ${stmt.statementNo || '#' + stmt.id}`);
+    }
     if (entry.payment) {
         const pay = entry.payment;
         details.push(`Payment: #${pay.id}${pay.customer?.name ? ' - ' + pay.customer.name : ''}`);
@@ -773,7 +777,7 @@ function EntryDetails({ entry }: { entry: EAdvance }) {
         <div className="flex flex-wrap gap-1.5">
             {details.map((d, i) => (
                 <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground ${
-                    d.startsWith('Bill:') || d.startsWith('Payment:') ? 'bg-primary/5 border-primary/20 text-primary' : 'bg-white/5'
+                    d.startsWith('Bill:') || d.startsWith('Payment:') || d.startsWith('Stmt:') ? 'bg-primary/5 border-primary/20 text-primary' : 'bg-white/5'
                 }`}>
                     {d}
                 </span>
