@@ -29,6 +29,7 @@ public class EAdvanceDTO {
     private UpiCompanySummary upiCompany;
     private InvoiceBillSummary invoiceBill;
     private PaymentSummary payment;
+    private StatementSummary statement;
     private Long shiftId;
     private Long scid;
     private LocalDateTime createdAt;
@@ -54,6 +55,7 @@ public class EAdvanceDTO {
                 .upiCompany(UpiCompanySummary.from(e.getUpiCompany()))
                 .invoiceBill(InvoiceBillSummary.from(e.getInvoiceBill()))
                 .payment(PaymentSummary.from(e.getPayment()))
+                .statement(StatementSummary.from(e.getStatement()))
                 .shiftId(e.getShiftId())
                 .scid(e.getScid())
                 .createdAt(e.getCreatedAt())
@@ -94,6 +96,18 @@ public class EAdvanceDTO {
         public static PaymentSummary from(Payment p) {
             if (p == null) return null;
             return PaymentSummary.builder().id(p.getId()).amount(p.getAmount()).build();
+        }
+    }
+
+    @Getter
+    @Builder
+    public static class StatementSummary {
+        private Long id;
+        private String statementNo;
+
+        public static StatementSummary from(Statement s) {
+            if (s == null) return null;
+            return StatementSummary.builder().id(s.getId()).statementNo(s.getStatementNo()).build();
         }
     }
 }
