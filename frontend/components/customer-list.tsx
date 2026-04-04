@@ -257,7 +257,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                                                     {consumed} L
                                                 </span>
                                                 <span className="text-foreground font-medium">
-                                                    / {isAmount ? `$${creditLimit}` : `${creditLimit} L`}
+                                                    / {isAmount ? `₹${creditLimit.toLocaleString()}` : `${creditLimit} L`}
                                                 </span>
                                             </div>
                                             {/* Progress bar only makes sense if units match */}
