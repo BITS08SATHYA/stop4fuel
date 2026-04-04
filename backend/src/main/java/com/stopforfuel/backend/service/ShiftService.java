@@ -166,7 +166,7 @@ public class ShiftService {
                     ? nozzle.getTank().getProduct().getPrice().doubleValue() : null);
 
             // Check for existing inventory record for THIS shift first
-            NozzleInventory currentShiftReading = nozzleInventoryRepository.findByShiftIdAndNozzleId(shiftId, nozzle.getId());
+            NozzleInventory currentShiftReading = nozzleInventoryRepository.findByShiftIdAndNozzleId(shiftId, nozzle.getId()).stream().findFirst().orElse(null);
             if (currentShiftReading != null) {
                 row.setOpenMeterReading(currentShiftReading.getOpenMeterReading());
                 row.setCloseMeterReading(currentShiftReading.getCloseMeterReading());
@@ -197,7 +197,7 @@ public class ShiftService {
             row.setCapacity(tank.getCapacity());
 
             // Check for existing inventory record for THIS shift first
-            TankInventory currentShiftReading = tankInventoryRepository.findByShiftIdAndTankId(shiftId, tank.getId());
+            TankInventory currentShiftReading = tankInventoryRepository.findByShiftIdAndTankId(shiftId, tank.getId()).stream().findFirst().orElse(null);
             if (currentShiftReading != null) {
                 row.setOpenDip(currentShiftReading.getOpenDip());
                 row.setOpenStock(currentShiftReading.getOpenStock());
@@ -244,7 +244,7 @@ public class ShiftService {
 
         // Save nozzle inventory readings (upsert: update existing or create new)
         for (ShiftClosingSubmitDTO.NozzleReadingInput input : submitDTO.getNozzleReadings()) {
-            NozzleInventory ni = nozzleInventoryRepository.findByShiftIdAndNozzleId(shiftId, input.getNozzleId());
+            NozzleInventory ni = nozzleInventoryRepository.findByShiftIdAndNozzleId(shiftId, input.getNozzleId()).stream().findFirst().orElse(null);
             if (ni == null) {
                 ni = new NozzleInventory();
                 ni.setScid(scid);
@@ -264,7 +264,7 @@ public class ShiftService {
             Tank tank = tankRepository.findById(input.getTankId())
                     .orElseThrow(() -> new RuntimeException("Tank not found: " + input.getTankId()));
 
-            TankInventory ti = tankInventoryRepository.findByShiftIdAndTankId(shiftId, input.getTankId());
+            TankInventory ti = tankInventoryRepository.findByShiftIdAndTankId(shiftId, input.getTankId()).stream().findFirst().orElse(null);
             if (ti == null) {
                 ti = new TankInventory();
                 ti.setScid(scid);
