@@ -611,6 +611,29 @@ export default function CustomerProfilePage() {
                                 </div>
                             </div>
 
+                            {/* Credit Amount Limit */}
+                            <div className="pt-4 border-t border-border">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-muted-foreground">Credit Amount Limit</span>
+                                    {isEditing ? (
+                                        <div className="flex items-center gap-1">
+                                            <span>₹</span>
+                                            <input
+                                                type="number"
+                                                value={customer.creditLimitAmount || ""}
+                                                onChange={(e) => setCustomer({ ...customer, creditLimitAmount: parseFloat(e.target.value) || null })}
+                                                className="w-24 bg-secondary border border-border rounded px-1 py-0.5 text-right text-foreground"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <span className="font-bold text-foreground">
+                                            {customer.creditLimitAmount ? `₹${customer.creditLimitAmount.toLocaleString()}` : "Unlimited"}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
                                 <div>
                                     <p className="text-xs text-muted-foreground">Allocated to Vehicles</p>
