@@ -58,8 +58,8 @@ export function AdvanceFilters({
                 onChange={(val) => onTypeFilterChange(val)}
                 options={[
                     { value: "ALL", label: "All Types" },
-                    { value: "CASH_ADVANCE", label: "Cash Advance" },
-                    { value: "SALARY_ADVANCE", label: "Salary Advance" },
+                    { value: "CASH", label: "Cash Advance" },
+                    { value: "SALARY", label: "Salary Advance" },
                 ]}
             />
             <div className="flex items-center gap-2">
