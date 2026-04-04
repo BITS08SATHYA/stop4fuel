@@ -174,9 +174,9 @@ export default function ShiftsPage() {
                 eAdvData,
                 eAdvSummaryData,
                 expensesData,
-                expTotalData,
+                ,
                 stationExpensesData,
-                stationExpTotalData,
+                ,
                 opAdvData,
                 paymentsData,
                 incentivesData,
@@ -212,7 +212,8 @@ export default function ShiftsPage() {
             setEAdvances(eAdvData);
             setEAdvanceSummary(eAdvSummaryData);
             setExpenses(mergedExpenses);
-            setExpenseTotal(expTotalData + (stationExpTotalData || 0));
+            const mergedTotal = mergedExpenses.reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
+            setExpenseTotal(mergedTotal);
             setOpAdvances(opAdvData);
             setPayments(paymentsData);
             setIncentivePayments(incentivesData);
