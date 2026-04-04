@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import {
@@ -107,16 +108,16 @@ export default function ShiftHistoryPage() {
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={statusFilter}
-                        onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="">All Statuses</option>
-                        <option value="OPEN">Open</option>
-                        <option value="CLOSED">Closed</option>
-                        <option value="RECONCILED">Reconciled</option>
-                    </select>
+                        onChange={(val) => { setStatusFilter(val); setPage(0); }}
+                        options={[
+                            { value: "", label: "All Statuses" },
+                            { value: "OPEN", label: "Open" },
+                            { value: "CLOSED", label: "Closed" },
+                            { value: "RECONCILED", label: "Reconciled" },
+                        ]}
+                    />
                     <div className="ml-auto text-sm text-muted-foreground">
                         {filtered.length} shift{filtered.length !== 1 ? "s" : ""}
                     </div>

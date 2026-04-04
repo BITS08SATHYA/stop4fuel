@@ -73,6 +73,10 @@ public class Statement extends BaseEntity {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Payment> payments = new ArrayList<>();
 
+    @OneToMany(mappedBy = "statement")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private List<EAdvance> eAdvances = new ArrayList<>();
+
     @PrePersist
     @Override
     protected void onCreate() {

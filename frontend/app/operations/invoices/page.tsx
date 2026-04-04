@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getInvoices,
     getInvoicesByShift,
@@ -852,39 +853,35 @@ export default function InvoicesPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                                 <div className="lg:col-span-2">
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Product</label>
-                                    <select
-                                        className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
-                                        value={line.product?.id || ""}
-                                        onChange={(e) => {
-                                            const p = products.find(prod => prod.id === parseInt(e.target.value));
+                                    <StyledSelect
+                                        value={String(line.product?.id || "")}
+                                        onChange={(val) => {
+                                            const p = products.find(prod => prod.id === parseInt(val));
                                             if (p) updateProductLine(idx, { product: p, unitPrice: String(p.price) });
                                         }}
-                                    >
-                                        <option value="">Select Product...</option>
-                                        {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.category} - {p.unit})</option>)}
-                                    </select>
+                                        options={[
+                                            { value: "", label: "Select Product..." },
+                                            ...products.map(p => ({ value: String(p.id), label: `${p.name} (${p.category} - ${p.unit})` })),
+                                        ]}
+                                    />
                                 </div>
 
                                 {line.product?.category === "Fuel" && (
                                     <div>
                                         <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Nozzle</label>
-                                        <select
-                                            className="w-full bg-muted border border-border rounded-xl p-3 text-foreground text-sm"
-                                            value={line.nozzle?.id || ""}
-                                            onChange={(e) => {
-                                                const n = nozzles.find(noz => noz.id === parseInt(e.target.value));
+                                        <StyledSelect
+                                            value={String(line.nozzle?.id || "")}
+                                            onChange={(val) => {
+                                                const n = nozzles.find(noz => noz.id === parseInt(val));
                                                 updateProductLine(idx, { nozzle: n || null });
                                             }}
-                                        >
-                                            <option value="">Select Nozzle...</option>
-                                            {nozzles
-                                                .filter(n => n.tank?.productId === line.product?.id)
-                                                .map(n => (
-                                                    <option key={n.id} value={n.id}>
-                                                        {n.nozzleName} ({n.pump.name})
-                                                    </option>
-                                                ))}
-                                        </select>
+                                            options={[
+                                                { value: "", label: "Select Nozzle..." },
+                                                ...nozzles
+                                                    .filter(n => n.tank?.productId === line.product?.id)
+                                                    .map(n => ({ value: String(n.id), label: `${n.nozzleName} (${n.pump.name})` })),
+                                            ]}
+                                        />
                                     </div>
                                 )}
 

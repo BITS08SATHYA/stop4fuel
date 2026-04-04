@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     CreditCard, Receipt, FileText, Search, Check, IndianRupee, Clock,
     ImageIcon, Paperclip, ArrowLeft, ChevronRight
@@ -586,16 +587,15 @@ export default function RecordPaymentPage() {
                                     {/* Payment Mode */}
                                     <div>
                                         <label className="block text-xs font-medium text-muted-foreground mb-1.5">Payment Mode</label>
-                                        <select
-                                            value={payModeId}
-                                            onChange={(e) => { setPayModeId(Number(e.target.value)); resetModeFields(); }}
-                                            className="w-full px-4 py-2.5 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        >
-                                            <option value="">Select mode...</option>
-                                            {paymentModes.map((m) => (
-                                                <option key={m.id} value={m.id}>{m.name}</option>
-                                            ))}
-                                        </select>
+                                        <StyledSelect
+                                            value={String(payModeId)}
+                                            onChange={(val) => { setPayModeId(val ? Number(val) : ""); resetModeFields(); }}
+                                            options={[
+                                                { value: "", label: "Select mode..." },
+                                                ...paymentModes.map((m) => ({ value: String(m.id), label: m.name })),
+                                            ]}
+                                            className="w-full"
+                                        />
                                     </div>
 
                                     {/* Mode-specific reference fields */}
@@ -611,12 +611,16 @@ export default function RecordPaymentPage() {
                                                 </div>
                                                 <div>
                                                     <label className="block text-[10px] text-muted-foreground mb-1">Card Type</label>
-                                                    <select value={cardType} onChange={(e) => setCardType(e.target.value)}
-                                                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 text-sm">
-                                                        <option value="">Select...</option>
-                                                        <option value="Debit">Debit</option>
-                                                        <option value="Credit">Credit</option>
-                                                    </select>
+                                                    <StyledSelect
+                                                        value={cardType}
+                                                        onChange={(val) => setCardType(val)}
+                                                        options={[
+                                                            { value: "", label: "Select..." },
+                                                            { value: "Debit", label: "Debit" },
+                                                            { value: "Credit", label: "Credit" },
+                                                        ]}
+                                                        className="w-full"
+                                                    />
                                                 </div>
                                             </div>
                                             <div>

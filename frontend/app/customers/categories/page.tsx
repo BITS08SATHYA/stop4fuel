@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 export default function CategoriesPage() {
     const [categories, setCategories] = useState<any[]>([]);
@@ -220,15 +221,17 @@ export default function CategoriesPage() {
                         <label className="block text-sm font-medium text-muted-foreground mb-1">
                             Type <span className="text-red-500">*</span>
                         </label>
-                        <select
+                        <StyledSelect
                             value={formData.categoryType || ""}
-                            onChange={(e) => setFormData({ ...formData, categoryType: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                        >
-                            <option value="" className="bg-slate-900">Select Type</option>
-                            <option value="GOVERNMENT" className="bg-slate-900">Government</option>
-                            <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
-                        </select>
+                            onChange={(val) => setFormData({ ...formData, categoryType: val })}
+                            options={[
+                                { value: "", label: "Select Type" },
+                                { value: "GOVERNMENT", label: "Government" },
+                                { value: "NON_GOVERNMENT", label: "Non-Government" },
+                            ]}
+                            placeholder="Select Type"
+                            className="w-full"
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Description</label>
