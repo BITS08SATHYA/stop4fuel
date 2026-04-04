@@ -40,19 +40,26 @@ public class ShiftSalesCalculationService {
         private final BigDecimal cashBillTotal;
         private final BigDecimal creditBillTotal;
         private final List<InvoiceBill> allInvoices;
+        private final double testLitres;
+        private final BigDecimal testAmount;
 
         public SalesResult(List<ReportLineItem> lineItems, BigDecimal cashBillTotal,
-                           BigDecimal creditBillTotal, List<InvoiceBill> allInvoices) {
+                           BigDecimal creditBillTotal, List<InvoiceBill> allInvoices,
+                           double testLitres, BigDecimal testAmount) {
             this.lineItems = lineItems;
             this.cashBillTotal = cashBillTotal;
             this.creditBillTotal = creditBillTotal;
             this.allInvoices = allInvoices;
+            this.testLitres = testLitres;
+            this.testAmount = testAmount;
         }
 
         public List<ReportLineItem> getLineItems() { return lineItems; }
         public BigDecimal getCashBillTotal() { return cashBillTotal; }
         public BigDecimal getCreditBillTotal() { return creditBillTotal; }
         public List<InvoiceBill> getAllInvoices() { return allInvoices; }
+        public double getTestLitres() { return testLitres; }
+        public BigDecimal getTestAmount() { return testAmount; }
     }
 
     /**
@@ -128,18 +135,7 @@ public class ShiftSalesCalculationService {
             lineItems.add(item);
         }
 
-        // Add test quantity as separate line item
-        if (totalTestLitres > 0) {
-            ReportLineItem testItem = new ReportLineItem();
-            testItem.setReport(report);
-            testItem.setSection("REVENUE");
-            testItem.setCategory("TEST_QUANTITY");
-            testItem.setLabel("Test");
-            testItem.setQuantity(totalTestLitres);
-            testItem.setAmount(BigDecimal.valueOf(totalTestAmount).setScale(4, RoundingMode.HALF_UP));
-            testItem.setSortOrder(++sortOrder);
-            lineItems.add(testItem);
-        }
+        // Test quantity data passed via SalesResult to be added in ADVANCE section
 
         // Add oil/lubricant sales lines
         for (Map.Entry<String, double[]> entry : oilSales.entrySet()) {
@@ -209,7 +205,8 @@ public class ShiftSalesCalculationService {
             lineItems.add(item);
         }
 
-        return new SalesResult(lineItems, cashBillTotal, creditBillTotal, allInvoices);
+        return new SalesResult(lineItems, cashBillTotal, creditBillTotal, allInvoices,
+                totalTestLitres, BigDecimal.valueOf(totalTestAmount).setScale(4, RoundingMode.HALF_UP));
     }
 
     /**
