@@ -219,7 +219,7 @@ public class PaymentReportService {
             }
             addReceiptRow(table, "Paid Against:", paidAgainst, labelFont, valueFont);
             addReceiptRow(table, "Mode:", payment.getPaymentMode() != null
-                    ? payment.getPaymentMode().getModeName() : "—", labelFont, valueFont);
+                    ? payment.getPaymentMode().name() : "—", labelFont, valueFont);
             if (payment.getReferenceNo() != null && !payment.getReferenceNo().isBlank()) {
                 addReceiptRow(table, "Reference:", payment.getReferenceNo(), labelFont, valueFont);
             }
@@ -286,7 +286,7 @@ public class PaymentReportService {
             row.put("paidAgainst", paidAgainst);
 
             row.put("amount", p.getAmount() != null ? "₹" + NUM_FMT.format(p.getAmount()) : "—");
-            row.put("mode", p.getPaymentMode() != null ? p.getPaymentMode().getModeName() : "—");
+            row.put("mode", p.getPaymentMode() != null ? p.getPaymentMode().name() : "—");
             row.put("reference", p.getReferenceNo() != null ? p.getReferenceNo() : "—");
             row.put("employeeName", p.getReceivedBy() != null ? p.getReceivedBy().getName() : "—");
             row.put("status", p.getTargetPaymentStatus() != null ? p.getTargetPaymentStatus() : "—");

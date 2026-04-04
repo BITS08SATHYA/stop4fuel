@@ -9,10 +9,10 @@ import {
     ImageIcon, Paperclip, ArrowLeft, ChevronRight
 } from "lucide-react";
 import {
-    getPaymentModes, getOutstandingByCustomer,
+    getOutstandingByCustomer,
     getCustomers, recordStatementPayment, recordBillPayment,
-    getOutstandingBills, uploadPaymentProof,
-    type Payment, type PaymentMode, type Statement, type InvoiceBill, type Customer
+    getOutstandingBills, uploadPaymentProof, PAYMENT_MODES,
+    type Payment, type Statement, type InvoiceBill, type Customer
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
 
@@ -26,7 +26,7 @@ const fmtCurrency = (n: number) =>
 
 export default function RecordPaymentPage() {
     const router = useRouter();
-    const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([]);
+    // paymentModes are now a static constant (PAYMENT_MODES)
     const [payTarget, setPayTarget] = useState<PayTarget>("statement");
 
     // Customer search
@@ -50,7 +50,7 @@ export default function RecordPaymentPage() {
 
     // Payment details
     const [payAmount, setPayAmount] = useState("");
-    const [payModeId, setPayModeId] = useState<number | "">("");
+    const [payModeId, setPayModeId] = useState("");
     const [payReference, setPayReference] = useState("");
     const [payRemarks, setPayRemarks] = useState("");
     // Mode-specific metadata
@@ -69,9 +69,7 @@ export default function RecordPaymentPage() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    useEffect(() => {
-        getPaymentModes().then(setPaymentModes).catch(console.error);
-    }, []);
+    // Payment modes are static constants (PAYMENT_MODES)
 
     // Customer search
     const searchCustomers = async (val: string) => {
@@ -121,7 +119,7 @@ export default function RecordPaymentPage() {
         }
     };
 
-    const selectedModeName = paymentModes.find(m => m.id === payModeId)?.name || "";
+    const selectedModeName = payModeId;
 
     const buildReferenceNo = (): string => {
         const parts: string[] = [];
@@ -144,7 +142,7 @@ export default function RecordPaymentPage() {
                 if (utrNo) parts.push(`UTR: ${utrNo}`);
                 if (bankName) parts.push(`Bank: ${bankName}`);
                 break;
-            case "BANK":
+            case "BANK_TRANSFER":
                 if (depositSlipNo) parts.push(`Slip: ${depositSlipNo}`);
                 if (bankName) parts.push(`Bank: ${bankName}`);
                 break;
@@ -188,7 +186,7 @@ export default function RecordPaymentPage() {
         try {
             const paymentData: Partial<Payment> = {
                 amount: Number(payAmount),
-                paymentMode: { id: Number(payModeId) } as PaymentMode,
+                paymentMode: payModeId,
                 referenceNo: buildReferenceNo() || undefined,
                 remarks: payRemarks || undefined,
                 paymentDate: new Date().toISOString(),
@@ -588,11 +586,11 @@ export default function RecordPaymentPage() {
                                     <div>
                                         <label className="block text-xs font-medium text-muted-foreground mb-1.5">Payment Mode</label>
                                         <StyledSelect
-                                            value={String(payModeId)}
-                                            onChange={(val) => { setPayModeId(val ? Number(val) : ""); resetModeFields(); }}
+                                            value={payModeId}
+                                            onChange={(val) => { setPayModeId(val); resetModeFields(); }}
                                             options={[
                                                 { value: "", label: "Select mode..." },
-                                                ...paymentModes.map((m) => ({ value: String(m.id), label: m.name })),
+                                                ...PAYMENT_MODES.map((m) => ({ value: m, label: m })),
                                             ]}
                                             className="w-full"
                                         />
@@ -693,7 +691,7 @@ export default function RecordPaymentPage() {
                                         </div>
                                     )}
 
-                                    {selectedModeName === "BANK" && (
+                                    {selectedModeName === "BANK_TRANSFER" && (
                                         <div className="space-y-3 p-3 bg-muted/20 rounded-lg border border-border/50">
                                             <div className="text-xs font-medium text-muted-foreground">Bank Deposit Details</div>
                                             <div className="grid grid-cols-2 gap-3">

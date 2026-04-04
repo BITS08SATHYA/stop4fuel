@@ -17,7 +17,7 @@ public class PaymentDTO {
     private String remarks;
     private String proofImageKey;
     private Long shiftId;
-    private PaymentModeSummary paymentMode;
+    private String paymentMode;
     private CustomerSummary customer;
     private StatementSummary statement;
     private InvoiceBillSummary invoiceBill;
@@ -35,7 +35,7 @@ public class PaymentDTO {
                 .remarks(p.getRemarks())
                 .proofImageKey(p.getProofImageKey())
                 .shiftId(p.getShiftId())
-                .paymentMode(PaymentModeSummary.from(p.getPaymentMode()))
+                .paymentMode(p.getPaymentMode() != null ? p.getPaymentMode().name() : null)
                 .customer(CustomerSummary.from(p.getCustomer()))
                 .statement(StatementSummary.from(p.getStatement()))
                 .invoiceBill(InvoiceBillSummary.from(p.getInvoiceBill()))
@@ -44,18 +44,6 @@ public class PaymentDTO {
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();
-    }
-
-    @Getter
-    @Builder
-    public static class PaymentModeSummary {
-        private Long id;
-        private String name;
-
-        public static PaymentModeSummary from(PaymentMode pm) {
-            if (pm == null) return null;
-            return PaymentModeSummary.builder().id(pm.getId()).name(pm.getModeName()).build();
-        }
     }
 
     @Getter

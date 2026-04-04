@@ -98,7 +98,7 @@ public class SalaryPaymentService {
     }
 
     @Transactional
-    public SalaryPayment markAsPaid(Long paymentId, String paymentMode) {
+    public SalaryPayment markAsPaid(Long paymentId, com.stopforfuel.backend.enums.PaymentMode paymentMode) {
         SalaryPayment payment = salaryPaymentRepository.findByIdAndScidForUpdate(paymentId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
 

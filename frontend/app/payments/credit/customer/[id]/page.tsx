@@ -665,7 +665,7 @@ function PaymentTable({ payments, loading, page, totalPages, onPageChange, fmt, 
                         <tr key={p.id} className="border-b border-border/30 hover:bg-muted/20">
                             <td className="py-1.5 px-2 text-muted-foreground">{p.paymentDate ? fmtDate(p.paymentDate) : "-"}</td>
                             <td className="py-1.5 px-2 text-right font-medium text-emerald-400">{fmt(p.amount)}</td>
-                            <td className="py-1.5 px-2 text-muted-foreground">{p.paymentMode?.modeName || p.paymentMode?.name || "-"}</td>
+                            <td className="py-1.5 px-2 text-muted-foreground">{p.paymentMode || "-"}</td>
                             <td className="py-1.5 px-2 text-muted-foreground">{p.referenceNo || "-"}</td>
                             <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[120px]">
                                 {p.statement ? `Stmt: ${p.statement.statementNo}` : p.invoiceBill ? `Bill: ${p.invoiceBill.billNo || p.invoiceBill.id}` : "-"}
