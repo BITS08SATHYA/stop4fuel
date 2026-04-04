@@ -481,7 +481,7 @@ public class DashboardService {
                     item.setId(inv.getId());
                     item.setBillNo(inv.getBillNo());
                     item.setBillType(inv.getBillType() != null ? inv.getBillType().name() : null);
-                    item.setPaymentMode(inv.getPaymentMode());
+                    item.setPaymentMode(inv.getPaymentMode() != null ? inv.getPaymentMode().name() : null);
                     item.setNetAmount(inv.getNetAmount());
                     item.setDate(inv.getDate() != null
                             ? inv.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);

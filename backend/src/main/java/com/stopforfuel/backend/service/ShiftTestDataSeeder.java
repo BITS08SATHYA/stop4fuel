@@ -34,7 +34,6 @@ public class ShiftTestDataSeeder {
     private final ProductRepository productRepository;
     private final UpiCompanyRepository upiCompanyRepository;
     private final PaymentRepository paymentRepository;
-    private final PaymentModeRepository paymentModeRepository;
     private final ExpenseRepository expenseRepository;
     private final ExpenseTypeRepository expenseTypeRepository;
     private final IncentivePaymentRepository incentivePaymentRepository;
@@ -189,7 +188,7 @@ public class ShiftTestDataSeeder {
             EAdvance ea = new EAdvance();
             ea.setScid(scid);
             ea.setShiftId(shiftId);
-            ea.setAdvanceType(EAdvanceType.CARD);
+            ea.setAdvanceType(com.stopforfuel.backend.enums.PaymentMode.CARD);
             ea.setAmount(BigDecimal.valueOf(cardAmounts[i]));
             ea.setTransactionDate(shiftStart.plusMinutes(30 + i * 45));
             ea.setBatchId(cardData[i][0]);
@@ -208,7 +207,7 @@ public class ShiftTestDataSeeder {
                 EAdvance ea = new EAdvance();
                 ea.setScid(scid);
                 ea.setShiftId(shiftId);
-                ea.setAdvanceType(EAdvanceType.UPI);
+                ea.setAdvanceType(com.stopforfuel.backend.enums.PaymentMode.UPI);
                 ea.setAmount(BigDecimal.valueOf(upiAmounts[i]));
                 ea.setTransactionDate(shiftStart.plusMinutes(60 + i * 40));
                 ea.setUpiCompany(upiCompanies.get(i % upiCompanies.size()));
@@ -224,7 +223,7 @@ public class ShiftTestDataSeeder {
             EAdvance ea = new EAdvance();
             ea.setScid(scid);
             ea.setShiftId(shiftId);
-            ea.setAdvanceType(EAdvanceType.CCMS);
+            ea.setAdvanceType(com.stopforfuel.backend.enums.PaymentMode.CCMS);
             ea.setAmount(BigDecimal.valueOf(ccmsAmounts[i]));
             ea.setTransactionDate(shiftStart.plusMinutes(90 + i * 60));
             ea.setCcmsNumber("CCMS-" + LocalDate.now() + "-00" + (i + 1));
@@ -237,7 +236,7 @@ public class ShiftTestDataSeeder {
         EAdvance cheque = new EAdvance();
         cheque.setScid(scid);
         cheque.setShiftId(shiftId);
-        cheque.setAdvanceType(EAdvanceType.CHEQUE);
+        cheque.setAdvanceType(com.stopforfuel.backend.enums.PaymentMode.CHEQUE);
         cheque.setAmount(BigDecimal.valueOf(12000));
         cheque.setTransactionDate(shiftStart.plusMinutes(120));
         cheque.setChequeNo("456789");
@@ -252,7 +251,7 @@ public class ShiftTestDataSeeder {
         EAdvance bank = new EAdvance();
         bank.setScid(scid);
         bank.setShiftId(shiftId);
-        bank.setAdvanceType(EAdvanceType.BANK_TRANSFER);
+        bank.setAdvanceType(com.stopforfuel.backend.enums.PaymentMode.BANK_TRANSFER);
         bank.setAmount(BigDecimal.valueOf(9500));
         bank.setTransactionDate(shiftStart.plusMinutes(150));
         bank.setBankName("HDFC");
@@ -348,7 +347,7 @@ public class ShiftTestDataSeeder {
                 if (nozzle == null) continue;
 
                 InvoiceBill bill = createFuelBill(shiftId, scid, fuel, nozzle, cashQuantities[i],
-                        BillType.CASH, "CASH", "TEST-C-" + (i + 1), null,
+                        BillType.CASH, com.stopforfuel.backend.enums.PaymentMode.CASH, "TEST-C-" + (i + 1), null,
                         shiftStart.plusMinutes(20 + i * 50));
                 invoiceBillRepository.save(bill);
                 cashCount++;
@@ -384,7 +383,7 @@ public class ShiftTestDataSeeder {
             oilCashBill.setScid(scid);
             oilCashBill.setShiftId(shiftId);
             oilCashBill.setBillType(BillType.CASH);
-            oilCashBill.setPaymentMode("CASH");
+            oilCashBill.setPaymentMode(com.stopforfuel.backend.enums.PaymentMode.CASH);
             oilCashBill.setDate(shiftStart.plusMinutes(75));
             oilCashBill.setBillNo("TEST-C-OIL-1");
             oilCashBill.setBillDesc("Test cash oil sale");
@@ -429,7 +428,7 @@ public class ShiftTestDataSeeder {
                 oilCash2.setScid(scid);
                 oilCash2.setShiftId(shiftId);
                 oilCash2.setBillType(BillType.CASH);
-                oilCash2.setPaymentMode("CASH");
+                oilCash2.setPaymentMode(com.stopforfuel.backend.enums.PaymentMode.CASH);
                 oilCash2.setDate(shiftStart.plusMinutes(200));
                 oilCash2.setBillNo("TEST-C-OIL-2");
                 oilCash2.setBillDesc("Test cash oil sale - " + oil3.getName());
@@ -461,7 +460,7 @@ public class ShiftTestDataSeeder {
             accBill.setScid(scid);
             accBill.setShiftId(shiftId);
             accBill.setBillType(BillType.CASH);
-            accBill.setPaymentMode("CASH");
+            accBill.setPaymentMode(com.stopforfuel.backend.enums.PaymentMode.CASH);
             accBill.setDate(shiftStart.plusMinutes(130));
             accBill.setBillNo("TEST-C-ACC-1");
             accBill.setBillDesc("Test accessory sale");
@@ -549,7 +548,7 @@ public class ShiftTestDataSeeder {
     }
 
     private InvoiceBill createFuelBill(Long shiftId, Long scid, Product fuel, Nozzle nozzle,
-                                        double quantity, BillType billType, String paymentMode,
+                                        double quantity, BillType billType, com.stopforfuel.backend.enums.PaymentMode paymentMode,
                                         String billNo, Customer customer, LocalDateTime date) {
         BigDecimal qty = BigDecimal.valueOf(quantity);
         BigDecimal price = fuel.getPrice();
@@ -595,31 +594,26 @@ public class ShiftTestDataSeeder {
 
         // Payment against previous credit bills (not the ones we just created)
         // This simulates customers coming in to pay their outstanding credit
-        PaymentMode cashMode = paymentModeRepository.findByModeName("CASH").orElse(null);
-        PaymentMode upiMode = paymentModeRepository.findByModeName("UPI").orElse(null);
-
-        if (cashMode != null && customers.size() >= 1) {
-            // Customer 1 pays cash
+        if (customers.size() >= 1) {
             Payment p1 = new Payment();
             p1.setScid(scid);
             p1.setShiftId(shiftId);
             p1.setPaymentDate(shiftStart.plusMinutes(110));
             p1.setAmount(BigDecimal.valueOf(15000));
-            p1.setPaymentMode(cashMode);
+            p1.setPaymentMode(com.stopforfuel.backend.enums.PaymentMode.CASH);
             p1.setCustomer(customers.get(0));
             p1.setRemarks("Test cash payment - outstanding credit");
             paymentRepository.save(p1);
             count++;
         }
 
-        if (upiMode != null && customers.size() >= 2) {
-            // Customer 2 pays via UPI
+        if (customers.size() >= 2) {
             Payment p2 = new Payment();
             p2.setScid(scid);
             p2.setShiftId(shiftId);
             p2.setPaymentDate(shiftStart.plusMinutes(170));
             p2.setAmount(BigDecimal.valueOf(8500));
-            p2.setPaymentMode(upiMode);
+            p2.setPaymentMode(com.stopforfuel.backend.enums.PaymentMode.UPI);
             p2.setReferenceNo("UPI-REF-TEST-001");
             p2.setCustomer(customers.get(1));
             p2.setRemarks("Test UPI payment - outstanding credit");
@@ -627,14 +621,13 @@ public class ShiftTestDataSeeder {
             count++;
         }
 
-        if (cashMode != null && customers.size() >= 3) {
-            // Customer 3 pays cash
+        if (customers.size() >= 3) {
             Payment p3 = new Payment();
             p3.setScid(scid);
             p3.setShiftId(shiftId);
             p3.setPaymentDate(shiftStart.plusMinutes(220));
             p3.setAmount(BigDecimal.valueOf(25000));
-            p3.setPaymentMode(cashMode);
+            p3.setPaymentMode(com.stopforfuel.backend.enums.PaymentMode.CASH);
             p3.setCustomer(customers.get(2));
             p3.setRemarks("Test cash payment - partial settlement");
             paymentRepository.save(p3);

@@ -43,7 +43,7 @@ public class SalaryPaymentDTO {
                 .otherDeductions(sp.getOtherDeductions())
                 .netPayable(sp.getNetPayable())
                 .paymentDate(sp.getPaymentDate())
-                .paymentMode(sp.getPaymentMode())
+                .paymentMode(sp.getPaymentMode() != null ? sp.getPaymentMode().name() : null)
                 .status(sp.getStatus())
                 .remarks(sp.getRemarks())
                 .employee(EmployeeSummary.from(sp.getEmployee()))

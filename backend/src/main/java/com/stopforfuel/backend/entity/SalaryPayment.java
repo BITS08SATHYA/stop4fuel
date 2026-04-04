@@ -35,7 +35,8 @@ public class SalaryPayment extends BaseEntity {
     private Double netPayable;
 
     private LocalDate paymentDate;
-    private String paymentMode;
+    @Enumerated(EnumType.STRING)
+    private com.stopforfuel.backend.enums.PaymentMode paymentMode;
 
     private String status = "DRAFT"; // DRAFT, PAID
 

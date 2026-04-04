@@ -703,7 +703,7 @@ export default function ShiftClosingWorkspace() {
                                                 <td className="py-1 px-2">
                                                     {p.invoiceBill?.billNo || p.statement?.statementNo || p.referenceNo || "-"}
                                                 </td>
-                                                <td className="py-1 px-2">{p.paymentMode?.name || "-"}</td>
+                                                <td className="py-1 px-2">{p.paymentMode || "-"}</td>
                                                 <td className="py-1 px-2 text-muted-foreground">{p.remarks || "-"}</td>
                                                 <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCur(p.amount)}</td>
                                             </tr>

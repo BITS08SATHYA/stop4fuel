@@ -30,7 +30,7 @@ public class StationExpenseDTO {
                 .expenseDate(se.getExpenseDate())
                 .description(se.getDescription())
                 .paidTo(se.getPaidTo())
-                .paymentMode(se.getPaymentMode())
+                .paymentMode(se.getPaymentMode() != null ? se.getPaymentMode().name() : null)
                 .recurringType(se.getRecurringType())
                 .expenseType(ExpenseTypeSummary.from(se.getExpenseType()))
                 .scid(se.getScid())

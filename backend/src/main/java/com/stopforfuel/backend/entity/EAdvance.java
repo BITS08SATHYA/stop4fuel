@@ -1,7 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.stopforfuel.backend.enums.EAdvanceType;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,7 +28,7 @@ public class EAdvance extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "advance_type", nullable = false)
-    private EAdvanceType advanceType;
+    private com.stopforfuel.backend.enums.PaymentMode advanceType;
 
     @Column(name = "remarks")
     private String remarks;
