@@ -11,12 +11,12 @@ import {
     Download, FileSpreadsheet, Calendar, Eye, Pencil
 } from "lucide-react";
 import {
-    getPayments, getPaymentsByShift, getPaymentModes, getOutstandingStatements,
+    getPayments, getPaymentsByShift, getOutstandingStatements,
     getCustomers, recordStatementPayment, recordBillPayment,
     getOutstandingBills, uploadPaymentProof, getPaymentProofUrl,
     exportPaymentsPdf, exportPaymentsExcel, downloadPaymentReceipt,
-    API_BASE_URL,
-    type Payment, type PaymentMode, type Statement, type InvoiceBill, type Customer, type PageResponse
+    API_BASE_URL, PAYMENT_MODES,
+    type Payment, type Statement, type InvoiceBill, type Customer, type PageResponse
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
@@ -45,7 +45,7 @@ const statusBadge = (status?: string) => {
 
 export default function PaymentsPage() {
     const [payments, setPayments] = useState<Payment[]>([]);
-    const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([]);
+    // paymentModes are now a static constant (PAYMENT_MODES)
     const [loading, setLoading] = useState(true);
 
     // Shift-scoping
@@ -76,7 +76,7 @@ export default function PaymentsPage() {
 
     // Step 3: Payment details
     const [payAmount, setPayAmount] = useState("");
-    const [payModeId, setPayModeId] = useState<number | "">("");
+    const [payModeId, setPayModeId] = useState("");
     const [payReference, setPayReference] = useState("");
     const [payRemarks, setPayRemarks] = useState("");
     const [proofFile, setProofFile] = useState<File | null>(null);
@@ -110,8 +110,6 @@ export default function PaymentsPage() {
 
     const loadInitialData = async () => {
         try {
-            const modes = await getPaymentModes();
-            setPaymentModes(modes);
             // Fetch active shift
             const shiftRes = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
             if (shiftRes.ok) {
@@ -235,7 +233,7 @@ export default function PaymentsPage() {
         try {
             const paymentData: Partial<Payment> = {
                 amount: Number(payAmount),
-                paymentMode: { id: Number(payModeId) } as PaymentMode,
+                paymentMode: payModeId,
                 referenceNo: payReference || undefined,
                 remarks: payRemarks || undefined,
                 paymentDate: new Date().toISOString(),
@@ -367,7 +365,7 @@ export default function PaymentsPage() {
             p.referenceNo?.toLowerCase().includes(q) ||
             p.remarks?.toLowerCase().includes(q) ||
             p.receivedBy?.name?.toLowerCase().includes(q);
-        const matchesMode = modeFilter === "ALL" || p.paymentMode?.name === modeFilter;
+        const matchesMode = modeFilter === "ALL" || p.paymentMode === modeFilter;
         return matchesSearch && matchesMode;
     });
 
@@ -507,7 +505,7 @@ export default function PaymentsPage() {
                             onChange={(val) => setModeFilter(val)}
                             options={[
                                 { value: "ALL", label: "All Modes" },
-                                ...paymentModes.map((m) => ({ value: m.name, label: m.name })),
+                                ...PAYMENT_MODES.map((m) => ({ value: m, label: m })),
                             ]}
                         />
                     </div>
@@ -605,7 +603,7 @@ export default function PaymentsPage() {
                                                       </span>
                                                     : "-"}
                                             </td>
-                                            <td className="py-3 px-3">{p.paymentMode?.name || "-"}</td>
+                                            <td className="py-3 px-3">{p.paymentMode || "-"}</td>
                                             <td className="py-3 px-3 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
@@ -881,11 +879,11 @@ export default function PaymentsPage() {
                                 <div>
                                     <label className="block text-sm font-medium text-muted-foreground mb-1">Payment Mode</label>
                                     <StyledSelect
-                                        value={String(payModeId)}
-                                        onChange={(val) => setPayModeId(val ? Number(val) : "")}
+                                        value={payModeId}
+                                        onChange={(val) => setPayModeId(val)}
                                         options={[
                                             { value: "", label: "Select mode..." },
-                                            ...paymentModes.map((m) => ({ value: String(m.id), label: m.name })),
+                                            ...PAYMENT_MODES.map((m) => ({ value: m, label: m })),
                                         ]}
                                         className="w-full"
                                     />
@@ -997,7 +995,7 @@ export default function PaymentsPage() {
                             </div>
                             <div>
                                 <span className="text-muted-foreground text-xs">Payment Mode</span>
-                                <div className="font-medium">{viewPayment.paymentMode?.name || "-"}</div>
+                                <div className="font-medium">{viewPayment.paymentMode || "-"}</div>
                             </div>
                             <div>
                                 <span className="text-muted-foreground text-xs">Paid Against</span>

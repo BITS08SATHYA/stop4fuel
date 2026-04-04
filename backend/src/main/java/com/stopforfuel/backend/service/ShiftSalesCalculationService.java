@@ -183,7 +183,7 @@ public class ShiftSalesCalculationService {
         for (InvoiceBill inv : allInvoices) {
             if (!com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())) continue;
 
-            String paymentMode = inv.getPaymentMode() != null ? inv.getPaymentMode().toUpperCase() : "CASH";
+            String paymentMode = inv.getPaymentMode() != null ? inv.getPaymentMode().name() : "CASH";
 
             if (inv.getProducts() != null) {
                 for (InvoiceProduct ip : inv.getProducts()) {
@@ -324,7 +324,7 @@ public class ShiftSalesCalculationService {
             cbd.setBillNo(bill.getBillNo());
             cbd.setVehicleNo(bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-");
             cbd.setDriverName(bill.getDriverName());
-            cbd.setPaymentMode(bill.getPaymentMode() != null ? bill.getPaymentMode() : "CASH");
+            cbd.setPaymentMode(bill.getPaymentMode() != null ? bill.getPaymentMode().name() : "CASH");
             cbd.setAmount(bill.getNetAmount());
             StringBuilder prodStr = new StringBuilder();
             if (bill.getProducts() != null) {
@@ -370,7 +370,7 @@ public class ShiftSalesCalculationService {
         Map<String, Integer> modeCounts = new LinkedHashMap<>();
         for (InvoiceBill inv : invoices) {
             if (!com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())) continue;
-            String mode = inv.getPaymentMode() != null ? inv.getPaymentMode().toUpperCase() : "CASH";
+            String mode = inv.getPaymentMode() != null ? inv.getPaymentMode().name() : "CASH";
             BigDecimal amt = inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO;
             modeAmounts.merge(mode, amt, BigDecimal::add);
             modeCounts.merge(mode, 1, Integer::sum);

@@ -88,7 +88,7 @@ public class CustomerPortalService {
             item.setId(p.getId());
             item.setDate(p.getPaymentDate() != null ? p.getPaymentDate().toString() : null);
             item.setAmount(p.getAmount());
-            item.setPaymentMode(p.getPaymentMode() != null ? p.getPaymentMode().getModeName() : null);
+            item.setPaymentMode(p.getPaymentMode() != null ? p.getPaymentMode().name() : null);
             item.setReferenceNo(p.getReferenceNo());
             return item;
         }).toList());

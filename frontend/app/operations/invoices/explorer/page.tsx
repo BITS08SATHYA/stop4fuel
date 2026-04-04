@@ -17,8 +17,8 @@ import {
 import {
     getInvoiceHistory, getCustomerInvoices,
     getPaymentsByBill, recordBillPayment, getBillPaymentSummary,
-    getCustomerCreditInfo, getPaymentModes,
-    type InvoiceBill, type Payment, type PaymentMode,
+    getCustomerCreditInfo, PAYMENT_MODES,
+    type InvoiceBill, type Payment,
     type PageResponse, type BillPaymentSummary
 } from "@/lib/api/station";
 
@@ -81,9 +81,9 @@ export default function InvoiceExplorerPage() {
 
     // Payment form
     const [showPaymentForm, setShowPaymentForm] = useState(false);
-    const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([]);
+    // paymentModes are now a static constant (PAYMENT_MODES)
     const [paymentAmount, setPaymentAmount] = useState("");
-    const [paymentModeId, setPaymentModeId] = useState<number | "">("");
+    const [paymentModeId, setPaymentModeId] = useState("");
     const [paymentRef, setPaymentRef] = useState("");
     const [paymentRemarks, setPaymentRemarks] = useState("");
     const [paymentSubmitting, setPaymentSubmitting] = useState(false);
@@ -130,10 +130,7 @@ export default function InvoiceExplorerPage() {
         }
     }, [invoices, searchParams]);
 
-    // Load payment modes once
-    useEffect(() => {
-        getPaymentModes().then(setPaymentModes).catch(console.error);
-    }, []);
+    // Payment modes are static constants (PAYMENT_MODES)
 
     // Load invoices
     const fetchInvoices = useCallback(async () => {
@@ -206,7 +203,7 @@ export default function InvoiceExplorerPage() {
         try {
             await recordBillPayment(selectedInvoice.id!, {
                 amount: Number(paymentAmount),
-                paymentMode: { id: paymentModeId as number, name: "" },
+                paymentMode: paymentModeId,
                 referenceNo: paymentRef || undefined,
                 remarks: paymentRemarks || undefined,
             });
@@ -568,7 +565,7 @@ export default function InvoiceExplorerPage() {
                                                 canPay={canPayDirectly(selectedInvoice)}
                                                 showForm={showPaymentForm}
                                                 onShowForm={setShowPaymentForm}
-                                                paymentModes={paymentModes}
+                                                paymentModes={PAYMENT_MODES}
                                                 paymentAmount={paymentAmount}
                                                 onAmountChange={setPaymentAmount}
                                                 paymentModeId={paymentModeId}
@@ -751,11 +748,11 @@ function InvoicePaymentsTab({
     canPay: boolean;
     showForm: boolean;
     onShowForm: (v: boolean) => void;
-    paymentModes: PaymentMode[];
+    paymentModes: readonly string[];
     paymentAmount: string;
     onAmountChange: (v: string) => void;
-    paymentModeId: number | "";
-    onModeChange: (v: number | "") => void;
+    paymentModeId: string;
+    onModeChange: (v: string) => void;
     paymentRef: string;
     onRefChange: (v: string) => void;
     paymentRemarks: string;
@@ -831,9 +828,9 @@ function InvoicePaymentsTab({
                             <label className="text-xs text-muted-foreground mb-1 block">Payment Mode *</label>
                             <StyledSelect
                                 value={String(paymentModeId)}
-                                onChange={(val) => onModeChange(val ? Number(val) : "")}
+                                onChange={(val) => onModeChange(val)}
                                 placeholder="Select mode"
-                                options={[{ value: "", label: "Select mode" }, ...paymentModes.map(m => ({ value: String(m.id), label: m.name }))]}
+                                options={[{ value: "", label: "Select mode" }, ...paymentModes.map(m => ({ value: m, label: m }))]}
                             />
                         </div>
                     </div>
@@ -897,9 +894,9 @@ function InvoicePaymentsTab({
                                 <div className="flex items-center justify-between mb-1">
                                     <div className="flex items-center gap-2">
                                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                            PAYMENT_MODE_COLORS[pmt.paymentMode?.name] || "bg-muted text-muted-foreground"
+                                            PAYMENT_MODE_COLORS[pmt.paymentMode] || "bg-muted text-muted-foreground"
                                         }`}>
-                                            {pmt.paymentMode?.name}
+                                            {pmt.paymentMode}
                                         </span>
                                         <span className="text-xs text-muted-foreground">{formatDateTime(pmt.paymentDate)}</span>
                                     </div>
