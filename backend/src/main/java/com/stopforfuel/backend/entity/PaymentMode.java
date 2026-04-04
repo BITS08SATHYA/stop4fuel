@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,5 +17,6 @@ public class PaymentMode {
 
     @jakarta.validation.constraints.NotBlank(message = "Payment mode name is required")
     @Column(name = "mode_name", nullable = false, unique = true)
-    private String modeName; // CASH, CHEQUE, UPI, NEFT, CARD
+    @JsonProperty("name")
+    private String modeName; // CASH, CHEQUE, UPI, NEFT, CARD, CCMS, BANK_TRANSFER
 }
