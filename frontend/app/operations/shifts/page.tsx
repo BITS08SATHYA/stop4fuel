@@ -38,6 +38,7 @@ import {
     ExternalCashInflow,
     NozzleReadingRow,
 } from "@/lib/api/station";
+import { getStationExpensesByShift, getStationExpenseShiftTotal } from "@/lib/api/station/advances";
 import { fetchAdvancesByShift, OperationalAdvance } from "@/app/operations/advances/advances-api";
 import {
     Clock,
@@ -174,6 +175,8 @@ export default function ShiftsPage() {
                 eAdvSummaryData,
                 expensesData,
                 expTotalData,
+                stationExpensesData,
+                stationExpTotalData,
                 opAdvData,
                 paymentsData,
                 incentivesData,
@@ -185,6 +188,8 @@ export default function ShiftsPage() {
                 getEAdvanceSummary(shiftId),
                 getExpensesByShift(shiftId),
                 getExpenseShiftTotal(shiftId),
+                getStationExpensesByShift(shiftId).catch(() => []),
+                getStationExpenseShiftTotal(shiftId).catch(() => 0),
                 fetchAdvancesByShift(shiftId).catch(() => [] as OperationalAdvance[]),
                 getPaymentsByShift(shiftId),
                 getIncentivePaymentsByShift(shiftId),
@@ -192,11 +197,22 @@ export default function ShiftsPage() {
                 getShiftClosingData(shiftId).catch(() => null),
             ]);
 
+            // Merge both expense sources (Expense + StationExpense)
+            const mergedExpenses = [
+                ...expensesData,
+                ...stationExpensesData.map((se: any) => ({
+                    ...se,
+                    expenseType: se.expenseType,
+                    description: se.description,
+                    remarks: se.description,
+                })),
+            ];
+
             setInvoices(invoicesData);
             setEAdvances(eAdvData);
             setEAdvanceSummary(eAdvSummaryData);
-            setExpenses(expensesData);
-            setExpenseTotal(expTotalData);
+            setExpenses(mergedExpenses);
+            setExpenseTotal(expTotalData + (stationExpTotalData || 0));
             setOpAdvances(opAdvData);
             setPayments(paymentsData);
             setIncentivePayments(incentivesData);
