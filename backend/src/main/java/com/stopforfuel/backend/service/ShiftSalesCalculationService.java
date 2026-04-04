@@ -100,7 +100,7 @@ public class ShiftSalesCalculationService {
             }
         }
 
-        // 1b. Fuel Sales: compute from nozzle meter readings, grouped by product
+        // 1b. Fuel Sales: compute from nozzle meter readings, rate from Product Catalog
         Map<String, double[]> fuelSales = new LinkedHashMap<>(); // productName -> [netLitres, amount, rate]
         double totalTestLitres = 0;
         double totalTestAmount = 0;
@@ -108,10 +108,11 @@ public class ShiftSalesCalculationService {
         for (NozzleInventory ni : nozzleInvs) {
             if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
                     || ni.getNozzle().getTank().getProduct() == null) continue;
-            String productName = ni.getNozzle().getTank().getProduct().getName();
+            Product product = ni.getNozzle().getTank().getProduct();
+            String productName = product.getName();
             double sales = ni.getSales() != null ? ni.getSales() : 0;
             double test = ni.getTestQuantity() != null ? ni.getTestQuantity() : 0;
-            double rate = ni.getRate() != null ? ni.getRate() : 0;
+            double rate = product.getPrice() != null ? product.getPrice().doubleValue() : 0;
             double netLitres = sales - test;
             double amount = netLitres * rate;
             fuelSales.merge(productName, new double[]{netLitres, amount, rate},
