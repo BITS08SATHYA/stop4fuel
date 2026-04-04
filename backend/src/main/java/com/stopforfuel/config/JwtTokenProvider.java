@@ -14,7 +14,7 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${app.jwt.secret}")
+    @Value("${app.jwt.secret:stopforfuel-dev-secret-key-min-32-chars!!}")
     private String secret;
 
     private static final long EXPIRATION_MS = 8 * 60 * 60 * 1000; // 8 hours
