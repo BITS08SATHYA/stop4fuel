@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getShiftReport,
     getShiftReportPrintData,
@@ -555,10 +556,15 @@ export default function ShiftReportPage() {
                     <h3 className="text-lg font-semibold mb-4">Transfer Entry</h3>
                     <div className="space-y-3">
                         <div><label className="text-sm font-medium text-muted-foreground">Target Report</label>
-                        <select value={targetReportId} onChange={e => setTargetReportId(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded-lg bg-background text-sm">
-                            <option value="">Select a draft report...</option>
-                            {draftReports.map(r => <option key={r.id} value={r.id}>Shift #{r.shift?.id} — {fmtDT(r.reportDate)}</option>)}
-                        </select></div>
+                        <StyledSelect
+                            value={targetReportId}
+                            onChange={(val) => setTargetReportId(val)}
+                            options={[
+                                { value: "", label: "Select a draft report..." },
+                                ...draftReports.map(r => ({ value: String(r.id), label: `Shift #${r.shift?.id} — ${fmtDT(r.reportDate)}` })),
+                            ]}
+                            className="mt-1"
+                        /></div>
                         <div><label className="text-sm font-medium text-muted-foreground">Reason</label>
                         <input type="text" value={transferReason} onChange={e => setTransferReason(e.target.value)} placeholder="Why transfer?" className="w-full mt-1 px-3 py-2 border rounded-lg bg-background text-sm" /></div>
                     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { useFormValidation, required, min, indianMobile } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { Employee, ADVANCE_TYPES, createAdvance } from "./advances-api";
@@ -122,18 +123,17 @@ export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: Advan
                 {addType === "SALARY_ADVANCE" && employees.length > 0 && (
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Select Employee</label>
-                        <select
+                        <StyledSelect
                             value={addEmployeeId || ""}
-                            onChange={(e) => handleEmployeeSelect(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="">-- Select employee (optional) --</option>
-                            {employees.map((emp) => (
-                                <option key={emp.id} value={emp.id}>
-                                    {emp.name} {emp.designation ? `(${emp.designation})` : ""}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(val) => handleEmployeeSelect(val)}
+                            options={[
+                                { value: "", label: "-- Select employee (optional) --" },
+                                ...employees.map((emp) => ({
+                                    value: String(emp.id),
+                                    label: `${emp.name}${emp.designation ? ` (${emp.designation})` : ""}`,
+                                })),
+                            ]}
+                        />
                     </div>
                 )}
 

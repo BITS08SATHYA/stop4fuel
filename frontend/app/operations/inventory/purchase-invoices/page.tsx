@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getPurchaseInvoices,
     getActiveProducts,
@@ -326,25 +327,29 @@ export default function PurchaseInvoicesPage() {
                                     className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
-                            <select
+                            <StyledSelect
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="">All Statuses</option>
-                                <option value="PENDING">Pending</option>
-                                <option value="VERIFIED">Verified</option>
-                                <option value="PAID">Paid</option>
-                            </select>
-                            <select
+                                onChange={(val) => setStatusFilter(val)}
+                                options={[
+                                    { value: "", label: "All Statuses" },
+                                    { value: "PENDING", label: "Pending" },
+                                    { value: "VERIFIED", label: "Verified" },
+                                    { value: "PAID", label: "Paid" },
+                                ]}
+                                placeholder="All Statuses"
+                                className="min-w-[140px]"
+                            />
+                            <StyledSelect
                                 value={typeFilter}
-                                onChange={(e) => setTypeFilter(e.target.value)}
-                                className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="">All Types</option>
-                                <option value="FUEL">Fuel</option>
-                                <option value="NON_FUEL">Non-Fuel</option>
-                            </select>
+                                onChange={(val) => setTypeFilter(val)}
+                                options={[
+                                    { value: "", label: "All Types" },
+                                    { value: "FUEL", label: "Fuel" },
+                                    { value: "NON_FUEL", label: "Non-Fuel" },
+                                ]}
+                                placeholder="All Types"
+                                className="min-w-[140px]"
+                            />
                             <div className="flex items-center gap-1.5">
                                 <input
                                     type="date"
@@ -515,16 +520,16 @@ export default function PurchaseInvoicesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Supplier</label>
-                            <select
+                            <StyledSelect
                                 value={supplierId}
-                                onChange={(e) => { setSupplierId(e.target.value); setPurchaseOrderId(""); clearError("supplierId"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.supplierId)}`}
-                            >
-                                <option value="">Select supplier...</option>
-                                {suppliers.map((s) => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => { setSupplierId(val); setPurchaseOrderId(""); clearError("supplierId"); }}
+                                options={[
+                                    { value: "", label: "Select supplier..." },
+                                    ...suppliers.map((s) => ({ value: String(s.id), label: s.name })),
+                                ]}
+                                placeholder="Select supplier..."
+                                className={`w-full ${inputErrorClass(errors.supplierId)}`}
+                            />
                             <FieldError error={errors.supplierId} />
                         </div>
                         <div>
@@ -562,19 +567,16 @@ export default function PurchaseInvoicesPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Purchase Order (optional)</label>
-                            <select
+                            <StyledSelect
                                 value={purchaseOrderId}
-                                onChange={(e) => setPurchaseOrderId(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
-                                disabled={!supplierId}
-                            >
-                                <option value="">None</option>
-                                {filteredPOs.map((po) => (
-                                    <option key={po.id} value={po.id}>
-                                        PO #{po.id} — {new Date(po.orderDate).toLocaleDateString()} ({po.status})
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={(val) => setPurchaseOrderId(val)}
+                                options={[
+                                    { value: "", label: "None" },
+                                    ...filteredPOs.map((po) => ({ value: String(po.id), label: `PO #${po.id} — ${new Date(po.orderDate).toLocaleDateString()} (${po.status})` })),
+                                ]}
+                                placeholder="None"
+                                className={`w-full ${!supplierId ? "opacity-50 pointer-events-none" : ""}`}
+                            />
                         </div>
                     </div>
 
@@ -590,12 +592,16 @@ export default function PurchaseInvoicesPage() {
                                 return (
                                     <div key={idx} className="grid grid-cols-12 gap-2 items-center">
                                         <div className={invoiceType === "FUEL" ? "col-span-4" : "col-span-5"}>
-                                            <select value={li.productId} onChange={(e) => updateLineItem(idx, "productId", e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm" required>
-                                                <option value="">Product...</option>
-                                                {filteredProducts.map((p) => (
-                                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                                ))}
-                                            </select>
+                                            <StyledSelect
+                                                value={li.productId}
+                                                onChange={(val) => updateLineItem(idx, "productId", val)}
+                                                options={[
+                                                    { value: "", label: "Product..." },
+                                                    ...filteredProducts.map((p) => ({ value: String(p.id), label: p.name })),
+                                                ]}
+                                                placeholder="Product..."
+                                                className="w-full"
+                                            />
                                         </div>
                                         {invoiceType === "FUEL" && (
                                             <div className="col-span-1">

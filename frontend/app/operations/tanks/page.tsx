@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { getTanks, getFuelProducts, createTank, updateTank, deleteTank, Tank, Product, checkStockAlerts } from "@/lib/api/station";
 import { Droplets, Plus, Edit2, Trash2, Search, AlertTriangle } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
@@ -158,15 +159,16 @@ export default function TanksPage() {
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="ALL">All Status</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
-                    </select>
+                        onChange={(val) => setStatusFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Status" },
+                            { value: "ACTIVE", label: "Active" },
+                            { value: "INACTIVE", label: "Inactive" },
+                        ]}
+                        className="min-w-[140px]"
+                    />
                 </div>
 
                 {isLoading ? (
@@ -399,16 +401,16 @@ export default function TanksPage() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Fuel Product</label>
-                        <select
+                        <StyledSelect
                             value={productId}
-                            onChange={(e) => { setProductId(e.target.value); clearError("productId"); }}
-                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.productId)}`}
-                        >
-                            <option value="" className="bg-background text-foreground">Select a product...</option>
-                            {products.map(p => (
-                                <option key={p.id} value={p.id} className="bg-background text-foreground">{p.name}</option>
-                            ))}
-                        </select>
+                            onChange={(val) => { setProductId(val); clearError("productId"); }}
+                            options={[
+                                { value: "", label: "Select a product..." },
+                                ...products.map(p => ({ value: String(p.id), label: p.name })),
+                            ]}
+                            placeholder="Select a product..."
+                            className={`w-full ${inputErrorClass(errors.productId)}`}
+                        />
                         <FieldError error={errors.productId} />
                     </div>
                     <div className="pt-2">

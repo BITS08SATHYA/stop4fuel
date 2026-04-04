@@ -5,6 +5,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { getMyInvoices, CustomerInvoice } from "@/lib/api/station";
 import { Loader2, FileText } from "lucide-react";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 function formatCurrency(val?: number | null) {
     if (val == null) return "0.00";
@@ -47,15 +48,17 @@ export default function CustomerInvoicesPage() {
                 <h1 className="text-xl font-bold flex items-center gap-2">
                     <FileText className="w-5 h-5" /> My Invoices
                 </h1>
-                <select
+                <StyledSelect
                     value={paymentStatus}
-                    onChange={(e) => { setPaymentStatus(e.target.value); setPage(0); }}
-                    className="border border-border rounded-md px-3 py-1.5 text-sm bg-background"
-                >
-                    <option value="">All Status</option>
-                    <option value="NOT_PAID">Not Paid</option>
-                    <option value="PAID">Paid</option>
-                </select>
+                    onChange={(val) => { setPaymentStatus(val); setPage(0); }}
+                    options={[
+                        { value: "", label: "All Status" },
+                        { value: "NOT_PAID", label: "Not Paid" },
+                        { value: "PAID", label: "Paid" },
+                    ]}
+                    placeholder="All Status"
+                    className="min-w-[140px]"
+                />
             </div>
 
             <GlassCard className="p-0 overflow-hidden">
