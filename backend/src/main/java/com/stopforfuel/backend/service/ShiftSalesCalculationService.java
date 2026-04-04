@@ -136,7 +136,19 @@ public class ShiftSalesCalculationService {
             lineItems.add(item);
         }
 
-        // Test quantity data passed via SalesResult to be added in ADVANCE section
+        // Add test quantity in Revenue (fuel was dispensed through nozzle)
+        if (totalTestLitres > 0) {
+            ReportLineItem testItem = new ReportLineItem();
+            testItem.setReport(report);
+            testItem.setSection("REVENUE");
+            testItem.setCategory("TEST_QUANTITY");
+            testItem.setLabel("Test");
+            testItem.setQuantity(totalTestLitres);
+            testItem.setAmount(BigDecimal.valueOf(totalTestAmount).setScale(4, RoundingMode.HALF_UP));
+            testItem.setSortOrder(++sortOrder);
+            lineItems.add(testItem);
+        }
+        // Test data also passed via SalesResult to be added in ADVANCE section
 
         // Add oil/lubricant sales lines
         for (Map.Entry<String, double[]> entry : oilSales.entrySet()) {
