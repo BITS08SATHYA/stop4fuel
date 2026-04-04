@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Calendar } from "lucide-react";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 interface AdvanceFiltersProps {
     searchQuery: string;
@@ -40,27 +41,27 @@ export function AdvanceFilters({
                     className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
             </div>
-            <select
+            <StyledSelect
                 value={statusFilter}
-                onChange={(e) => onStatusFilterChange(e.target.value)}
-                className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-                <option value="ALL">All Status</option>
-                <option value="GIVEN">Given</option>
-                <option value="RETURNED">Returned</option>
-                <option value="PARTIALLY_RETURNED">Partially Returned</option>
-                <option value="SETTLED">Settled</option>
-                <option value="CANCELLED">Cancelled</option>
-            </select>
-            <select
+                onChange={(val) => onStatusFilterChange(val)}
+                options={[
+                    { value: "ALL", label: "All Status" },
+                    { value: "GIVEN", label: "Given" },
+                    { value: "RETURNED", label: "Returned" },
+                    { value: "PARTIALLY_RETURNED", label: "Partially Returned" },
+                    { value: "SETTLED", label: "Settled" },
+                    { value: "CANCELLED", label: "Cancelled" },
+                ]}
+            />
+            <StyledSelect
                 value={typeFilter}
-                onChange={(e) => onTypeFilterChange(e.target.value)}
-                className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-                <option value="ALL">All Types</option>
-                <option value="CASH_ADVANCE">Cash Advance</option>
-                <option value="SALARY_ADVANCE">Salary Advance</option>
-            </select>
+                onChange={(val) => onTypeFilterChange(val)}
+                options={[
+                    { value: "ALL", label: "All Types" },
+                    { value: "CASH_ADVANCE", label: "Cash Advance" },
+                    { value: "SALARY_ADVANCE", label: "Salary Advance" },
+                ]}
+            />
             <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4 text-muted-foreground" />

@@ -13,6 +13,7 @@ import {
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 const API = API_BASE_URL;
 
@@ -466,19 +467,19 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Party Type</span>
                                 {isEditing ? (
-                                    <select
-                                        value={customer.party?.id || ""}
-                                        onChange={(e) => {
-                                            const selected = parties.find((p: any) => p.id === Number(e.target.value));
+                                    <StyledSelect
+                                        value={String(customer.party?.id || "")}
+                                        onChange={(val) => {
+                                            const selected = parties.find((p: any) => p.id === Number(val));
                                             setCustomer({ ...customer, party: selected || null });
                                         }}
-                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
-                                    >
-                                        <option value="">None</option>
-                                        {parties.map((p: any) => (
-                                            <option key={p.id} value={p.id} className="bg-card text-foreground">{p.partyType}</option>
-                                        ))}
-                                    </select>
+                                        options={[
+                                            { value: "", label: "None" },
+                                            ...parties.map((p: any) => ({ value: String(p.id), label: p.partyType })),
+                                        ]}
+                                        placeholder="None"
+                                        className="min-w-[140px]"
+                                    />
                                 ) : (
                                     <Badge variant="outline">{customer.party?.partyType || "N/A"}</Badge>
                                 )}
@@ -486,19 +487,19 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Group</span>
                                 {isEditing ? (
-                                    <select
-                                        value={customer.group?.id || ""}
-                                        onChange={(e) => {
-                                            const selected = groups.find((g: any) => g.id === Number(e.target.value));
+                                    <StyledSelect
+                                        value={String(customer.group?.id || "")}
+                                        onChange={(val) => {
+                                            const selected = groups.find((g: any) => g.id === Number(val));
                                             setCustomer({ ...customer, group: selected || null });
                                         }}
-                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
-                                    >
-                                        <option value="">None</option>
-                                        {groups.map((g: any) => (
-                                            <option key={g.id} value={g.id} className="bg-card text-foreground">{g.groupName}</option>
-                                        ))}
-                                    </select>
+                                        options={[
+                                            { value: "", label: "None" },
+                                            ...groups.map((g: any) => ({ value: String(g.id), label: g.groupName })),
+                                        ]}
+                                        placeholder="None"
+                                        className="min-w-[140px]"
+                                    />
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.group?.groupName || "Unassigned"}</span>
                                 )}
@@ -506,23 +507,24 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Customer Type</span>
                                 {isEditing ? (
-                                    <select
+                                    <StyledSelect
                                         value={editCustomerType}
-                                        onChange={(e) => {
-                                            const type = e.target.value;
-                                            setEditCustomerType(type);
+                                        onChange={(val) => {
+                                            setEditCustomerType(val);
                                             setCustomer({ ...customer, customerCategory: null });
-                                            if (type === "GOVERNMENT") {
+                                            if (val === "GOVERNMENT") {
                                                 const govCat = categories.find((c: any) => c.categoryType === "GOVERNMENT");
                                                 if (govCat) setCustomer({ ...customer, customerCategory: govCat });
                                             }
                                         }}
-                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
-                                    >
-                                        <option value="">Select Type</option>
-                                        <option value="GOVERNMENT" className="bg-card text-foreground">Government</option>
-                                        <option value="NON_GOVERNMENT" className="bg-card text-foreground">Non-Government</option>
-                                    </select>
+                                        options={[
+                                            { value: "", label: "Select Type" },
+                                            { value: "GOVERNMENT", label: "Government" },
+                                            { value: "NON_GOVERNMENT", label: "Non-Government" },
+                                        ]}
+                                        placeholder="Select Type"
+                                        className="min-w-[140px]"
+                                    />
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">
                                         {customer.customerCategory?.categoryType === "GOVERNMENT" ? "Government" :
@@ -534,19 +536,19 @@ export default function CustomerProfilePage() {
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">Category</span>
                                     {isEditing ? (
-                                        <select
-                                            value={customer.customerCategory?.id || ""}
-                                            onChange={(e) => {
-                                                const selected = categories.find((c: any) => c.id === Number(e.target.value));
+                                        <StyledSelect
+                                            value={String(customer.customerCategory?.id || "")}
+                                            onChange={(val) => {
+                                                const selected = categories.find((c: any) => c.id === Number(val));
                                                 setCustomer({ ...customer, customerCategory: selected || null });
                                             }}
-                                            className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
-                                        >
-                                            <option value="">Select Category</option>
-                                            {categories.filter((c: any) => c.categoryType === "NON_GOVERNMENT").map((c: any) => (
-                                                <option key={c.id} value={c.id} className="bg-card text-foreground">{c.categoryName}</option>
-                                            ))}
-                                        </select>
+                                            options={[
+                                                { value: "", label: "Select Category" },
+                                                ...categories.filter((c: any) => c.categoryType === "NON_GOVERNMENT").map((c: any) => ({ value: String(c.id), label: c.categoryName })),
+                                            ]}
+                                            placeholder="Select Category"
+                                            className="min-w-[140px]"
+                                        />
                                     ) : (
                                         <span className="text-sm font-medium text-foreground">{customer.customerCategory?.categoryName || "Not set"}</span>
                                     )}
@@ -710,17 +712,19 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Frequency</span>
                                 {isEditing ? (
-                                    <select
+                                    <StyledSelect
                                         value={customer.statementFrequency || ""}
-                                        onChange={(e) => setCustomer({ ...customer, statementFrequency: e.target.value || null })}
-                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
-                                    >
-                                        <option value="">Not set</option>
-                                        <option value="MONTHLY" className="bg-card text-foreground">Monthly</option>
-                                        <option value="BIWEEKLY" className="bg-card text-foreground">Biweekly</option>
-                                        <option value="WEEKLY" className="bg-card text-foreground">Weekly</option>
-                                        <option value="CUSTOM" className="bg-card text-foreground">Custom</option>
-                                    </select>
+                                        onChange={(val) => setCustomer({ ...customer, statementFrequency: val || null })}
+                                        options={[
+                                            { value: "", label: "Not set" },
+                                            { value: "MONTHLY", label: "Monthly" },
+                                            { value: "BIWEEKLY", label: "Biweekly" },
+                                            { value: "WEEKLY", label: "Weekly" },
+                                            { value: "CUSTOM", label: "Custom" },
+                                        ]}
+                                        placeholder="Not set"
+                                        className="min-w-[140px]"
+                                    />
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.statementFrequency || "Not set"}</span>
                                 )}
@@ -728,16 +732,18 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Grouping</span>
                                 {isEditing ? (
-                                    <select
+                                    <StyledSelect
                                         value={customer.statementGrouping || ""}
-                                        onChange={(e) => setCustomer({ ...customer, statementGrouping: e.target.value || null })}
-                                        className="text-sm bg-secondary border border-border rounded px-2 py-1 text-foreground"
-                                    >
-                                        <option value="">Not set</option>
-                                        <option value="CUSTOMER_WISE" className="bg-card text-foreground">Customer Wise</option>
-                                        <option value="VEHICLE_WISE" className="bg-card text-foreground">Vehicle Wise</option>
-                                        <option value="BILL_WISE" className="bg-card text-foreground">Bill Wise</option>
-                                    </select>
+                                        onChange={(val) => setCustomer({ ...customer, statementGrouping: val || null })}
+                                        options={[
+                                            { value: "", label: "Not set" },
+                                            { value: "CUSTOMER_WISE", label: "Customer Wise" },
+                                            { value: "VEHICLE_WISE", label: "Vehicle Wise" },
+                                            { value: "BILL_WISE", label: "Bill Wise" },
+                                        ]}
+                                        placeholder="Not set"
+                                        className="min-w-[140px]"
+                                    />
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.statementGrouping?.replace(/_/g, ' ') || "Not set"}</span>
                                 )}
@@ -960,18 +966,18 @@ export default function CustomerProfilePage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-1">Product</label>
-                                <select
+                                <StyledSelect
                                     value={newIncentive.productId}
-                                    onChange={(e) => setNewIncentive({ ...newIncentive, productId: e.target.value })}
-                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
-                                >
-                                    <option value="" className="bg-card text-foreground">Select Product</option>
-                                    {allProducts
-                                        .filter(p => !customerIncentives.some((inc: any) => inc.product?.id === p.id && inc.active))
-                                        .map(p => (
-                                            <option key={p.id} value={p.id} className="bg-card text-foreground">{p.name} ({p.category})</option>
-                                        ))}
-                                </select>
+                                    onChange={(val) => setNewIncentive({ ...newIncentive, productId: val })}
+                                    options={[
+                                        { value: "", label: "Select Product" },
+                                        ...allProducts
+                                            .filter(p => !customerIncentives.some((inc: any) => inc.product?.id === p.id && inc.active))
+                                            .map(p => ({ value: String(p.id), label: `${p.name} (${p.category})` })),
+                                    ]}
+                                    placeholder="Select Product"
+                                    className="w-full"
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-1">Min Quantity (optional)</label>
@@ -1051,29 +1057,29 @@ export default function CustomerProfilePage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-1">Vehicle Type</label>
-                                <select
+                                <StyledSelect
                                     value={newVehicle.vehicleTypeId}
-                                    onChange={(e) => setNewVehicle({ ...newVehicle, vehicleTypeId: e.target.value })}
-                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
-                                >
-                                    <option value="" className="bg-card text-foreground">Select Type</option>
-                                    {vehicleTypes.map(vt => (
-                                        <option key={vt.id} value={vt.id} className="bg-card text-foreground">{vt.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setNewVehicle({ ...newVehicle, vehicleTypeId: val })}
+                                    options={[
+                                        { value: "", label: "Select Type" },
+                                        ...vehicleTypes.map(vt => ({ value: String(vt.id), label: vt.name || "" })),
+                                    ]}
+                                    placeholder="Select Type"
+                                    className="w-full"
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-1">Fuel Type</label>
-                                <select
+                                <StyledSelect
                                     value={newVehicle.fuelType}
-                                    onChange={(e) => setNewVehicle({ ...newVehicle, fuelType: e.target.value })}
-                                    className="w-full bg-secondary border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-cyan-500"
-                                >
-                                    <option value="" className="bg-card text-foreground">Select Fuel</option>
-                                    {products.map(p => (
-                                        <option key={p.id} value={p.id} className="bg-card text-foreground">{p.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setNewVehicle({ ...newVehicle, fuelType: val })}
+                                    options={[
+                                        { value: "", label: "Select Fuel" },
+                                        ...products.map(p => ({ value: String(p.id), label: p.name })),
+                                    ]}
+                                    placeholder="Select Fuel"
+                                    className="w-full"
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-1">Max Capacity (tank size in liters)</label>

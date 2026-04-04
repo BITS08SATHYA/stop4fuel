@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 function CustomerAutocomplete({
     customers,
@@ -351,16 +352,17 @@ export default function VehiclesPage() {
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="ALL">All Status</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="BLOCKED">Blocked</option>
-                        <option value="INACTIVE">Inactive</option>
-                    </select>
+                        onChange={(val) => setStatusFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Status" },
+                            { value: "ACTIVE", label: "Active" },
+                            { value: "BLOCKED", label: "Blocked" },
+                            { value: "INACTIVE", label: "Inactive" },
+                        ]}
+                        className="min-w-[140px]"
+                    />
                     <CustomerAutocomplete
                         customers={customers}
                         value={customerFilter}

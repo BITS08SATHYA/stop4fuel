@@ -9,6 +9,7 @@ import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 const API = API_BASE_URL;
 
@@ -194,16 +195,16 @@ function CustomerGroupMapping() {
                 <div className="h-8 w-px bg-border" />
 
                 {/* Assign controls */}
-                <select
+                <StyledSelect
                     value={targetGroupId}
-                    onChange={(e) => setTargetGroupId(e.target.value)}
-                    className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
-                >
-                    <option value="">Select group...</option>
-                    {groups.map((g) => (
-                        <option key={g.id} value={g.id}>{g.groupName}</option>
-                    ))}
-                </select>
+                    onChange={(val) => setTargetGroupId(val)}
+                    options={[
+                        { value: "", label: "Select group..." },
+                        ...groups.map((g) => ({ value: String(g.id), label: g.groupName })),
+                    ]}
+                    placeholder="Select group..."
+                    className="min-w-[160px]"
+                />
 
                 <PermissionGate permission="CUSTOMER_MANAGE">
                     <button
