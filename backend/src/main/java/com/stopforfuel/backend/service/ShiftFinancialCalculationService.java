@@ -35,7 +35,8 @@ public class ShiftFinancialCalculationService {
      */
     @Transactional(readOnly = true)
     public List<ReportLineItem> computeFinancialLineItems(ShiftClosingReport report, Long shiftId,
-                                                           BigDecimal creditBillTotal, int startSortOrder) {
+                                                           BigDecimal creditBillTotal, int startSortOrder,
+                                                           double testLitres, BigDecimal testAmount) {
         List<ReportLineItem> lineItems = new ArrayList<>();
         int sortOrder = startSortOrder;
 
@@ -99,6 +100,19 @@ public class ShiftFinancialCalculationService {
             item.setAmount(expenseTotal);
             item.setSortOrder(++sortOrder);
             lineItems.add(item);
+        }
+
+        // 12b. Test Quantity (fuel used for nozzle testing)
+        if (testLitres > 0 && testAmount != null && testAmount.compareTo(BigDecimal.ZERO) > 0) {
+            ReportLineItem testItem = new ReportLineItem();
+            testItem.setReport(report);
+            testItem.setSection("ADVANCE");
+            testItem.setCategory("TEST_QUANTITY");
+            testItem.setLabel("Test");
+            testItem.setQuantity(testLitres);
+            testItem.setAmount(testAmount);
+            testItem.setSortOrder(++sortOrder);
+            lineItems.add(testItem);
         }
 
         // 13. Incentive (from incentive_payment table)
