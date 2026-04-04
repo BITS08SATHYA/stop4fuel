@@ -292,7 +292,9 @@ public class ShiftSalesCalculationService {
             mr.setCloseReading(ni.getCloseMeterReading());
             mr.setSales(ni.getSales());
             mr.setTestQuantity(ni.getTestQuantity());
-            mr.setRate(ni.getRate());
+            mr.setRate(ni.getNozzle().getTank() != null && ni.getNozzle().getTank().getProduct() != null
+                    && ni.getNozzle().getTank().getProduct().getPrice() != null
+                    ? ni.getNozzle().getTank().getProduct().getPrice().doubleValue() : ni.getRate());
             mr.setAmount(ni.getAmount());
             data.getMeterReadings().add(mr);
         }
