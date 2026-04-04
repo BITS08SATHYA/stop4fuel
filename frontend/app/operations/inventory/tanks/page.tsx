@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getTankInventories,
     getTanks,
@@ -234,16 +235,16 @@ export default function TankInventoryPage() {
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={tankFilter}
-                        onChange={(e) => setTankFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="">All Tanks</option>
-                        {tanks.map((t) => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                    </select>
+                        onChange={(val) => setTankFilter(val)}
+                        options={[
+                            { value: "", label: "All Tanks" },
+                            ...tanks.map((t) => ({ value: String(t.id), label: t.name })),
+                        ]}
+                        placeholder="All Tanks"
+                        className="min-w-[160px]"
+                    />
                     <div className="flex items-center gap-2">
                         <label className="text-xs text-muted-foreground font-medium">From</label>
                         <input
@@ -400,16 +401,16 @@ export default function TankInventoryPage() {
                         </div>
                         <div className="col-span-1">
                             <label className="block text-sm font-medium text-foreground mb-1.5">Selected Tank</label>
-                            <select
+                            <StyledSelect
                                 value={tankId}
-                                onChange={(e) => { setTankId(e.target.value); clearError("tankId"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.tankId)}`}
-                            >
-                                <option value="">Select Tank...</option>
-                                {tanks.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name} ({t.product.name} - Cap: {t.capacity}L)</option>
-                                ))}
-                            </select>
+                                onChange={(val) => { setTankId(val); clearError("tankId"); }}
+                                options={[
+                                    { value: "", label: "Select Tank..." },
+                                    ...tanks.map(t => ({ value: String(t.id), label: `${t.name} (${t.product.name} - Cap: ${t.capacity}L)` })),
+                                ]}
+                                placeholder="Select Tank..."
+                                className={`w-full ${inputErrorClass(errors.tankId)}`}
+                            />
                             <FieldError error={errors.tankId} />
                         </div>
                     </div>

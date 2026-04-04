@@ -15,7 +15,7 @@ services:
       retries: 5
 
   backend:
-    image: 971422715802.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-backend:latest
+    image: ${ECR_REGISTRY}/stopforfuel-backend:latest
     container_name: stopforfuel-backend
     depends_on:
       postgres:
@@ -26,7 +26,7 @@ services:
       DATABASE_USER: postgres
       DATABASE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       SERVER_PORT: 8080
-      CORS_ALLOWED_ORIGINS: "https://stopforfuel.com,https://www.stopforfuel.com"
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://stopforfuel.com}
     ports:
       - "8080:8080"
     restart: unless-stopped

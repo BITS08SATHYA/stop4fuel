@@ -32,6 +32,9 @@ Thumbs.db
 .env.*.local
 *.log
 
+# === Terraform secrets (use .tfvars.example as template) ===
+infra/environments/*/terraform.tfvars
+
 # === Uploads ===
 uploads/
 

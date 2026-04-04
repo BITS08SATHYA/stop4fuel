@@ -293,6 +293,7 @@ public class PaymentService {
                 EAdvanceType type = EAdvanceType.valueOf("BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode);
                 eAdv.setAdvanceType(type);
                 eAdv.setPayment(payment);
+                eAdv.setStatement(payment.getStatement());
                 if ("CARD".equals(upperMode) && customerName != null) {
                     eAdv.setCustomerName(customerName);
                 }

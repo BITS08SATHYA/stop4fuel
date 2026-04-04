@@ -13,6 +13,7 @@ import {
     AlertCircle,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
@@ -266,17 +267,27 @@ export default function UtilityBillsPage() {
                             className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
-                        <option value="ALL">All Types</option>
-                        <option value="ELECTRICITY">Electricity</option>
-                        <option value="WATER">Water</option>
-                    </select>
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
-                        <option value="ALL">All Status</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="PAID">Paid</option>
-                        <option value="OVERDUE">Overdue</option>
-                    </select>
+                    <StyledSelect
+                        value={typeFilter}
+                        onChange={(val) => setTypeFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Types" },
+                            { value: "ELECTRICITY", label: "Electricity" },
+                            { value: "WATER", label: "Water" },
+                        ]}
+                        className="min-w-[140px]"
+                    />
+                    <StyledSelect
+                        value={statusFilter}
+                        onChange={(val) => setStatusFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Status" },
+                            { value: "PENDING", label: "Pending" },
+                            { value: "PAID", label: "Paid" },
+                            { value: "OVERDUE", label: "Overdue" },
+                        ]}
+                        className="min-w-[140px]"
+                    />
                 </div>
 
                 {/* Table */}
@@ -356,10 +367,15 @@ export default function UtilityBillsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Bill Type <span className="text-red-500">*</span></label>
-                            <select required value={billType} onChange={(e) => setBillType(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
-                                <option value="ELECTRICITY">Electricity</option>
-                                <option value="WATER">Water</option>
-                            </select>
+                            <StyledSelect
+                                value={billType}
+                                onChange={(val) => setBillType(val)}
+                                options={[
+                                    { value: "ELECTRICITY", label: "Electricity" },
+                                    { value: "WATER", label: "Water" },
+                                ]}
+                                className="w-full"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Provider <span className="text-red-500">*</span></label>
@@ -391,11 +407,16 @@ export default function UtilityBillsPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Status</label>
-                            <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none">
-                                <option value="PENDING">Pending</option>
-                                <option value="PAID">Paid</option>
-                                <option value="OVERDUE">Overdue</option>
-                            </select>
+                            <StyledSelect
+                                value={status}
+                                onChange={(val) => setStatus(val)}
+                                options={[
+                                    { value: "PENDING", label: "Pending" },
+                                    { value: "PAID", label: "Paid" },
+                                    { value: "OVERDUE", label: "Overdue" },
+                                ]}
+                                className="w-full"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Bill Period</label>
