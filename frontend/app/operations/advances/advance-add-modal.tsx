@@ -16,7 +16,7 @@ interface AdvanceAddModalProps {
 }
 
 export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: AdvanceAddModalProps) {
-    const [addType, setAddType] = useState("CASH_ADVANCE");
+    const [addType, setAddType] = useState("CASH");
     const [addAmount, setAddAmount] = useState("");
     const [addRecipientName, setAddRecipientName] = useState("");
     const [addRecipientPhone, setAddRecipientPhone] = useState("");
@@ -33,7 +33,7 @@ export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: Advan
     });
 
     const resetAddForm = () => {
-        setAddType("CASH_ADVANCE");
+        setAddType("CASH");
         setAddAmount("");
         setAddRecipientName("");
         setAddRecipientPhone("");
@@ -120,7 +120,7 @@ export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: Advan
                 </div>
 
                 {/* Employee Selector (for salary advance) */}
-                {addType === "SALARY_ADVANCE" && employees.length > 0 && (
+                {addType === "SALARY" && employees.length > 0 && (
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Select Employee</label>
                         <StyledSelect
