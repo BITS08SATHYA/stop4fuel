@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { Modal } from "@/components/ui/modal";
 import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import {
@@ -1034,16 +1035,15 @@ export default function ShiftsPage() {
                     {txnType === "UPI" && (
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">UPI Company</label>
-                            <select
+                            <StyledSelect
                                 value={selectedUpiCompanyId}
-                                onChange={(e) => { setSelectedUpiCompanyId(e.target.value); setNewUpiCompanyName(""); }}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 mb-2"
-                            >
-                                <option value="">Select or add new...</option>
-                                {upiCompanies.map((u) => (
-                                    <option key={u.id} value={u.id}>{u.companyName}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => { setSelectedUpiCompanyId(val); setNewUpiCompanyName(""); }}
+                                options={[
+                                    { value: "", label: "Select or add new..." },
+                                    ...upiCompanies.map((u) => ({ value: String(u.id), label: u.companyName })),
+                                ]}
+                                className="mb-2"
+                            />
                             {!selectedUpiCompanyId && (
                                 <input
                                     type="text"
@@ -1097,16 +1097,15 @@ export default function ShiftsPage() {
                             <InputField label="Description" value={expenseDescription} onChange={setExpenseDescription} placeholder="What was the expense for?" />
                             <div>
                                 <label className="block text-xs font-medium text-foreground mb-1">Expense Type</label>
-                                <select
+                                <StyledSelect
                                     value={selectedExpenseTypeId}
-                                    onChange={(e) => { setSelectedExpenseTypeId(e.target.value); setNewExpenseTypeName(""); }}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 mb-2"
-                                >
-                                    <option value="">Select or add new...</option>
-                                    {expenseTypes.map((et) => (
-                                        <option key={et.id} value={et.id}>{et.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => { setSelectedExpenseTypeId(val); setNewExpenseTypeName(""); }}
+                                    options={[
+                                        { value: "", label: "Select or add new..." },
+                                        ...expenseTypes.map((et) => ({ value: String(et.id), label: et.name })),
+                                    ]}
+                                    className="mb-2"
+                                />
                                 {!selectedExpenseTypeId && (
                                     <input
                                         type="text"

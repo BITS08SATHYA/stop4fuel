@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { Badge } from "@/components/ui/badge";
 import {
     Phone, Search, AlertTriangle, Clock, ChevronRight,
@@ -218,15 +219,15 @@ export default function CreditOverviewPage() {
                                     className="w-full pl-8 pr-3 py-1.5 bg-card border border-border rounded-lg text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
                                 />
                             </div>
-                            <select
+                            <StyledSelect
                                 value={categoryFilter}
-                                onChange={(e) => setCategoryFilter(e.target.value)}
-                                className="px-2 py-1.5 bg-card border border-border rounded-lg text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
-                            >
-                                <option value="">All</option>
-                                <option value="GOVERNMENT">Govt</option>
-                                <option value="NON_GOVERNMENT">Non-Govt</option>
-                            </select>
+                                onChange={(val) => setCategoryFilter(val)}
+                                options={[
+                                    { value: "", label: "All" },
+                                    { value: "GOVERNMENT", label: "Govt" },
+                                    { value: "NON_GOVERNMENT", label: "Non-Govt" },
+                                ]}
+                            />
                             {(listFilter !== "all" || search) && (
                                 <button
                                     onClick={() => { setListFilter("all"); setSearch(""); }}

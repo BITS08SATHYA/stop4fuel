@@ -389,15 +389,16 @@ export default function ExplorerPage() {
                         </div>
                         <div className="w-36">
                             <label className="text-xs text-muted-foreground mb-1 block">Status</label>
-                            <select
+                            <StyledSelect
                                 value={statusFilter}
-                                onChange={(e) => { setStatusFilter(e.target.value); handleFilterChange(); }}
-                                className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="">All</option>
-                                <option value="NOT_PAID">Not Paid</option>
-                                <option value="PAID">Paid</option>
-                            </select>
+                                onChange={(val) => { setStatusFilter(val); handleFilterChange(); }}
+                                options={[
+                                    { value: "", label: "All" },
+                                    { value: "NOT_PAID", label: "Not Paid" },
+                                    { value: "PAID", label: "Paid" },
+                                ]}
+                                className="w-full"
+                            />
                         </div>
                         <div className="w-40">
                             <label className="text-xs text-muted-foreground mb-1 block">From Date</label>

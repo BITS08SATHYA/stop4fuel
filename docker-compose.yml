@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: stopforfuel
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
     ports:
       - "5432:5432"
     volumes:
@@ -26,7 +26,7 @@ services:
     environment:
       DATABASE_URL: jdbc:postgresql://postgres:5432/stopforfuel
       DATABASE_USER: postgres
-      DATABASE_PASSWORD: password
+      DATABASE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,7 +37,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://100.52.228.13:8080/api
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
     container_name: stopforfuel-frontend
     ports:
       - "3000:3000"

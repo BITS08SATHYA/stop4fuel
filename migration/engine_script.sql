@@ -196,7 +196,7 @@ BEGIN
         VALUES (v_id,'emp_'||r.employeeid,(SELECT id FROM roles WHERE role_type=v_role LIMIT 1),r.employee_joindate,v_st);
         INSERT INTO employees (id,designation_id,salary,aadhar_number,bank_name,bank_ifsc,bank_account_number,
             gender,date_of_birth,blood_group,employee_code,termination_date)
-        VALUES (v_id,(SELECT id FROM designations WHERE name=v_desig LIMIT 1),COALESCE(r.employee_salary,0),v_a,
+        VALUES (v_id,(SELECT id FROM designations WHERE name=v_desig LIMIT 1),LEAST(COALESCE(r.employee_salary,0),9999999),v_a,
             NULLIF(TRIM(COALESCE(r.employee_bankname,'')),''),NULLIF(TRIM(COALESCE(r.employee_ifsc,'')),''),
             NULLIF(TRIM(COALESCE(r.employee_bankaccno,'')),''),v_g,r.employee_birthdate,
             NULLIF(TRIM(COALESCE(r.employeebloodgrp,'')),''),'emp'||LPAD(r.employeeid::TEXT,3,'0'),r.employeeterminationdate);

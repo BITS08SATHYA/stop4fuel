@@ -9,6 +9,7 @@ import {
     Package, RotateCcw, Pencil, Trash2, Plus, X, Save
 } from "lucide-react";
 import { FormErrorBanner } from "@/components/ui/field-error";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { PermissionGate } from "@/components/permission-gate";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
@@ -331,39 +332,39 @@ export default function InvoiceHistoryPage() {
                     </div>
                     <div className="min-w-[130px]">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Bill Type</label>
-                        <select
+                        <StyledSelect
                             value={filters.billType}
-                            onChange={e => setFilters(f => ({ ...f, billType: e.target.value }))}
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
-                        >
-                            <option value="">All</option>
-                            <option value="CASH">Cash</option>
-                            <option value="CREDIT">Credit</option>
-                        </select>
+                            onChange={(val) => setFilters(f => ({ ...f, billType: val }))}
+                            options={[
+                                { value: "", label: "All" },
+                                { value: "CASH", label: "Cash" },
+                                { value: "CREDIT", label: "Credit" },
+                            ]}
+                        />
                     </div>
                     <div className="min-w-[140px]">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Payment Status</label>
-                        <select
+                        <StyledSelect
                             value={filters.paymentStatus}
-                            onChange={e => setFilters(f => ({ ...f, paymentStatus: e.target.value }))}
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
-                        >
-                            <option value="">All</option>
-                            <option value="PAID">Paid</option>
-                            <option value="NOT_PAID">Not Paid</option>
-                        </select>
+                            onChange={(val) => setFilters(f => ({ ...f, paymentStatus: val }))}
+                            options={[
+                                { value: "", label: "All" },
+                                { value: "PAID", label: "Paid" },
+                                { value: "NOT_PAID", label: "Not Paid" },
+                            ]}
+                        />
                     </div>
                     <div className="min-w-[150px]">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Category</label>
-                        <select
+                        <StyledSelect
                             value={filters.categoryType}
-                            onChange={e => setFilters(f => ({ ...f, categoryType: e.target.value }))}
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
-                        >
-                            <option value="">All</option>
-                            <option value="GOVERNMENT">Government</option>
-                            <option value="NON_GOVERNMENT">Non-Government</option>
-                        </select>
+                            onChange={(val) => setFilters(f => ({ ...f, categoryType: val }))}
+                            options={[
+                                { value: "", label: "All" },
+                                { value: "GOVERNMENT", label: "Government" },
+                                { value: "NON_GOVERNMENT", label: "Non-Government" },
+                            ]}
+                        />
                     </div>
                     <div className="flex-1 min-w-[200px]">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Search</label>
@@ -657,20 +658,18 @@ export default function InvoiceHistoryPage() {
                         </div>
                         <div>
                             <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Vehicle</label>
-                            <select
-                                value={editVehicle?.id || ""}
-                                onChange={(e) => {
-                                    const vid = Number(e.target.value);
+                            <StyledSelect
+                                value={String(editVehicle?.id || "")}
+                                onChange={(val) => {
+                                    const vid = Number(val);
                                     const v = editCustomerVehicles.find((v: any) => v.id === vid) || editVehicleResults.find(v => v.id === vid) || null;
                                     setEditVehicle(v);
                                 }}
-                                className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground"
-                            >
-                                <option value="">— No vehicle —</option>
-                                {editCustomerVehicles.map((v: any) => (
-                                    <option key={v.id} value={v.id}>{v.vehicleNumber}</option>
-                                ))}
-                            </select>
+                                options={[
+                                    { value: "", label: "— No vehicle —" },
+                                    ...editCustomerVehicles.map((v: any) => ({ value: String(v.id), label: v.vehicleNumber })),
+                                ]}
+                            />
                             {/* Vehicle search for non-customer vehicles */}
                             <input
                                 value={editVehicleSearch}
@@ -716,38 +715,34 @@ export default function InvoiceHistoryPage() {
                                 <div key={idx} className="grid grid-cols-12 gap-2 items-end p-3 rounded-lg bg-muted/30 border border-border/30">
                                     <div className="col-span-3">
                                         <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Product</label>
-                                        <select
-                                            value={line.product?.id || ""}
-                                            onChange={e => {
-                                                const p = allProducts.find(pr => pr.id === Number(e.target.value)) || null;
+                                        <StyledSelect
+                                            value={String(line.product?.id || "")}
+                                            onChange={(val) => {
+                                                const p = allProducts.find(pr => pr.id === Number(val)) || null;
                                                 updateEditLine(idx, {
                                                     product: p,
                                                     unitPrice: p ? String(p.price) : line.unitPrice,
                                                 });
                                             }}
-                                            className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground"
-                                        >
-                                            <option value="">Select...</option>
-                                            {allProducts.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
+                                            options={[
+                                                { value: "", label: "Select..." },
+                                                ...allProducts.map(p => ({ value: String(p.id), label: p.name })),
+                                            ]}
+                                        />
                                     </div>
                                     <div className="col-span-2">
                                         <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Nozzle</label>
-                                        <select
-                                            value={line.nozzle?.id || ""}
-                                            onChange={e => {
-                                                const n = allNozzles.find(nz => nz.id === Number(e.target.value)) || null;
+                                        <StyledSelect
+                                            value={String(line.nozzle?.id || "")}
+                                            onChange={(val) => {
+                                                const n = allNozzles.find(nz => nz.id === Number(val)) || null;
                                                 updateEditLine(idx, { nozzle: n });
                                             }}
-                                            className="w-full px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground"
-                                        >
-                                            <option value="">—</option>
-                                            {allNozzles.map(n => (
-                                                <option key={n.id} value={n.id}>{n.nozzleName}</option>
-                                            ))}
-                                        </select>
+                                            options={[
+                                                { value: "", label: "—" },
+                                                ...allNozzles.map(n => ({ value: String(n.id), label: n.nozzleName })),
+                                            ]}
+                                        />
                                     </div>
                                     <div className="col-span-1">
                                         <label className="block text-[9px] font-bold uppercase text-muted-foreground mb-0.5">Qty</label>
