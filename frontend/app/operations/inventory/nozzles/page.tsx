@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getNozzleInventories,
     getNozzles,
@@ -210,16 +211,26 @@ export default function NozzleInventoryPage() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
                     </div>
-                    <select value={nozzleFilter} onChange={(e) => { setNozzleFilter(e.target.value); if (e.target.value) setProductFilter(""); }}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                        <option value="">All Nozzles</option>
-                        {nozzles.map((n) => <option key={n.id} value={n.id}>{n.nozzleName} ({n.pump.name})</option>)}
-                    </select>
-                    <select value={productFilter} onChange={(e) => { setProductFilter(e.target.value); if (e.target.value) setNozzleFilter(""); }}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-                        <option value="">All Products</option>
-                        {uniqueProducts.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                    <StyledSelect
+                        value={nozzleFilter}
+                        onChange={(val) => { setNozzleFilter(val); if (val) setProductFilter(""); }}
+                        options={[
+                            { value: "", label: "All Nozzles" },
+                            ...nozzles.map((n) => ({ value: String(n.id), label: `${n.nozzleName} (${n.pump.name})` })),
+                        ]}
+                        placeholder="All Nozzles"
+                        className="min-w-[160px]"
+                    />
+                    <StyledSelect
+                        value={productFilter}
+                        onChange={(val) => { setProductFilter(val); if (val) setNozzleFilter(""); }}
+                        options={[
+                            { value: "", label: "All Products" },
+                            ...uniqueProducts.map((p) => ({ value: String(p.id), label: p.name })),
+                        ]}
+                        placeholder="All Products"
+                        className="min-w-[160px]"
+                    />
                     <div className="flex items-center gap-2">
                         <label className="text-xs text-muted-foreground font-medium">From</label>
                         <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
@@ -388,11 +399,16 @@ export default function NozzleInventoryPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Selected Nozzle</label>
-                            <select value={nozzleId} onChange={(e) => { setNozzleId(e.target.value); clearError("nozzleId"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.nozzleId)}`}>
-                                <option value="">Select Nozzle...</option>
-                                {nozzles.map(n => <option key={n.id} value={n.id}>{n.nozzleName} ({n.pump.name} - {n.tank.productName})</option>)}
-                            </select>
+                            <StyledSelect
+                                value={nozzleId}
+                                onChange={(val) => { setNozzleId(val); clearError("nozzleId"); }}
+                                options={[
+                                    { value: "", label: "Select Nozzle..." },
+                                    ...nozzles.map(n => ({ value: String(n.id), label: `${n.nozzleName} (${n.pump.name} - ${n.tank.productName})` })),
+                                ]}
+                                placeholder="Select Nozzle..."
+                                className={`w-full ${inputErrorClass(errors.nozzleId)}`}
+                            />
                             <FieldError error={errors.nozzleId} />
                         </div>
                         <div>

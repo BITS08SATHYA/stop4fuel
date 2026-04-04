@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getSuppliers,
     createSupplier,
@@ -176,15 +177,16 @@ export default function SuppliersPage() {
                                 className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>
-                        <select
+                        <StyledSelect
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="ALL">All Status</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE">Inactive</option>
-                        </select>
+                            onChange={(val) => setStatusFilter(val)}
+                            options={[
+                                { value: "ALL", label: "All Status" },
+                                { value: "ACTIVE", label: "Active" },
+                                { value: "INACTIVE", label: "Inactive" },
+                            ]}
+                            className="min-w-[140px]"
+                        />
                     </div>
 
                     <GlassCard className="overflow-hidden border-none p-0">

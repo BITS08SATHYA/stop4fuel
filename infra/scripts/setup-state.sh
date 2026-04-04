@@ -7,24 +7,24 @@ set -euo pipefail
 
 echo "Creating Terraform state buckets..."
 
-# Dev state bucket (us-east-1, sathya-nyu profile)
+# Dev state bucket (us-east-1, ${AWS_DEV_PROFILE:-default} profile)
 echo "→ Creating dev state bucket..."
 aws s3api create-bucket \
   --bucket stopforfuel-terraform-state-dev \
   --region us-east-1 \
-  --profile sathya-nyu
+  --profile ${AWS_DEV_PROFILE:-default}
 
 aws s3api put-bucket-versioning \
   --bucket stopforfuel-terraform-state-dev \
   --versioning-configuration Status=Enabled \
-  --profile sathya-nyu
+  --profile ${AWS_DEV_PROFILE:-default}
 
 aws s3api put-bucket-encryption \
   --bucket stopforfuel-terraform-state-dev \
   --server-side-encryption-configuration '{
     "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]
   }' \
-  --profile sathya-nyu
+  --profile ${AWS_DEV_PROFILE:-default}
 
 aws s3api put-public-access-block \
   --bucket stopforfuel-terraform-state-dev \
@@ -34,7 +34,7 @@ aws s3api put-public-access-block \
     "BlockPublicPolicy": true,
     "RestrictPublicBuckets": true
   }' \
-  --profile sathya-nyu
+  --profile ${AWS_DEV_PROFILE:-default}
 
 echo "✓ Dev state bucket created"
 

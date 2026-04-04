@@ -330,27 +330,27 @@ export default function InvoiceExplorerPage() {
                         </div>
                         <div className="w-32">
                             <label className="text-xs text-muted-foreground mb-1 block">Bill Type</label>
-                            <select
+                            <StyledSelect
                                 value={billTypeFilter}
-                                onChange={(e) => { setBillTypeFilter(e.target.value); handleFilterChange(); }}
-                                className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="">All</option>
-                                <option value="CASH">Cash</option>
-                                <option value="CREDIT">Credit</option>
-                            </select>
+                                onChange={(val) => { setBillTypeFilter(val); handleFilterChange(); }}
+                                options={[
+                                    { value: "", label: "All" },
+                                    { value: "CASH", label: "Cash" },
+                                    { value: "CREDIT", label: "Credit" },
+                                ]}
+                            />
                         </div>
                         <div className="w-32">
                             <label className="text-xs text-muted-foreground mb-1 block">Status</label>
-                            <select
+                            <StyledSelect
                                 value={paymentStatusFilter}
-                                onChange={(e) => { setPaymentStatusFilter(e.target.value); handleFilterChange(); }}
-                                className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="">All</option>
-                                <option value="PAID">Paid</option>
-                                <option value="NOT_PAID">Unpaid</option>
-                            </select>
+                                onChange={(val) => { setPaymentStatusFilter(val); handleFilterChange(); }}
+                                options={[
+                                    { value: "", label: "All" },
+                                    { value: "PAID", label: "Paid" },
+                                    { value: "NOT_PAID", label: "Unpaid" },
+                                ]}
+                            />
                         </div>
                         <div className="w-40">
                             <label className="text-xs text-muted-foreground mb-1 block">From Date</label>

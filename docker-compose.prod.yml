@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: REDACTED.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-db:latest
+    image: ${ECR_REGISTRY}/stopforfuel-db:latest
     container_name: stopforfuel-postgres
     environment:
       POSTGRES_DB: stopforfuel
@@ -18,7 +18,7 @@ services:
       - stopforfuel-net
 
   backend:
-    image: REDACTED.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-backend:latest
+    image: ${ECR_REGISTRY}/stopforfuel-backend:latest
     container_name: stopforfuel-backend
     expose:
       - "8080"
@@ -42,7 +42,7 @@ services:
       - stopforfuel-net
 
   frontend:
-    image: REDACTED.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-frontend:latest
+    image: ${ECR_REGISTRY}/stopforfuel-frontend:latest
     container_name: stopforfuel-frontend
     expose:
       - "3000"

@@ -13,6 +13,7 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { useFormValidation, required, min, max, custom } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
@@ -329,16 +330,17 @@ export default function LeaveManagementPage() {
                                     className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
-                            <select
+                            <StyledSelect
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="PENDING">Pending</option>
-                                <option value="APPROVED">Approved</option>
-                                <option value="REJECTED">Rejected</option>
-                            </select>
+                                onChange={(val) => setStatusFilter(val)}
+                                options={[
+                                    { value: "ALL", label: "All Status" },
+                                    { value: "PENDING", label: "Pending" },
+                                    { value: "APPROVED", label: "Approved" },
+                                    { value: "REJECTED", label: "Rejected" },
+                                ]}
+                                className="min-w-[140px]"
+                            />
                         </div>
 
                         {filteredRequests.length === 0 ? (
@@ -478,16 +480,16 @@ export default function LeaveManagementPage() {
                         <div className="flex gap-3 mb-6 items-end">
                             <div>
                                 <label className="block text-sm font-medium text-foreground mb-1.5">Employee</label>
-                                <select
+                                <StyledSelect
                                     value={balanceEmployeeId}
-                                    onChange={(e) => setBalanceEmployeeId(e.target.value)}
-                                    className="bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none min-w-[200px]"
-                                >
-                                    <option value="">Select Employee</option>
-                                    {employees.filter(e => e.status?.toUpperCase() === "ACTIVE").map((emp) => (
-                                        <option key={emp.id} value={emp.id}>{emp.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setBalanceEmployeeId(val)}
+                                    options={[
+                                        { value: "", label: "Select Employee" },
+                                        ...employees.filter(e => e.status?.toUpperCase() === "ACTIVE").map((emp) => ({ value: String(emp.id), label: emp.name })),
+                                    ]}
+                                    placeholder="Select Employee"
+                                    className="min-w-[200px]"
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-foreground mb-1.5">Year</label>
@@ -550,32 +552,32 @@ export default function LeaveManagementPage() {
                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Employee <span className="text-red-500">*</span>
                             </label>
-                            <select
+                            <StyledSelect
                                 value={selectedEmployeeId}
-                                onChange={(e) => { setSelectedEmployeeId(e.target.value); clearReqError("employeeId"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none ${inputErrorClass(reqErrors.employeeId)}`}
-                            >
-                                <option value="">Select Employee</option>
-                                {employees.filter(e => e.status?.toUpperCase() === "ACTIVE").map((emp) => (
-                                    <option key={emp.id} value={emp.id}>{emp.name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => { setSelectedEmployeeId(val); clearReqError("employeeId"); }}
+                                options={[
+                                    { value: "", label: "Select Employee" },
+                                    ...employees.filter(e => e.status?.toUpperCase() === "ACTIVE").map((emp) => ({ value: String(emp.id), label: emp.name })),
+                                ]}
+                                placeholder="Select Employee"
+                                className={`w-full ${inputErrorClass(reqErrors.employeeId)}`}
+                            />
                             <FieldError error={reqErrors.employeeId} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Leave Type <span className="text-red-500">*</span>
                             </label>
-                            <select
+                            <StyledSelect
                                 value={selectedLeaveTypeId}
-                                onChange={(e) => { setSelectedLeaveTypeId(e.target.value); clearReqError("leaveTypeId"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none ${inputErrorClass(reqErrors.leaveTypeId)}`}
-                            >
-                                <option value="">Select Type</option>
-                                {leaveTypes.map((lt) => (
-                                    <option key={lt.id} value={lt.id}>{lt.name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => { setSelectedLeaveTypeId(val); clearReqError("leaveTypeId"); }}
+                                options={[
+                                    { value: "", label: "Select Type" },
+                                    ...leaveTypes.map((lt) => ({ value: String(lt.id), label: lt.name })),
+                                ]}
+                                placeholder="Select Type"
+                                className={`w-full ${inputErrorClass(reqErrors.leaveTypeId)}`}
+                            />
                             <FieldError error={reqErrors.leaveTypeId} />
                         </div>
                         <div>

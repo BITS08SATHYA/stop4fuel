@@ -7,6 +7,7 @@ import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { Plus, Search, RotateCcw, Loader2, Pencil, X, Save } from "lucide-react";
 import { CreateUserModal } from "@/components/users/create-user-modal";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 const getApiBaseUrl = () => {
     if (typeof window !== "undefined") {
@@ -224,27 +225,31 @@ export default function UsersPage() {
                             className="w-full pl-9 pr-3 py-2 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={typeFilter}
-                        onChange={(e) => setTypeFilter(e.target.value)}
-                        className="px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="">All Types</option>
-                        <option value="EMPLOYEE">Employees</option>
-                        <option value="CUSTOMER">Customers</option>
-                    </select>
-                    <select
+                        onChange={(val) => setTypeFilter(val)}
+                        options={[
+                            { value: "", label: "All Types" },
+                            { value: "EMPLOYEE", label: "Employees" },
+                            { value: "CUSTOMER", label: "Customers" },
+                        ]}
+                        placeholder="All Types"
+                        className="min-w-[140px]"
+                    />
+                    <StyledSelect
                         value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
-                        className="px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="">All Roles</option>
-                        <option value="OWNER">Owner</option>
-                        <option value="ADMIN">Admin</option>
-                        <option value="CASHIER">Cashier</option>
-                        <option value="EMPLOYEE">Employee</option>
-                        <option value="CUSTOMER">Customer</option>
-                    </select>
+                        onChange={(val) => setRoleFilter(val)}
+                        options={[
+                            { value: "", label: "All Roles" },
+                            { value: "OWNER", label: "Owner" },
+                            { value: "ADMIN", label: "Admin" },
+                            { value: "CASHIER", label: "Cashier" },
+                            { value: "EMPLOYEE", label: "Employee" },
+                            { value: "CUSTOMER", label: "Customer" },
+                        ]}
+                        placeholder="All Roles"
+                        className="min-w-[140px]"
+                    />
                 </div>
 
                 {/* Table */}
@@ -349,30 +354,27 @@ export default function UsersPage() {
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-sm font-medium block mb-1">Role</label>
-                                    <select
+                                    <StyledSelect
                                         value={editRole}
-                                        onChange={(e) => setEditRole(e.target.value)}
-                                        className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    >
-                                        {ROLES.map(r => (
-                                            <option key={r} value={r}>{r}</option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => setEditRole(val)}
+                                        options={ROLES.map(r => ({ value: r, label: r }))}
+                                        className="w-full"
+                                    />
                                 </div>
 
                                 {editUser.userType === "EMPLOYEE" && (
                                     <div>
                                         <label className="text-sm font-medium block mb-1">Designation</label>
-                                        <select
+                                        <StyledSelect
                                             value={editDesignation}
-                                            onChange={(e) => setEditDesignation(e.target.value)}
-                                            className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        >
-                                            <option value="">No designation</option>
-                                            {designations.map(d => (
-                                                <option key={d.id} value={d.name}>{d.name}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(val) => setEditDesignation(val)}
+                                            options={[
+                                                { value: "", label: "No designation" },
+                                                ...designations.map(d => ({ value: d.name, label: d.name })),
+                                            ]}
+                                            placeholder="No designation"
+                                            className="w-full"
+                                        />
                                     </div>
                                 )}
                             </div>
