@@ -64,12 +64,12 @@ public class ShiftSalesCalculationService {
         List<ReportLineItem> lineItems = new ArrayList<>();
         int sortOrder = startSortOrder;
 
-        // 1. Fuel Sales: group ALL invoices by product
+        // 1a. Cash/Credit bill totals and oil sales from invoices
         List<InvoiceBill> allInvoices = invoiceBillRepository.findByShiftId(shiftId);
-        Map<String, double[]> fuelSales = new LinkedHashMap<>(); // productName -> [litres, amount, rate]
-
         BigDecimal cashBillTotal = BigDecimal.ZERO;
         BigDecimal creditBillTotal = BigDecimal.ZERO;
+
+        Map<String, double[]> oilSales = new LinkedHashMap<>();
 
         for (InvoiceBill inv : allInvoices) {
             if (com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())) {
@@ -80,36 +80,75 @@ public class ShiftSalesCalculationService {
 
             if (inv.getProducts() != null) {
                 for (InvoiceProduct ip : inv.getProducts()) {
-                    String productName = ip.getProduct() != null ? ip.getProduct().getName() : "Unknown";
                     String category = ip.getProduct() != null ? ip.getProduct().getCategory() : "FUEL";
-                    double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
-                    double amt = ip.getAmount() != null ? ip.getAmount().doubleValue() : 0;
-                    double rate = ip.getUnitPrice() != null ? ip.getUnitPrice().doubleValue() : 0;
-
-                    if ("FUEL".equalsIgnoreCase(category)) {
-                        fuelSales.merge(productName, new double[]{qty, amt, rate},
-                                (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2]});
-                    } else {
-                        // Oil/lubricant sales grouped separately
-                        fuelSales.merge("OIL:" + productName, new double[]{qty, amt, rate},
+                    if (!"FUEL".equalsIgnoreCase(category)) {
+                        String productName = ip.getProduct() != null ? ip.getProduct().getName() : "Unknown";
+                        double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
+                        double amt = ip.getAmount() != null ? ip.getAmount().doubleValue() : 0;
+                        double rate = ip.getUnitPrice() != null ? ip.getUnitPrice().doubleValue() : 0;
+                        oilSales.merge(productName, new double[]{qty, amt, rate},
                                 (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2]});
                     }
                 }
             }
         }
 
+        // 1b. Fuel Sales: compute from nozzle meter readings, grouped by product
+        Map<String, double[]> fuelSales = new LinkedHashMap<>(); // productName -> [netLitres, amount, rate]
+        double totalTestLitres = 0;
+        double totalTestAmount = 0;
+        List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
+        for (NozzleInventory ni : nozzleInvs) {
+            if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
+                    || ni.getNozzle().getTank().getProduct() == null) continue;
+            String productName = ni.getNozzle().getTank().getProduct().getName();
+            double sales = ni.getSales() != null ? ni.getSales() : 0;
+            double test = ni.getTestQuantity() != null ? ni.getTestQuantity() : 0;
+            double rate = ni.getRate() != null ? ni.getRate() : 0;
+            double netLitres = sales - test;
+            double amount = netLitres * rate;
+            fuelSales.merge(productName, new double[]{netLitres, amount, rate},
+                    (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2]});
+            totalTestLitres += test;
+            totalTestAmount += test * rate;
+        }
+
         // Add fuel product lines
         for (Map.Entry<String, double[]> entry : fuelSales.entrySet()) {
-            String key = entry.getKey();
             double[] vals = entry.getValue();
-            boolean isOil = key.startsWith("OIL:");
-            String name = isOil ? key.substring(4) : key;
-
             ReportLineItem item = new ReportLineItem();
             item.setReport(report);
             item.setSection("REVENUE");
-            item.setCategory(isOil ? "OIL_SALES" : "FUEL_SALES");
-            item.setLabel(name);
+            item.setCategory("FUEL_SALES");
+            item.setLabel(entry.getKey());
+            item.setQuantity(vals[0]);
+            item.setRate(BigDecimal.valueOf(vals[2]).setScale(4, RoundingMode.HALF_UP));
+            item.setAmount(BigDecimal.valueOf(vals[1]).setScale(4, RoundingMode.HALF_UP));
+            item.setSortOrder(++sortOrder);
+            lineItems.add(item);
+        }
+
+        // Add test quantity as separate line item
+        if (totalTestLitres > 0) {
+            ReportLineItem testItem = new ReportLineItem();
+            testItem.setReport(report);
+            testItem.setSection("REVENUE");
+            testItem.setCategory("TEST_QUANTITY");
+            testItem.setLabel("Test");
+            testItem.setQuantity(totalTestLitres);
+            testItem.setAmount(BigDecimal.valueOf(totalTestAmount).setScale(4, RoundingMode.HALF_UP));
+            testItem.setSortOrder(++sortOrder);
+            lineItems.add(testItem);
+        }
+
+        // Add oil/lubricant sales lines
+        for (Map.Entry<String, double[]> entry : oilSales.entrySet()) {
+            double[] vals = entry.getValue();
+            ReportLineItem item = new ReportLineItem();
+            item.setReport(report);
+            item.setSection("REVENUE");
+            item.setCategory("OIL_SALES");
+            item.setLabel(entry.getKey());
             item.setQuantity(vals[0]);
             item.setRate(BigDecimal.valueOf(vals[2]).setScale(4, RoundingMode.HALF_UP));
             item.setAmount(BigDecimal.valueOf(vals[1]).setScale(4, RoundingMode.HALF_UP));

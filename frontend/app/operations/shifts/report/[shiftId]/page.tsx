@@ -54,7 +54,7 @@ function fmtQty(v?: number) {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-    FUEL_SALES: "Fuel Sales", OIL_SALES: "Oil / Lubricant", BILL_PAYMENT: "Bill Payments",
+    FUEL_SALES: "Fuel Sales", TEST_QUANTITY: "Test", OIL_SALES: "Oil / Lubricant", BILL_PAYMENT: "Bill Payments",
     STATEMENT_PAYMENT: "Statement Payments", EXTERNAL_INFLOW: "External Cash Inflow",
     CREDIT_BILLS: "Credit Bills", CARD: "Card", CCMS: "CCMS", UPI: "UPI",
     BANK: "Bank Transfer", CHEQUE: "Cheque", CASH_ADVANCE: "Cash Advance",
