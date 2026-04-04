@@ -2,13 +2,13 @@ app:
   auth:
     enabled: false
   jwt:
-    secret: stopforfuel-dev-secret-key-min-32-chars!!
+    secret: ${JWT_SECRET:change-me-set-via-env-variable-min-32}
   seed-test-data:
     enabled: true
 
 spring:
   datasource:
-    password: ${DATABASE_PASSWORD:myPassword}
+    password: ${DATABASE_PASSWORD}
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration

@@ -4,8 +4,12 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  type    = string
-  default = "stopforfuel-prod"
+  type = string
+}
+
+variable "aws_account_id" {
+  type        = string
+  description = "AWS account ID for ECR registry and IAM ARNs"
 }
 
 variable "project_name" {
@@ -23,24 +27,20 @@ variable "vpc_cidr" {
   default = "10.0.0.0/16"
 }
 
-# Cognito (existing)
+# Cognito
 variable "cognito_user_pool_id" {
-  type    = string
-  default = "ap-south-1_1jBWQOLC2"
+  type = string
 }
 
 variable "cognito_client_id" {
-  type    = string
-  default = "4mgdk5ld0hfc5hglc3tvklr5li"
+  type = string
 }
 
 variable "cognito_domain" {
-  type    = string
-  default = "stopforfuel-prod.auth.ap-south-1.amazoncognito.com"
+  type = string
 }
 
 # ACM certificate for ALB HTTPS
 variable "acm_certificate_arn" {
-  type    = string
-  default = "arn:aws:acm:ap-south-1:607856468014:certificate/e716a28c-5a0c-4a06-a7b9-903a478cc755"
+  type = string
 }

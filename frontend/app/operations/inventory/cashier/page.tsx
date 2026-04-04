@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getCashierStocks,
     getActiveProducts,
@@ -268,17 +269,16 @@ export default function CashierStockPage() {
                     <FormErrorBanner message={apiError} />
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Product</label>
-                        <select
+                        <StyledSelect
                             value={productId}
-                            onChange={(e) => { setProductId(e.target.value); clearError("productId"); }}
-                            disabled={!!editingId}
-                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground disabled:opacity-50 ${inputErrorClass(errors.productId)}`}
-                        >
-                            <option value="">Select a product...</option>
-                            {products.map((p) => (
-                                <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
-                            ))}
-                        </select>
+                            onChange={(val) => { setProductId(val); clearError("productId"); }}
+                            options={[
+                                { value: "", label: "Select a product..." },
+                                ...products.map((p) => ({ value: String(p.id), label: `${p.name} (${p.unit})` })),
+                            ]}
+                            placeholder="Select a product..."
+                            className={`w-full ${!!editingId ? "opacity-50 pointer-events-none" : ""} ${inputErrorClass(errors.productId)}`}
+                        />
                         <FieldError error={errors.productId} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
