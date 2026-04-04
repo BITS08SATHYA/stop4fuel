@@ -30,10 +30,9 @@ public class Payment extends BaseEntity {
     private BigDecimal amount;
 
     @NotNull(message = "Payment mode is required")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payment_mode_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private PaymentMode paymentMode;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_mode", nullable = false)
+    private com.stopforfuel.backend.enums.PaymentMode paymentMode;
 
     @Column(name = "reference_no")
     private String referenceNo; // cheque no, UTR, UPI ref

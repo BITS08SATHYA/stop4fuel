@@ -3,10 +3,8 @@ import { fetchWithAuth } from '../fetch-with-auth';
 import type { InvoiceBill } from './invoices';
 
 // --- Types ---
-export interface PaymentMode {
-    id: number;
-    name: string;
-}
+export const PAYMENT_MODES = ["CASH", "CARD", "UPI", "CHEQUE", "CCMS", "BANK_TRANSFER", "NEFT"] as const;
+export type PaymentModeType = typeof PAYMENT_MODES[number];
 
 export interface Statement {
     id?: number;
@@ -29,7 +27,7 @@ export interface Payment {
     id?: number;
     paymentDate: string;
     amount: number;
-    paymentMode: PaymentMode;
+    paymentMode: string;
     referenceNo?: string;
     customer?: { id: number; name: string; username?: string };
     statement?: { id: number; statementNo: string; netAmount: number; receivedAmount: number; balanceAmount: number };
@@ -89,10 +87,6 @@ export interface IncentivePayment {
     invoiceBill?: { id: number; billNo?: string; billType?: string; netAmount?: number } | null;
     statement?: { id: number; statementNo?: string } | null;
 }
-
-// Payment Modes
-export const getPaymentModes = (): Promise<PaymentMode[]> =>
-    fetchWithAuth(`${API_BASE_URL}/payment-modes`).then(handleResponse);
 
 // Statements
 export const getStatements = (

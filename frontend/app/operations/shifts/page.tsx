@@ -822,7 +822,7 @@ export default function ShiftsPage() {
                                                                 <td className="py-1.5 text-foreground">{p.customer?.name || "-"}</td>
                                                                 <td className="py-1.5">
                                                                     <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 border border-border text-muted-foreground">
-                                                                        {p.paymentMode?.name || "-"}
+                                                                        {p.paymentMode || "-"}
                                                                     </span>
                                                                 </td>
                                                                 <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(p.amount)}</td>

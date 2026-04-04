@@ -53,15 +53,15 @@ public class ShiftFinancialCalculationService {
 
         // 6-10. Electronic payment advances (from e_advance table)
         addTransactionLineItem(lineItems, report, shiftId, "CARD",
-                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CARD), "Card Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.CARD), "Card Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "CCMS",
-                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CCMS), "CCMS Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.CCMS), "CCMS Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "UPI",
-                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.UPI), "UPI Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.UPI), "UPI Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "BANK",
-                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.BANK_TRANSFER), "Bank Transfer Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.BANK_TRANSFER), "Bank Transfer Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "CHEQUE",
-                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CHEQUE), "Cheque Advance", ++sortOrder);
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.CHEQUE), "Cheque Advance", ++sortOrder);
 
         // 11. Operational Advances (Cash, Salary, Management)
         List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
@@ -233,7 +233,7 @@ public class ShiftFinancialCalculationService {
         for (Payment p : shiftPayments) {
             ShiftReportPrintData.PaymentEntryDetail pe = new ShiftReportPrintData.PaymentEntryDetail();
             pe.setCustomerName(p.getCustomer() != null ? p.getCustomer().getName() : "-");
-            pe.setPaymentMode(p.getPaymentMode() != null ? p.getPaymentMode().getModeName() : "CASH");
+            pe.setPaymentMode(p.getPaymentMode() != null ? p.getPaymentMode().name() : "CASH");
             pe.setAmount(p.getAmount());
 
             if (p.getInvoiceBill() != null) {

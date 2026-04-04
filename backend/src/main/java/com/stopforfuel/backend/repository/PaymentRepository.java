@@ -25,7 +25,7 @@ public interface PaymentRepository extends ScidRepository<Payment> {
 
     List<Payment> findByCustomerIdAndPaymentDateBetween(Long customerId, LocalDateTime from, LocalDateTime to);
 
-    @Query("SELECT p FROM Payment p JOIN FETCH p.customer JOIN FETCH p.paymentMode " +
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
            "WHERE p.shiftId = :shiftId ORDER BY p.paymentDate DESC")
     List<Payment> findByShiftIdEager(@Param("shiftId") Long shiftId);
@@ -41,13 +41,13 @@ public interface PaymentRepository extends ScidRepository<Payment> {
     // Paginated versions
     Page<Payment> findAllBy(Pageable pageable);
 
-    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c JOIN FETCH p.paymentMode " +
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
            "LEFT JOIN c.customerCategory cc " +
            "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType)")
     Page<Payment> findWithCategoryFilter(@Param("categoryType") String categoryType, Pageable pageable);
 
-    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c JOIN FETCH p.paymentMode " +
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
            "LEFT JOIN c.customerCategory cc " +
            "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType) " +
@@ -64,12 +64,12 @@ public interface PaymentRepository extends ScidRepository<Payment> {
             Pageable pageable);
 
     // Fetch all payments eagerly (for the default no-filter case)
-    @Query("SELECT p FROM Payment p JOIN FETCH p.customer JOIN FETCH p.paymentMode " +
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy")
     Page<Payment> findAllEager(Pageable pageable);
 
     // For export (no pagination)
-    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c JOIN FETCH p.paymentMode " +
+    @Query("SELECT p FROM Payment p JOIN FETCH p.customer c " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
            "LEFT JOIN c.customerCategory cc " +
            "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType) " +
@@ -113,10 +113,10 @@ public interface PaymentRepository extends ScidRepository<Payment> {
             @Param("toDate") LocalDateTime toDate);
 
     // Payment mode breakdown
-    @Query("SELECT pm.modeName, COUNT(p), COALESCE(SUM(p.amount), 0) " +
-           "FROM Payment p JOIN p.paymentMode pm " +
+    @Query("SELECT p.paymentMode, COUNT(p), COALESCE(SUM(p.amount), 0) " +
+           "FROM Payment p " +
            "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate " +
-           "GROUP BY pm.modeName ORDER BY SUM(p.amount) DESC")
+           "GROUP BY p.paymentMode ORDER BY SUM(p.amount) DESC")
     List<Object[]> getPaymentModeBreakdown(
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);

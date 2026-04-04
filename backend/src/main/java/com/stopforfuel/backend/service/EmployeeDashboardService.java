@@ -144,7 +144,7 @@ public class EmployeeDashboardService {
             item.setNetPayable(sp.getNetPayable());
             item.setStatus(sp.getStatus());
             item.setPaymentDate(sp.getPaymentDate() != null ? sp.getPaymentDate().toString() : null);
-            item.setPaymentMode(sp.getPaymentMode());
+            item.setPaymentMode(sp.getPaymentMode() != null ? sp.getPaymentMode().name() : null);
             return item;
         }).toList());
         data.setSalarySummary(salarySummary);
