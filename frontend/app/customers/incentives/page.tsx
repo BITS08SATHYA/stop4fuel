@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     Tag,
     Search,
@@ -330,27 +331,25 @@ export default function IncentivesPage() {
                                     className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
-                            <select
+                            <StyledSelect
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="INACTIVE">Inactive</option>
-                            </select>
-                            <select
+                                onChange={(val) => setStatusFilter(val)}
+                                options={[
+                                    { value: "ALL", label: "All Status" },
+                                    { value: "ACTIVE", label: "Active" },
+                                    { value: "INACTIVE", label: "Inactive" },
+                                ]}
+                                className="min-w-[140px]"
+                            />
+                            <StyledSelect
                                 value={productFilter}
-                                onChange={(e) => setProductFilter(e.target.value)}
-                                className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="ALL">All Products</option>
-                                {productOptions.map(([id, name]) => (
-                                    <option key={id} value={String(id)}>
-                                        {name}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={(val) => setProductFilter(val)}
+                                options={[
+                                    { value: "ALL", label: "All Products" },
+                                    ...productOptions.map(([id, name]) => ({ value: String(id), label: String(name) })),
+                                ]}
+                                className="min-w-[160px]"
+                            />
                         </div>
 
                         {/* Table */}
@@ -514,20 +513,16 @@ export default function IncentivesPage() {
                         <label className="block text-sm font-medium text-foreground mb-1.5">
                             Product <span className="text-red-500">*</span>
                         </label>
-                        <select
-                            required
-                            disabled={!!editingIncentive}
+                        <StyledSelect
                             value={formProductId}
-                            onChange={(e) => setFormProductId(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-                        >
-                            <option value="">Select product...</option>
-                            {products.map((p) => (
-                                <option key={p.id} value={String(p.id)}>
-                                    {p.name}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(val) => setFormProductId(val)}
+                            options={[
+                                { value: "", label: "Select product..." },
+                                ...products.map((p) => ({ value: String(p.id), label: p.name })),
+                            ]}
+                            placeholder="Select product..."
+                            className={`w-full ${!!editingIncentive ? "opacity-50 pointer-events-none" : ""}`}
+                        />
                     </div>
 
                     {/* Discount Rate */}

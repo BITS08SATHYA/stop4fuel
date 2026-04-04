@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { getNozzles, getTanks, getPumps, createNozzle, updateNozzle, deleteNozzle, Nozzle, Tank, Pump } from "@/lib/api/station";
 import { Fuel, Plus, Edit2, Trash2, Search, Activity, Droplets } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
@@ -157,25 +158,26 @@ export default function NozzlesPage() {
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={pumpFilter}
-                        onChange={(e) => setPumpFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="">All Pumps</option>
-                        {pumps.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
-                    <select
+                        onChange={(val) => setPumpFilter(val)}
+                        options={[
+                            { value: "", label: "All Pumps" },
+                            ...pumps.map((p) => ({ value: String(p.id), label: p.name })),
+                        ]}
+                        placeholder="All Pumps"
+                        className="min-w-[140px]"
+                    />
+                    <StyledSelect
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="ALL">All Status</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
-                    </select>
+                        onChange={(val) => setStatusFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Status" },
+                            { value: "ACTIVE", label: "Active" },
+                            { value: "INACTIVE", label: "Inactive" },
+                        ]}
+                        className="min-w-[140px]"
+                    />
                 </div>
 
                 {isLoading ? (
@@ -300,32 +302,32 @@ export default function NozzlesPage() {
                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Assigned Pump <span className="text-red-500">*</span>
                             </label>
-                            <select
+                            <StyledSelect
                                 value={pumpId}
-                                onChange={(e) => { setPumpId(e.target.value); clearError("pumpId"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.pumpId)}`}
-                            >
-                                <option value="">Select a pump...</option>
-                                {pumps.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => { setPumpId(val); clearError("pumpId"); }}
+                                options={[
+                                    { value: "", label: "Select a pump..." },
+                                    ...pumps.map(p => ({ value: String(p.id), label: p.name })),
+                                ]}
+                                placeholder="Select a pump..."
+                                className={`w-full ${inputErrorClass(errors.pumpId)}`}
+                            />
                             <FieldError error={errors.pumpId} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Source Tank <span className="text-red-500">*</span>
                             </label>
-                            <select
+                            <StyledSelect
                                 value={tankId}
-                                onChange={(e) => { setTankId(e.target.value); clearError("tankId"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.tankId)}`}
-                            >
-                                <option value="">Select a fuel tank...</option>
-                                {tanks.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name} ({t.product.name})</option>
-                                ))}
-                            </select>
+                                onChange={(val) => { setTankId(val); clearError("tankId"); }}
+                                options={[
+                                    { value: "", label: "Select a fuel tank..." },
+                                    ...tanks.map(t => ({ value: String(t.id), label: `${t.name} (${t.product.name})` })),
+                                ]}
+                                placeholder="Select a fuel tank..."
+                                className={`w-full ${inputErrorClass(errors.tankId)}`}
+                            />
                             <FieldError error={errors.tankId} />
                         </div>
                     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
@@ -409,25 +410,25 @@ export default function StatementsPage() {
                             placeholder="To"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={filterCategory}
-                        onChange={(e) => { setFilterCategory(e.target.value); setPage(0); }}
-                        className="px-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="">All Categories</option>
-                        <option value="GOVERNMENT">Government</option>
-                        <option value="NON_GOVERNMENT">Non-Government</option>
-                    </select>
-                    <select
+                        onChange={(val) => { setFilterCategory(val); setPage(0); }}
+                        options={[
+                            { value: "", label: "All Categories" },
+                            { value: "GOVERNMENT", label: "Government" },
+                            { value: "NON_GOVERNMENT", label: "Non-Government" },
+                        ]}
+                    />
+                    <StyledSelect
                         value={filterStatus}
-                        onChange={(e) => handleFilterChange(e.target.value)}
-                        className="px-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="ALL">All Status</option>
-                        <option value="DRAFT">Draft</option>
-                        <option value="NOT_PAID">Outstanding</option>
-                        <option value="PAID">Paid</option>
-                    </select>
+                        onChange={(val) => handleFilterChange(val)}
+                        options={[
+                            { value: "ALL", label: "All Status" },
+                            { value: "DRAFT", label: "Draft" },
+                            { value: "NOT_PAID", label: "Outstanding" },
+                            { value: "PAID", label: "Paid" },
+                        ]}
+                    />
                 </div>
 
                 {/* PDF Error Toast */}
@@ -720,30 +721,27 @@ export default function StatementsPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs text-muted-foreground mb-1">Vehicle</label>
-                                <select
-                                    value={filterVehicleId}
-                                    onChange={(e) => { setFilterVehicleId(e.target.value ? Number(e.target.value) : ""); setShowPreview(false); }}
-                                    className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    disabled={!selectedCustomerId}
-                                >
-                                    <option value="">All Vehicles</option>
-                                    {vehicles.map(v => (
-                                        <option key={v.id} value={v.id}>{v.vehicleNumber}</option>
-                                    ))}
-                                </select>
+                                <StyledSelect
+                                    value={String(filterVehicleId)}
+                                    onChange={(val) => { setFilterVehicleId(val ? Number(val) : ""); setShowPreview(false); }}
+                                    options={[
+                                        { value: "", label: "All Vehicles" },
+                                        ...vehicles.map(v => ({ value: String(v.id), label: v.vehicleNumber })),
+                                    ]}
+                                    className="w-full"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs text-muted-foreground mb-1">Product</label>
-                                <select
-                                    value={filterProductId}
-                                    onChange={(e) => { setFilterProductId(e.target.value ? Number(e.target.value) : ""); setShowPreview(false); }}
-                                    className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                >
-                                    <option value="">All Products</option>
-                                    {products.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
-                                </select>
+                                <StyledSelect
+                                    value={String(filterProductId)}
+                                    onChange={(val) => { setFilterProductId(val ? Number(val) : ""); setShowPreview(false); }}
+                                    options={[
+                                        { value: "", label: "All Products" },
+                                        ...products.map(p => ({ value: String(p.id), label: p.name })),
+                                    ]}
+                                    className="w-full"
+                                />
                             </div>
                         </div>
                     </div>

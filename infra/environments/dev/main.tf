@@ -1,5 +1,5 @@
 locals {
-  aws_account_id = "971422715802"
+  aws_account_id = var.aws_account_id
   ecr_registry   = "${local.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
   azs            = ["${var.aws_region}a", "${var.aws_region}b"]
 }
