@@ -66,6 +66,7 @@ export default function InvoiceHistoryPage() {
     const [editIndentNo, setEditIndentNo] = useState("");
     const [editPaymentMode, setEditPaymentMode] = useState("");
     const [editVehicleKM, setEditVehicleKM] = useState("");
+    const [editManualDiscount, setEditManualDiscount] = useState("");
     const [editBillType, setEditBillType] = useState<"CASH" | "CREDIT">("CASH");
     const [editCustomer, setEditCustomer] = useState<{ id: number; name: string; username?: string } | null>(null);
     const [editVehicle, setEditVehicle] = useState<{ id: number; vehicleNumber: string } | null>(null);
@@ -176,6 +177,7 @@ export default function InvoiceHistoryPage() {
         setEditIndentNo(inv.indentNo || "");
         setEditPaymentMode(inv.paymentMode || "");
         setEditVehicleKM(inv.vehicleKM ? String(inv.vehicleKM) : "");
+        setEditManualDiscount(inv.totalDiscount ? String(inv.totalDiscount) : "");
         setEditBillType((inv.billType as "CASH" | "CREDIT") || "CASH");
         setEditCustomer(inv.customer || null);
         setEditVehicle(inv.vehicle || null);
@@ -246,7 +248,9 @@ export default function InvoiceHistoryPage() {
     };
 
     const editTotalGross = editLines.reduce((s, l) => s + l.grossAmount, 0);
-    const editTotalDiscount = editLines.reduce((s, l) => s + l.discountAmount, 0);
+    const editProductDiscount = editLines.reduce((s, l) => s + l.discountAmount, 0);
+    const editManualDiscountNum = editBillType === "CASH" && editManualDiscount ? parseFloat(editManualDiscount) || 0 : 0;
+    const editTotalDiscount = editProductDiscount + editManualDiscountNum;
     const editNetAmount = editTotalGross - editTotalDiscount;
 
     const handleSaveEdit = async () => {
@@ -265,6 +269,8 @@ export default function InvoiceHistoryPage() {
                 indentNo: editIndentNo || undefined,
                 paymentMode: editPaymentMode || undefined,
                 vehicleKM: editVehicleKM ? Number(editVehicleKM) : undefined,
+                totalDiscount: editManualDiscountNum > 0 ? editManualDiscountNum : undefined,
+                netAmount: editNetAmount > 0 ? editNetAmount : undefined,
                 customer: editCustomer ? { id: editCustomer.id } as any : undefined,
                 vehicle: editVehicle ? { id: editVehicle.id } as any : undefined,
                 products: editLines.map(l => ({
@@ -789,6 +795,22 @@ export default function InvoiceHistoryPage() {
                                 </div>
                             ))}
                         </div>
+
+                        {/* Manual Discount (CASH only) */}
+                        {editBillType === "CASH" && (
+                            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/50">
+                                <label className="text-xs font-bold uppercase text-muted-foreground whitespace-nowrap">Discount (₹)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editManualDiscount}
+                                    onChange={e => setEditManualDiscount(e.target.value)}
+                                    placeholder="0.00"
+                                    className="w-32 px-2 py-1.5 text-sm rounded border border-border bg-background text-foreground font-mono"
+                                />
+                            </div>
+                        )}
 
                         {/* Totals */}
                         <div className="flex justify-end gap-6 mt-3 pt-3 border-t border-border/50 text-sm font-mono">
