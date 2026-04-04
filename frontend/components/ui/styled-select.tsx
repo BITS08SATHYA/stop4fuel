@@ -51,7 +51,7 @@ export function StyledSelect({
                 <ChevronDown size={14} className={`text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
             </button>
             {isOpen && (
-                <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-50 mt-1 w-full bg-secondary border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {options.map((option) => (
                         <button
                             key={option.value}

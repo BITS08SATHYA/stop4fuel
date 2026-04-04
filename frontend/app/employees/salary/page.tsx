@@ -13,6 +13,7 @@ import {
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { FormErrorBanner } from "@/components/ui/field-error";
 import {
     getMonthlyPayments,
@@ -104,15 +105,12 @@ export default function SalaryProcessingPage() {
                         <p className="text-muted-foreground mt-2">Process monthly payroll for all employees</p>
                     </div>
                     <div className="flex gap-3">
-                        <select
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                            className="bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
-                        >
-                            {months.map((m, i) => (
-                                <option key={i} value={i + 1}>{m}</option>
-                            ))}
-                        </select>
+                        <StyledSelect
+                            value={String(selectedMonth)}
+                            onChange={(val) => setSelectedMonth(Number(val))}
+                            options={months.map((m, i) => ({ value: String(i + 1), label: m }))}
+                            className="min-w-[140px]"
+                        />
                         <input
                             type="number"
                             value={selectedYear}

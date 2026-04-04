@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { Modal } from "@/components/ui/modal";
 import {
     CreditCard,
@@ -421,16 +422,14 @@ export default function EAdvancesPage() {
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={typeFilter}
-                        onChange={(e) => setTypeFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="ALL">All Types</option>
-                        {ADVANCE_TYPES.map((t) => (
-                            <option key={t.value} value={t.value}>{t.label}</option>
-                        ))}
-                    </select>
+                        onChange={(val) => setTypeFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Types" },
+                            ...ADVANCE_TYPES.map((t) => ({ value: t.value, label: t.label })),
+                        ]}
+                    />
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -624,16 +623,15 @@ export default function EAdvancesPage() {
                     {txnType === "UPI" && (
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">UPI Company</label>
-                            <select
+                            <StyledSelect
                                 value={selectedUpiCompanyId}
-                                onChange={(e) => { setSelectedUpiCompanyId(e.target.value); setNewUpiCompanyName(""); }}
-                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 mb-2"
-                            >
-                                <option value="">Select or add new...</option>
-                                {upiCompanies.map((u) => (
-                                    <option key={u.id} value={u.id}>{u.companyName}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => { setSelectedUpiCompanyId(val); setNewUpiCompanyName(""); }}
+                                options={[
+                                    { value: "", label: "Select or add new..." },
+                                    ...upiCompanies.map((u) => ({ value: String(u.id), label: u.companyName })),
+                                ]}
+                                className="mb-2"
+                            />
                             {!selectedUpiCompanyId && (
                                 <input
                                     type="text"
