@@ -357,38 +357,26 @@ public class InvoiceBillService {
             return;
         }
 
-        String paymentMode = invoice.getPaymentMode();
-        if (paymentMode == null) paymentMode = "CASH";
-
-        String upperMode = paymentMode.toUpperCase();
-        // Only create EAdvance for electronic payment modes
-        switch (upperMode) {
-            case "UPI":
-            case "CARD":
-            case "CHEQUE":
-            case "BANK TRANSFER":
-            case "BANK":
-            case "CCMS":
-                String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : null;
-                String remark = "Auto: Invoice #" + invoice.getId()
-                        + (customerName != null ? " - " + customerName : "");
-                EAdvance eAdv = new EAdvance();
-                eAdv.setAmount(amount);
-                eAdv.setRemarks(remark);
-                eAdv.setShiftId(activeShift.getId());
-                eAdv.setScid(invoice.getScid());
-                com.stopforfuel.backend.enums.EAdvanceType type = com.stopforfuel.backend.enums.EAdvanceType.valueOf("BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode);
-                eAdv.setAdvanceType(type);
-                eAdv.setInvoiceBill(invoice);
-                if ("CARD".equals(upperMode) && customerName != null) {
-                    eAdv.setCustomerName(customerName);
-                }
-                eAdvanceService.create(eAdv);
-                break;
-            default:
-                // CASH — no separate record needed, InvoiceBill is the source of truth
-                break;
+        com.stopforfuel.backend.enums.PaymentMode mode = invoice.getPaymentMode();
+        if (mode == null || mode == com.stopforfuel.backend.enums.PaymentMode.CASH || mode == com.stopforfuel.backend.enums.PaymentMode.NEFT) {
+            return;
         }
+
+        // Create EAdvance for electronic payment modes (CARD, UPI, CHEQUE, CCMS, BANK_TRANSFER)
+        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : null;
+        String remark = "Auto: Invoice #" + invoice.getId()
+                + (customerName != null ? " - " + customerName : "");
+        EAdvance eAdv = new EAdvance();
+        eAdv.setAmount(amount);
+        eAdv.setRemarks(remark);
+        eAdv.setShiftId(activeShift.getId());
+        eAdv.setScid(invoice.getScid());
+        eAdv.setAdvanceType(mode);
+        eAdv.setInvoiceBill(invoice);
+        if (mode == com.stopforfuel.backend.enums.PaymentMode.CARD && customerName != null) {
+            eAdv.setCustomerName(customerName);
+        }
+        eAdvanceService.create(eAdv);
     }
 
     /**

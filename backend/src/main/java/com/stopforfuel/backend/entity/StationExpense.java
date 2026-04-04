@@ -25,7 +25,8 @@ public class StationExpense extends BaseEntity {
     private String description;
 
     private String paidTo;
-    private String paymentMode;
+    @Enumerated(EnumType.STRING)
+    private com.stopforfuel.backend.enums.PaymentMode paymentMode;
 
     private String recurringType = "ONE_TIME"; // ONE_TIME, MONTHLY, QUARTERLY, ANNUAL
 }

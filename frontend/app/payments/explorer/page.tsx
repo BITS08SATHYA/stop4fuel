@@ -18,9 +18,9 @@ import {
 import {
     getStatements, getStatementBills, getPaymentsByStatement,
     getStatementStats, getStatementPdfUrl, getBillPaymentSummary,
-    getCustomerCreditInfo, getPaymentModes, recordStatementPayment,
+    getCustomerCreditInfo, recordStatementPayment, PAYMENT_MODES,
     type Statement, type Payment, type InvoiceBill, type StatementStats,
-    type PageResponse, type BillPaymentSummary, type PaymentMode
+    type PageResponse, type BillPaymentSummary
 } from "@/lib/api/station";
 
 function formatCurrency(val?: number | null) {
@@ -107,10 +107,10 @@ export default function ExplorerPage() {
     const [showMobileDetail, setShowMobileDetail] = useState(false);
 
     // Payment form (for statement payments)
-    const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([]);
+    // paymentModes are now a static constant (PAYMENT_MODES)
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState("");
-    const [paymentModeId, setPaymentModeId] = useState<number | "">("");
+    const [paymentModeId, setPaymentModeId] = useState("");
     const [paymentRef, setPaymentRef] = useState("");
     const [paymentRemarks, setPaymentRemarks] = useState("");
     const [paymentSubmitting, setPaymentSubmitting] = useState(false);
@@ -138,10 +138,7 @@ export default function ExplorerPage() {
         }
     }, [statements, searchParams]);
 
-    // Load payment modes
-    useEffect(() => {
-        getPaymentModes().then(setPaymentModes).catch(console.error);
-    }, []);
+    // Payment modes are static constants (PAYMENT_MODES)
 
     // Load KPI stats
     useEffect(() => {
@@ -236,7 +233,7 @@ export default function ExplorerPage() {
         try {
             await recordStatementPayment(selectedStatement.id!, {
                 amount: Number(paymentAmount),
-                paymentMode: { id: paymentModeId as number, name: "" },
+                paymentMode: paymentModeId,
                 referenceNo: paymentRef || undefined,
                 remarks: paymentRemarks || undefined,
             });
@@ -648,7 +645,7 @@ export default function ExplorerPage() {
                                                 statement={selectedStatement}
                                                 showForm={showPaymentForm}
                                                 onShowForm={setShowPaymentForm}
-                                                paymentModes={paymentModes}
+                                                paymentModes={PAYMENT_MODES}
                                                 paymentAmount={paymentAmount}
                                                 onAmountChange={setPaymentAmount}
                                                 paymentModeId={paymentModeId}
@@ -884,9 +881,9 @@ function BillsTab({
                                             <div key={idx} className="flex items-center justify-between text-xs bg-card/50 rounded px-2 py-1.5">
                                                 <div className="flex items-center gap-2">
                                                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                                        PAYMENT_MODE_COLORS[pmt.paymentMode?.name] || "bg-muted text-muted-foreground"
+                                                        PAYMENT_MODE_COLORS[pmt.paymentMode] || "bg-muted text-muted-foreground"
                                                     }`}>
-                                                        {pmt.paymentMode?.name}
+                                                        {pmt.paymentMode}
                                                     </span>
                                                     <span className="text-muted-foreground">{formatDate(pmt.paymentDate)}</span>
                                                 </div>
@@ -917,11 +914,11 @@ function PaymentsTab({
     statement: Statement;
     showForm: boolean;
     onShowForm: (v: boolean) => void;
-    paymentModes: PaymentMode[];
+    paymentModes: readonly string[];
     paymentAmount: string;
     onAmountChange: (v: string) => void;
-    paymentModeId: number | "";
-    onModeChange: (v: number | "") => void;
+    paymentModeId: string;
+    onModeChange: (v: string) => void;
     paymentRef: string;
     onRefChange: (v: string) => void;
     paymentRemarks: string;
@@ -987,9 +984,9 @@ function PaymentsTab({
                             <label className="text-xs text-muted-foreground mb-1 block">Payment Mode *</label>
                             <StyledSelect
                                 value={String(paymentModeId)}
-                                onChange={(val) => onModeChange(val ? Number(val) : "")}
+                                onChange={(val) => onModeChange(val)}
                                 placeholder="Select mode"
-                                options={[{ value: "", label: "Select mode" }, ...paymentModes.map(m => ({ value: String(m.id), label: m.name }))]}
+                                options={[{ value: "", label: "Select mode" }, ...paymentModes.map(m => ({ value: m, label: m }))]}
                             />
                         </div>
                     </div>
@@ -1053,9 +1050,9 @@ function PaymentsTab({
                                 <div className="flex items-center justify-between mb-1">
                                     <div className="flex items-center gap-2">
                                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                            PAYMENT_MODE_COLORS[pmt.paymentMode?.name] || "bg-muted text-muted-foreground"
+                                            PAYMENT_MODE_COLORS[pmt.paymentMode] || "bg-muted text-muted-foreground"
                                         }`}>
-                                            {pmt.paymentMode?.name}
+                                            {pmt.paymentMode}
                                         </span>
                                         <span className="text-xs text-muted-foreground">{formatDateTime(pmt.paymentDate)}</span>
                                     </div>

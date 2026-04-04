@@ -75,8 +75,9 @@ public class InvoiceBill extends BaseEntity {
     @Column(name = "bill_type", nullable = false)
     private BillType billType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_mode")
-    private String paymentMode; // CASH, CARD, UPI, etc.
+    private com.stopforfuel.backend.enums.PaymentMode paymentMode;
 
     @Column(name = "indent_no")
     private String indentNo;

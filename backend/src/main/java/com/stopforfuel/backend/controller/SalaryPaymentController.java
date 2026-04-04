@@ -47,7 +47,8 @@ public class SalaryPaymentController {
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
         try {
-            String paymentMode = body != null ? body.get("paymentMode") : "CASH";
+            String modeStr = body != null && body.get("paymentMode") != null ? body.get("paymentMode") : "CASH";
+            com.stopforfuel.backend.enums.PaymentMode paymentMode = com.stopforfuel.backend.enums.PaymentMode.valueOf(modeStr);
             return ResponseEntity.ok(SalaryPaymentDTO.from(salaryPaymentService.markAsPaid(id, paymentMode)));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
