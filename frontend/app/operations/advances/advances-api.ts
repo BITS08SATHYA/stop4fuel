@@ -57,8 +57,8 @@ export interface InvoiceBill {
 // --- Constants ---
 
 export const ADVANCE_TYPES = [
-    { value: "CASH_ADVANCE", label: "Cash Advance", icon: Banknote, color: "text-blue-500 bg-blue-500/10" },
-    { value: "SALARY_ADVANCE", label: "Salary Advance", icon: Wallet, color: "text-emerald-500 bg-emerald-500/10" },
+    { value: "CASH", label: "Cash Advance", icon: Banknote, color: "text-blue-500 bg-blue-500/10" },
+    { value: "SALARY", label: "Salary Advance", icon: Wallet, color: "text-emerald-500 bg-emerald-500/10" },
     { value: "MANAGEMENT", label: "Management", icon: Receipt, color: "text-purple-500 bg-purple-500/10" },
 ];
 
