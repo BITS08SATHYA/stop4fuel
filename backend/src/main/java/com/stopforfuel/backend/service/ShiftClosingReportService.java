@@ -449,6 +449,23 @@ public class ShiftClosingReportService {
         // Delegate financial print data sections
         List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
         financialCalculationService.populateAdvanceEntries(data, shiftId, invoices);
+
+        // Add test quantity as advance entry (fuel expense)
+        double testLitres = 0;
+        double testAmount = 0;
+        for (ShiftReportPrintData.MeterReading mr : data.getMeterReadings()) {
+            double test = mr.getTestQuantity() != null ? mr.getTestQuantity() : 0;
+            double rate = mr.getRate() != null ? mr.getRate() : 0;
+            testLitres += test;
+            testAmount += test * rate;
+        }
+        if (testLitres > 0) {
+            ShiftReportPrintData.AdvanceEntryDetail testEntry = new ShiftReportPrintData.AdvanceEntryDetail();
+            testEntry.setType("TEST");
+            testEntry.setDescription("Nozzle test fuel (" + (int) testLitres + "L)");
+            testEntry.setAmount(java.math.BigDecimal.valueOf(testAmount).setScale(2, java.math.RoundingMode.HALF_UP));
+            data.getAdvanceEntries().add(testEntry);
+        }
         financialCalculationService.populatePaymentEntries(data, shiftId);
 
         return data;

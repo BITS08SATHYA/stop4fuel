@@ -187,6 +187,7 @@ public final class ShiftReportPdfUtils {
             case "HOME_ADVANCE", "HOME" -> "Home Advance";
             case "SALARY_ADVANCE", "SALARY" -> "Salary Advance";
             case "EXPENSE" -> "Expenses";
+            case "TEST" -> "Test";
             case "INCENTIVE" -> "Incentive";
             case "REPAYMENT" -> "Inflow Repayment";
             case "EXTERNAL_INFLOW" -> "External Inflow";

@@ -59,6 +59,24 @@ public class ShiftReportFinancialSection {
             totalRevenue = totalRevenue.add(amount);
         }
 
+        // Test quantity line item in revenue
+        double totalTestLitres = 0;
+        double totalTestAmount = 0;
+        for (MeterReading mr : data.getMeterReadings()) {
+            double test = mr.getTestQuantity() != null ? mr.getTestQuantity() : 0;
+            double rate = mr.getRate() != null ? mr.getRate() : 0;
+            totalTestLitres += test;
+            totalTestAmount += test * rate;
+        }
+        if (totalTestLitres > 0) {
+            BigDecimal testAmt = BigDecimal.valueOf(totalTestAmount).setScale(2, RoundingMode.HALF_UP);
+            addCellLeft(table, "Test", SMALL_FONT);
+            addCellRight(table, fmt0(totalTestLitres), SMALL_FONT);
+            addCellRight(table, "", SMALL_FONT);
+            addCellRight(table, fmtComma(testAmt), SMALL_FONT);
+            totalRevenue = totalRevenue.add(testAmt);
+        }
+
         // Oil sales from stock summary (non-fuel)
         BigDecimal oilTotal = BigDecimal.ZERO;
         for (StockSummaryRow row : data.getStockSummary()) {
