@@ -58,6 +58,18 @@ public class StationExpenseController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/shift/{shiftId}")
+    @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
+    public List<StationExpenseDTO> getByShift(@PathVariable Long shiftId) {
+        return stationExpenseService.getByShift(shiftId).stream().map(StationExpenseDTO::from).toList();
+    }
+
+    @GetMapping("/shift/{shiftId}/total")
+    @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
+    public Double getShiftTotal(@PathVariable Long shiftId) {
+        return stationExpenseService.sumByShift(shiftId);
+    }
+
     @GetMapping("/summary")
     @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
     public Map<String, Object> getExpenseSummary(

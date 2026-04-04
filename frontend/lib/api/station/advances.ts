@@ -138,6 +138,12 @@ export const createExpenseType = (type: Partial<ExpenseType>): Promise<ExpenseTy
         body: JSON.stringify(type),
     }).then(handleResponse);
 
+export const getStationExpensesByShift = (shiftId: number): Promise<StationExpense[]> =>
+    fetchWithAuth(`${API_BASE_URL}/station-expenses/shift/${shiftId}`).then(handleResponse);
+
+export const getStationExpenseShiftTotal = (shiftId: number): Promise<number> =>
+    fetchWithAuth(`${API_BASE_URL}/station-expenses/shift/${shiftId}/total`).then(handleResponse);
+
 // Station Expenses
 export const getStationExpenses = (from?: string, to?: string): Promise<StationExpense[]> => {
     const params = new URLSearchParams();
