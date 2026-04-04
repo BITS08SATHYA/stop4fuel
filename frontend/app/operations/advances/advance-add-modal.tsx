@@ -124,7 +124,7 @@ export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: Advan
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Select Employee</label>
                         <StyledSelect
-                            value={addEmployeeId || ""}
+                            value={addEmployeeId ? String(addEmployeeId) : ""}
                             onChange={(val) => handleEmployeeSelect(val)}
                             options={[
                                 { value: "", label: "-- Select employee (optional) --" },
