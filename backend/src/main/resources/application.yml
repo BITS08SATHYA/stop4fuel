@@ -48,4 +48,4 @@ aws:
   s3:
     bucket: ${AWS_S3_BUCKET:stopforfuel}
     region: ${AWS_REGION:us-east-1}
-    profile: ${AWS_S3_PROFILE:sathya-nyu}
+    profile: ${AWS_S3_PROFILE:default}

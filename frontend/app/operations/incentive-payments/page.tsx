@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { Modal } from "@/components/ui/modal";
 import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
@@ -318,16 +319,14 @@ export default function IncentivePaymentsPage() {
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={customerFilter}
-                        onChange={(e) => setCustomerFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="ALL">All Customers</option>
-                        {uniqueCustomers.map(([id, name]) => (
-                            <option key={id} value={id}>{name}</option>
-                        ))}
-                    </select>
+                        onChange={(val) => setCustomerFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Customers" },
+                            ...uniqueCustomers.map(([id, name]) => ({ value: String(id), label: String(name) })),
+                        ]}
+                    />
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4 text-muted-foreground" />

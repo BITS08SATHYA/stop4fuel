@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getProducts,
     createProduct,
@@ -240,24 +241,26 @@ export default function ProductsPage() {
                             className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="ALL">All Categories</option>
-                        <option value="Fuel">Fuel</option>
-                        <option value="Non-Fuel">Non-Fuel</option>
-                    </select>
-                    <select
+                        onChange={(val) => setCategoryFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Categories" },
+                            { value: "Fuel", label: "Fuel" },
+                            { value: "Non-Fuel", label: "Non-Fuel" },
+                        ]}
+                        className="min-w-[160px]"
+                    />
+                    <StyledSelect
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                        <option value="ALL">All Status</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
-                    </select>
+                        onChange={(val) => setStatusFilter(val)}
+                        options={[
+                            { value: "ALL", label: "All Status" },
+                            { value: "ACTIVE", label: "Active" },
+                            { value: "INACTIVE", label: "Inactive" },
+                        ]}
+                        className="min-w-[140px]"
+                    />
                 </div>
 
                 {isLoading ? (
@@ -475,14 +478,15 @@ export default function ProductsPage() {
                             <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
                                 Category <span className="text-red-500">*</span>
                             </label>
-                            <select
+                            <StyledSelect
                                 value={category}
-                                onChange={(e) => { setCategory(e.target.value); clearError("category"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none ${inputErrorClass(errors.category)}`}
-                            >
-                                <option value="Fuel">Fuel</option>
-                                <option value="Non-Fuel">Non-Fuel (Lubes, Items)</option>
-                            </select>
+                                onChange={(val) => { setCategory(val); clearError("category"); }}
+                                options={[
+                                    { value: "Fuel", label: "Fuel" },
+                                    { value: "Non-Fuel", label: "Non-Fuel (Lubes, Items)" },
+                                ]}
+                                className={`w-full ${inputErrorClass(errors.category)}`}
+                            />
                             <FieldError error={errors.category} />
                         </div>
 
@@ -491,15 +495,16 @@ export default function ProductsPage() {
                                 <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
                                     Fuel Family
                                 </label>
-                                <select
+                                <StyledSelect
                                     value={fuelFamily}
-                                    onChange={(e) => setFuelFamily(e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
-                                >
-                                    <option value="">Not Set</option>
-                                    <option value="PETROL">Petrol Family</option>
-                                    <option value="DIESEL">Diesel Family</option>
-                                </select>
+                                    onChange={(val) => setFuelFamily(val)}
+                                    options={[
+                                        { value: "", label: "Not Set" },
+                                        { value: "PETROL", label: "Petrol Family" },
+                                        { value: "DIESEL", label: "Diesel Family" },
+                                    ]}
+                                    className="w-full"
+                                />
                                 <p className="text-xs text-muted-foreground mt-1">
                                     Groups compatible fuels (e.g. Petrol + Xtra Premium = Petrol Family)
                                 </p>
@@ -510,16 +515,17 @@ export default function ProductsPage() {
                             <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
                                 Unit <span className="text-red-500">*</span>
                             </label>
-                            <select
+                            <StyledSelect
                                 value={unit}
-                                onChange={(e) => { setUnit(e.target.value); clearError("unit"); }}
-                                className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none ${inputErrorClass(errors.unit)}`}
-                            >
-                                <option value="Liters">Liters</option>
-                                <option value="Pieces">Pieces</option>
-                                <option value="Kg">Kg</option>
-                                <option value="Box">Box</option>
-                            </select>
+                                onChange={(val) => { setUnit(val); clearError("unit"); }}
+                                options={[
+                                    { value: "Liters", label: "Liters" },
+                                    { value: "Pieces", label: "Pieces" },
+                                    { value: "Kg", label: "Kg" },
+                                    { value: "Box", label: "Box" },
+                                ]}
+                                className={`w-full ${inputErrorClass(errors.unit)}`}
+                            />
                             <FieldError error={errors.unit} />
                         </div>
 
@@ -544,50 +550,48 @@ export default function ProductsPage() {
                                     <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
                                         <Truck className="w-4 h-4 text-primary" /> Supplier <span className="text-muted-foreground font-normal text-xs">(Optional)</span>
                                     </label>
-                                    <select
+                                    <StyledSelect
                                         value={supplierId}
-                                        onChange={(e) => setSupplierId(e.target.value)}
-                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
-                                    >
-                                        <option value="">Select Supplier...</option>
-                                        {suppliers.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => setSupplierId(val)}
+                                        options={[
+                                            { value: "", label: "Select Supplier..." },
+                                            ...suppliers.map(s => ({ value: String(s.id), label: s.name })),
+                                        ]}
+                                        placeholder="Select Supplier..."
+                                        className="w-full"
+                                    />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
                                         Oil Type <span className="text-muted-foreground font-normal text-xs">(Optional)</span>
                                     </label>
-                                    <select
+                                    <StyledSelect
                                         value={oilTypeId}
-                                        onChange={(e) => setOilTypeId(e.target.value)}
-                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
-                                    >
-                                        <option value="">Select Oil Type...</option>
-                                        {oilTypes.map(ot => (
-                                            <option key={ot.id} value={ot.id}>{ot.name}</option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => setOilTypeId(val)}
+                                        options={[
+                                            { value: "", label: "Select Oil Type..." },
+                                            ...oilTypes.map(ot => ({ value: String(ot.id), label: ot.name })),
+                                        ]}
+                                        placeholder="Select Oil Type..."
+                                        className="w-full"
+                                    />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
                                         <Award className="w-4 h-4 text-primary" /> Lubricant Grade <span className="text-muted-foreground font-normal text-xs">(Optional)</span>
                                     </label>
-                                    <select
+                                    <StyledSelect
                                         value={gradeTypeId}
-                                        onChange={(e) => setGradeTypeId(e.target.value)}
-                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
-                                    >
-                                        <option value="">Select Grade...</option>
-                                        {filteredGradeTypes.map(g => (
-                                            <option key={g.id} value={g.id}>
-                                                {g.name}{g.oilType ? ` (${g.oilType.name})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => setGradeTypeId(val)}
+                                        options={[
+                                            { value: "", label: "Select Grade..." },
+                                            ...filteredGradeTypes.map(g => ({ value: String(g.id), label: `${g.name}${g.oilType ? ` (${g.oilType.name})` : ''}` })),
+                                        ]}
+                                        placeholder="Select Grade..."
+                                        className="w-full"
+                                    />
                                 </div>
 
                                 <div>

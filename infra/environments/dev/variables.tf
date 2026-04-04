@@ -4,8 +4,12 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  type    = string
-  default = "sathya-nyu"
+  type = string
+}
+
+variable "aws_account_id" {
+  type        = string
+  description = "AWS account ID for ECR registry and IAM ARNs"
 }
 
 variable "project_name" {
@@ -39,20 +43,17 @@ variable "allowed_ssh_cidr" {
   default = "0.0.0.0/0"
 }
 
-# Cognito (existing)
+# Cognito
 variable "cognito_user_pool_id" {
-  type    = string
-  default = "us-east-1_dbKOhCJuc"
+  type = string
 }
 
 variable "cognito_client_id" {
-  type    = string
-  default = "12ng4u1706e49uslj2o2egadvh"
+  type = string
 }
 
 variable "cognito_domain" {
-  type    = string
-  default = "stopforfuel-dev.auth.us-east-1.amazoncognito.com"
+  type = string
 }
 
 variable "db_password" {
