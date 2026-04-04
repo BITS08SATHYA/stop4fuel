@@ -301,7 +301,8 @@ public class ShiftClosingReportService {
         int nextSortOrder = salesResult.getLineItems().stream()
                 .mapToInt(ReportLineItem::getSortOrder).max().orElse(0);
         List<ReportLineItem> financialItems = financialCalculationService.computeFinancialLineItems(
-                report, shiftId, salesResult.getCreditBillTotal(), nextSortOrder);
+                report, shiftId, salesResult.getCreditBillTotal(), nextSortOrder,
+                salesResult.getTestLitres(), salesResult.getTestAmount());
         allLineItems.addAll(financialItems);
 
         // Save all line items
