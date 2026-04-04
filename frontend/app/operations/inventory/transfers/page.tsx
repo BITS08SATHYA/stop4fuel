@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
+import { StyledSelect } from "@/components/ui/styled-select";
 import {
     getStockTransfers,
     getActiveProducts,
@@ -328,16 +329,16 @@ export default function StockTransferPage() {
 
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Product</label>
-                        <select
+                        <StyledSelect
                             value={productId}
-                            onChange={(e) => { setProductId(e.target.value); clearError("productId"); }}
-                            className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.productId)}`}
-                        >
-                            <option value="">Select a product...</option>
-                            {products.map((p) => (
-                                <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
-                            ))}
-                        </select>
+                            onChange={(val) => { setProductId(val); clearError("productId"); }}
+                            options={[
+                                { value: "", label: "Select a product..." },
+                                ...products.map((p) => ({ value: String(p.id), label: `${p.name} (${p.unit})` })),
+                            ]}
+                            placeholder="Select a product..."
+                            className={`w-full ${inputErrorClass(errors.productId)}`}
+                        />
                         <FieldError error={errors.productId} />
                     </div>
 

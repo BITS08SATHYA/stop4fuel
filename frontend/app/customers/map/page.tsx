@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { API_BASE_URL } from "@/lib/api/station";
 import { MapPin, Navigation, Filter, X, ChevronDown, Settings2 } from "lucide-react";
+import { StyledSelect } from "@/components/ui/styled-select";
 
 const CustomerMap = dynamic(() => import("@/components/customers/customer-map"), { ssr: false });
 
@@ -128,19 +129,17 @@ export default function CustomerMapPage() {
                         </button>
 
                         {/* Status Filter */}
-                        <div className="relative">
-                            <select
-                                value={statusFilter}
-                                onChange={e => setStatusFilter(e.target.value)}
-                                className="appearance-none bg-card border border-border rounded-lg px-4 py-2 pr-8 text-sm font-medium text-foreground cursor-pointer hover:bg-muted transition-colors"
-                            >
-                                <option value="ALL">All Status</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="BLOCKED">Blocked</option>
-                                <option value="INACTIVE">Inactive</option>
-                            </select>
-                            <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        </div>
+                        <StyledSelect
+                            value={statusFilter}
+                            onChange={(val) => setStatusFilter(val)}
+                            options={[
+                                { value: "ALL", label: "All Status" },
+                                { value: "ACTIVE", label: "Active" },
+                                { value: "BLOCKED", label: "Blocked" },
+                                { value: "INACTIVE", label: "Inactive" },
+                            ]}
+                            className="min-w-[140px]"
+                        />
 
                         {/* Route Toggle */}
                         <button

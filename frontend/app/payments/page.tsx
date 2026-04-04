@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { StyledSelect } from "@/components/ui/styled-select";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
@@ -483,34 +484,32 @@ export default function PaymentsPage() {
                                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>
-                        <select
+                        <StyledSelect
                             value={categoryFilter}
-                            onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
-                            className="px-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="">All Categories</option>
-                            <option value="GOVERNMENT">Government</option>
-                            <option value="NON_GOVERNMENT">Non-Government</option>
-                        </select>
-                        <select
+                            onChange={(val) => { setCategoryFilter(val); setPage(0); }}
+                            options={[
+                                { value: "", label: "All Categories" },
+                                { value: "GOVERNMENT", label: "Government" },
+                                { value: "NON_GOVERNMENT", label: "Non-Government" },
+                            ]}
+                        />
+                        <StyledSelect
                             value={paidAgainstFilter}
-                            onChange={(e) => { setPaidAgainstFilter(e.target.value); setPage(0); }}
-                            className="px-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="">Bills & Statements</option>
-                            <option value="BILL">Bills Only</option>
-                            <option value="STATEMENT">Statements Only</option>
-                        </select>
-                        <select
+                            onChange={(val) => { setPaidAgainstFilter(val); setPage(0); }}
+                            options={[
+                                { value: "", label: "Bills & Statements" },
+                                { value: "BILL", label: "Bills Only" },
+                                { value: "STATEMENT", label: "Statements Only" },
+                            ]}
+                        />
+                        <StyledSelect
                             value={modeFilter}
-                            onChange={(e) => setModeFilter(e.target.value)}
-                            className="px-4 py-2 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                            <option value="ALL">All Modes</option>
-                            {paymentModes.map((m) => (
-                                <option key={m.id} value={m.name}>{m.name}</option>
-                            ))}
-                        </select>
+                            onChange={(val) => setModeFilter(val)}
+                            options={[
+                                { value: "ALL", label: "All Modes" },
+                                ...paymentModes.map((m) => ({ value: m.name, label: m.name })),
+                            ]}
+                        />
                     </div>
 
                     {/* Date Range Filter — only in dates mode */}
@@ -881,16 +880,15 @@ export default function PaymentsPage() {
                                 {/* Payment Mode */}
                                 <div>
                                     <label className="block text-sm font-medium text-muted-foreground mb-1">Payment Mode</label>
-                                    <select
-                                        value={payModeId}
-                                        onChange={(e) => setPayModeId(Number(e.target.value))}
-                                        className="w-full px-4 py-2.5 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    >
-                                        <option value="">Select mode...</option>
-                                        {paymentModes.map((m) => (
-                                            <option key={m.id} value={m.id}>{m.name}</option>
-                                        ))}
-                                    </select>
+                                    <StyledSelect
+                                        value={String(payModeId)}
+                                        onChange={(val) => setPayModeId(val ? Number(val) : "")}
+                                        options={[
+                                            { value: "", label: "Select mode..." },
+                                            ...paymentModes.map((m) => ({ value: String(m.id), label: m.name })),
+                                        ]}
+                                        className="w-full"
+                                    />
                                 </div>
                             </div>
 
