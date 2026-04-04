@@ -72,7 +72,7 @@ const mockPayments = {
       id: 1,
       paymentDate: "2026-03-20T14:00:00",
       amount: 10000,
-      paymentMode: { id: 1, name: "CASH" },
+      paymentMode: "CASH",
       customer: { id: 1, name: "ABC Transport" },
       referenceNo: "PAY-001",
       remarks: null,
@@ -84,7 +84,7 @@ const mockPayments = {
       id: 2,
       paymentDate: "2026-03-21T10:00:00",
       amount: 25000,
-      paymentMode: { id: 2, name: "UPI" },
+      paymentMode: "UPI",
       customer: { id: 2, name: "XYZ Logistics" },
       referenceNo: "PAY-002",
       remarks: null,
@@ -137,7 +137,7 @@ test.describe("Payments Page", () => {
     await page.route(`${API_BASE}/auth/me`, (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(DEV_USER) })
     );
-    // The page calls getPayments (paginated) and getPaymentModes
+    // The page calls getPayments (paginated)
     await page.route(`${API_BASE}/payments?*`, (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockPayments) })
     );
@@ -147,15 +147,9 @@ test.describe("Payments Page", () => {
       }
       return route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
     });
-    await page.route(`${API_BASE}/payment-modes`, (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([
-        { id: 1, name: "CASH" },
-        { id: 2, name: "UPI" },
-      ]) })
-    );
     await page.route(`${API_BASE}/**`, (route) => {
       const url = route.request().url();
-      if (url.includes("/auth/me") || url.includes("/payments") || url.includes("/payment-modes")) return;
+      if (url.includes("/auth/me") || url.includes("/payments")) return;
       route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
     });
   });

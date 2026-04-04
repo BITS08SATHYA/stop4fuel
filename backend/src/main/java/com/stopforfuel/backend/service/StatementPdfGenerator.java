@@ -459,7 +459,7 @@ public class StatementPdfGenerator {
             for (Payment p : payments) {
                 addSummaryCell(table, String.valueOf(idx), Element.ALIGN_LEFT, false);
                 addSummaryCell(table, p.getPaymentDate() != null ? p.getPaymentDate().format(SHORT_DATE) : "-", Element.ALIGN_LEFT, false);
-                String mode = p.getPaymentMode() != null ? p.getPaymentMode().getModeName() : "-";
+                String mode = p.getPaymentMode() != null ? p.getPaymentMode().name() : "-";
                 addSummaryCell(table, mode, Element.ALIGN_LEFT, false);
                 addSummaryCell(table, p.getReferenceNo() != null ? p.getReferenceNo() : "-", Element.ALIGN_LEFT, false);
                 addSummaryCell(table, fmtAmt(p.getAmount()), Element.ALIGN_RIGHT, false);

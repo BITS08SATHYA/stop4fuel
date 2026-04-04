@@ -63,7 +63,7 @@ public class InvoiceBillDTO {
                 .netAmount(b.getNetAmount())
                 .billNo(b.getBillNo())
                 .billType(b.getBillType() != null ? b.getBillType().name() : null)
-                .paymentMode(b.getPaymentMode())
+                .paymentMode(b.getPaymentMode() != null ? b.getPaymentMode().name() : null)
                 .indentNo(b.getIndentNo())
                 .indentPic(b.getIndentPic())
                 .status(b.getStatus())

@@ -1,7 +1,7 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.*;
-import com.stopforfuel.backend.enums.EAdvanceType;
+import com.stopforfuel.backend.enums.PaymentMode;
 import com.stopforfuel.backend.enums.PaymentStatus;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
@@ -27,7 +27,6 @@ public class PaymentService {
     private final StatementRepository statementRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final CustomerRepository customerRepository;
-    private final PaymentModeRepository paymentModeRepository;
     private final ShiftService shiftService;
     private final EAdvanceService eAdvanceService;
     private final S3StorageService s3StorageService;
@@ -124,8 +123,7 @@ public class PaymentService {
             }
         }
 
-        // Resolve payment mode and set employee
-        resolvePaymentMode(payment);
+        // Set employee
         resolveReceivedBy(payment);
 
         Payment saved = paymentRepository.save(payment);
@@ -199,8 +197,7 @@ public class PaymentService {
             }
         }
 
-        // Resolve payment mode and set employee
-        resolvePaymentMode(payment);
+        // Set employee
         resolveReceivedBy(payment);
 
         Payment saved = paymentRepository.save(payment);
@@ -271,38 +268,27 @@ public class PaymentService {
             return;
         }
 
-        String modeName = payment.getPaymentMode() != null ? payment.getPaymentMode().getModeName() : "CASH";
-        String upperMode = modeName.toUpperCase();
-
-        // Only create EAdvance for electronic payment modes
-        switch (upperMode) {
-            case "UPI":
-            case "CARD":
-            case "CHEQUE":
-            case "BANK TRANSFER":
-            case "BANK":
-            case "CCMS":
-                String customerName = payment.getCustomer() != null ? payment.getCustomer().getName() : null;
-                String remark = "Auto: Payment #" + payment.getId()
-                        + (customerName != null ? " - " + customerName : "");
-                EAdvance eAdv = new EAdvance();
-                eAdv.setAmount(amount);
-                eAdv.setRemarks(remark);
-                eAdv.setShiftId(activeShift.getId());
-                eAdv.setScid(payment.getScid());
-                EAdvanceType type = EAdvanceType.valueOf("BANK TRANSFER".equals(upperMode) ? "BANK_TRANSFER" : upperMode);
-                eAdv.setAdvanceType(type);
-                eAdv.setPayment(payment);
-                eAdv.setStatement(payment.getStatement());
-                if ("CARD".equals(upperMode) && customerName != null) {
-                    eAdv.setCustomerName(customerName);
-                }
-                eAdvanceService.create(eAdv);
-                break;
-            default:
-                // CASH — no separate record needed, Payment is the source of truth
-                break;
+        PaymentMode mode = payment.getPaymentMode();
+        if (mode == null || mode == PaymentMode.CASH || mode == PaymentMode.NEFT) {
+            return;
         }
+
+        // Create EAdvance for electronic payment modes (CARD, UPI, CHEQUE, CCMS, BANK_TRANSFER)
+        String customerName = payment.getCustomer() != null ? payment.getCustomer().getName() : null;
+        String remark = "Auto: Payment #" + payment.getId()
+                + (customerName != null ? " - " + customerName : "");
+        EAdvance eAdv = new EAdvance();
+        eAdv.setAmount(amount);
+        eAdv.setRemarks(remark);
+        eAdv.setShiftId(activeShift.getId());
+        eAdv.setScid(payment.getScid());
+        eAdv.setAdvanceType(mode);
+        eAdv.setPayment(payment);
+        eAdv.setStatement(payment.getStatement());
+        if (mode == PaymentMode.CARD && customerName != null) {
+            eAdv.setCustomerName(customerName);
+        }
+        eAdvanceService.create(eAdv);
     }
 
     /**
@@ -314,17 +300,6 @@ public class PaymentService {
             if (activeShift != null && activeShift.getAttendant() != null) {
                 payment.setReceivedBy(activeShift.getAttendant());
             }
-        }
-    }
-
-    /**
-     * Resolve payment mode from the entity's paymentMode.id to a managed entity.
-     */
-    private void resolvePaymentMode(Payment payment) {
-        if (payment.getPaymentMode() != null && payment.getPaymentMode().getId() != null) {
-            PaymentMode mode = paymentModeRepository.findById(payment.getPaymentMode().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Payment mode not found"));
-            payment.setPaymentMode(mode);
         }
     }
 

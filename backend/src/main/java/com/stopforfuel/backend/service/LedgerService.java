@@ -83,7 +83,7 @@ public class LedgerService {
             entry.date = payment.getPaymentDate();
             entry.type = "CREDIT";
             entry.description = "Payment"
-                    + (payment.getPaymentMode() != null ? " (" + payment.getPaymentMode().getModeName() + ")" : "")
+                    + (payment.getPaymentMode() != null ? " (" + payment.getPaymentMode().name() + ")" : "")
                     + (payment.getReferenceNo() != null ? " Ref: " + payment.getReferenceNo() : "");
             entry.referenceId = payment.getId();
             entry.debitAmount = BigDecimal.ZERO;

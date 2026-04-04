@@ -2,7 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.EAdvance;
 import com.stopforfuel.backend.entity.Shift;
-import com.stopforfuel.backend.enums.EAdvanceType;
+import com.stopforfuel.backend.enums.PaymentMode;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.EAdvanceRepository;
 import com.stopforfuel.config.SecurityUtils;
@@ -42,7 +42,7 @@ public class EAdvanceService {
 
     @Transactional(readOnly = true)
     public List<EAdvance> getByType(String advanceType) {
-        return repository.findByAdvanceTypeOrderByTransactionDateDesc(EAdvanceType.valueOf(advanceType));
+        return repository.findByAdvanceTypeOrderByTransactionDateDesc(PaymentMode.valueOf(advanceType));
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +51,7 @@ public class EAdvanceService {
         LocalDateTime to = toDate.atTime(LocalTime.MAX);
         Long scid = SecurityUtils.getScid();
         if (type != null && !type.isBlank()) {
-            return repository.findByDateRangeAndType(scid, from, to, EAdvanceType.valueOf(type));
+            return repository.findByDateRangeAndType(scid, from, to, PaymentMode.valueOf(type));
         }
         return repository.findByDateRange(scid, from, to);
     }
@@ -100,11 +100,11 @@ public class EAdvanceService {
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> getShiftSummary(Long shiftId) {
         return Map.of(
-            "card", repository.sumByShiftAndType(shiftId, EAdvanceType.CARD),
-            "upi", repository.sumByShiftAndType(shiftId, EAdvanceType.UPI),
-            "cheque", repository.sumByShiftAndType(shiftId, EAdvanceType.CHEQUE),
-            "ccms", repository.sumByShiftAndType(shiftId, EAdvanceType.CCMS),
-            "bank_transfer", repository.sumByShiftAndType(shiftId, EAdvanceType.BANK_TRANSFER),
+            "card", repository.sumByShiftAndType(shiftId, PaymentMode.CARD),
+            "upi", repository.sumByShiftAndType(shiftId, PaymentMode.UPI),
+            "cheque", repository.sumByShiftAndType(shiftId, PaymentMode.CHEQUE),
+            "ccms", repository.sumByShiftAndType(shiftId, PaymentMode.CCMS),
+            "bank_transfer", repository.sumByShiftAndType(shiftId, PaymentMode.BANK_TRANSFER),
             "total", repository.sumAllByShift(shiftId)
         );
     }

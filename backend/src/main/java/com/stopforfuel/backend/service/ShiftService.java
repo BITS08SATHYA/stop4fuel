@@ -395,11 +395,11 @@ public class ShiftService {
 
         // E-Advance totals by type
         Map<String, BigDecimal> eAdvTotals = new LinkedHashMap<>();
-        eAdvTotals.put("CARD", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CARD));
-        eAdvTotals.put("UPI", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.UPI));
-        eAdvTotals.put("CCMS", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CCMS));
-        eAdvTotals.put("CHEQUE", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.CHEQUE));
-        eAdvTotals.put("BANK_TRANSFER", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.EAdvanceType.BANK_TRANSFER));
+        eAdvTotals.put("CARD", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.CARD));
+        eAdvTotals.put("UPI", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.UPI));
+        eAdvTotals.put("CCMS", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.CCMS));
+        eAdvTotals.put("CHEQUE", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.CHEQUE));
+        eAdvTotals.put("BANK_TRANSFER", eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.BANK_TRANSFER));
         dto.setEAdvanceTotals(eAdvTotals);
 
         // Operational advance totals by type
