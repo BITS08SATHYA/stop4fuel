@@ -283,8 +283,10 @@ public class InvoiceBillService {
             }
 
             invoice.setGrossAmount(totalGross);
-            invoice.setTotalDiscount(totalDiscountSum);
-            BigDecimal netAmount = totalGross.subtract(totalDiscountSum);
+            // Preserve manual invoice-level discount (sent from frontend) and add product-level discounts
+            BigDecimal manualDiscount = invoice.getTotalDiscount() != null ? invoice.getTotalDiscount() : BigDecimal.ZERO;
+            invoice.setTotalDiscount(totalDiscountSum.add(manualDiscount));
+            BigDecimal netAmount = totalGross.subtract(totalDiscountSum).subtract(manualDiscount);
             if (invoice.getNetAmount() == null || invoice.getNetAmount().compareTo(BigDecimal.ZERO) == 0) {
                 invoice.setNetAmount(netAmount);
             }
