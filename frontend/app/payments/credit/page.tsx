@@ -712,7 +712,7 @@ function PaymentsTable({ payments }: { payments: Payment[] }) {
                         </td>
                         <td className="py-1.5 px-3">
                             <Badge variant="default" className="text-[9px] px-1 py-0">
-                                {pmt.paymentMode?.name || "-"}
+                                {pmt.paymentMode || "-"}
                             </Badge>
                         </td>
                         <td className="py-1.5 px-3 text-muted-foreground">{pmt.referenceNo || "-"}</td>
