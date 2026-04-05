@@ -232,6 +232,18 @@ public class AdminUserService {
         return userRepository.save(user);
     }
 
+    @Transactional
+    public User toggleUserStatus(Long userId) {
+        User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getStatus() == EntityStatus.ACTIVE) {
+            user.setStatus(EntityStatus.INACTIVE);
+        } else {
+            user.setStatus(EntityStatus.ACTIVE);
+        }
+        return userRepository.save(user);
+    }
+
     public void disableUser(Long userId) {
         User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));

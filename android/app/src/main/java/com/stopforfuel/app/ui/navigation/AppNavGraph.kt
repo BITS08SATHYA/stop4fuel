@@ -16,6 +16,8 @@ import com.stopforfuel.app.ui.pumpsession.EndPumpSessionScreen
 import com.stopforfuel.app.ui.customer.CustomerListScreen
 import com.stopforfuel.app.ui.customer.CustomerDetailScreen
 import com.stopforfuel.app.ui.employee.EmployeeManageScreen
+import com.stopforfuel.app.ui.dashboard.DashboardScreen
+import com.stopforfuel.app.ui.product.ProductManageScreen
 
 @Composable
 fun AppNavGraph() {
@@ -54,6 +56,12 @@ fun AppNavGraph() {
                 },
                 onNavigateToEmployees = {
                     navController.navigate(Routes.EmployeeManage.route)
+                },
+                onNavigateToDashboard = {
+                    navController.navigate(Routes.Dashboard.route)
+                },
+                onNavigateToProducts = {
+                    navController.navigate(Routes.ProductManage.route)
                 },
                 onLogout = {
                     navController.navigate(Routes.Login.route) {
@@ -117,6 +125,16 @@ fun AppNavGraph() {
             EmployeeManageScreen(
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Routes.Dashboard.route) {
+            DashboardScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.ProductManage.route) {
+            ProductManageScreen(onBack = { navController.popBackStack() })
         }
     }
 }
