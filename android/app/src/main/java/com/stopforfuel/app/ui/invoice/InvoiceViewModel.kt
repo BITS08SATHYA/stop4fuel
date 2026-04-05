@@ -60,7 +60,7 @@ data class InvoiceUiState(
     val successBillNo: String? = null
 ) {
     val filteredNozzles: List<NozzleDto>
-        get() = if (selectedProduct != null && selectedProduct.category == "Fuel") {
+        get() = if (selectedProduct != null && selectedProduct.category.equals("Fuel", ignoreCase = true)) {
             nozzles.filter { it.tank?.productId == selectedProduct.id }
         } else emptyList()
 
