@@ -105,6 +105,9 @@ interface ApiService {
     @GET("api/dashboard/system-health")
     suspend fun getSystemHealth(): SystemHealthDto
 
+    @GET("api/dashboard/cashier")
+    suspend fun getCashierDashboard(): CashierDashboardDto
+
     // Products Management
     @PUT("api/products/{id}")
     suspend fun updateProduct(@Path("id") id: Long, @Body product: Map<String, Any?>): ProductDto

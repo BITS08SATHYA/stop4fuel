@@ -2,11 +2,7 @@ package com.stopforfuel.app.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.stopforfuel.app.data.remote.dto.DashboardStatsDto
-import com.stopforfuel.app.data.remote.dto.ProductDto
-import com.stopforfuel.app.data.remote.dto.PumpSessionDto
-import com.stopforfuel.app.data.remote.dto.ShiftDto
-import com.stopforfuel.app.data.remote.dto.SystemHealthDto
+import com.stopforfuel.app.data.remote.dto.*
 import com.stopforfuel.app.data.repository.AuthRepository
 import com.stopforfuel.app.data.repository.DashboardRepository
 import com.stopforfuel.app.data.repository.LookupRepository
@@ -26,10 +22,14 @@ data class HomeUiState(
     val activePumpSession: PumpSessionDto? = null,
     val dashboardStats: DashboardStatsDto? = null,
     val systemHealth: SystemHealthDto? = null,
+    val cashierDashboard: CashierDashboardDto? = null,
     val fuelProducts: List<ProductDto> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null
-)
+) {
+    val isManager: Boolean
+        get() = userRole.uppercase().let { it == "OWNER" || it == "MANAGER" }
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -49,38 +49,51 @@ class HomeViewModel @Inject constructor(
 
     fun loadData() {
         viewModelScope.launch {
+            val role = authRepository.getUserRole() ?: ""
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 userName = authRepository.getUserName() ?: "",
-                userRole = authRepository.getUserRole() ?: ""
+                userRole = role
             )
 
             try {
-                // Fetch shift + pre-cache lookups in parallel
                 val shift = shiftRepository.fetchActiveShift()
                 val pumpSession = pumpSessionRepository.getActiveSession()
 
-                // Pre-fetch products and nozzles for invoice creation
+                // Pre-fetch lookups
                 lookupRepository.getProducts()
                 lookupRepository.getNozzles()
                 lookupRepository.getPumps()
 
-                // Load dashboard data
-                val stats = dashboardRepository.getStats().getOrNull()
-                val health = dashboardRepository.getSystemHealth().getOrNull()
-                val products = dashboardRepository.getProducts().getOrNull()
-                    ?.filter { it.category.equals("FUEL", ignoreCase = true) }
-                    ?: emptyList()
+                val isManager = role.uppercase().let { it == "OWNER" || it == "MANAGER" }
 
-                _uiState.value = _uiState.value.copy(
-                    activeShift = shift,
-                    activePumpSession = pumpSession,
-                    dashboardStats = stats,
-                    systemHealth = health,
-                    fuelProducts = products,
-                    isLoading = false,
-                    error = null
-                )
+                if (isManager) {
+                    // Owner/Manager: full dashboard
+                    val stats = dashboardRepository.getStats().getOrNull()
+                    val health = dashboardRepository.getSystemHealth().getOrNull()
+                    val products = dashboardRepository.getProducts().getOrNull()
+                        ?.filter { it.category.equals("FUEL", ignoreCase = true) }
+                        ?: emptyList()
+
+                    _uiState.value = _uiState.value.copy(
+                        activeShift = shift,
+                        activePumpSession = pumpSession,
+                        dashboardStats = stats,
+                        systemHealth = health,
+                        fuelProducts = products,
+                        isLoading = false, error = null
+                    )
+                } else {
+                    // Cashier/Employee: shift-focused dashboard
+                    val cashier = dashboardRepository.getCashierDashboard().getOrNull()
+
+                    _uiState.value = _uiState.value.copy(
+                        activeShift = shift,
+                        activePumpSession = pumpSession,
+                        cashierDashboard = cashier,
+                        isLoading = false, error = null
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
