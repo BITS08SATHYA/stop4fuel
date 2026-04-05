@@ -17,6 +17,10 @@ public interface ProductInventoryRepository extends ScidRepository<ProductInvent
     @Query("SELECT pi FROM ProductInventory pi WHERE pi.product.id = :productId ORDER BY pi.date DESC, pi.id DESC LIMIT 1")
     ProductInventory findTopByProductIdForUpdate(@Param("productId") Long productId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT pi FROM ProductInventory pi WHERE pi.product.id = :productId AND pi.shiftId = :shiftId ORDER BY pi.id DESC LIMIT 1")
+    ProductInventory findByProductIdAndShiftIdForUpdate(@Param("productId") Long productId, @Param("shiftId") Long shiftId);
+
     @Query("SELECT pi FROM ProductInventory pi JOIN FETCH pi.product WHERE pi.scid = :scid ORDER BY pi.date DESC, pi.id DESC")
     List<ProductInventory> findAllByScidWithProduct(Long scid);
 
