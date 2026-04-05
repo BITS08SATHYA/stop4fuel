@@ -923,15 +923,58 @@ export default function InvoicesPage() {
                                 )}
 
                                 <div>
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Qty</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
-                                        value={line.quantity}
-                                        onChange={(e) => updateProductLine(idx, { quantity: e.target.value })}
-                                        placeholder="0"
-                                    />
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                            {line.amountMode ? "Amount (₹)" : `Qty${line.product?.category === "Fuel" ? " (L)" : ""}`}
+                                        </label>
+                                        {line.product?.category === "Fuel" && (
+                                            <button
+                                                type="button"
+                                                onClick={() => updateProductLine(idx, { amountMode: !line.amountMode, quantity: "", amountInput: "" })}
+                                                className="text-[9px] font-bold text-amber-500 hover:text-amber-400"
+                                            >
+                                                {line.amountMode ? "→ Liters" : "→ ₹ Amount"}
+                                            </button>
+                                        )}
+                                    </div>
+                                    {line.amountMode ? (
+                                        <>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
+                                                value={line.amountInput || ""}
+                                                onChange={(e) => {
+                                                    const amt = parseFloat(e.target.value) || 0;
+                                                    const price = parseFloat(line.unitPrice) || 0;
+                                                    const qty = price > 0 ? (amt / price).toFixed(3) : "0";
+                                                    updateProductLine(idx, { amountInput: e.target.value, quantity: qty });
+                                                }}
+                                                placeholder="₹0"
+                                            />
+                                            {line.amountInput && parseFloat(line.unitPrice) > 0 && (
+                                                <p className="text-[10px] text-primary font-bold mt-1">
+                                                    = {(parseFloat(line.amountInput) / parseFloat(line.unitPrice)).toFixed(3)} L
+                                                </p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
+                                                value={line.quantity}
+                                                onChange={(e) => updateProductLine(idx, { quantity: e.target.value })}
+                                                placeholder="0"
+                                            />
+                                            {line.product?.category === "Fuel" && line.quantity && parseFloat(line.unitPrice) > 0 && (
+                                                <p className="text-[10px] text-primary font-bold mt-1">
+                                                    = ₹{(parseFloat(line.quantity) * parseFloat(line.unitPrice)).toFixed(2)}
+                                                </p>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
 
                                 <div>
