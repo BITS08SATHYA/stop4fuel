@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -214,6 +215,20 @@ private fun Step1Content(
                 }
             }
 
+            // Quick select product buttons
+            item {
+                Text(
+                    "QUICK SELECT",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                QuickSelectRow(
+                    products = uiState.products,
+                    onSelect = { viewModel.selectProduct(it) }
+                )
+            }
+
             // Product buttons
             item {
                 Text(
@@ -299,6 +314,48 @@ private fun Step1Content(
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickSelectRow(
+    products: List<com.stopforfuel.app.data.remote.dto.ProductDto>,
+    onSelect: (com.stopforfuel.app.data.remote.dto.ProductDto) -> Unit
+) {
+    data class QuickBtn(val label: String, val matcher: (String) -> Boolean)
+
+    val quickButtons = listOf(
+        QuickBtn("MS") { it.contains("petrol", ignoreCase = true) },
+        QuickBtn("XP") { it.contains("xtra premium", ignoreCase = true) || it.contains("extra premium", ignoreCase = true) },
+        QuickBtn("HSD") { it.contains("diesel", ignoreCase = true) },
+        QuickBtn("2T Loose") { it.contains("2t", ignoreCase = true) && it.contains("loose", ignoreCase = true) },
+        QuickBtn("2T 20ml") { it.contains("20", ignoreCase = true) && (it.contains("ml", ignoreCase = true) || it.contains("pouch", ignoreCase = true)) },
+        QuickBtn("40ml") { it.contains("40", ignoreCase = true) && (it.contains("ml", ignoreCase = true) || it.contains("pouch", ignoreCase = true)) }
+    )
+
+    val orange = Color(0xFFFF9800)
+
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(quickButtons) { btn ->
+            val matched = products.firstOrNull { btn.matcher(it.name ?: "") }
+            if (matched != null) {
+                ElevatedAssistChip(
+                    onClick = { onSelect(matched) },
+                    label = {
+                        Text(
+                            btn.label,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    },
+                    colors = AssistChipDefaults.elevatedAssistChipColors(
+                        containerColor = orange,
+                        labelColor = Color.Black
+                    ),
+                    modifier = Modifier.height(36.dp)
+                )
             }
         }
     }

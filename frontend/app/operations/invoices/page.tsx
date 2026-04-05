@@ -839,6 +839,43 @@ export default function InvoicesPage() {
                     </button>
                 </div>
 
+                {/* Quick Select Product Buttons */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                    {[
+                        { label: "MS", matcher: (n: string) => n.toLowerCase().includes("petrol") },
+                        { label: "XP", matcher: (n: string) => n.toLowerCase().includes("xtra premium") || n.toLowerCase().includes("extra premium") },
+                        { label: "HSD", matcher: (n: string) => n.toLowerCase().includes("diesel") },
+                        { label: "2T Loose", matcher: (n: string) => n.toLowerCase().includes("2t") && n.toLowerCase().includes("loose") },
+                        { label: "2T 20ml", matcher: (n: string) => n.toLowerCase().includes("20") && (n.toLowerCase().includes("ml") || n.toLowerCase().includes("pouch")) },
+                        { label: "40ml", matcher: (n: string) => n.toLowerCase().includes("40") && (n.toLowerCase().includes("ml") || n.toLowerCase().includes("pouch")) },
+                    ].map(({ label, matcher }) => {
+                        const matched = products.find(p => matcher(p.name || ""));
+                        if (!matched) return null;
+                        return (
+                            <button
+                                key={label}
+                                onClick={() => {
+                                    const emptyIdx = selectedProducts.findIndex((l: any) => !l.product);
+                                    if (emptyIdx >= 0) {
+                                        updateProductLine(emptyIdx, { product: matched, unitPrice: String(matched.price) });
+                                    } else {
+                                        setSelectedProducts((prev: any[]) => [...prev, {
+                                            product: matched,
+                                            nozzle: null,
+                                            quantity: "",
+                                            unitPrice: String(matched.price),
+                                            amount: 0
+                                        }]);
+                                    }
+                                }}
+                                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black rounded-full text-xs font-bold transition-all shadow-sm"
+                            >
+                                {label}
+                            </button>
+                        );
+                    })}
+                </div>
+
                 {selectedProducts.length === 0 && (
                     <div className="text-center py-12 text-muted-foreground">
                         <Package className="w-12 h-12 mx-auto mb-3 opacity-40" />

@@ -2,9 +2,13 @@ package com.stopforfuel.app.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.stopforfuel.app.data.remote.dto.DashboardStatsDto
+import com.stopforfuel.app.data.remote.dto.ProductDto
 import com.stopforfuel.app.data.remote.dto.PumpSessionDto
 import com.stopforfuel.app.data.remote.dto.ShiftDto
+import com.stopforfuel.app.data.remote.dto.SystemHealthDto
 import com.stopforfuel.app.data.repository.AuthRepository
+import com.stopforfuel.app.data.repository.DashboardRepository
 import com.stopforfuel.app.data.repository.LookupRepository
 import com.stopforfuel.app.data.repository.PumpSessionRepository
 import com.stopforfuel.app.data.repository.ShiftRepository
@@ -20,6 +24,9 @@ data class HomeUiState(
     val userRole: String = "",
     val activeShift: ShiftDto? = null,
     val activePumpSession: PumpSessionDto? = null,
+    val dashboardStats: DashboardStatsDto? = null,
+    val systemHealth: SystemHealthDto? = null,
+    val fuelProducts: List<ProductDto> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -29,7 +36,8 @@ class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val shiftRepository: ShiftRepository,
     private val lookupRepository: LookupRepository,
-    private val pumpSessionRepository: PumpSessionRepository
+    private val pumpSessionRepository: PumpSessionRepository,
+    private val dashboardRepository: DashboardRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -57,9 +65,19 @@ class HomeViewModel @Inject constructor(
                 lookupRepository.getNozzles()
                 lookupRepository.getPumps()
 
+                // Load dashboard data
+                val stats = dashboardRepository.getStats().getOrNull()
+                val health = dashboardRepository.getSystemHealth().getOrNull()
+                val products = dashboardRepository.getProducts().getOrNull()
+                    ?.filter { it.category.equals("FUEL", ignoreCase = true) }
+                    ?: emptyList()
+
                 _uiState.value = _uiState.value.copy(
                     activeShift = shift,
                     activePumpSession = pumpSession,
+                    dashboardStats = stats,
+                    systemHealth = health,
+                    fuelProducts = products,
                     isLoading = false,
                     error = null
                 )
