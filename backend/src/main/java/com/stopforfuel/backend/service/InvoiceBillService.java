@@ -494,8 +494,14 @@ public class InvoiceBillService {
         // --- 2. Product inventory deduction ---
         if (invoiceProduct.getProduct() != null && invoiceProduct.getProduct().getId() != null) {
             Long productId = invoiceProduct.getProduct().getId();
-            ProductInventory productInv = productInventoryRepository
-                    .findTopByProductIdForUpdate(productId);
+            Long shiftId = invoiceProduct.getInvoiceBill() != null ? invoiceProduct.getInvoiceBill().getShiftId() : null;
+            ProductInventory productInv = null;
+            if (shiftId != null) {
+                productInv = productInventoryRepository.findByProductIdAndShiftIdForUpdate(productId, shiftId);
+            }
+            if (productInv == null) {
+                productInv = productInventoryRepository.findTopByProductIdForUpdate(productId);
+            }
             if (productInv != null) {
                 double currentClose = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
                 productInv.setCloseStock(currentClose - qty);
