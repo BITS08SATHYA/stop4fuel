@@ -29,6 +29,7 @@ public class PaymentService {
     private final CustomerRepository customerRepository;
     private final ShiftService shiftService;
     private final EAdvanceService eAdvanceService;
+    private final EAdvanceRepository eAdvanceRepository;
     private final S3StorageService s3StorageService;
 
     @Transactional(readOnly = true)
@@ -251,6 +252,79 @@ public class PaymentService {
         summary.totalReceived = totalReceived;
         summary.balanceAmount = balance.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : balance;
         return summary;
+    }
+
+    /**
+     * Delete a payment and reverse all side effects:
+     * - Revert statement received/balance amounts and status
+     * - Revert bill payment status
+     * - Remove linked EAdvance record
+     * - Delete proof image from S3
+     */
+    @Transactional
+    public void deletePayment(Long id) {
+        Payment payment = paymentRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
+
+        // 1. Remove linked EAdvance if exists
+        eAdvanceRepository.findByPaymentId(id).ifPresent(eAdv -> eAdvanceService.delete(eAdv.getId()));
+
+        // 2. Delete proof image from S3 if exists
+        if (payment.getProofImageKey() != null) {
+            s3StorageService.delete(payment.getProofImageKey());
+        }
+
+        // 3. Reverse statement side effects
+        if (payment.getStatement() != null) {
+            Statement statement = payment.getStatement();
+
+            // Delete the payment first so the sum query excludes it
+            paymentRepository.delete(payment);
+            paymentRepository.flush();
+
+            // Recalculate statement totals from remaining payments
+            BigDecimal totalReceived = paymentRepository.sumPaymentsByStatementId(statement.getId());
+            statement.setReceivedAmount(totalReceived);
+            statement.setBalanceAmount(statement.getNetAmount().subtract(totalReceived));
+
+            // If it was PAID, reset to NOT_PAID
+            if ("PAID".equals(statement.getStatus())) {
+                statement.setStatus("NOT_PAID");
+
+                // Reset all underlying bills back to NOT_PAID
+                List<InvoiceBill> bills = invoiceBillRepository.findByStatementId(statement.getId());
+                for (InvoiceBill bill : bills) {
+                    if (bill.getPaymentStatus() == PaymentStatus.PAID) {
+                        bill.setPaymentStatus(PaymentStatus.NOT_PAID);
+                        invoiceBillRepository.save(bill);
+                    }
+                }
+            }
+
+            statementRepository.save(statement);
+
+        } else if (payment.getInvoiceBill() != null) {
+            // 4. Reverse direct bill payment side effects
+            InvoiceBill bill = payment.getInvoiceBill();
+
+            // Delete the payment first so the sum query excludes it
+            paymentRepository.delete(payment);
+            paymentRepository.flush();
+
+            // Recalculate total received from remaining payments
+            BigDecimal remainingReceived = paymentRepository.sumPaymentsByInvoiceBillId(bill.getId());
+
+            // If bill was PAID but remaining payments no longer cover the full amount, reset
+            if (bill.getPaymentStatus() == PaymentStatus.PAID
+                    && remainingReceived.compareTo(bill.getNetAmount()) < 0) {
+                bill.setPaymentStatus(PaymentStatus.NOT_PAID);
+                invoiceBillRepository.save(bill);
+            }
+
+        } else {
+            // No statement or bill linked — just delete the payment
+            paymentRepository.delete(payment);
+        }
     }
 
     /**

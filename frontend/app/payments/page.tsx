@@ -8,13 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import {
     CreditCard, Receipt, FileText, Search, Check, IndianRupee, Clock, ImageIcon, Paperclip,
-    Download, FileSpreadsheet, Calendar, Eye, Pencil
+    Download, FileSpreadsheet, Calendar, Eye, Pencil, Trash2
 } from "lucide-react";
 import {
     getPayments, getPaymentsByShift, getOutstandingStatements,
     getCustomers, recordStatementPayment, recordBillPayment,
     getOutstandingBills, uploadPaymentProof, getPaymentProofUrl,
     exportPaymentsPdf, exportPaymentsExcel, downloadPaymentReceipt,
+    deletePayment,
     API_BASE_URL, PAYMENT_MODES,
     type Payment, type Statement, type InvoiceBill, type Customer, type PageResponse
 } from "@/lib/api/station";
@@ -340,6 +341,21 @@ export default function PaymentsPage() {
         }
     };
 
+    const handleDeletePayment = async (id: number) => {
+        if (!confirm("Delete this payment? This will reverse the received amount on the linked statement/bill.")) return;
+        try {
+            await deletePayment(id);
+            if (viewPayment?.id === id) setViewPayment(null);
+            if (viewMode === "shift" && activeShiftId) {
+                loadPaymentsByShift(activeShiftId);
+            } else {
+                loadPaymentsByDate();
+            }
+        } catch (e) {
+            console.error("Failed to delete payment", e);
+        }
+    };
+
     // Filter outstanding items by search
     const filteredStatements = outstandingStatements.filter(s => {
         if (!billSearch) return true;
@@ -613,6 +629,15 @@ export default function PaymentsPage() {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
+                                                    <PermissionGate permission="PAYMENT_MANAGE">
+                                                        <button
+                                                            onClick={() => handleDeletePayment(p.id!)}
+                                                            className="p-1.5 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </PermissionGate>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1079,6 +1104,15 @@ export default function PaymentsPage() {
                                 <Download className="w-4 h-4 text-primary" />
                                 Download Receipt
                             </button>
+                            <PermissionGate permission="PAYMENT_MANAGE">
+                                <button
+                                    onClick={() => handleDeletePayment(viewPayment.id!)}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-rose-500/30 text-sm text-rose-400 hover:bg-rose-500/20 transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                </button>
+                            </PermissionGate>
                             <button
                                 onClick={() => setViewPayment(null)}
                                 className="ml-auto px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors text-sm"

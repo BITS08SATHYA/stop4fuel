@@ -13,12 +13,12 @@ import {
     IndianRupee, Percent, FileClock, FileCheck2, TrendingUp,
     Search, Calendar, ChevronDown, ChevronRight, FileText,
     Download, Loader2, ArrowLeft, Receipt, CreditCard, Clock,
-    Banknote, ImageIcon, ExternalLink
+    Banknote, ImageIcon, ExternalLink, Trash2
 } from "lucide-react";
 import {
     getStatements, getStatementBills, getPaymentsByStatement,
     getStatementStats, getStatementPdfUrl, getBillPaymentSummary,
-    getCustomerCreditInfo, recordStatementPayment, PAYMENT_MODES,
+    getCustomerCreditInfo, recordStatementPayment, deletePayment, PAYMENT_MODES,
     type Statement, type Payment, type InvoiceBill, type StatementStats,
     type PageResponse, type BillPaymentSummary
 } from "@/lib/api/station";
@@ -257,6 +257,26 @@ export default function ExplorerPage() {
             setPaymentError(err?.message || "Payment failed");
         } finally {
             setPaymentSubmitting(false);
+        }
+    };
+
+    const handleDeletePayment = async (paymentId: number) => {
+        if (!confirm("Delete this payment? This will reverse the received amount on the linked statement/bill.")) return;
+        try {
+            await deletePayment(paymentId);
+            if (selectedStatement) {
+                const [paymentsRes, statementsRes] = await Promise.all([
+                    getPaymentsByStatement(selectedStatement.id!),
+                    getStatements(page, pageSize, customerId || undefined, statusFilter || undefined, fromDate || undefined, toDate || undefined),
+                ]);
+                setPayments(paymentsRes);
+                setStatements(statementsRes.content);
+                const updated = statementsRes.content.find(s => s.id === selectedStatement.id);
+                if (updated) setSelectedStatement(updated);
+                getStatementStats().then(setStats).catch(console.error);
+            }
+        } catch (e) {
+            console.error("Failed to delete payment", e);
         }
     };
 
@@ -658,6 +678,7 @@ export default function ExplorerPage() {
                                                 error={paymentError}
                                                 onSubmit={handleRecordStatementPayment}
                                                 onCancel={() => { setShowPaymentForm(false); setPaymentError(""); }}
+                                                onDeletePayment={handleDeletePayment}
                                             />
                                         )}
                                     </div>
@@ -908,7 +929,7 @@ function PaymentsTab({
     payments, statement, showForm, onShowForm,
     paymentModes, paymentAmount, onAmountChange, paymentModeId, onModeChange,
     paymentRef, onRefChange, paymentRemarks, onRemarksChange,
-    submitting, error, onSubmit, onCancel
+    submitting, error, onSubmit, onCancel, onDeletePayment
 }: {
     payments: Payment[];
     statement: Statement;
@@ -927,6 +948,7 @@ function PaymentsTab({
     error: string;
     onSubmit: () => void;
     onCancel: () => void;
+    onDeletePayment: (id: number) => void;
 }) {
     const totalReceived = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
     const canPay = statement.status === "NOT_PAID" && (statement.balanceAmount || 0) > 0;
@@ -1056,7 +1078,18 @@ function PaymentsTab({
                                         </span>
                                         <span className="text-xs text-muted-foreground">{formatDateTime(pmt.paymentDate)}</span>
                                     </div>
-                                    <span className="text-sm font-bold text-green-400">{formatCurrency(pmt.amount)}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-bold text-green-400">{formatCurrency(pmt.amount)}</span>
+                                        <PermissionGate permission="PAYMENT_MANAGE">
+                                            <button
+                                                onClick={() => onDeletePayment(pmt.id!)}
+                                                className="p-1 rounded-md hover:bg-rose-500/20 text-rose-400/60 hover:text-rose-400 transition-colors"
+                                                title="Delete payment"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </PermissionGate>
+                                    </div>
                                 </div>
                                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
                                     {pmt.referenceNo && <span>Ref: {pmt.referenceNo}</span>}
