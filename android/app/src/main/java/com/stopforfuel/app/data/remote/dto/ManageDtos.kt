@@ -59,3 +59,8 @@ data class PasscodeApproveResponse(
     val userName: String?,
     val phone: String?
 )
+
+data class VehicleTypeDto(
+    val id: Long,
+    val typeName: String?
+)

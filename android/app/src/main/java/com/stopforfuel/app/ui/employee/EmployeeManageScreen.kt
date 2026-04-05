@@ -24,6 +24,8 @@ fun EmployeeManageScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    com.stopforfuel.app.ui.AutoRefreshOnResume { viewModel.loadAll() }
+
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(state.actionMessage) {
         state.actionMessage?.let {
@@ -137,7 +139,8 @@ fun EmployeeManageScreen(
                     items(state.employees) { employee ->
                         EmployeeCard(
                             employee = employee,
-                            onResetPasscode = { viewModel.resetPasscode(employee.id, employee.name) }
+                            onResetPasscode = { viewModel.resetPasscode(employee.id, employee.name) },
+                            onToggleStatus = { viewModel.toggleStatus(employee.id) }
                         )
                     }
                 }
@@ -149,9 +152,11 @@ fun EmployeeManageScreen(
 @Composable
 private fun EmployeeCard(
     employee: com.stopforfuel.app.data.remote.dto.AdminUserDto,
-    onResetPasscode: () -> Unit
+    onResetPasscode: () -> Unit,
+    onToggleStatus: () -> Unit = {}
 ) {
     var showConfirm by remember { mutableStateOf(false) }
+    val isActive = employee.status?.uppercase() == "ACTIVE"
 
     if (showConfirm) {
         AlertDialog(
@@ -168,29 +173,38 @@ private fun EmployeeCard(
     }
 
     Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    employee.name ?: "Unknown",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            employee.name ?: "Unknown",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        com.stopforfuel.app.ui.customer.StatusBadge(status = employee.status ?: "ACTIVE")
+                    }
                 Text(
                     "${employee.designation ?: employee.role ?: ""} | ${employee.phone ?: ""}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            FilledTonalButton(onClick = { showConfirm = true }) {
-                Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Reset PIN")
+                FilledTonalButton(onClick = { showConfirm = true }) {
+                    Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Reset PIN")
+                }
+            }
+            // Toggle status row
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onToggleStatus) {
+                    Text(if (isActive) "Deactivate" else "Activate")
+                }
             }
         }
     }
