@@ -59,6 +59,18 @@ public class VehicleController {
         return VehicleDTO.from(vehicleService.toggleStatus(id));
     }
 
+    @PatchMapping("/{id}/block")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    public VehicleDTO blockVehicle(@PathVariable Long id) {
+        return VehicleDTO.from(vehicleService.blockVehicle(id));
+    }
+
+    @PatchMapping("/{id}/unblock")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    public VehicleDTO unblockVehicle(@PathVariable Long id) {
+        return VehicleDTO.from(vehicleService.unblockVehicle(id));
+    }
+
     @PatchMapping("/{id}/liter-limit")
     @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
     public VehicleDTO updateLiterLimit(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
