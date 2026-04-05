@@ -486,15 +486,17 @@ public class ShiftSalesCalculationService {
                 row.setSales(sales);
             } else {
                 ProductInventory pi = productInvMap.get(product.getId());
+                double sales = 0;
+
                 if (pi != null) {
-                    double sales = pi.getSales() != null ? pi.getSales() : 0;
-                    if (sales == 0) continue;
+                    sales = pi.getSales() != null ? pi.getSales() : 0;
                     row.setOpenStock(pi.getOpenStock() != null ? pi.getOpenStock() : 0);
                     row.setReceipt(pi.getIncomeStock() != null ? pi.getIncomeStock() : 0);
                     row.setTotalStock(pi.getTotalStock() != null ? pi.getTotalStock() : 0);
-                    row.setSales(sales);
-                } else {
-                    double sales = 0;
+                }
+
+                // Fallback: scan invoices if ProductInventory shows no sales
+                if (sales == 0) {
                     for (InvoiceBill inv : invoices) {
                         if (inv.getProducts() != null) {
                             for (InvoiceProduct ip : inv.getProducts()) {
@@ -504,12 +506,15 @@ public class ShiftSalesCalculationService {
                             }
                         }
                     }
-                    if (sales == 0) continue;
-                    row.setSales(sales);
-                    row.setOpenStock(0.0);
-                    row.setReceipt(0.0);
-                    row.setTotalStock(0.0);
+                    if (pi == null) {
+                        row.setOpenStock(0.0);
+                        row.setReceipt(0.0);
+                        row.setTotalStock(0.0);
+                    }
                 }
+
+                if (sales == 0) continue;
+                row.setSales(sales);
             }
 
             BigDecimal salesAmt = product.getPrice() != null && row.getSales() != null
