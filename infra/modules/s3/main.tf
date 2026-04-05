@@ -22,3 +22,23 @@ resource "aws_s3_bucket_versioning" "main" {
     status = "Enabled"
   }
 }
+
+# Document folder structure
+locals {
+  folder_prefixes = [
+    "documents/",
+    "employees/",
+    "invoices/",
+    "payments/",
+    "reports/",
+    "statements/",
+  ]
+}
+
+resource "aws_s3_object" "folders" {
+  for_each = toset(local.folder_prefixes)
+
+  bucket = aws_s3_bucket.main.id
+  key    = each.value
+  content_type = "application/x-directory"
+}
