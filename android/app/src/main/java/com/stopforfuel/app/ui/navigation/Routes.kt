@@ -14,4 +14,6 @@ sealed class Routes(val route: String) {
         fun withId(id: Long) = "customer_detail/$id"
     }
     data object EmployeeManage : Routes("employee_manage")
+    data object Dashboard : Routes("dashboard")
+    data object ProductManage : Routes("product_manage")
 }

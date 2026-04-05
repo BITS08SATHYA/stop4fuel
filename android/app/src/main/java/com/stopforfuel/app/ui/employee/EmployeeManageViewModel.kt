@@ -104,6 +104,18 @@ class EmployeeManageViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(newPasscode = null, newPasscodeForUser = null)
     }
 
+    fun toggleStatus(userId: Long) {
+        viewModelScope.launch {
+            repository.toggleStatus(userId).fold(
+                onSuccess = { updated ->
+                    val newList = _uiState.value.employees.map { if (it.id == userId) updated else it }
+                    _uiState.value = _uiState.value.copy(employees = newList, actionMessage = "Status: ${updated.status}")
+                },
+                onFailure = { _uiState.value = _uiState.value.copy(actionMessage = "Error: ${it.message}") }
+            )
+        }
+    }
+
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(actionMessage = null)
     }

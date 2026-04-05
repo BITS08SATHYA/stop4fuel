@@ -98,6 +98,31 @@ interface ApiService {
     @POST("api/admin/users/passcode-reset-requests/{id}/reject")
     suspend fun rejectResetRequest(@Path("id") id: Long)
 
+    // Dashboard
+    @GET("api/dashboard/stats")
+    suspend fun getDashboardStats(): DashboardStatsDto
+
+    @GET("api/dashboard/system-health")
+    suspend fun getSystemHealth(): SystemHealthDto
+
+    // Products Management
+    @PUT("api/products/{id}")
+    suspend fun updateProduct(@Path("id") id: Long, @Body product: Map<String, Any?>): ProductDto
+
+    @POST("api/product-price-history")
+    suspend fun createPriceHistory(@Body entry: Map<String, Any?>): Any
+
+    // Vehicle Creation
+    @POST("api/vehicles")
+    suspend fun createVehicle(@Body vehicle: Map<String, Any?>): VehicleDto
+
+    @GET("api/vehicle-types")
+    suspend fun getVehicleTypes(): List<VehicleTypeDto>
+
+    // Employee Status Toggle
+    @PATCH("api/admin/users/{id}/toggle-status")
+    suspend fun toggleUserStatus(@Path("id") id: Long): AdminUserDto
+
     // Invoices
     @POST("api/invoices")
     suspend fun createInvoice(@Body invoice: CreateInvoiceRequest): InvoiceBillDto
