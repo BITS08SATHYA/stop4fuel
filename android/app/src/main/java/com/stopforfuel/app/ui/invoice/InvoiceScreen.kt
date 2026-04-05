@@ -147,74 +147,6 @@ private fun Step1Content(
                 }
             }
 
-            // Added items list
-            if (uiState.lineItems.isNotEmpty()) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "ADDED ITEMS",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        TextButton(onClick = { viewModel.clearAllItems() }) {
-                            Text("Clear", color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-
-                itemsIndexed(uiState.lineItems) { index, item ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = item.product.name ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = buildString {
-                                        if (item.nozzle != null) append("${item.nozzle.nozzleName} · ")
-                                        append("${item.quantity}${if (item.product.category == "Fuel") "L" else ""}")
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Text(
-                                text = inrFormat.format(item.amount),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            IconButton(
-                                onClick = { viewModel.removeItem(index) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Remove",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
             // Quick select product buttons
             item {
                 Text(
@@ -274,6 +206,39 @@ private fun Step1Content(
                     QuantitySection(uiState = uiState, viewModel = viewModel)
                 }
             }
+
+            // Added items list (at bottom so product grid stays visible)
+            if (uiState.lineItems.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("ADDED ITEMS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = { viewModel.clearAllItems() }) {
+                            Text("Clear", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+                itemsIndexed(uiState.lineItems) { index, item ->
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                        Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.product.name ?: "", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text(buildString {
+                                    if (item.nozzle != null) append("${item.nozzle.nozzleName} · ")
+                                    append("${item.quantity}${if (item.product.category == "Fuel") "L" else ""}")
+                                }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(inrFormat.format(item.amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            IconButton(onClick = { viewModel.removeItem(index) }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Remove", modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Bottom bar
@@ -324,22 +289,22 @@ private fun QuickSelectRow(
     products: List<com.stopforfuel.app.data.remote.dto.ProductDto>,
     onSelect: (com.stopforfuel.app.data.remote.dto.ProductDto) -> Unit
 ) {
-    data class QuickBtn(val label: String, val matcher: (String) -> Boolean)
+    data class QuickBtn(val label: String, val matcher: (com.stopforfuel.app.data.remote.dto.ProductDto) -> Boolean)
 
     val quickButtons = listOf(
-        QuickBtn("MS") { it.contains("petrol", ignoreCase = true) },
-        QuickBtn("XP") { it.contains("xtra premium", ignoreCase = true) || it.contains("extra premium", ignoreCase = true) },
-        QuickBtn("HSD") { it.contains("diesel", ignoreCase = true) },
-        QuickBtn("2T Loose") { it.contains("2t", ignoreCase = true) && it.contains("loose", ignoreCase = true) },
-        QuickBtn("2T 20ml") { it.contains("20", ignoreCase = true) && (it.contains("ml", ignoreCase = true) || it.contains("pouch", ignoreCase = true)) },
-        QuickBtn("40ml") { it.contains("40", ignoreCase = true) && (it.contains("ml", ignoreCase = true) || it.contains("pouch", ignoreCase = true)) }
+        QuickBtn("MS") { it.category?.uppercase() == "FUEL" && it.name?.contains("petrol", ignoreCase = true) == true && it.name?.contains("additive", ignoreCase = true) != true },
+        QuickBtn("XP") { it.category?.uppercase() == "FUEL" && (it.name?.contains("xtra premium", ignoreCase = true) == true || it.name?.contains("extra premium", ignoreCase = true) == true) },
+        QuickBtn("HSD") { it.category?.uppercase() == "FUEL" && it.name?.contains("diesel", ignoreCase = true) == true && it.name?.contains("additive", ignoreCase = true) != true },
+        QuickBtn("2T Loose") { it.name?.contains("2t", ignoreCase = true) == true && it.name?.contains("loose", ignoreCase = true) == true },
+        QuickBtn("2T 20ml") { it.name?.contains("20", ignoreCase = true) == true && (it.name?.contains("ml", ignoreCase = true) == true || it.name?.contains("pouch", ignoreCase = true) == true) },
+        QuickBtn("40ml") { it.name?.contains("40", ignoreCase = true) == true && (it.name?.contains("ml", ignoreCase = true) == true || it.name?.contains("pouch", ignoreCase = true) == true) }
     )
 
     val orange = Color(0xFFFF9800)
 
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(quickButtons) { btn ->
-            val matched = products.firstOrNull { btn.matcher(it.name ?: "") }
+            val matched = products.firstOrNull { btn.matcher(it) }
             if (matched != null) {
                 ElevatedAssistChip(
                     onClick = { onSelect(matched) },
@@ -426,7 +391,11 @@ private fun QuantitySection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "QUANTITY",
+                when {
+                    uiState.isRupeesMode -> "AMOUNT (₹)"
+                    uiState.selectedProduct?.category == "Fuel" -> "QUANTITY (Liters)"
+                    else -> "QUANTITY"
+                },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -460,6 +429,23 @@ private fun QuantitySection(
                     .fillMaxWidth()
                     .padding(16.dp)
             )
+            // Conversion display
+            val inputVal = uiState.quantityInput.toBigDecimalOrNull()
+            val price = uiState.selectedProduct?.price
+            if (inputVal != null && price != null && price > java.math.BigDecimal.ZERO && uiState.selectedProduct?.category == "Fuel") {
+                val convText = if (uiState.isRupeesMode) {
+                    "= ${inputVal.divide(price, 3, java.math.RoundingMode.HALF_UP)} L"
+                } else {
+                    "= ₹${inputVal.multiply(price).setScale(2, java.math.RoundingMode.HALF_UP)}"
+                }
+                Text(
+                    text = convText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
