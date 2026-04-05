@@ -13,6 +13,9 @@ import com.stopforfuel.app.ui.login.LoginScreen
 import com.stopforfuel.app.ui.history.ShiftInvoicesScreen
 import com.stopforfuel.app.ui.pumpsession.StartPumpSessionScreen
 import com.stopforfuel.app.ui.pumpsession.EndPumpSessionScreen
+import com.stopforfuel.app.ui.customer.CustomerListScreen
+import com.stopforfuel.app.ui.customer.CustomerDetailScreen
+import com.stopforfuel.app.ui.employee.EmployeeManageScreen
 
 @Composable
 fun AppNavGraph() {
@@ -45,6 +48,12 @@ fun AppNavGraph() {
                 },
                 onNavigateToEndSession = { sessionId ->
                     navController.navigate(Routes.EndPumpSession.withId(sessionId))
+                },
+                onNavigateToCustomers = {
+                    navController.navigate(Routes.CustomerList.route)
+                },
+                onNavigateToEmployees = {
+                    navController.navigate(Routes.EmployeeManage.route)
                 },
                 onLogout = {
                     navController.navigate(Routes.Login.route) {
@@ -83,6 +92,30 @@ fun AppNavGraph() {
                 sessionId = sessionId,
                 onBack = { navController.popBackStack() },
                 onSessionClosed = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.CustomerList.route) {
+            CustomerListScreen(
+                onBack = { navController.popBackStack() },
+                onCustomerSelected = { customerId ->
+                    navController.navigate(Routes.CustomerDetail.withId(customerId))
+                }
+            )
+        }
+
+        composable(
+            route = Routes.CustomerDetail.route,
+            arguments = listOf(navArgument("customerId") { type = NavType.LongType })
+        ) {
+            CustomerDetailScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.EmployeeManage.route) {
+            EmployeeManageScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }
