@@ -302,5 +302,8 @@ export const createIncentivePayment = (payment: Partial<IncentivePayment>): Prom
         body: JSON.stringify(payment),
     }).then(handleResponse);
 
+export const deletePayment = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/payments/${id}`, { method: 'DELETE' }).then(handleResponse);
+
 export const deleteIncentivePayment = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/incentive-payments/${id}`, { method: 'DELETE' }).then(handleResponse);

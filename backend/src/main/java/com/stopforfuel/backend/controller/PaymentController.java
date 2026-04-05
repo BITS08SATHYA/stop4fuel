@@ -186,6 +186,17 @@ public class PaymentController {
     }
 
     /**
+     * Delete a payment and reverse all side effects.
+     * DELETE /api/payments/{id}
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
+        paymentService.deletePayment(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
      * Get a presigned URL for a payment's proof image.
      * GET /api/payments/{id}/proof-url
      */
