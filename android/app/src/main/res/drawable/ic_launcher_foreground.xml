@@ -4,23 +4,47 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Fuel pump icon -->
+    <!-- StopForFuel logo - stylized F fuel pump -->
     <group
-        android:translateX="24"
-        android:translateY="24">
-        <!-- Pump body -->
+        android:translateX="18"
+        android:translateY="14"
+        android:scaleX="0.38"
+        android:scaleY="0.38">
+        <!-- Top curve of F -->
+        <path
+            android:fillColor="#2DD4BF"
+            android:pathData="M80,0 Q140,-5 160,20 Q180,45 150,65 Q130,80 90,80" />
+        <!-- Bottom curve -->
+        <path
+            android:fillColor="#2DD4BF"
+            android:pathData="M90,80 Q40,80 20,105 Q0,130 30,155 Q50,170 90,170" />
+        <!-- F body connection -->
+        <path
+            android:fillColor="#14B8A6"
+            android:pathData="M60,60 L60,170 L90,170 L90,80 Q130,80 150,65 Q170,50 155,30 L130,30 Q140,45 125,58 Q110,68 90,68 L90,60 Z"
+            android:alpha="0.9" />
+        <!-- Vertical bar -->
+        <path
+            android:fillColor="#14B8A6"
+            android:pathData="M90,55 L118,55 L118,205 L90,205 Z" />
+        <!-- Top horizontal bar -->
+        <path
+            android:fillColor="#2DD4BF"
+            android:pathData="M90,55 L200,55 L200,78 L118,78 L118,55 Z" />
+        <!-- Middle horizontal bar -->
+        <path
+            android:fillColor="#14B8A6"
+            android:pathData="M118,110 L180,110 L180,130 L118,130 Z"
+            android:alpha="0.95" />
+        <!-- Fuel drop (orange accent) -->
+        <path
+            android:fillColor="#F59E0B"
+            android:pathData="M35,140 m-8,0 a8,8 0,1 1,16 0 a8,8 0,1 1,-16 0"
+            android:alpha="0.9" />
+        <!-- Drop highlight -->
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M20,10L20,10c0,-2.2 -1.8,-4 -4,-4h-12c-2.2,0 -4,1.8 -4,4v40c0,2.2 1.8,4 4,4h12c2.2,0 4,-1.8 4,-4v-18l8,4v-18l-4,-2v-4l4,-4l-2,-2l-6,6z" />
-        <!-- Nozzle -->
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M6,14h8v8h-8z" />
-        <!-- S letter -->
-        <path
-            android:fillColor="#1565C0"
-            android:pathData="M7,32l6,0l0,3l-6,0l0,3l6,0l0,3l-6,0l0,-3l-3,0l0,-3l3,0z"
-            android:strokeWidth="0.5"
-            android:strokeColor="#1565C0" />
+            android:pathData="M35,137 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"
+            android:alpha="0.5" />
     </group>
 </vector>
