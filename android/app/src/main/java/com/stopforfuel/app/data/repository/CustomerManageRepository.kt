@@ -59,4 +59,18 @@ class CustomerManageRepository @Inject constructor(
     suspend fun updateVehicleLiterLimit(id: Long, limit: BigDecimal?): Result<VehicleDto> = runCatching {
         api.updateVehicleLiterLimit(id, LiterLimitRequest(limit))
     }
+
+    suspend fun createVehicle(customerId: Long, vehicleNumber: String, vehicleTypeId: Long?, maxLitersPerMonth: BigDecimal?): Result<VehicleDto> = runCatching {
+        val body = mutableMapOf<String, Any?>(
+            "vehicleNumber" to vehicleNumber,
+            "customer" to mapOf("id" to customerId)
+        )
+        if (vehicleTypeId != null) body["vehicleType"] = mapOf("id" to vehicleTypeId)
+        if (maxLitersPerMonth != null) body["maxLitersPerMonth"] = maxLitersPerMonth
+        api.createVehicle(body)
+    }
+
+    suspend fun getVehicleTypes(): Result<List<VehicleTypeDto>> = runCatching {
+        api.getVehicleTypes()
+    }
 }

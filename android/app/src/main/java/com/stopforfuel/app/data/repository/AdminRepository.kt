@@ -28,4 +28,8 @@ class AdminRepository @Inject constructor(
     suspend fun rejectResetRequest(requestId: Long): Result<Unit> = runCatching {
         api.rejectResetRequest(requestId)
     }
+
+    suspend fun toggleStatus(userId: Long): Result<AdminUserDto> = runCatching {
+        api.toggleUserStatus(userId)
+    }
 }

@@ -25,6 +25,7 @@ fun ShiftInvoicesScreen(
     viewModel: ShiftInvoicesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    com.stopforfuel.app.ui.AutoRefreshOnResume { viewModel.loadInvoices() }
 
     Scaffold(
         topBar = {
