@@ -509,11 +509,11 @@ public class DashboardService {
         SystemHealth health = new SystemHealth();
         Long scid = com.stopforfuel.config.SecurityUtils.getScid();
 
-        health.setTotalCustomers(customerRepository.countByScid(scid));
-        health.setActiveCustomers(customerRepository.countByScidAndStatus(scid, com.stopforfuel.backend.enums.EntityStatus.ACTIVE));
-        health.setBlockedCustomers(customerRepository.countByScidAndStatus(scid, com.stopforfuel.backend.enums.EntityStatus.BLOCKED));
-        health.setInactiveCustomers(customerRepository.countByScidAndStatus(scid, com.stopforfuel.backend.enums.EntityStatus.INACTIVE));
-        health.setTotalVehicles(vehicleRepository.countByScid(scid));
+        health.setTotalCustomers(customerRepository.count());
+        health.setActiveCustomers(customerRepository.countByStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE));
+        health.setBlockedCustomers(customerRepository.countByStatus(com.stopforfuel.backend.enums.EntityStatus.BLOCKED));
+        health.setInactiveCustomers(customerRepository.countByStatus(com.stopforfuel.backend.enums.EntityStatus.INACTIVE));
+        health.setTotalVehicles(vehicleRepository.count());
         health.setTotalEmployees(employeeRepository.countByScid(scid));
         health.setTotalUsers(userRepository.countByScid(scid));
         health.setTotalProducts(productRepository.countByScid(scid));
