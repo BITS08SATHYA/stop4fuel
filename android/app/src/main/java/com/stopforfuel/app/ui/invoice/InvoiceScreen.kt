@@ -228,7 +228,7 @@ private fun Step1Content(
                                 Text(item.product.name ?: "", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                                 Text(buildString {
                                     if (item.nozzle != null) append("${item.nozzle.nozzleName} · ")
-                                    append("${item.quantity}${if (item.product.category == "Fuel") "L" else ""}")
+                                    append("${item.quantity}${if (item.product.category.equals("Fuel", ignoreCase = true)) "L" else ""}")
                                 }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(inrFormat.format(item.amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -333,7 +333,7 @@ private fun ProductGrid(
     onSelect: (com.stopforfuel.app.data.remote.dto.ProductDto) -> Unit
 ) {
     // Group: Fuel first, then others
-    val fuelProducts = products.filter { it.category == "Fuel" }
+    val fuelProducts = products.filter { it.category.equals("Fuel", ignoreCase = true) }
     val otherProducts = products.filter { it.category != "Fuel" }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -393,14 +393,14 @@ private fun QuantitySection(
             Text(
                 when {
                     uiState.isRupeesMode -> "AMOUNT (₹)"
-                    uiState.selectedProduct?.category == "Fuel" -> "QUANTITY (Liters)"
+                    uiState.selectedProduct?.category.equals("Fuel", ignoreCase = true) -> "QUANTITY (Liters)"
                     else -> "QUANTITY"
                 },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            if (uiState.selectedProduct?.category == "Fuel") {
+            if (uiState.selectedProduct?.category.equals("Fuel", ignoreCase = true)) {
                 Row {
                     FilterChip(
                         selected = !uiState.isRupeesMode,
@@ -432,7 +432,7 @@ private fun QuantitySection(
             // Conversion display
             val inputVal = uiState.quantityInput.toBigDecimalOrNull()
             val price = uiState.selectedProduct?.price
-            if (inputVal != null && price != null && price > java.math.BigDecimal.ZERO && uiState.selectedProduct?.category == "Fuel") {
+            if (inputVal != null && price != null && price > java.math.BigDecimal.ZERO && uiState.selectedProduct?.category.equals("Fuel", ignoreCase = true)) {
                 val convText = if (uiState.isRupeesMode) {
                     "= ${inputVal.divide(price, 3, java.math.RoundingMode.HALF_UP)} L"
                 } else {
@@ -451,7 +451,7 @@ private fun QuantitySection(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Quick amount buttons (for fuel in rupees mode)
-        if (uiState.selectedProduct?.category == "Fuel") {
+        if (uiState.selectedProduct?.category.equals("Fuel", ignoreCase = true)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -618,7 +618,7 @@ private fun Step2Content(
                             ) {
                                 Column {
                                     Text(
-                                        "${item.product.name} · ${item.quantity}${if (item.product.category == "Fuel") "L" else ""} x ${inrFormat.format(item.unitPrice)}",
+                                        "${item.product.name} · ${item.quantity}${if (item.product.category.equals("Fuel", ignoreCase = true)) "L" else ""} x ${inrFormat.format(item.unitPrice)}",
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     if (item.nozzle != null) {

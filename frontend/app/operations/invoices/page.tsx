@@ -903,7 +903,7 @@ export default function InvoicesPage() {
                                     />
                                 </div>
 
-                                {line.product?.category === "Fuel" && (
+                                {line.product?.category?.toLowerCase() === "fuel" && (
                                     <div>
                                         <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Nozzle</label>
                                         <StyledSelect
@@ -925,9 +925,9 @@ export default function InvoicesPage() {
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
                                         <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                                            {line.amountMode ? "Amount (₹)" : `Qty${line.product?.category === "Fuel" ? " (L)" : ""}`}
+                                            {line.amountMode ? "Amount (₹)" : `Qty${line.product?.category?.toLowerCase() === "fuel" ? " (L)" : ""}`}
                                         </label>
-                                        {line.product?.category === "Fuel" && (
+                                        {line.product?.category?.toLowerCase() === "fuel" && (
                                             <button
                                                 type="button"
                                                 onClick={() => updateProductLine(idx, { amountMode: !line.amountMode, quantity: "", amountInput: "" })}
@@ -968,7 +968,7 @@ export default function InvoicesPage() {
                                                 onChange={(e) => updateProductLine(idx, { quantity: e.target.value })}
                                                 placeholder="0"
                                             />
-                                            {line.product?.category === "Fuel" && line.quantity && parseFloat(line.unitPrice) > 0 && (
+                                            {line.product?.category?.toLowerCase() === "fuel" && line.quantity && parseFloat(line.unitPrice) > 0 && (
                                                 <p className="text-[10px] text-primary font-bold mt-1">
                                                     = ₹{(parseFloat(line.quantity) * parseFloat(line.unitPrice)).toFixed(2)}
                                                 </p>
