@@ -1,0 +1,341 @@
+package com.stopforfuel.app.ui.customer
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.stopforfuel.app.data.remote.dto.VehicleDto
+import java.text.NumberFormat
+import java.util.Locale
+
+private val inrFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomerDetailScreen(
+    onBack: () -> Unit,
+    viewModel: CustomerDetailViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    // Show snackbar for action messages
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(state.actionMessage) {
+        state.actionMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearMessage()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(state.customer?.name ?: "Customer") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.loadAll() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        if (state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.error != null) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = { viewModel.loadAll() }) { Text("Retry") }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 12.dp)
+            ) {
+                // Customer Info
+                item { CustomerInfoCard(state) }
+
+                // Credit Limits
+                item { CreditLimitsCard(state, viewModel) }
+
+                // Status Actions
+                item { StatusActionsCard(state, viewModel) }
+
+                // Vehicles Header
+                item {
+                    Text(
+                        "Vehicles (${state.vehicles.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Vehicle rows
+                items(state.vehicles) { vehicle ->
+                    VehicleCard(
+                        vehicle = vehicle,
+                        isExpanded = state.expandedVehicleId == vehicle.id,
+                        onToggleExpand = { viewModel.toggleVehicleExpand(vehicle.id) },
+                        onToggleStatus = { viewModel.toggleVehicleStatus(vehicle.id) },
+                        onBlock = { viewModel.blockVehicle(vehicle.id) },
+                        onUnblock = { viewModel.unblockVehicle(vehicle.id) },
+                        onUpdateLimit = { limit -> viewModel.updateVehicleLiterLimit(vehicle.id, limit) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomerInfoCard(state: CustomerDetailState) {
+    val customer = state.customer ?: return
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(customer.name ?: "", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                StatusBadge(status = customer.status ?: "ACTIVE")
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            if (customer.group?.groupName != null) {
+                Text("Group: ${customer.group.groupName}", style = MaterialTheme.typography.bodySmall)
+            }
+            if (!customer.phoneNumbers.isNullOrEmpty()) {
+                Text("Phone: ${customer.phoneNumbers.joinToString()}", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreditLimitsCard(state: CustomerDetailState, viewModel: CustomerDetailViewModel) {
+    val customer = state.customer ?: return
+    var amountText by remember(customer.creditLimitAmount) {
+        mutableStateOf(customer.creditLimitAmount?.toPlainString() ?: "")
+    }
+    var litersText by remember(customer.creditLimitLiters) {
+        mutableStateOf(customer.creditLimitLiters?.toPlainString() ?: "")
+    }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Credit Limits", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Credit info summary
+            state.creditInfo?.let { info ->
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("Outstanding", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            inrFormat.format(info.balance ?: 0),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if ((info.balance ?: java.math.BigDecimal.ZERO) > java.math.BigDecimal.ZERO)
+                                MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Column {
+                        Text("Consumed Liters", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            "${info.consumedLiters ?: 0} L",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            OutlinedTextField(
+                value = amountText,
+                onValueChange = { amountText = it },
+                label = { Text("Amount Limit (₹)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = litersText,
+                onValueChange = { litersText = it },
+                label = { Text("Liters Limit") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { viewModel.updateCreditLimits(amountText, litersText) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save Credit Limits")
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusActionsCard(state: CustomerDetailState, viewModel: CustomerDetailViewModel) {
+    val customer = state.customer ?: return
+    val status = customer.status?.uppercase() ?: "ACTIVE"
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Status Actions", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (status == "ACTIVE") {
+                    OutlinedButton(
+                        onClick = { viewModel.toggleStatus() },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Deactivate") }
+                    Button(
+                        onClick = { viewModel.blockCustomer() },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Block") }
+                } else if (status == "BLOCKED") {
+                    Button(
+                        onClick = { viewModel.unblockCustomer() },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Unblock") }
+                } else {
+                    // INACTIVE
+                    Button(
+                        onClick = { viewModel.toggleStatus() },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Activate") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VehicleCard(
+    vehicle: VehicleDto,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    onToggleStatus: () -> Unit,
+    onBlock: () -> Unit,
+    onUnblock: () -> Unit,
+    onUpdateLimit: (String) -> Unit
+) {
+    val status = vehicle.status?.uppercase() ?: "ACTIVE"
+    var limitText by remember(vehicle.maxLitersPerMonth) {
+        mutableStateOf(vehicle.maxLitersPerMonth?.toPlainString() ?: "")
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggleExpand)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Header row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        vehicle.vehicleNumber ?: "Unknown",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Limit: ${vehicle.maxLitersPerMonth ?: "None"} L | Used: ${vehicle.consumedLiters ?: 0} L",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                StatusBadge(status = status)
+                Icon(
+                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = "Expand",
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+
+            // Expanded actions
+            AnimatedVisibility(visible = isExpanded) {
+                Column(modifier = Modifier.padding(top = 12.dp)) {
+                    // Liter limit
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = limitText,
+                            onValueChange = { limitText = it },
+                            label = { Text("Liter Limit/Month") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilledTonalButton(onClick = { onUpdateLimit(limitText) }) {
+                            Text("Save")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Status actions
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        when (status) {
+                            "ACTIVE" -> {
+                                OutlinedButton(onClick = onToggleStatus, modifier = Modifier.weight(1f)) {
+                                    Text("Deactivate")
+                                }
+                                Button(
+                                    onClick = onBlock,
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("Block") }
+                            }
+                            "BLOCKED" -> {
+                                Button(onClick = onUnblock, modifier = Modifier.weight(1f)) {
+                                    Text("Unblock")
+                                }
+                            }
+                            else -> {
+                                Button(onClick = onToggleStatus, modifier = Modifier.weight(1f)) {
+                                    Text("Activate")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
