@@ -105,7 +105,8 @@ class InvoiceViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             selectedProduct = product,
             selectedNozzle = null,
-            quantityInput = ""
+            quantityInput = "",
+            isRupeesMode = false
         )
     }
 
