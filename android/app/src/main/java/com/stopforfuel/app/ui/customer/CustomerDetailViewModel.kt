@@ -3,9 +3,7 @@ package com.stopforfuel.app.ui.customer
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.stopforfuel.app.data.remote.dto.CreditInfoResponse
-import com.stopforfuel.app.data.remote.dto.CustomerListDto
-import com.stopforfuel.app.data.remote.dto.VehicleDto
+import com.stopforfuel.app.data.remote.dto.*
 import com.stopforfuel.app.data.repository.CustomerManageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,10 +16,12 @@ data class CustomerDetailState(
     val customer: CustomerListDto? = null,
     val creditInfo: CreditInfoResponse? = null,
     val vehicles: List<VehicleDto> = emptyList(),
+    val vehicleTypes: List<VehicleTypeDto> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
     val actionMessage: String? = null,
-    val expandedVehicleId: Long? = null
+    val expandedVehicleId: Long? = null,
+    val showAddVehicle: Boolean = false
 )
 
 @HiltViewModel
@@ -154,6 +154,30 @@ class CustomerDetailViewModel @Inject constructor(
                 onSuccess = { updated ->
                     val newList = _uiState.value.vehicles.map { if (it.id == vehicleId) updated else it }
                     _uiState.value = _uiState.value.copy(vehicles = newList, actionMessage = "Liter limit updated")
+                },
+                onFailure = { _uiState.value = _uiState.value.copy(actionMessage = "Error: ${it.message}") }
+            )
+        }
+    }
+
+    fun showAddVehicle() {
+        viewModelScope.launch {
+            val types = repository.getVehicleTypes().getOrDefault(emptyList())
+            _uiState.value = _uiState.value.copy(showAddVehicle = true, vehicleTypes = types)
+        }
+    }
+
+    fun hideAddVehicle() {
+        _uiState.value = _uiState.value.copy(showAddVehicle = false)
+    }
+
+    fun createVehicle(vehicleNumber: String, vehicleTypeId: Long?, maxLitersPerMonth: String) {
+        viewModelScope.launch {
+            val limit = maxLitersPerMonth.toBigDecimalOrNull()
+            repository.createVehicle(customerId, vehicleNumber, vehicleTypeId, limit).fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(showAddVehicle = false, actionMessage = "Vehicle added")
+                    loadAll()
                 },
                 onFailure = { _uiState.value = _uiState.value.copy(actionMessage = "Error: ${it.message}") }
             )

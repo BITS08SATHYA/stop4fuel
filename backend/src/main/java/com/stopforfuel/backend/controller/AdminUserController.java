@@ -86,6 +86,13 @@ public class AdminUserController {
         return ResponseEntity.ok(UserListDTO.from(user));
     }
 
+    @PatchMapping("/{id}/toggle-status")
+    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    public ResponseEntity<UserListDTO> toggleUserStatus(@PathVariable Long id) {
+        User user = adminUserService.toggleUserStatus(id);
+        return ResponseEntity.ok(UserListDTO.from(user));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
     public ResponseEntity<Void> disableUser(@PathVariable Long id) {
