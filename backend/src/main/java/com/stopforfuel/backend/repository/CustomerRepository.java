@@ -58,6 +58,8 @@ public interface CustomerRepository extends ScidRepository<Customer> {
 
     long countByScidAndStatus(Long scid, com.stopforfuel.backend.enums.EntityStatus status);
 
+    long countByStatus(com.stopforfuel.backend.enums.EntityStatus status);
+
     @Query("SELECT DISTINCT c.scid FROM Customer c")
     java.util.List<Long> findDistinctScids();
 }
