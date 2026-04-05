@@ -1,6 +1,8 @@
 package com.stopforfuel.app.ui.home
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -11,9 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
+import java.util.Locale
+
+private val inrFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,7 +116,8 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (uiState.isLoading) {
@@ -139,6 +147,94 @@ fun HomeScreen(
                         Icon(Icons.Default.Receipt, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("New Invoice", style = MaterialTheme.typography.titleMedium)
+                    }
+
+                    // Dashboard stats embedded on home screen
+                    if (uiState.dashboardStats != null) {
+                        val stats = uiState.dashboardStats!!
+                        Spacer(modifier = Modifier.height(20.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            StatCard(
+                                title = "Today's Revenue",
+                                value = inrFormat.format(stats.todayRevenue ?: 0),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = "Fuel Volume",
+                                value = "${stats.todayFuelVolume ?: 0} L",
+                                color = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            StatCard(
+                                title = "Invoices",
+                                value = "${stats.todayInvoiceCount ?: 0}",
+                                subtitle = "${stats.todayCashInvoices ?: 0} cash / ${stats.todayCreditInvoices ?: 0} credit",
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatCard(
+                                title = "Outstanding",
+                                value = inrFormat.format(stats.totalOutstanding ?: 0),
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (uiState.systemHealth != null) {
+                            val health = uiState.systemHealth!!
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                StatCard(
+                                    title = "Customers",
+                                    value = "${health.activeCustomers ?: 0}",
+                                    subtitle = "${health.blockedCustomers ?: 0} blocked, ${health.inactiveCustomers ?: 0} inactive",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatCard(
+                                    title = "Vehicles",
+                                    value = "${health.totalVehicles ?: 0}",
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        // Current fuel prices
+                        if (uiState.fuelProducts.isNotEmpty()) {
+                            Text(
+                                "Current Fuel Prices",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            uiState.fuelProducts.forEach { product ->
+                                Card(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(product.name ?: "", fontWeight = FontWeight.Bold)
+                                        Text(
+                                            "${inrFormat.format(product.price ?: 0)} / ${product.unit ?: "L"}",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -204,6 +300,25 @@ private fun PumpSessionCard(
                 Icon(Icons.Default.Stop, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("End")
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatCard(
+    title: String,
+    value: String,
+    subtitle: String? = null,
+    color: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier
+) {
+    Card(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
+            if (subtitle != null) {
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

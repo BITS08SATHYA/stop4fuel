@@ -32,4 +32,7 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     List<Vehicle> findByCustomerId(Long customerId);
     List<Vehicle> findByCustomerIsNull();
     List<Vehicle> findByIdIn(List<Long> ids);
+
+    @Query("SELECT COUNT(v) FROM Vehicle v WHERE v.scid = :scid")
+    long countByScid(@Param("scid") Long scid);
 }
