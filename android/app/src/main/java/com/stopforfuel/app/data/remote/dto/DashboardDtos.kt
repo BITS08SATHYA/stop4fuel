@@ -33,3 +33,34 @@ data class SystemHealthDto(
     val activeShifts: Long?,
     val totalProducts: Long?
 )
+
+data class CashierDashboardDto(
+    val hasActiveShift: Boolean?,
+    val shiftId: Long?,
+    val shiftStatus: String?,
+    val startTime: String?,
+    val attendantName: String?,
+    val cashBillTotal: BigDecimal?,
+    val creditBillTotal: BigDecimal?,
+    val totalInvoiceCount: Int?,
+    val cashInvoiceCount: Int?,
+    val creditInvoiceCount: Int?,
+    val eAdvanceTotals: Map<String, BigDecimal>?,
+    val billPaymentTotal: BigDecimal?,
+    val statementPaymentTotal: BigDecimal?,
+    val expenseTotal: BigDecimal?,
+    val operationalAdvanceTotal: BigDecimal?,
+    val incentiveTotal: BigDecimal?,
+    val cashInHand: BigDecimal?,
+    val recentInvoices: List<CashierInvoiceItem>?
+)
+
+data class CashierInvoiceItem(
+    val id: Long?,
+    val billNo: String?,
+    val billType: String?,
+    val paymentMode: String?,
+    val netAmount: BigDecimal?,
+    val date: String?,
+    val customerName: String?
+)

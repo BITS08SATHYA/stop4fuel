@@ -149,92 +149,16 @@ fun HomeScreen(
                         Text("New Invoice", style = MaterialTheme.typography.titleMedium)
                     }
 
-                    // Dashboard stats embedded on home screen
-                    if (uiState.dashboardStats != null) {
-                        val stats = uiState.dashboardStats!!
-                        Spacer(modifier = Modifier.height(20.dp))
-                        HorizontalDivider()
-                        Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            StatCard(
-                                title = "Today's Revenue",
-                                value = inrFormat.format(stats.todayRevenue ?: 0),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.weight(1f)
-                            )
-                            StatCard(
-                                title = "Fuel Volume",
-                                value = "${stats.todayFuelVolume ?: 0} L",
-                                color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            StatCard(
-                                title = "Invoices",
-                                value = "${stats.todayInvoiceCount ?: 0}",
-                                subtitle = "${stats.todayCashInvoices ?: 0} cash / ${stats.todayCreditInvoices ?: 0} credit",
-                                color = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.weight(1f)
-                            )
-                            StatCard(
-                                title = "Outstanding",
-                                value = inrFormat.format(stats.totalOutstanding ?: 0),
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        if (uiState.systemHealth != null) {
-                            val health = uiState.systemHealth!!
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                StatCard(
-                                    title = "Customers",
-                                    value = "${health.activeCustomers ?: 0}",
-                                    subtitle = "${health.blockedCustomers ?: 0} blocked, ${health.inactiveCustomers ?: 0} inactive",
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                StatCard(
-                                    title = "Vehicles",
-                                    value = "${health.totalVehicles ?: 0}",
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-
-                        // Current fuel prices
-                        if (uiState.fuelProducts.isNotEmpty()) {
-                            Text(
-                                "Current Fuel Prices",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            uiState.fuelProducts.forEach { product ->
-                                Card(modifier = Modifier.fillMaxWidth()) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(product.name ?: "", fontWeight = FontWeight.Bold)
-                                        Text(
-                                            "${inrFormat.format(product.price ?: 0)} / ${product.unit ?: "L"}",
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
+                    if (uiState.isManager) {
+                        // --- OWNER/MANAGER DASHBOARD ---
+                        OwnerDashboard(uiState)
+                    } else {
+                        // --- CASHIER DASHBOARD ---
+                        CashierDashboard(uiState)
                     }
                 }
             }
@@ -322,4 +246,95 @@ private fun StatCard(
             }
         }
     }
+}
+
+@Composable
+private fun OwnerDashboard(uiState: HomeUiState) {
+    val stats = uiState.dashboardStats ?: return
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatCard("Today's Revenue", inrFormat.format(stats.todayRevenue ?: 0), color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        StatCard("Fuel Volume", "${stats.todayFuelVolume ?: 0} L", color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatCard("Invoices", "${stats.todayInvoiceCount ?: 0}", subtitle = "${stats.todayCashInvoices ?: 0} cash / ${stats.todayCreditInvoices ?: 0} credit", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
+        StatCard("Outstanding", inrFormat.format(stats.totalOutstanding ?: 0), color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    uiState.systemHealth?.let { health ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard("Customers", "${health.activeCustomers ?: 0}", subtitle = "${health.blockedCustomers ?: 0} blocked, ${health.inactiveCustomers ?: 0} inactive", color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+            StatCard("Vehicles", "${health.totalVehicles ?: 0}", color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+    if (uiState.fuelProducts.isNotEmpty()) {
+        Text("Current Fuel Prices", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        uiState.fuelProducts.forEach { product ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(product.name ?: "", fontWeight = FontWeight.Bold)
+                    Text("${inrFormat.format(product.price ?: 0)} / ${product.unit ?: "L"}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+        }
+    }
+    Spacer(Modifier.height(16.dp))
+}
+
+@Composable
+private fun CashierDashboard(uiState: HomeUiState) {
+    val cd = uiState.cashierDashboard ?: return
+
+    // Sales breakdown
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatCard("Cash Sales", inrFormat.format(cd.cashBillTotal ?: 0), subtitle = "${cd.cashInvoiceCount ?: 0} bills", color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        StatCard("Credit Sales", inrFormat.format(cd.creditBillTotal ?: 0), subtitle = "${cd.creditInvoiceCount ?: 0} bills", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+
+    // Cash in hand + invoices
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatCard("Total Invoices", "${cd.totalInvoiceCount ?: 0}", color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f))
+        StatCard("Cash in Hand", inrFormat.format(cd.cashInHand ?: 0), color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+
+    // E-advances
+    val upi = cd.eAdvanceTotals?.get("UPI") ?: java.math.BigDecimal.ZERO
+    val card = cd.eAdvanceTotals?.get("CARD") ?: java.math.BigDecimal.ZERO
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatCard("UPI Advances", inrFormat.format(upi), color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
+        StatCard("Card Advances", inrFormat.format(card), color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+
+    // Expenses + payments
+    val paymentsTotal = (cd.billPaymentTotal ?: java.math.BigDecimal.ZERO).add(cd.statementPaymentTotal ?: java.math.BigDecimal.ZERO)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatCard("Expenses", inrFormat.format(cd.expenseTotal ?: 0), color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+        StatCard("Payments", inrFormat.format(paymentsTotal), color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+
+    // Recent invoices
+    if (!cd.recentInvoices.isNullOrEmpty()) {
+        Text("Recent Invoices", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        cd.recentInvoices.forEach { inv ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(inv.billNo ?: "", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text("${inv.billType ?: ""} · ${inv.paymentMode ?: ""} · ${inv.customerName ?: "Walk-in"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text(inrFormat.format(inv.netAmount ?: 0), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+        }
+    }
+    Spacer(Modifier.height(16.dp))
 }

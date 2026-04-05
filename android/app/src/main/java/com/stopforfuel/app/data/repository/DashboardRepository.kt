@@ -20,4 +20,8 @@ class DashboardRepository @Inject constructor(
     suspend fun getProducts(): Result<List<ProductDto>> = runCatching {
         api.getActiveProducts()
     }
+
+    suspend fun getCashierDashboard(): Result<CashierDashboardDto> = runCatching {
+        api.getCashierDashboard()
+    }
 }
