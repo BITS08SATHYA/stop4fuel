@@ -317,9 +317,9 @@ public class InvoiceBillService {
             updateConsumedLiters(invoice.getVehicle(), invoice.getCustomer(), totalLiters);
         }
 
-        // --- Auto-deduct inventory ---
-        if (invoice.getProducts() != null) {
-            for (InvoiceProduct invoiceProduct : invoice.getProducts()) {
+        // --- Auto-deduct inventory (use saved entity to ensure products are persisted) ---
+        if (saved.getProducts() != null) {
+            for (InvoiceProduct invoiceProduct : saved.getProducts()) {
                 deductInventory(invoiceProduct);
             }
         }
