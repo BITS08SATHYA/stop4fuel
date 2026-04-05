@@ -317,9 +317,9 @@ public class InvoiceBillService {
             updateConsumedLiters(invoice.getVehicle(), invoice.getCustomer(), totalLiters);
         }
 
-        // --- Auto-deduct inventory ---
-        if (invoice.getProducts() != null) {
-            for (InvoiceProduct invoiceProduct : invoice.getProducts()) {
+        // --- Auto-deduct inventory (use saved entity to ensure products are persisted) ---
+        if (saved.getProducts() != null) {
+            for (InvoiceProduct invoiceProduct : saved.getProducts()) {
                 deductInventory(invoiceProduct);
             }
         }
@@ -494,8 +494,14 @@ public class InvoiceBillService {
         // --- 2. Product inventory deduction ---
         if (invoiceProduct.getProduct() != null && invoiceProduct.getProduct().getId() != null) {
             Long productId = invoiceProduct.getProduct().getId();
-            ProductInventory productInv = productInventoryRepository
-                    .findTopByProductIdForUpdate(productId);
+            Long shiftId = invoiceProduct.getInvoiceBill() != null ? invoiceProduct.getInvoiceBill().getShiftId() : null;
+            ProductInventory productInv = null;
+            if (shiftId != null) {
+                productInv = productInventoryRepository.findByProductIdAndShiftIdForUpdate(productId, shiftId);
+            }
+            if (productInv == null) {
+                productInv = productInventoryRepository.findTopByProductIdForUpdate(productId);
+            }
             if (productInv != null) {
                 double currentClose = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
                 productInv.setCloseStock(currentClose - qty);

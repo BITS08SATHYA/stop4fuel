@@ -5,6 +5,7 @@ import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
  * nozzle meter readings, product-wise sales, cash/credit bill breakdowns,
  * gross/net sales, and sales-related print data.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShiftSalesCalculationService {
@@ -486,26 +488,34 @@ public class ShiftSalesCalculationService {
                 row.setSales(sales);
             } else {
                 ProductInventory pi = productInvMap.get(product.getId());
+                double piSales = 0;
+                double invoiceSales = 0;
+
                 if (pi != null) {
-                    double sales = pi.getSales() != null ? pi.getSales() : 0;
-                    if (sales == 0) continue;
+                    piSales = pi.getSales() != null ? pi.getSales() : 0;
                     row.setOpenStock(pi.getOpenStock() != null ? pi.getOpenStock() : 0);
                     row.setReceipt(pi.getIncomeStock() != null ? pi.getIncomeStock() : 0);
                     row.setTotalStock(pi.getTotalStock() != null ? pi.getTotalStock() : 0);
-                    row.setSales(sales);
-                } else {
-                    double sales = 0;
-                    for (InvoiceBill inv : invoices) {
-                        if (inv.getProducts() != null) {
-                            for (InvoiceProduct ip : inv.getProducts()) {
-                                if (ip.getProduct() != null && ip.getProduct().getId().equals(product.getId())) {
-                                    sales += ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
-                                }
+                }
+
+                // Always scan invoices for non-fuel products (PI may have wrong shift's sales)
+                for (InvoiceBill inv : invoices) {
+                    if (inv.getProducts() != null) {
+                        for (InvoiceProduct ip : inv.getProducts()) {
+                            if (ip.getProduct() != null && ip.getProduct().getId().equals(product.getId())) {
+                                invoiceSales += ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
                             }
                         }
                     }
-                    if (sales == 0) continue;
-                    row.setSales(sales);
+                }
+
+                // Use whichever source has sales data (prefer invoice scan as source of truth)
+                double sales = invoiceSales > 0 ? invoiceSales : piSales;
+                log.debug("Product '{}': PI sales={}, invoice sales={}, using={}", product.getName(), piSales, invoiceSales, sales);
+
+                if (sales == 0) continue;
+                row.setSales(sales);
+                if (pi == null) {
                     row.setOpenStock(0.0);
                     row.setReceipt(0.0);
                     row.setTotalStock(0.0);
