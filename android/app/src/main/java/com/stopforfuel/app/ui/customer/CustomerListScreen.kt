@@ -26,6 +26,8 @@ fun CustomerListScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    com.stopforfuel.app.ui.AutoRefreshOnResume { viewModel.search(state.searchQuery) }
+
     Scaffold(
         topBar = {
             TopAppBar(

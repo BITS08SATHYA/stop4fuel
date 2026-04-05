@@ -29,6 +29,8 @@ fun CustomerDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    com.stopforfuel.app.ui.AutoRefreshOnResume { viewModel.loadAll() }
+
     // Show snackbar for action messages
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(state.actionMessage) {
@@ -95,6 +97,18 @@ fun CustomerDetailScreen(
                     )
                 }
 
+                // Add Vehicle button
+                item {
+                    OutlinedButton(
+                        onClick = { viewModel.showAddVehicle() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Add Vehicle")
+                    }
+                }
+
                 // Vehicle rows
                 items(state.vehicles) { vehicle ->
                     VehicleCard(
@@ -110,6 +124,84 @@ fun CustomerDetailScreen(
             }
         }
     }
+
+    // Add Vehicle Dialog
+    if (state.showAddVehicle) {
+        AddVehicleDialog(
+            vehicleTypes = state.vehicleTypes,
+            onDismiss = { viewModel.hideAddVehicle() },
+            onSave = { number, typeId, limit -> viewModel.createVehicle(number, typeId, limit) }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddVehicleDialog(
+    vehicleTypes: List<com.stopforfuel.app.data.remote.dto.VehicleTypeDto>,
+    onDismiss: () -> Unit,
+    onSave: (String, Long?, String) -> Unit
+) {
+    var vehicleNumber by remember { mutableStateOf("") }
+    var selectedTypeId by remember { mutableStateOf<Long?>(null) }
+    var literLimit by remember { mutableStateOf("") }
+    var typeExpanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Vehicle") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = vehicleNumber,
+                    onValueChange = { vehicleNumber = it.uppercase() },
+                    label = { Text("Vehicle Number *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Vehicle type dropdown
+                ExposedDropdownMenuBox(
+                    expanded = typeExpanded,
+                    onExpandedChange = { typeExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = vehicleTypes.find { it.id == selectedTypeId }?.typeName ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Vehicle Type") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
+                        vehicleTypes.forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type.typeName ?: "") },
+                                onClick = { selectedTypeId = type.id; typeExpanded = false }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = literLimit,
+                    onValueChange = { literLimit = it },
+                    label = { Text("Liter Limit / Month") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(vehicleNumber, selectedTypeId, literLimit) },
+                enabled = vehicleNumber.isNotBlank()
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
