@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EAdvanceRepository extends ScidRepository<EAdvance> {
@@ -28,4 +29,6 @@ public interface EAdvanceRepository extends ScidRepository<EAdvance> {
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM EAdvance e WHERE e.shiftId = :shiftId AND e.advanceType = :type")
     BigDecimal sumByShiftAndType(@Param("shiftId") Long shiftId, @Param("type") PaymentMode type);
+
+    Optional<EAdvance> findByPaymentId(Long paymentId);
 }
