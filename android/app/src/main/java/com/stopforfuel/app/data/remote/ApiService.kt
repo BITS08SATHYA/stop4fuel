@@ -33,6 +33,71 @@ interface ApiService {
     @GET("api/customers/{id}/vehicles")
     suspend fun getCustomerVehicles(@Path("id") customerId: Long): List<VehicleDto>
 
+    // Customer Management
+    @GET("api/customers/{id}")
+    suspend fun getCustomer(@Path("id") id: Long): CustomerListDto
+
+    @GET("api/customers/{id}/credit-info")
+    suspend fun getCreditInfo(@Path("id") id: Long): CreditInfoResponse
+
+    @PATCH("api/customers/{id}/credit-limits")
+    suspend fun updateCreditLimits(
+        @Path("id") id: Long,
+        @Body limits: CreditLimitUpdateRequest
+    ): CustomerListDto
+
+    @PATCH("api/customers/{id}/toggle-status")
+    suspend fun toggleCustomerStatus(@Path("id") id: Long): CustomerListDto
+
+    @PATCH("api/customers/{id}/block")
+    suspend fun blockCustomer(
+        @Path("id") id: Long,
+        @Body body: Map<String, String> = emptyMap()
+    ): CustomerListDto
+
+    @PATCH("api/customers/{id}/unblock")
+    suspend fun unblockCustomer(
+        @Path("id") id: Long,
+        @Body body: Map<String, String> = emptyMap()
+    ): CustomerListDto
+
+    // Vehicle Management
+    @PATCH("api/vehicles/{id}/toggle-status")
+    suspend fun toggleVehicleStatus(@Path("id") id: Long): VehicleDto
+
+    @PATCH("api/vehicles/{id}/block")
+    suspend fun blockVehicle(@Path("id") id: Long): VehicleDto
+
+    @PATCH("api/vehicles/{id}/unblock")
+    suspend fun unblockVehicle(@Path("id") id: Long): VehicleDto
+
+    @PATCH("api/vehicles/{id}/liter-limit")
+    suspend fun updateVehicleLiterLimit(
+        @Path("id") id: Long,
+        @Body body: LiterLimitRequest
+    ): VehicleDto
+
+    // Admin / Employee Management
+    @GET("api/admin/users")
+    suspend fun getAdminUsers(
+        @Query("type") type: String? = "EMPLOYEE",
+        @Query("search") search: String? = null
+    ): List<AdminUserDto>
+
+    @POST("api/admin/users/{id}/reset-passcode")
+    suspend fun resetPasscode(@Path("id") id: Long): PasscodeResetResponse
+
+    @GET("api/admin/users/passcode-reset-requests")
+    suspend fun getPasscodeResetRequests(
+        @Query("status") status: String? = null
+    ): List<PasscodeResetRequestDto>
+
+    @POST("api/admin/users/passcode-reset-requests/{id}/approve")
+    suspend fun approveResetRequest(@Path("id") id: Long): PasscodeApproveResponse
+
+    @POST("api/admin/users/passcode-reset-requests/{id}/reject")
+    suspend fun rejectResetRequest(@Path("id") id: Long)
+
     // Invoices
     @POST("api/invoices")
     suspend fun createInvoice(@Body invoice: CreateInvoiceRequest): InvoiceBillDto

@@ -20,6 +20,8 @@ fun HomeScreen(
     onNavigateToShiftInvoices: () -> Unit,
     onNavigateToStartSession: () -> Unit,
     onNavigateToEndSession: (Long) -> Unit,
+    onNavigateToCustomers: () -> Unit = {},
+    onNavigateToEmployees: () -> Unit = {},
     onLogout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -132,6 +134,43 @@ fun HomeScreen(
                         Icon(Icons.Default.PlayArrow, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Start Pump Session")
+                    }
+                }
+
+                // Management section (OWNER/MANAGER only)
+                val role = uiState.userRole.uppercase()
+                if (role == "OWNER" || role == "MANAGER") {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "Management",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = onNavigateToCustomers,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                    ) {
+                        Icon(Icons.Default.People, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Customers")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = onNavigateToEmployees,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                    ) {
+                        Icon(Icons.Default.Badge, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Employees")
                     }
                 }
             }
