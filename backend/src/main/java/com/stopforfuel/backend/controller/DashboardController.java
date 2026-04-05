@@ -260,6 +260,10 @@ public class DashboardController {
     @Getter @Setter @NoArgsConstructor
     public static class SystemHealth {
         private long totalCustomers;
+        private long activeCustomers;
+        private long blockedCustomers;
+        private long inactiveCustomers;
+        private long totalVehicles;
         private long totalEmployees;
         private long totalUsers;
         private long activeShiftCount;
