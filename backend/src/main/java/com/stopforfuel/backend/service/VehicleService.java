@@ -107,6 +107,28 @@ public class VehicleService {
         return vehicleRepository.save(vehicle);
     }
 
+    @Transactional
+    public Vehicle blockVehicle(Long id) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+        if (vehicle.getStatus() != EntityStatus.ACTIVE) {
+            throw new BusinessException("Vehicle can only be blocked from ACTIVE status. Current: " + vehicle.getStatus());
+        }
+        vehicle.setStatus(EntityStatus.BLOCKED);
+        return vehicleRepository.save(vehicle);
+    }
+
+    @Transactional
+    public Vehicle unblockVehicle(Long id) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+        if (vehicle.getStatus() != EntityStatus.BLOCKED) {
+            throw new BusinessException("Vehicle can only be unblocked from BLOCKED status. Current: " + vehicle.getStatus());
+        }
+        vehicle.setStatus(EntityStatus.ACTIVE);
+        return vehicleRepository.save(vehicle);
+    }
+
     /**
      * Updates only the maxLitersPerMonth for a vehicle.
      * Used by the "Set as Limit" workflow from statements.
