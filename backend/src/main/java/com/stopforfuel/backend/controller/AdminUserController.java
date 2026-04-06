@@ -46,7 +46,7 @@ public class AdminUserController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_CREATE')")
     public ResponseEntity<Map<String, Object>> createUser(@Valid @RequestBody CreateUserRequest request) {
         if (request.getPhone() != null && !request.getPhone().isBlank()) {
             // Mobile-first user creation
@@ -73,28 +73,28 @@ public class AdminUserController {
     }
 
     @PostMapping("/{id}/reset-passcode")
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
     public ResponseEntity<Map<String, String>> resetPasscode(@PathVariable Long id) {
         String newPasscode = adminUserService.resetPasscode(id);
         return ResponseEntity.ok(Map.of("passcode", newPasscode));
     }
 
     @PutMapping("/{id}/role")
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
     public ResponseEntity<UserListDTO> updateUserRole(@PathVariable Long id, @Valid @RequestBody UpdateUserRoleRequest request) {
         User user = adminUserService.updateUserRole(id, request.getRoleType(), request.getDesignation());
         return ResponseEntity.ok(UserListDTO.from(user));
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
     public ResponseEntity<UserListDTO> toggleUserStatus(@PathVariable Long id) {
         User user = adminUserService.toggleUserStatus(id);
         return ResponseEntity.ok(UserListDTO.from(user));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_DELETE')")
     public ResponseEntity<Void> disableUser(@PathVariable Long id) {
         adminUserService.disableUser(id);
         return ResponseEntity.ok().build();
@@ -103,7 +103,7 @@ public class AdminUserController {
     // --- Passcode Reset Requests ---
 
     @GetMapping("/passcode-reset-requests")
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_VIEW')")
     public List<PasscodeResetRequest> getResetRequests(
             @RequestParam(required = false) String status) {
         Long scid = SecurityUtils.getScid();
@@ -115,7 +115,7 @@ public class AdminUserController {
     }
 
     @GetMapping("/passcode-reset-requests/pending-count")
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_VIEW')")
     public Map<String, Long> getPendingResetCount() {
         long count = resetRequestRepository.countByScidAndStatus(
                 SecurityUtils.getScid(), PasscodeResetRequest.Status.PENDING);
@@ -123,7 +123,7 @@ public class AdminUserController {
     }
 
     @PostMapping("/passcode-reset-requests/{id}/approve")
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
     public ResponseEntity<Map<String, Object>> approveResetRequest(@PathVariable Long id) {
         PasscodeResetRequest request = resetRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reset request not found"));
@@ -148,7 +148,7 @@ public class AdminUserController {
     }
 
     @PostMapping("/passcode-reset-requests/{id}/reject")
-    @PreAuthorize("hasPermission(null, 'USER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
     public ResponseEntity<Void> rejectResetRequest(@PathVariable Long id) {
         PasscodeResetRequest request = resetRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reset request not found"));

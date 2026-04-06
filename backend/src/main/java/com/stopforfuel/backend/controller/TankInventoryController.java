@@ -79,19 +79,19 @@ public class TankInventoryController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_CREATE')")
     public TankInventoryDTO create(@Valid @RequestBody TankInventory inventory) {
         return TankInventoryDTO.from(service.save(inventory));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_UPDATE')")
     public TankInventoryDTO update(@PathVariable Long id, @Valid @RequestBody TankInventory inventory) {
         return TankInventoryDTO.from(service.update(id, inventory));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

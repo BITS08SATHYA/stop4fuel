@@ -135,7 +135,7 @@ export default function NozzlesPage() {
                             Manage fuel nozzles and their connections to tanks and pumps.
                         </p>
                     </div>
-                    <PermissionGate permission="STATION_MANAGE">
+                    <PermissionGate permission="STATION_CREATE">
                         <button
                             onClick={() => openModal()}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -243,7 +243,7 @@ export default function NozzlesPage() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <PermissionGate permission="STATION_MANAGE">
+                                                <PermissionGate permission="STATION_UPDATE">
                                                     <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={() => openModal(nozzle)}

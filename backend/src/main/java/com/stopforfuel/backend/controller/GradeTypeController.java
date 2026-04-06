@@ -42,25 +42,25 @@ public class GradeTypeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_CREATE')")
     public GradeTypeDTO create(@Valid @RequestBody GradeType grade) {
         return GradeTypeDTO.from(service.createGrade(grade));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public GradeTypeDTO update(@PathVariable Long id, @Valid @RequestBody GradeType grade) {
         return GradeTypeDTO.from(service.updateGrade(id, grade));
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public GradeTypeDTO toggleStatus(@PathVariable Long id) {
         return GradeTypeDTO.from(service.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_DELETE')")
     public void delete(@PathVariable Long id) {
         service.deleteGrade(id);
     }

@@ -64,7 +64,7 @@ export default function OperationalAdvancesPage() {
                                 <span className="text-sm font-medium text-amber-500">No active shift</span>
                             </div>
                         )}
-                        <PermissionGate permission="FINANCE_MANAGE">
+                        <PermissionGate permission="FINANCE_CREATE">
                             <button
                                 onClick={handleOpenAddModal}
                                 title="Record a new advance"

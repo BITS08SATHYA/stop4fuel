@@ -53,7 +53,7 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_CREATE')")
     public CustomerDetailDTO createCustomer(@Valid @RequestBody Customer customer) {
         if (customer.getScid() == null) {
             customer.setScid(SecurityUtils.getScid());
@@ -62,13 +62,13 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public CustomerDetailDTO updateCustomer(@PathVariable Long id, @Valid @RequestBody Customer customer) {
         return CustomerDetailDTO.from(customerService.updateCustomer(id, customer));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_DELETE')")
     public void deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);
     }
@@ -88,13 +88,13 @@ public class CustomerController {
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public CustomerDetailDTO toggleStatus(@PathVariable Long id) {
         return CustomerDetailDTO.from(customerService.toggleStatus(id));
     }
 
     @PatchMapping("/{id}/block")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public CustomerDetailDTO blockCustomer(@PathVariable Long id,
             @RequestBody(required = false) java.util.Map<String, String> body) {
         String notes = body != null ? body.get("notes") : null;
@@ -102,7 +102,7 @@ public class CustomerController {
     }
 
     @PatchMapping("/{id}/unblock")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public CustomerDetailDTO unblockCustomer(@PathVariable Long id,
             @RequestBody(required = false) java.util.Map<String, String> body) {
         String notes = body != null ? body.get("notes") : null;
@@ -116,7 +116,7 @@ public class CustomerController {
     }
 
     @PatchMapping("/{id}/credit-limits")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public CustomerDetailDTO updateCreditLimits(@PathVariable Long id, @RequestBody java.util.Map<String, Object> limits) {
         return CustomerDetailDTO.from(customerService.updateCreditLimits(id, limits));
     }

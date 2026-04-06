@@ -265,7 +265,7 @@ export default function IncentivePaymentsPage() {
                             Track discount and incentive payments given to customers.
                         </p>
                     </div>
-                    <PermissionGate permission="SHIFT_MANAGE">
+                    <PermissionGate permission="SHIFT_CREATE">
                         <button
                             onClick={handleOpenAdd}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -440,7 +440,7 @@ export default function IncentivePaymentsPage() {
                                                     {p.shiftId ? `#${p.shiftId}` : "-"}
                                                 </td>
                                                 <td className="px-5 py-3 text-center">
-                                                    <PermissionGate permission="SHIFT_MANAGE">
+                                                    <PermissionGate permission="SHIFT_DELETE">
                                                         <button
                                                             onClick={() => p.id && handleDelete(p.id)}
                                                             className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"

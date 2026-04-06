@@ -34,7 +34,7 @@ public class SalaryPaymentController {
     }
 
     @PostMapping("/process")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public List<SalaryPaymentDTO> processMonthlyPayroll(
             @RequestParam Integer month,
             @RequestParam Integer year) {
@@ -42,7 +42,7 @@ public class SalaryPaymentController {
     }
 
     @PatchMapping("/{id}/pay")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<SalaryPaymentDTO> markAsPaid(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
@@ -56,7 +56,7 @@ public class SalaryPaymentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<SalaryPaymentDTO> updatePayment(@PathVariable Long id, @Valid @RequestBody SalaryPayment payment) {
         try {
             return ResponseEntity.ok(SalaryPaymentDTO.from(salaryPaymentService.updatePayment(id, payment)));

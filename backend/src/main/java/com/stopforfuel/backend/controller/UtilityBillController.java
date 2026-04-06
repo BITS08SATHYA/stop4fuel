@@ -38,13 +38,13 @@ public class UtilityBillController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_CREATE')")
     public UtilityBillDTO createBill(@Valid @RequestBody UtilityBill bill) {
         return UtilityBillDTO.from(utilityBillService.createBill(bill));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_UPDATE')")
     public ResponseEntity<UtilityBillDTO> updateBill(@PathVariable Long id, @Valid @RequestBody UtilityBill bill) {
         try {
             return ResponseEntity.ok(UtilityBillDTO.from(utilityBillService.updateBill(id, bill)));
@@ -54,14 +54,14 @@ public class UtilityBillController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_DELETE')")
     public ResponseEntity<Void> deleteBill(@PathVariable Long id) {
         utilityBillService.deleteBill(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/upload-pdf")
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_UPDATE')")
     public ResponseEntity<UtilityBillDTO> uploadPdf(@RequestParam("file") MultipartFile file) {
         try {
             UtilityBill parsed = utilityBillService.parseTnebPdf(file);
@@ -72,7 +72,7 @@ public class UtilityBillController {
     }
 
     @PostMapping("/upload-bulk")
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_UPDATE')")
     public ResponseEntity<List<UtilityBillDTO>> uploadBulkPdfs(@RequestParam("files") List<MultipartFile> files) {
         List<UtilityBillDTO> parsed = utilityBillService.parseBulkPdfs(files).stream().map(UtilityBillDTO::from).toList();
         return ResponseEntity.ok(parsed);

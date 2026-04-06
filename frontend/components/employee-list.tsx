@@ -93,7 +93,7 @@ export function EmployeeList() {
                     <h2 className="text-2xl font-bold tracking-tight">Employees</h2>
                     <p className="text-muted-foreground">Manage your staff and their details.</p>
                 </div>
-                <PermissionGate permission="EMPLOYEE_MANAGE">
+                <PermissionGate permission="EMPLOYEE_CREATE">
                     <button
                         onClick={openAdd}
                         className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
@@ -169,7 +169,7 @@ export function EmployeeList() {
                                 <td className="p-4 text-right">
                                     <div className="flex justify-end gap-2">
                                         <button onClick={() => setProfileEmployee(emp)} className="p-2 hover:bg-muted rounded-md" title="View Profile"><Eye className="w-4 h-4" /></button>
-                                        <PermissionGate permission="EMPLOYEE_MANAGE">
+                                        <PermissionGate permission="EMPLOYEE_UPDATE">
                                             <button onClick={() => openEdit(emp)} className="p-2 hover:bg-muted rounded-md" title="Edit"><Pencil className="w-4 h-4" /></button>
                                             <button onClick={() => handleDelete(emp.id)} className="p-2 hover:bg-red-100 text-red-600 rounded-md" title="Delete"><Trash2 className="w-4 h-4" /></button>
                                         </PermissionGate>

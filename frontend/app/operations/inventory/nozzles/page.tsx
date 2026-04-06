@@ -195,7 +195,7 @@ export default function NozzleInventoryPage() {
                         </h1>
                         <p className="text-muted-foreground mt-2">Record daily meter readings and track sales per nozzle.</p>
                     </div>
-                    <PermissionGate permission="INVENTORY_MANAGE">
+                    <PermissionGate permission="INVENTORY_CREATE">
                         <button onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all">
                             <Plus className="w-5 h-5" /> Add Daily Reading
@@ -364,7 +364,7 @@ export default function NozzleInventoryPage() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex justify-center gap-2">
-                                                        <PermissionGate permission="INVENTORY_MANAGE">
+                                                        <PermissionGate permission="INVENTORY_UPDATE">
                                                             <button onClick={() => handleEdit(inv)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors" title="Edit">
                                                                 <Edit2 className="w-4 h-4" />
                                                             </button>

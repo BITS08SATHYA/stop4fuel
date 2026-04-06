@@ -25,13 +25,13 @@ public class PartyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_CREATE')")
     public Party create(@Valid @RequestBody Party party) {
         return repository.save(party);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         repository.deleteById(id);
         return ResponseEntity.noContent().build();

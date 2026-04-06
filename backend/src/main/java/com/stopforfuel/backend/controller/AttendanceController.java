@@ -37,7 +37,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/employees/{employeeId}/attendance")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public AttendanceDTO markAttendance(@PathVariable Long employeeId, @Valid @RequestBody Attendance attendance) {
         com.stopforfuel.backend.entity.Employee employee = new com.stopforfuel.backend.entity.Employee();
         employee.setId(employeeId);
@@ -46,13 +46,13 @@ public class AttendanceController {
     }
 
     @PostMapping("/attendance/bulk")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public List<AttendanceDTO> markBulkAttendance(@Valid @RequestBody List<Attendance> attendances) {
         return attendanceService.markBulkAttendance(attendances).stream().map(AttendanceDTO::from).toList();
     }
 
     @DeleteMapping("/attendance/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_DELETE')")
     public ResponseEntity<Void> deleteAttendance(@PathVariable Long id) {
         attendanceService.deleteAttendance(id);
         return ResponseEntity.ok().build();

@@ -131,7 +131,7 @@ public class PaymentController {
      * POST /api/payments/statement/{statementId}
      */
     @PostMapping("/statement/{statementId}")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_CREATE')")
     public ResponseEntity<PaymentDTO> recordStatementPayment(
             @PathVariable Long statementId,
             @Valid @RequestBody Payment payment) {
@@ -144,7 +144,7 @@ public class PaymentController {
      * POST /api/payments/bill/{invoiceBillId}
      */
     @PostMapping("/bill/{invoiceBillId}")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_CREATE')")
     public ResponseEntity<PaymentDTO> recordBillPayment(
             @PathVariable Long invoiceBillId,
             @Valid @RequestBody Payment payment) {
@@ -177,7 +177,7 @@ public class PaymentController {
      * POST /api/payments/{id}/upload-proof
      */
     @PostMapping("/{id}/upload-proof")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
     public ResponseEntity<PaymentDTO> uploadProof(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) throws IOException {
@@ -190,7 +190,7 @@ public class PaymentController {
      * DELETE /api/payments/{id}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_DELETE')")
     public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
         paymentService.deletePayment(id);
         return ResponseEntity.noContent().build();

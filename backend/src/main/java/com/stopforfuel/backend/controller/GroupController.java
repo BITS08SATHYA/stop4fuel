@@ -31,19 +31,19 @@ public class GroupController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_CREATE')")
     public GroupDTO createGroup(@Valid @RequestBody Group group) {
         return GroupDTO.from(groupService.createGroup(group));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public GroupDTO updateGroup(@PathVariable Long id, @Valid @RequestBody Group group) {
         return GroupDTO.from(groupService.updateGroup(id, group));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_DELETE')")
     public void deleteGroup(@PathVariable Long id) {
         groupService.deleteGroup(id);
     }

@@ -36,25 +36,25 @@ public class SupplierController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_CREATE')")
     public SupplierDTO create(@Valid @RequestBody Supplier supplier) {
         return SupplierDTO.from(service.createSupplier(supplier));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public SupplierDTO update(@PathVariable Long id, @Valid @RequestBody Supplier supplier) {
         return SupplierDTO.from(service.updateSupplier(id, supplier));
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public SupplierDTO toggleStatus(@PathVariable Long id) {
         return SupplierDTO.from(service.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_DELETE')")
     public void delete(@PathVariable Long id) {
         service.deleteSupplier(id);
     }

@@ -30,13 +30,13 @@ public class LeaveController {
     }
 
     @PostMapping("/leave-types")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public LeaveType createLeaveType(@Valid @RequestBody LeaveType leaveType) {
         return leaveService.createLeaveType(leaveType);
     }
 
     @PutMapping("/leave-types/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<LeaveType> updateLeaveType(@PathVariable Long id, @Valid @RequestBody LeaveType leaveType) {
         try {
             return ResponseEntity.ok(leaveService.updateLeaveType(id, leaveType));
@@ -46,7 +46,7 @@ public class LeaveController {
     }
 
     @DeleteMapping("/leave-types/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_DELETE')")
     public ResponseEntity<Void> deleteLeaveType(@PathVariable Long id) {
         leaveService.deleteLeaveType(id);
         return ResponseEntity.ok().build();
@@ -63,7 +63,7 @@ public class LeaveController {
     }
 
     @PostMapping("/employees/{employeeId}/leave-balances/initialize")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public List<LeaveBalance> initializeLeaveBalances(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
@@ -73,7 +73,7 @@ public class LeaveController {
 
     // Leave Requests
     @PostMapping("/employees/{employeeId}/leave-requests")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public LeaveRequestDTO createLeaveRequest(@PathVariable Long employeeId, @Valid @RequestBody LeaveRequest request) {
         return LeaveRequestDTO.from(leaveService.createLeaveRequest(employeeId, request));
     }
@@ -91,7 +91,7 @@ public class LeaveController {
     }
 
     @PatchMapping("/leave-requests/{id}/approve")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<LeaveRequestDTO> approveLeaveRequest(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {
@@ -105,7 +105,7 @@ public class LeaveController {
     }
 
     @PatchMapping("/leave-requests/{id}/reject")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<LeaveRequestDTO> rejectLeaveRequest(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body) {

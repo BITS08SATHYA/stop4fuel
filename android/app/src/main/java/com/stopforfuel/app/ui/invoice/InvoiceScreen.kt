@@ -296,8 +296,8 @@ private fun QuickSelectRow(
         QuickBtn("XP") { it.category?.uppercase() == "FUEL" && (it.name?.contains("xtra premium", ignoreCase = true) == true || it.name?.contains("extra premium", ignoreCase = true) == true) },
         QuickBtn("HSD") { it.category?.uppercase() == "FUEL" && it.name?.contains("diesel", ignoreCase = true) == true && it.name?.contains("additive", ignoreCase = true) != true },
         QuickBtn("2T Loose") { it.name?.contains("2t", ignoreCase = true) == true && it.name?.contains("loose", ignoreCase = true) == true },
-        QuickBtn("2T 20ml") { it.name?.contains("20", ignoreCase = true) == true && (it.name?.contains("ml", ignoreCase = true) == true || it.name?.contains("pouch", ignoreCase = true) == true) },
-        QuickBtn("40ml") { it.name?.contains("40", ignoreCase = true) == true && (it.name?.contains("ml", ignoreCase = true) == true || it.name?.contains("pouch", ignoreCase = true) == true) }
+        QuickBtn("2T 20ml") { it.name?.contains("2t", ignoreCase = true) == true && it.name?.contains("20", ignoreCase = true) == true },
+        QuickBtn("2T 40ml") { it.name?.contains("2t", ignoreCase = true) == true && it.name?.contains("40", ignoreCase = true) == true }
     )
 
     val orange = Color(0xFFFF9800)

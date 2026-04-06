@@ -117,7 +117,7 @@ export default function SalaryProcessingPage() {
                             onChange={(e) => setSelectedYear(Number(e.target.value))}
                             className="bg-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-24"
                         />
-                        <PermissionGate permission="EMPLOYEE_MANAGE">
+                        <PermissionGate permission="EMPLOYEE_CREATE">
                             <button
                                 onClick={handleProcess}
                                 disabled={processing}
@@ -179,7 +179,7 @@ export default function SalaryProcessingPage() {
                     <div className="flex-1 overflow-hidden flex flex-col">
                         {draftCount > 0 && (
                             <div className="mb-3 flex justify-end">
-                                <PermissionGate permission="EMPLOYEE_MANAGE">
+                                <PermissionGate permission="EMPLOYEE_UPDATE">
                                     <button onClick={handleMarkAllPaid} className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
                                         Mark All as Paid ({draftCount})
                                     </button>
@@ -236,7 +236,7 @@ export default function SalaryProcessingPage() {
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
                                                     {p.status === "DRAFT" && (
-                                                        <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                        <PermissionGate permission="EMPLOYEE_UPDATE">
                                                             <button
                                                                 onClick={() => handleMarkPaid(p.id)}
                                                                 className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors"

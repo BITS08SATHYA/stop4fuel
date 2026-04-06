@@ -205,7 +205,7 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
                     </div>
                     <div className="flex items-center gap-2">
                         {!isNew && !editing && (
-                            <PermissionGate permission="SETTINGS_MANAGE">
+                            <PermissionGate permission="SETTINGS_UPDATE">
                                 <button
                                     onClick={() => setEditing(true)}
                                     className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors"

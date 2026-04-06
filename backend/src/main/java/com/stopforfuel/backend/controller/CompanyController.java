@@ -42,7 +42,7 @@ public class CompanyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_CREATE')")
     public CompanyDTO createCompany(@Valid @RequestBody Company company,
                                      @RequestParam(required = false) Long ownerId) {
         if (ownerId != null) {
@@ -52,7 +52,7 @@ public class CompanyController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
     public CompanyDTO updateCompany(@PathVariable Long id, @Valid @RequestBody Company company,
                                      @RequestParam(required = false) Long ownerId) {
         company.setId(id);
@@ -63,7 +63,7 @@ public class CompanyController {
     }
 
     @PostMapping("/{id}/logo")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
     public ResponseEntity<CompanyDTO> uploadLogo(@PathVariable Long id,
                                                   @RequestParam("file") MultipartFile file) {
         Company company = companyService.getCompanyById(id)
@@ -98,7 +98,7 @@ public class CompanyController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_DELETE')")
     public void deleteCompany(@PathVariable Long id) {
         companyService.deleteCompany(id);
     }

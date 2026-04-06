@@ -37,25 +37,25 @@ public class PumpController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_CREATE')")
     public PumpDTO createPump(@Valid @RequestBody Pump pump) {
         return PumpDTO.from(pumpService.createPump(pump));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_UPDATE')")
     public PumpDTO updatePump(@PathVariable Long id, @Valid @RequestBody Pump pump) {
         return PumpDTO.from(pumpService.updatePump(id, pump));
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_UPDATE')")
     public PumpDTO toggleStatus(@PathVariable Long id) {
         return PumpDTO.from(pumpService.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_DELETE')")
     public ResponseEntity<?> deletePump(@PathVariable Long id) {
         pumpService.deletePump(id);
         return ResponseEntity.ok().build();

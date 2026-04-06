@@ -796,7 +796,7 @@ function InvoicePaymentsTab({
 
             {/* Record payment button */}
             {canPay && balance > 0 && !showForm && (
-                <PermissionGate permission="PAYMENT_MANAGE">
+                <PermissionGate permission="PAYMENT_CREATE">
                     <button
                         onClick={() => onShowForm(true)}
                         className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"

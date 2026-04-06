@@ -37,25 +37,25 @@ public class PurchaseOrderController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_CREATE')")
     public PurchaseOrderDTO create(@Valid @RequestBody PurchaseOrder order) {
         return PurchaseOrderDTO.from(service.save(order));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_UPDATE')")
     public PurchaseOrderDTO update(@PathVariable Long id, @Valid @RequestBody PurchaseOrder order) {
         return PurchaseOrderDTO.from(service.update(id, order));
     }
 
     @PostMapping("/{id}/receive")
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_UPDATE')")
     public PurchaseOrderDTO receiveDelivery(@PathVariable Long id, @Valid @RequestBody List<ReceiveItemDTO> items) {
         return PurchaseOrderDTO.from(service.receiveDelivery(id, items));
     }
 
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_UPDATE')")
     public PurchaseOrderDTO cancel(@PathVariable Long id) {
         return PurchaseOrderDTO.from(service.cancel(id));
     }

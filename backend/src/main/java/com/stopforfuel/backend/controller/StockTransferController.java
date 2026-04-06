@@ -34,19 +34,19 @@ public class StockTransferController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_CREATE')")
     public StockTransferDTO create(@Valid @RequestBody StockTransfer transfer) {
         return StockTransferDTO.from(service.createTransfer(transfer));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_UPDATE')")
     public StockTransferDTO update(@PathVariable Long id, @Valid @RequestBody StockTransfer transfer) {
         return StockTransferDTO.from(service.updateTransfer(id, transfer));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.deleteTransfer(id);
         return ResponseEntity.noContent().build();

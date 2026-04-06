@@ -43,13 +43,13 @@ public class NotificationConfigController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_CREATE')")
     public NotificationConfig save(@Valid @RequestBody NotificationConfig config) {
         return configService.save(config);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_DELETE')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         configService.delete(id);
         return ResponseEntity.ok().build();

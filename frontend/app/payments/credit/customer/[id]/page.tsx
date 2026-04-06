@@ -260,7 +260,7 @@ export default function CreditCustomerProfilePage() {
                             </div>
                         </div>
                     </div>
-                    <PermissionGate permission="CUSTOMER_MANAGE">
+                    <PermissionGate permission="CUSTOMER_UPDATE">
                         <button
                             onClick={handleBlockToggle}
                             className={`text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-colors ${
@@ -354,7 +354,7 @@ export default function CreditCustomerProfilePage() {
                         <GlassCard className="!p-4">
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Credit Limits</h3>
-                                <PermissionGate permission="CUSTOMER_MANAGE">
+                                <PermissionGate permission="CUSTOMER_UPDATE">
                                     {editingLimits ? (
                                         <div className="flex gap-1">
                                             <button onClick={handleSaveLimits} className="text-[10px] px-2 py-0.5 rounded bg-primary text-primary-foreground hover:bg-primary/90">
@@ -419,7 +419,7 @@ export default function CreditCustomerProfilePage() {
                                                         {v.status || "ACTIVE"}
                                                     </Badge>
                                                 </div>
-                                                <PermissionGate permission="CUSTOMER_MANAGE">
+                                                <PermissionGate permission="CUSTOMER_UPDATE">
                                                     <button
                                                         onClick={() => handleToggleVehicleStatus(v.id)}
                                                         className="text-[9px] px-1.5 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"

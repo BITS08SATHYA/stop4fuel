@@ -3,6 +3,7 @@ package com.stopforfuel.backend.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
@@ -11,6 +12,7 @@ import lombok.Setter;
 })
 @Getter
 @Setter
+@NoArgsConstructor
 public class Permission {
 
     @Id
@@ -25,4 +27,18 @@ public class Permission {
 
     @Column(nullable = false)
     private String module;
+
+    @Column(nullable = false)
+    private String action;
+
+    @Column(nullable = false)
+    private boolean systemDefault = true;
+
+    public Permission(String code, String description, String module, String action, boolean systemDefault) {
+        this.code = code;
+        this.description = description;
+        this.module = module;
+        this.action = action;
+        this.systemDefault = systemDefault;
+    }
 }

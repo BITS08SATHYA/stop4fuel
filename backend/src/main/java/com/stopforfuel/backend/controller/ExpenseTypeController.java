@@ -24,13 +24,13 @@ public class ExpenseTypeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_CREATE')")
     public ExpenseType create(@Valid @RequestBody ExpenseType expenseType) {
         return repository.save(expenseType);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_UPDATE')")
     public ResponseEntity<ExpenseType> update(@PathVariable Long id, @Valid @RequestBody ExpenseType updated) {
         return repository.findById(id)
                 .map(existing -> {
@@ -41,7 +41,7 @@ public class ExpenseTypeController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         repository.deleteById(id);
         return ResponseEntity.noContent().build();
