@@ -91,7 +91,8 @@ export interface IncentivePayment {
 // Statements
 export const getStatements = (
     page = 0, size = 10, customerId?: number, status?: string,
-    fromDate?: string, toDate?: string, search?: string, categoryType?: string
+    fromDate?: string, toDate?: string, search?: string, categoryType?: string,
+    sort?: string
 ): Promise<PageResponse<Statement>> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (customerId) params.append('customerId', String(customerId));
@@ -100,6 +101,7 @@ export const getStatements = (
     if (toDate) params.append('toDate', toDate);
     if (search) params.append('search', search);
     if (categoryType) params.append('categoryType', categoryType);
+    if (sort) params.append('sort', sort);
     return fetchWithAuth(`${API_BASE_URL}/statements?${params}`).then(handleResponse);
 };
 

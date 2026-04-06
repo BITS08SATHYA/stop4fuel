@@ -44,9 +44,14 @@ public class StatementController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String categoryType) {
+            @RequestParam(required = false) String categoryType,
+            @RequestParam(required = false, defaultValue = "id,desc") String sort) {
+        String[] parts = sort.split(",");
+        String sortField = parts[0];
+        org.springframework.data.domain.Sort.Direction dir = parts.length > 1 && "asc".equalsIgnoreCase(parts[1])
+                ? org.springframework.data.domain.Sort.Direction.ASC : org.springframework.data.domain.Sort.Direction.DESC;
         return statementService.getStatements(customerId, status, categoryType, fromDate, toDate, search,
-                PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id").descending()))
+                PageRequest.of(page, size, org.springframework.data.domain.Sort.by(dir, sortField)))
                 .map(StatementDTO::from);
     }
 
