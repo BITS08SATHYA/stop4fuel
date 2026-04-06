@@ -868,14 +868,16 @@ export default function InvoicesPage() {
                                 key={label}
                                 onClick={() => {
                                     const emptyIdx = selectedProducts.findIndex((l: any) => !l.product);
+                                    const isFuel = matched.category?.toLowerCase() === "fuel";
                                     if (emptyIdx >= 0) {
-                                        updateProductLine(emptyIdx, { product: matched, unitPrice: String(matched.price) });
+                                        updateProductLine(emptyIdx, { product: matched, unitPrice: String(matched.price), amountMode: isFuel });
                                     } else {
                                         setSelectedProducts((prev: any[]) => [...prev, {
                                             product: matched,
                                             nozzle: null,
                                             quantity: "",
                                             unitPrice: String(matched.price),
+                                            amountMode: isFuel,
                                             amount: 0
                                         }]);
                                     }
@@ -932,6 +934,7 @@ export default function InvoicesPage() {
                                                             updateProductLine(idx, {
                                                                 product: p,
                                                                 unitPrice: String(p.price),
+                                                                amountMode: p.category?.toLowerCase() === "fuel",
                                                                 _productSearch: undefined,
                                                                 _showProductDropdown: false,
                                                             });
