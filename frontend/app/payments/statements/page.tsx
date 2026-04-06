@@ -11,7 +11,7 @@ import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
     FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight,
-    CheckCircle2, Zap, Pencil
+    CheckCircle2, Zap, Pencil, ArrowUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
 import {
     getStatements, generateStatement, regenerateStatement, getStatementBills,
@@ -78,6 +78,10 @@ export default function StatementsPage() {
     // Edit/Regenerate
     const [editingStatementId, setEditingStatementId] = useState<number | null>(null);
 
+    // Sort
+    const [sortField, setSortField] = useState("id");
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
     // Set as Limit
     const [setLimitSuccess, setSetLimitSuccess] = useState("");
 
@@ -89,7 +93,7 @@ export default function StatementsPage() {
 
     useEffect(() => {
         loadStatements();
-    }, [page, filterStatus, filterCategory, filterFromDate, filterToDate, tableSearch]);
+    }, [page, filterStatus, filterCategory, filterFromDate, filterToDate, tableSearch, sortField, sortDir]);
 
     // Load vehicles when customer changes in generate modal
     useEffect(() => {
@@ -140,7 +144,8 @@ export default function StatementsPage() {
             const result: PageResponse<Statement> = await getStatements(
                 page, pageSize, undefined, statusParam,
                 filterFromDate || undefined, filterToDate || undefined,
-                tableSearch || undefined, filterCategory || undefined
+                tableSearch || undefined, filterCategory || undefined,
+                `${sortField},${sortDir}`
             );
             setStatements(result.content);
             setTotalPages(result.totalPages);
@@ -347,6 +352,32 @@ export default function StatementsPage() {
         setPage(0); // reset to first page on filter change
     };
 
+    const handleSort = (field: string) => {
+        if (sortField === field) {
+            setSortDir(prev => prev === "asc" ? "desc" : "asc");
+        } else {
+            setSortField(field);
+            setSortDir("desc");
+        }
+        setPage(0);
+    };
+
+    const SortHeader = ({ field, label, align = "left" }: { field: string; label: string; align?: string }) => (
+        <th
+            className={`py-3 px-4 cursor-pointer hover:text-foreground transition-colors select-none text-${align}`}
+            onClick={() => handleSort(field)}
+        >
+            <span className="inline-flex items-center gap-1">
+                {label}
+                {sortField === field ? (
+                    sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                ) : (
+                    <ArrowUpDown className="w-3 h-3 opacity-30" />
+                )}
+            </span>
+        </th>
+    );
+
     const previewTotal = previewBills
         .filter(b => selectedBillIds.has(b.id!))
         .reduce((sum, b) => sum + Number(b.netAmount || 0), 0);
@@ -464,15 +495,15 @@ export default function StatementsPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-border text-muted-foreground">
-                                    <th className="text-left py-3 px-4">Statement No</th>
-                                    <th className="text-left py-3 px-4">Customer</th>
-                                    <th className="text-left py-3 px-4">Date</th>
-                                    <th className="text-right py-3 px-4">Bills</th>
-                                    <th className="text-right py-3 px-4">Net Amount</th>
-                                    <th className="text-right py-3 px-4">Received</th>
-                                    <th className="text-right py-3 px-4">Balance</th>
-                                    <th className="text-center py-3 px-4">Status</th>
+                                <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wider">
+                                    <SortHeader field="statementNo" label="Statement No" />
+                                    <SortHeader field="customer.name" label="Customer" />
+                                    <SortHeader field="statementDate" label="Date" />
+                                    <SortHeader field="numberOfBills" label="Bills" align="right" />
+                                    <SortHeader field="netAmount" label="Net Amount" align="right" />
+                                    <SortHeader field="receivedAmount" label="Received" align="right" />
+                                    <SortHeader field="balanceAmount" label="Balance" align="right" />
+                                    <SortHeader field="status" label="Status" align="center" />
                                     <th className="text-center py-3 px-4">Actions</th>
                                 </tr>
                             </thead>
