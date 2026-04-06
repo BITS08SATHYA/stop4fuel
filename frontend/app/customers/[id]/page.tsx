@@ -13,6 +13,7 @@ import {
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
+import { useAuth } from "@/lib/auth/auth-context";
 import { StyledSelect } from "@/components/ui/styled-select";
 
 const API = API_BASE_URL;
@@ -36,6 +37,9 @@ interface CustomerDetail {
     gstNumber?: string | null;
     latitude?: number | string | null;
     longitude?: number | string | null;
+    forceUnblocked?: boolean;
+    forceUnblockedBy?: string | null;
+    forceUnblockedAt?: string | null;
     party?: { id: number; partyType?: string } | null;
     group?: { id: number; groupName?: string } | null;
     customerCategory?: { id: number; categoryName?: string; categoryType?: string } | null;
@@ -65,6 +69,7 @@ function statusLabel(status: string) {
 export default function CustomerProfilePage() {
     const params = useParams();
     const router = useRouter();
+    const { user } = useAuth();
     const [customer, setCustomer] = useState<CustomerDetail | null>(null);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [loading, setLoading] = useState(true);
@@ -196,6 +201,23 @@ export default function CustomerProfilePage() {
         }
     };
 
+    const handleForceUnblock = async () => {
+        if (!customer) return;
+        const currentlyForced = !!customer.forceUnblocked;
+        try {
+            const res = await fetchWithAuth(`${API}/customers/${params.id}/force-unblock`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ enabled: !currentlyForced, byUser: user?.name || "Unknown" }),
+            });
+            if (res.ok) {
+                setCustomer(await res.json());
+            }
+        } catch (error) {
+            console.error("Failed to toggle force unblock", error);
+        }
+    };
+
     const handleToggleVehicleStatus = async (vehicleId: number) => {
         try {
             const res = await fetchWithAuth(`${API}/vehicles/${vehicleId}/toggle-status`, { method: "PATCH" });
@@ -311,6 +333,19 @@ export default function CustomerProfilePage() {
                         {customerStatus === "INACTIVE" && <><ShieldOff className="w-4 h-4" /> Activate</>}
                         {customerStatus === "BLOCKED" && <><ShieldAlert className="w-4 h-4" /> Unblock</>}
                     </button>
+                    {user?.role === "OWNER" && (
+                        <button
+                            onClick={handleForceUnblock}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                                customer.forceUnblocked
+                                    ? "bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 border border-orange-500/30"
+                                    : "bg-orange-500/5 text-orange-400 hover:bg-orange-500/10 border border-orange-500/20"
+                            }`}
+                        >
+                            <ShieldAlert className="w-4 h-4" />
+                            {customer.forceUnblocked ? "Revoke Force Unblock" : "Force Unblock"}
+                        </button>
+                    )}
                     <PermissionGate permission="CUSTOMER_UPDATE">
                         <button
                             onClick={() => {
@@ -366,6 +401,24 @@ export default function CustomerProfilePage() {
                             {customerStatus === "BLOCKED"
                                 ? "Admin must manually unblock after reviewing."
                                 : "Click 'Activate' to re-enable."}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Force Unblocked banner */}
+            {customer.forceUnblocked && (
+                <div className="rounded-xl p-4 flex items-center gap-3 bg-orange-500/10 border border-orange-500/20 text-orange-500">
+                    <ShieldAlert className="w-5 h-5 shrink-0" />
+                    <div>
+                        <span className="font-medium">
+                            Force Unblocked by {customer.forceUnblockedBy || "Unknown"}
+                            {customer.forceUnblockedAt && (
+                                <> on {new Date(customer.forceUnblockedAt as string).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</>
+                            )}
+                        </span>
+                        <span className="text-sm opacity-75 ml-2">
+                            Credit checks are bypassed. Invoices can be raised regardless of credit limits or blocked status.
                         </span>
                     </div>
                 </div>

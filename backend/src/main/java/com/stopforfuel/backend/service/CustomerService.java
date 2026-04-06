@@ -230,9 +230,30 @@ public class CustomerService {
      * Pre-invoice validation: checks if a new credit invoice would exceed the customer's limits.
      * Returns null if OK, or an error message string if limit would be breached.
      */
+    @Transactional
+    public Customer toggleForceUnblock(Long id, boolean enabled, String byUser) {
+        Customer customer = getCustomerById(id);
+        customer.setForceUnblocked(enabled);
+        customer.setForceUnblockedAt(enabled ? LocalDateTime.now() : null);
+        customer.setForceUnblockedBy(enabled ? byUser : null);
+        Customer saved = customerRepository.save(customer);
+
+        com.stopforfuel.backend.entity.CustomerBlockEvent event = new com.stopforfuel.backend.entity.CustomerBlockEvent();
+        event.setCustomer(saved);
+        event.setScid(saved.getScid());
+        event.setEventType(enabled ? "FORCE_UNBLOCKED" : "FORCE_UNBLOCK_REMOVED");
+        event.setTriggerType("FORCE_UNBLOCK");
+        event.setReason(enabled ? "Force unblock enabled by " + byUser : "Force unblock removed by " + byUser);
+        event.setPreviousStatus(saved.getStatus() != null ? saved.getStatus().name() : "ACTIVE");
+        blockEventRepository.save(event);
+
+        return saved;
+    }
+
     public String validateCreditLimitBeforeInvoice(Long customerId, BigDecimal invoiceAmount, BigDecimal invoiceLiters) {
         Customer customer = customerRepository.findById(customerId).orElse(null);
         if (customer == null) return null;
+        if (customer.isForceUnblocked()) return null;
 
         // 1. Amount-based check: would new invoice push ledger balance beyond creditLimitAmount?
         if (customer.getCreditLimitAmount() != null && customer.getCreditLimitAmount().compareTo(BigDecimal.ZERO) > 0
@@ -306,6 +327,9 @@ public class CustomerService {
     public void checkAndAutoBlock(Long customerId) {
         Customer customer = customerRepository.findByIdForUpdate(customerId).orElse(null);
         if (customer == null || customer.getStatus() != EntityStatus.ACTIVE) {
+            return;
+        }
+        if (customer.isForceUnblocked()) {
             return;
         }
 

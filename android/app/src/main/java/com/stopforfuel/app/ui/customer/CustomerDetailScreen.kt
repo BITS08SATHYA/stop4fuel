@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -298,6 +299,7 @@ private fun CreditLimitsCard(state: CustomerDetailState, viewModel: CustomerDeta
 private fun StatusActionsCard(state: CustomerDetailState, viewModel: CustomerDetailViewModel) {
     val customer = state.customer ?: return
     val status = customer.status?.uppercase() ?: "ACTIVE"
+    val orange = Color(0xFFFF9800)
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -328,6 +330,83 @@ private fun StatusActionsCard(state: CustomerDetailState, viewModel: CustomerDet
                         onClick = { viewModel.toggleStatus() },
                         modifier = Modifier.weight(1f)
                     ) { Text("Activate") }
+                }
+            }
+
+            // Force Unblock toggle - OWNER only
+            if (state.isOwner) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Force Unblock",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Bypass credit limits for invoicing",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = customer.forceUnblocked == true,
+                        onCheckedChange = { viewModel.toggleForceUnblock(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = orange
+                        )
+                    )
+                }
+
+                // Force Unblocked banner
+                if (customer.forceUnblocked == true) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = orange.copy(alpha = 0.15f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = orange,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    "Force Unblocked",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = orange
+                                )
+                                val details = buildString {
+                                    if (!customer.forceUnblockedBy.isNullOrBlank()) append("by ${customer.forceUnblockedBy}")
+                                    if (!customer.forceUnblockedAt.isNullOrBlank()) {
+                                        if (isNotEmpty()) append(" on ")
+                                        append(customer.forceUnblockedAt.take(10))
+                                    }
+                                }
+                                if (details.isNotBlank()) {
+                                    Text(
+                                        details,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = orange
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

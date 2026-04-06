@@ -20,6 +20,7 @@ import { generateStatementPdf, getStatementPdfUrl } from "@/lib/api/station/paym
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
+import { useAuth } from "@/lib/auth/auth-context";
 
 const API = API_BASE_URL;
 
@@ -40,6 +41,9 @@ interface CustomerFull {
     statementGrouping?: string | null;
     lastBlockedAt?: string | null;
     blockCount?: number;
+    forceUnblocked?: boolean;
+    forceUnblockedBy?: string | null;
+    forceUnblockedAt?: string | null;
     group?: { id: number; groupName?: string } | null;
     customerCategory?: { id: number; categoryName?: string; categoryType?: string } | null;
 }
@@ -87,6 +91,7 @@ type TabId = "invoices" | "statements" | "payments" | "vehicles";
 export default function CreditCustomerProfilePage() {
     const params = useParams();
     const router = useRouter();
+    const { user } = useAuth();
     const customerId = Number(params.id);
 
     const [customer, setCustomer] = useState<CustomerFull | null>(null);
@@ -220,6 +225,21 @@ export default function CreditCustomerProfilePage() {
         } catch (e) { console.error("Failed", e); }
     };
 
+    const handleForceUnblock = async () => {
+        if (!customer) return;
+        const currentlyForced = !!customer.forceUnblocked;
+        try {
+            const res = await fetchWithAuth(`${API}/customers/${customerId}/force-unblock`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ enabled: !currentlyForced, byUser: user?.name || "Unknown" }),
+            });
+            if (res.ok) {
+                loadCore();
+            }
+        } catch (e) { console.error("Failed to toggle force unblock", e); }
+    };
+
     const fmt = (n: number) => Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2 });
     const fmtCurrency = (n: number) => Number(n).toLocaleString("en-IN", { style: "currency", currency: "INR" });
     const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -272,7 +292,33 @@ export default function CreditCustomerProfilePage() {
                             {customer.status === "BLOCKED" ? <><Unlock className="w-3 h-3" /> Unblock</> : <><Lock className="w-3 h-3" /> Block</>}
                         </button>
                     </PermissionGate>
+                    {user?.role === "OWNER" && (
+                        <button
+                            onClick={handleForceUnblock}
+                            className={`text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-colors ${
+                                customer.forceUnblocked
+                                    ? "bg-orange-500/10 text-orange-500 border-orange-500/30 hover:bg-orange-500/20"
+                                    : "bg-orange-500/5 text-orange-400 border-orange-500/20 hover:bg-orange-500/10"
+                            }`}
+                        >
+                            <ShieldAlert className="w-3 h-3" />
+                            {customer.forceUnblocked ? "Revoke Force Unblock" : "Force Unblock"}
+                        </button>
+                    )}
                 </div>
+
+                {/* Force Unblocked banner */}
+                {customer.forceUnblocked && (
+                    <div className="rounded-lg p-3 flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-500">
+                        <ShieldAlert className="w-4 h-4 shrink-0" />
+                        <span className="text-xs font-medium">
+                            Credit checks bypassed — Force Unblocked by {customer.forceUnblockedBy || "Unknown"}
+                            {customer.forceUnblockedAt && (
+                                <> on {new Date(customer.forceUnblockedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</>
+                            )}
+                        </span>
+                    </div>
+                )}
 
                 {/* ── KPI Horizontal Bar ── */}
                 <div className="grid grid-cols-6 gap-2">
