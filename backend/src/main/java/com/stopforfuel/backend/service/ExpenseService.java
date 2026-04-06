@@ -35,7 +35,7 @@ public class ExpenseService {
 
     @Transactional(readOnly = true)
     public List<Expense> getByShift(Long shiftId) {
-        return repository.findByShiftIdOrderByExpenseDateDesc(shiftId);
+        return repository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional

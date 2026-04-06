@@ -62,7 +62,7 @@ public class StationExpenseService {
 
     @Transactional(readOnly = true)
     public List<StationExpense> getByShift(Long shiftId) {
-        return stationExpenseRepository.findByShiftId(shiftId);
+        return stationExpenseRepository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional(readOnly = true)

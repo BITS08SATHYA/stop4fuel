@@ -46,7 +46,7 @@ public class StatementController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String categoryType) {
         return statementService.getStatements(customerId, status, categoryType, fromDate, toDate, search,
-                PageRequest.of(page, size, org.springframework.data.domain.Sort.by("statementDate").descending()))
+                PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id").descending()))
                 .map(StatementDTO::from);
     }
 

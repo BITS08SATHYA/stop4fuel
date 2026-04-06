@@ -11,7 +11,7 @@ import java.util.List;
 
 @Repository
 public interface ExpenseRepository extends ScidRepository<Expense> {
-    List<Expense> findByShiftIdOrderByExpenseDateDesc(Long shiftId);
+    List<Expense> findByShiftIdOrderByIdDesc(Long shiftId);
     List<Expense> findAllByOrderByExpenseDateDesc();
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.shiftId = :shiftId")

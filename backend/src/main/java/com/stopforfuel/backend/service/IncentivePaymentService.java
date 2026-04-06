@@ -35,7 +35,7 @@ public class IncentivePaymentService {
 
     @Transactional(readOnly = true)
     public List<IncentivePayment> getByShift(Long shiftId) {
-        return repository.findByShiftIdOrderByPaymentDateDesc(shiftId);
+        return repository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional(readOnly = true)

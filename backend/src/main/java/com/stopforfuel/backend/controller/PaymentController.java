@@ -43,7 +43,7 @@ public class PaymentController {
         LocalDateTime from = fromDate != null ? fromDate.atStartOfDay() : null;
         LocalDateTime to = toDate != null ? toDate.atTime(23, 59, 59) : null;
         return paymentService.getPayments(categoryType, paidAgainst, from, to,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "paymentDate")))
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))
                 .map(PaymentDTO::from);
     }
 

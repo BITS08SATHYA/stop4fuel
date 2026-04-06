@@ -52,7 +52,7 @@ public class ShiftTestDataSeeder {
         }
 
         // Idempotency check
-        List<EAdvance> existing = eAdvanceRepository.findByShiftIdOrderByTransactionDateDesc(shiftId);
+        List<EAdvance> existing = eAdvanceRepository.findByShiftIdOrderByIdDesc(shiftId);
         if (!existing.isEmpty()) {
             throw new BusinessException("Test data already seeded for this shift");
         }
@@ -738,7 +738,7 @@ public class ShiftTestDataSeeder {
 
     private int seedProductInventory(Long shiftId, Long scid) {
         // Calculate sales per non-fuel product from the invoices we just created
-        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(shiftId);
         Map<Long, Double> salesByProduct = new HashMap<>();
 
         for (InvoiceBill inv : invoices) {

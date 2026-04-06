@@ -46,7 +46,7 @@ public class InvoiceBillService {
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getInvoicesByShift(Long shiftId) {
-        return repository.findByShiftId(shiftId);
+        return repository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional

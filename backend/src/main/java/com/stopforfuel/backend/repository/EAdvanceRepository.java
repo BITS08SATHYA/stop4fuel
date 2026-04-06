@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @Repository
 public interface EAdvanceRepository extends ScidRepository<EAdvance> {
-    List<EAdvance> findByShiftIdOrderByTransactionDateDesc(Long shiftId);
+    List<EAdvance> findByShiftIdOrderByIdDesc(Long shiftId);
     List<EAdvance> findByAdvanceTypeOrderByTransactionDateDesc(PaymentMode advanceType);
     List<EAdvance> findByShiftIdAndAdvanceType(Long shiftId, PaymentMode advanceType);
     List<EAdvance> findAllByOrderByTransactionDateDesc();

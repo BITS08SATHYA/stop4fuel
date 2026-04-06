@@ -37,7 +37,7 @@ public class EAdvanceService {
 
     @Transactional(readOnly = true)
     public List<EAdvance> getByShift(Long shiftId) {
-        return repository.findByShiftIdOrderByTransactionDateDesc(shiftId);
+        return repository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional(readOnly = true)

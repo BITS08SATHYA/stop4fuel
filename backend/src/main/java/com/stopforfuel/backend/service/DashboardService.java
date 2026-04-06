@@ -446,7 +446,7 @@ public class DashboardService {
         dashboard.setStatementPaymentTotal(stmtPayments != null ? stmtPayments : BigDecimal.ZERO);
 
         // Operational advances
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(sid);
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(sid);
         BigDecimal opAdvanceTotal = opAdvances.stream()
                 .map(oa -> oa.getAmount() != null ? oa.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -454,7 +454,7 @@ public class DashboardService {
         dashboard.setOperationalAdvanceCount(opAdvances.size());
 
         // Incentive payments
-        List<IncentivePayment> incentives = incentivePaymentRepository.findByShiftIdOrderByPaymentDateDesc(sid);
+        List<IncentivePayment> incentives = incentivePaymentRepository.findByShiftIdOrderByIdDesc(sid);
         BigDecimal incentiveTotal = incentives.stream()
                 .map(ip -> ip.getAmount() != null ? ip.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -462,7 +462,7 @@ public class DashboardService {
         dashboard.setIncentiveCount(incentives.size());
 
         // Invoice counts
-        List<InvoiceBill> shiftInvoices = invoiceBillRepository.findByShiftId(sid);
+        List<InvoiceBill> shiftInvoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(sid);
         dashboard.setTotalInvoiceCount(shiftInvoices.size());
         dashboard.setCashInvoiceCount((int) shiftInvoices.stream()
                 .filter(inv -> com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())).count());
