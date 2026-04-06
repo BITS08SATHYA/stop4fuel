@@ -194,7 +194,7 @@ export default function InvoicesPage() {
         setSelectedVehicle(undefined);
         try {
             const [vehiclesRes, incentivesData, creditInfo] = await Promise.all([
-                fetch(`${API_BASE_URL}/customers/${c.id}/vehicles`),
+                fetchWithAuth(`${API_BASE_URL}/customers/${c.id}/vehicles`),
                 getIncentivesByCustomer(c.id).catch(() => []),
                 getCustomerCreditInfo(c.id).catch(() => null)
             ]);
