@@ -64,7 +64,7 @@ interface ApiService {
     @PATCH("api/customers/{id}/force-unblock")
     suspend fun toggleForceUnblock(
         @Path("id") id: Long,
-        @Body body: Map<String, Any>
+        @Body body: ForceUnblockRequest
     ): CustomerListDto
 
     // Vehicle Management
@@ -123,7 +123,7 @@ interface ApiService {
 
     // Vehicle Creation
     @POST("api/vehicles")
-    suspend fun createVehicle(@Body vehicle: Map<String, Any?>): VehicleDto
+    suspend fun createVehicle(@Body vehicle: CreateVehicleRequest): VehicleDto
 
     @GET("api/vehicle-types")
     suspend fun getVehicleTypes(): List<VehicleTypeDto>

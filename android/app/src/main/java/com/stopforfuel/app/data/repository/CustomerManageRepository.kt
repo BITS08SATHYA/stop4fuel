@@ -61,17 +61,16 @@ class CustomerManageRepository @Inject constructor(
     }
 
     suspend fun createVehicle(customerId: Long, vehicleNumber: String, vehicleTypeId: Long?, maxLitersPerMonth: BigDecimal?): Result<VehicleDto> = runCatching {
-        val body = mutableMapOf<String, Any?>(
-            "vehicleNumber" to vehicleNumber,
-            "customer" to mapOf("id" to customerId)
-        )
-        if (vehicleTypeId != null) body["vehicleType"] = mapOf("id" to vehicleTypeId)
-        if (maxLitersPerMonth != null) body["maxLitersPerMonth"] = maxLitersPerMonth
-        api.createVehicle(body)
+        api.createVehicle(CreateVehicleRequest(
+            vehicleNumber = vehicleNumber,
+            customer = IdRef(customerId),
+            vehicleType = vehicleTypeId?.let { IdRef(it) },
+            maxLitersPerMonth = maxLitersPerMonth
+        ))
     }
 
     suspend fun toggleForceUnblock(id: Long, enabled: Boolean): Result<CustomerListDto> = runCatching {
-        api.toggleForceUnblock(id, mapOf("forceUnblocked" to enabled))
+        api.toggleForceUnblock(id, ForceUnblockRequest(enabled))
     }
 
     suspend fun getVehicleTypes(): Result<List<VehicleTypeDto>> = runCatching {
