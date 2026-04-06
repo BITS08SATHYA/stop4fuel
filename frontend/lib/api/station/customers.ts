@@ -163,8 +163,12 @@ export interface Incentive {
 }
 
 // Customers & Vehicles Search
-export const getCustomers = (search?: string): Promise<any> => {
-    const url = search ? `${API_BASE_URL}/customers?search=${encodeURIComponent(search)}` : `${API_BASE_URL}/customers`;
+export const getCustomers = (search?: string, size?: number): Promise<any> => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (size) params.set("size", String(size));
+    const query = params.toString();
+    const url = query ? `${API_BASE_URL}/customers?${query}` : `${API_BASE_URL}/customers`;
     return fetchWithAuth(url).then(handleResponse);
 };
 
