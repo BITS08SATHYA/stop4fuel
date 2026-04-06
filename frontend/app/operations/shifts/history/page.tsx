@@ -7,11 +7,13 @@ import { StyledSelect } from "@/components/ui/styled-select";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import {
-    Clock, Search, FileText, Download, Eye, Loader2, RotateCcw
+    Clock, Search, FileText, Download, Eye, Loader2, RotateCcw, Pencil, User
 } from "lucide-react";
 import {
     getShifts, getShiftReportPdfUrl, reopenShiftToEdit, Shift,
+    getShiftCashiers, changeShiftAttendant, CashierUser,
 } from "@/lib/api/station";
+import { Modal } from "@/components/ui/modal";
 
 const formatDateTime = (iso?: string) => {
     if (!iso) return "—";
@@ -43,6 +45,14 @@ export default function ShiftHistoryPage() {
     const [statusFilter, setStatusFilter] = useState("");
     const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
+    // Cashier assignment
+    const [showCashierModal, setShowCashierModal] = useState(false);
+    const [editingShiftId, setEditingShiftId] = useState<number | null>(null);
+    const [cashiers, setCashiers] = useState<CashierUser[]>([]);
+    const [selectedCashierId, setSelectedCashierId] = useState<number | "">("");
+    const [cashierSearch, setCashierSearch] = useState("");
+    const [savingCashier, setSavingCashier] = useState(false);
+
     useEffect(() => {
         loadShifts();
     }, []);
@@ -55,6 +65,33 @@ export default function ShiftHistoryPage() {
             console.error("Failed to load shifts", err);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleEditAttendant = async (shift: Shift) => {
+        try {
+            const list = await getShiftCashiers();
+            setCashiers(list);
+            setSelectedCashierId(shift.attendant?.id || "");
+            setCashierSearch("");
+            setEditingShiftId(shift.id);
+            setShowCashierModal(true);
+        } catch (err: any) {
+            alert(err.message || "Failed to load cashiers");
+        }
+    };
+
+    const handleSaveAttendant = async () => {
+        if (!editingShiftId || !selectedCashierId) return;
+        setSavingCashier(true);
+        try {
+            await changeShiftAttendant(editingShiftId, Number(selectedCashierId));
+            setShowCashierModal(false);
+            loadShifts();
+        } catch (err: any) {
+            alert(err.message || "Failed to update attendant");
+        } finally {
+            setSavingCashier(false);
         }
     };
 
@@ -163,7 +200,16 @@ export default function ShiftHistoryPage() {
                                                 <td className="px-4 py-3 text-muted-foreground">{formatDateTime(shift.startTime)}</td>
                                                 <td className="px-4 py-3 text-muted-foreground">{formatDateTime(shift.endTime)}</td>
                                                 <td className="px-4 py-3 text-muted-foreground">{getDuration(shift.startTime, shift.endTime)}</td>
-                                                <td className="px-4 py-3 text-foreground">{shift.attendant?.name || "—"}</td>
+                                                <td className="px-4 py-3 text-foreground">
+                                                    <button
+                                                        onClick={() => handleEditAttendant(shift)}
+                                                        className="inline-flex items-center gap-1.5 hover:text-orange-500 transition-colors group"
+                                                        title="Change attendant"
+                                                    >
+                                                        {shift.attendant?.name || "—"}
+                                                        <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </button>
+                                                </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-end gap-2">
                                                         {shift.status === "REVIEW" && (
@@ -222,6 +268,62 @@ export default function ShiftHistoryPage() {
                     </GlassCard>
                 )}
             </div>
+
+            {/* Cashier Assignment Modal */}
+            <Modal isOpen={showCashierModal} onClose={() => setShowCashierModal(false)} title="Set Shift Attendant">
+                <div className="p-6 space-y-4">
+                    <input
+                        type="text"
+                        placeholder="Search by name or phone..."
+                        value={cashierSearch}
+                        onChange={(e) => setCashierSearch(e.target.value)}
+                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                        {cashiers
+                            .filter(c => {
+                                const q = cashierSearch.toLowerCase();
+                                if (!q) return true;
+                                return c.name?.toLowerCase().includes(q) || c.phone?.includes(q);
+                            })
+                            .map(c => (
+                            <button
+                                key={c.id}
+                                onClick={() => setSelectedCashierId(c.id)}
+                                className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between ${
+                                    selectedCashierId === c.id
+                                        ? "border-orange-500 bg-orange-500/10 text-foreground"
+                                        : "border-border hover:bg-muted/50 text-foreground"
+                                }`}
+                            >
+                                <div>
+                                    <div className="font-medium">{c.name}</div>
+                                    <div className="text-xs text-muted-foreground">{c.role}{c.phone ? ` · ${c.phone}` : ""}</div>
+                                </div>
+                                {selectedCashierId === c.id && (
+                                    <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
+                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2 border-t border-border">
+                        <button onClick={() => setShowCashierModal(false)} className="px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSaveAttendant}
+                            disabled={!selectedCashierId || savingCashier}
+                            className="btn-gradient px-6 py-2 rounded-lg font-medium disabled:opacity-50"
+                        >
+                            {savingCashier ? "Saving..." : "Update Attendant"}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }
