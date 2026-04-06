@@ -57,4 +57,11 @@ public class PermissionController {
         permissionService.deleteModulePermissions(module);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/clear-cache")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
+    public ResponseEntity<Map<String, String>> clearCache() {
+        permissionService.clearCaches();
+        return ResponseEntity.ok(Map.of("message", "Permission caches cleared"));
+    }
 }
