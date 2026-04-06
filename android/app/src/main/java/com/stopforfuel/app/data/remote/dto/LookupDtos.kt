@@ -56,7 +56,10 @@ data class CustomerListDto(
     val consumedLiters: BigDecimal?,
     val group: GroupSummary?,
     val party: PartySummary?,
-    val customerCategory: CategorySummary?
+    val customerCategory: CategorySummary?,
+    val forceUnblocked: Boolean? = false,
+    val forceUnblockedAt: String? = null,
+    val forceUnblockedBy: String? = null
 )
 
 data class GroupSummary(

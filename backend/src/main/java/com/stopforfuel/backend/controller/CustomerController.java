@@ -121,6 +121,15 @@ public class CustomerController {
         return CustomerDetailDTO.from(customerService.updateCreditLimits(id, limits));
     }
 
+    @PatchMapping("/{id}/force-unblock")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
+    public CustomerDetailDTO toggleForceUnblock(@PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> body) {
+        boolean enabled = Boolean.TRUE.equals(body.get("enabled"));
+        String byUser = body.get("byUser") != null ? body.get("byUser").toString() : "Owner";
+        return CustomerDetailDTO.from(customerService.toggleForceUnblock(id, enabled, byUser));
+    }
+
     @GetMapping("/{id}/vehicles")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
     public List<Vehicle> getVehiclesByCustomerId(@PathVariable Long id) {

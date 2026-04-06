@@ -53,6 +53,12 @@ public class CustomerDetailDTO {
     // Credit monitoring
     private LocalDateTime lastBlockedAt;
     private Integer blockCount;
+
+    // Force unblock
+    private boolean forceUnblocked;
+    private LocalDateTime forceUnblockedAt;
+    private String forceUnblockedBy;
+
     public static CustomerDetailDTO from(Customer c) {
         return CustomerDetailDTO.builder()
                 .id(c.getId())
@@ -82,6 +88,9 @@ public class CustomerDetailDTO {
                 .statementGrouping(c.getStatementGrouping())
                 .lastBlockedAt(c.getLastBlockedAt())
                 .blockCount(c.getBlockCount())
+                .forceUnblocked(c.isForceUnblocked())
+                .forceUnblockedAt(c.getForceUnblockedAt())
+                .forceUnblockedBy(c.getForceUnblockedBy())
                 .build();
     }
 }

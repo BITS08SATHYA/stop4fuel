@@ -70,6 +70,16 @@ public class Customer extends User {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private java.util.List<Vehicle> vehicles = new java.util.ArrayList<>();
 
+    /** Force unblock — owner override that bypasses all credit checks */
+    @Column(name = "force_unblocked", nullable = false, columnDefinition = "boolean default false")
+    private boolean forceUnblocked = false;
+
+    @Column(name = "force_unblocked_at")
+    private java.time.LocalDateTime forceUnblockedAt;
+
+    @Column(name = "force_unblocked_by", length = 100)
+    private String forceUnblockedBy;
+
     /**
      * Uses the inherited `status` field from User entity.
      * Values: ACTIVE, INACTIVE, BLOCKED
@@ -85,6 +95,7 @@ public class Customer extends User {
     }
 
     public boolean canRaiseInvoice() {
+        if (forceUnblocked) return true;
         com.stopforfuel.backend.enums.EntityStatus s = getStatus();
         return s == null || s == com.stopforfuel.backend.enums.EntityStatus.ACTIVE;
     }

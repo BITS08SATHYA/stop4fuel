@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stopforfuel.app.data.remote.dto.*
+import com.stopforfuel.app.data.repository.AuthRepository
 import com.stopforfuel.app.data.repository.CustomerManageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,17 +18,22 @@ data class CustomerDetailState(
     val creditInfo: CreditInfoResponse? = null,
     val vehicles: List<VehicleDto> = emptyList(),
     val vehicleTypes: List<VehicleTypeDto> = emptyList(),
+    val userRole: String = "",
     val isLoading: Boolean = true,
     val error: String? = null,
     val actionMessage: String? = null,
     val expandedVehicleId: Long? = null,
     val showAddVehicle: Boolean = false
-)
+) {
+    val isOwner: Boolean
+        get() = userRole.uppercase() == "OWNER"
+}
 
 @HiltViewModel
 class CustomerDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val repository: CustomerManageRepository
+    private val repository: CustomerManageRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val customerId: Long = savedStateHandle["customerId"] ?: 0L
@@ -35,6 +41,7 @@ class CustomerDetailViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     init {
+        _uiState.value = _uiState.value.copy(userRole = authRepository.getUserRole() ?: "")
         loadAll()
     }
 
@@ -100,6 +107,20 @@ class CustomerDetailViewModel @Inject constructor(
             repository.unblock(customerId).fold(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(customer = it, actionMessage = "Customer unblocked")
+                },
+                onFailure = { _uiState.value = _uiState.value.copy(actionMessage = "Error: ${it.message}") }
+            )
+        }
+    }
+
+    fun toggleForceUnblock(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.toggleForceUnblock(customerId, enabled).fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(
+                        customer = it,
+                        actionMessage = if (enabled) "Force unblock enabled" else "Force unblock disabled"
+                    )
                 },
                 onFailure = { _uiState.value = _uiState.value.copy(actionMessage = "Error: ${it.message}") }
             )

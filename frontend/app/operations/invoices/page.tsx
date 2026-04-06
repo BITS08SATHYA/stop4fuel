@@ -33,6 +33,9 @@ interface CustomerWithCredit extends Customer {
     ledgerBalance?: number;
     status?: string;
     phoneNumbers?: string;
+    forceUnblocked?: boolean;
+    forceUnblockedBy?: string;
+    forceUnblockedAt?: string;
     [key: string]: unknown;
 }
 import { FileUploadField } from "@/components/ui/file-upload-field";
@@ -347,8 +350,8 @@ export default function InvoicesPage() {
             }
         }
 
-        // Check customer credit limits (CREDIT invoices only)
-        if (billType === "CREDIT" && selectedCustomer) {
+        // Check customer credit limits (CREDIT invoices only) — skip if force unblocked
+        if (billType === "CREDIT" && selectedCustomer && !selectedCustomer.forceUnblocked) {
             // Amount-based limit
             if (selectedCustomer.creditLimitAmount && Number(selectedCustomer.creditLimitAmount) > 0) {
                 const ledgerBalance = (selectedCustomer.ledgerBalance ?? 0);
@@ -447,7 +450,8 @@ export default function InvoicesPage() {
         }
     };
 
-    const isCustomerBlocked = selectedCustomer && (selectedCustomer.status === "BLOCKED" || selectedCustomer.status === "INACTIVE");
+    const isCustomerBlockedRaw = selectedCustomer && (selectedCustomer.status === "BLOCKED" || selectedCustomer.status === "INACTIVE");
+    const isCustomerBlocked = isCustomerBlockedRaw && !selectedCustomer?.forceUnblocked;
     const isVehicleBlocked = selectedVehicle && (selectedVehicle.status === "BLOCKED" || selectedVehicle.status === "INACTIVE");
     const isCreditCustomer = selectedCustomer && (
         (selectedCustomer.creditLimitAmount && Number(selectedCustomer.creditLimitAmount) > 0) ||
@@ -659,6 +663,14 @@ export default function InvoicesPage() {
                         >
                             <Trash2 size={18} />
                         </button>
+                    </div>
+                )}
+                {selectedCustomer?.forceUnblocked && (
+                    <div className="mt-4 p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-start gap-3">
+                        <ShieldAlert size={20} className="text-orange-500 shrink-0 mt-0.5" />
+                        <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                            Credit checks bypassed — Force Unblocked{selectedCustomer.forceUnblockedBy ? ` by ${selectedCustomer.forceUnblockedBy}` : ""}
+                        </p>
                     </div>
                 )}
                 {isCustomerBlocked && (

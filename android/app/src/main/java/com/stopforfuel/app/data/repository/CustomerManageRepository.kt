@@ -70,6 +70,10 @@ class CustomerManageRepository @Inject constructor(
         api.createVehicle(body)
     }
 
+    suspend fun toggleForceUnblock(id: Long, enabled: Boolean): Result<CustomerListDto> = runCatching {
+        api.toggleForceUnblock(id, mapOf("forceUnblocked" to enabled))
+    }
+
     suspend fun getVehicleTypes(): Result<List<VehicleTypeDto>> = runCatching {
         api.getVehicleTypes()
     }
