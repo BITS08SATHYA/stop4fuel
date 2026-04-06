@@ -178,6 +178,16 @@ export const getShifts = (): Promise<Shift[]> =>
 export const getActiveShift = (): Promise<Shift | null> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/active`).then(handleResponse);
 
+export interface CashierUser {
+    id: number;
+    name: string;
+    role?: string;
+    phone?: string;
+}
+
+export const getShiftCashiers = (): Promise<CashierUser[]> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/cashiers`).then(handleResponse);
+
 export const openShift = (shift: Partial<Shift>): Promise<Shift> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/open`, {
         method: 'POST',

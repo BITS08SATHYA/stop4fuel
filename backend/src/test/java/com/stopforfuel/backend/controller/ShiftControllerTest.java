@@ -38,6 +38,9 @@ class ShiftControllerTest {
     @MockBean
     private ShiftService shiftService;
 
+    @MockBean
+    private com.stopforfuel.backend.repository.UserRepository userRepository;
+
     private Shift testShift;
 
     @BeforeEach
