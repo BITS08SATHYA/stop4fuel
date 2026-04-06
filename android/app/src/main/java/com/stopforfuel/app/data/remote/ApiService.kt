@@ -61,6 +61,12 @@ interface ApiService {
         @Body body: Map<String, String> = emptyMap()
     ): CustomerListDto
 
+    @PATCH("api/customers/{id}/force-unblock")
+    suspend fun toggleForceUnblock(
+        @Path("id") id: Long,
+        @Body body: Map<String, Any>
+    ): CustomerListDto
+
     // Vehicle Management
     @PATCH("api/vehicles/{id}/toggle-status")
     suspend fun toggleVehicleStatus(@Path("id") id: Long): VehicleDto

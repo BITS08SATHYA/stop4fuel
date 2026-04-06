@@ -69,7 +69,9 @@ public class InvoiceBillService {
             Vehicle vehicle = vehicleRepository.findById(invoice.getVehicle().getId())
                     .orElseThrow(() -> new RuntimeException("Vehicle not found"));
 
-            if (!vehicle.canRaiseInvoice()) {
+            // Skip vehicle block check if customer is force-unblocked
+            boolean customerForceUnblocked = invoice.getCustomer() != null && invoice.getCustomer().isForceUnblocked();
+            if (!customerForceUnblocked && !vehicle.canRaiseInvoice()) {
                 throw new BusinessException(
                         "Cannot create invoice: Vehicle '" + vehicle.getVehicleNumber() +
                         "' is " + vehicle.getStatus() +
@@ -99,8 +101,9 @@ public class InvoiceBillService {
                 throw new BusinessException("Cannot create invoice: " + customerLimitError);
             }
 
-            // Check vehicle monthly liter limit
-            if (invoice.getVehicle() != null && invoice.getVehicle().getId() != null) {
+            // Check vehicle monthly liter limit (skip if customer is force-unblocked)
+            boolean custForceUnblocked = invoice.getCustomer() != null && invoice.getCustomer().isForceUnblocked();
+            if (!custForceUnblocked && invoice.getVehicle() != null && invoice.getVehicle().getId() != null) {
                 String vehicleLimitError = customerService.validateVehicleLimitBeforeInvoice(
                         invoice.getVehicle().getId(), preLiters);
                 if (vehicleLimitError != null) {
