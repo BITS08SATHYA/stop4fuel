@@ -215,39 +215,51 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     /**
-     * Ensure the global STMT sequence (fyYear=0) is initialized from the max existing statement number.
-     * This handles migration from FY-based S26/1 format to global S-{number} format.
+     * Migrate old-format statement numbers (e.g. S26/1) to S-{number} format,
+     * and ensure the global STMT sequence continues from the max existing number.
      */
     private void patchStatementSequence() {
-        var existing = billSequenceRepository.findByTypeAndFyYear(BillType.STMT, 0);
-        if (existing.isPresent() && existing.get().getLastNumber() > 0) return; // Already set
-
-        // Find the max numeric part from existing statement numbers (e.g., S-12185 → 12185)
+        // Find max S-{number} from existing statements
         long maxNumber = 0;
         var allStatements = statementRepository.findAll();
         for (var stmt : allStatements) {
             String no = stmt.getStatementNo();
             if (no == null) continue;
-            try {
-                // Handle formats: S-12185, S26/1, etc.
-                String numPart = no.replaceAll("[^0-9]", "");
-                if (!numPart.isEmpty()) {
-                    long num = Long.parseLong(numPart);
+            // Extract number from S-12185 format
+            if (no.startsWith("S-")) {
+                try {
+                    long num = Long.parseLong(no.substring(2));
                     if (num > maxNumber) maxNumber = num;
-                }
-            } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {}
+            }
         }
 
+        // Rename any old-format statements (S26/1, S26/2, etc.) to S-{next number}
+        for (var stmt : allStatements) {
+            String no = stmt.getStatementNo();
+            if (no != null && no.contains("/")) {
+                maxNumber++;
+                String newNo = "S-" + maxNumber;
+                stmt.setStatementNo(newNo);
+                statementRepository.save(stmt);
+                log.info("Renamed statement {} → {}", no, newNo);
+            }
+        }
+
+        // Set global sequence to max
         if (maxNumber > 0) {
+            var existing = billSequenceRepository.findByTypeAndFyYear(BillType.STMT, 0);
             BillSequence seq = existing.orElseGet(() -> {
                 BillSequence newSeq = new BillSequence();
                 newSeq.setType(BillType.STMT);
                 newSeq.setFyYear(0);
                 return newSeq;
             });
-            seq.setLastNumber(maxNumber);
-            billSequenceRepository.save(seq);
-            log.info("Initialized STMT global sequence to {}", maxNumber);
+            if (seq.getLastNumber() == null || seq.getLastNumber() < maxNumber) {
+                seq.setLastNumber(maxNumber);
+                billSequenceRepository.save(seq);
+                log.info("Set STMT global sequence to {}", maxNumber);
+            }
         }
     }
 
