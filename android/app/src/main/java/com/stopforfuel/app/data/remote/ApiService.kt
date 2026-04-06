@@ -115,11 +115,11 @@ interface ApiService {
     suspend fun getCashierDashboard(): CashierDashboardDto
 
     // Products Management
-    @PUT("api/products/{id}")
-    suspend fun updateProduct(@Path("id") id: Long, @Body product: Map<String, Any?>): ProductDto
+    @PATCH("api/products/{id}/price")
+    suspend fun updateProductPrice(@Path("id") id: Long, @Body request: PriceUpdateRequest): ProductDto
 
     @POST("api/product-price-history")
-    suspend fun createPriceHistory(@Body entry: Map<String, Any?>): Any
+    suspend fun createPriceHistory(@Body entry: CreatePriceHistoryRequest): Any
 
     // Vehicle Creation
     @POST("api/vehicles")

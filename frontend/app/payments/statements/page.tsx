@@ -11,10 +11,10 @@ import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
     FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight,
-    CheckCircle2, Zap
+    CheckCircle2, Zap, Pencil
 } from "lucide-react";
 import {
-    getStatements, generateStatement, getStatementBills,
+    getStatements, generateStatement, regenerateStatement, getStatementBills,
     getCustomers, deleteStatement, removeBillFromStatement,
     getVehiclesByCustomer, getProducts, previewStatementBills,
     generateStatementPdf, getStatementPdfUrl, getStatementStats,
@@ -74,6 +74,9 @@ export default function StatementsPage() {
     const [stats, setStats] = useState<StatementStats | null>(null);
     const [expandedBillId, setExpandedBillId] = useState<number | null>(null);
     const [pdfError, setPdfError] = useState("");
+
+    // Edit/Regenerate
+    const [editingStatementId, setEditingStatementId] = useState<number | null>(null);
 
     // Set as Limit
     const [setLimitSuccess, setSetLimitSuccess] = useState("");
@@ -202,6 +205,21 @@ export default function StatementsPage() {
         }
     };
 
+    const handleEditStatement = async (stmt: Statement) => {
+        setEditingStatementId(stmt.id!);
+        setSelectedCustomerId(stmt.customer?.id || "");
+        setFromDate(stmt.fromDate || "");
+        setToDate(stmt.toDate || "");
+        setFilterVehicleId("");
+        setFilterProductId("");
+        setShowPreview(false);
+        setPreviewBills([]);
+        setSelectedBillIds(new Set());
+        setUseBillSelection(false);
+        setError("");
+        setShowGenerateModal(true);
+    };
+
     const handleGenerate = async () => {
         if (!selectedCustomerId || !fromDate || !toDate) {
             setError("Please fill all required fields");
@@ -217,15 +235,17 @@ export default function StatementsPage() {
             const filters: { vehicleId?: number; productId?: number; billIds?: number[] } = {};
 
             if (useBillSelection && selectedBillIds.size > 0) {
-                // Bill-wise: user deselected some bills
                 filters.billIds = Array.from(selectedBillIds);
             } else {
-                // Filter-based generation
                 if (filterVehicleId) filters.vehicleId = Number(filterVehicleId);
                 if (filterProductId) filters.productId = Number(filterProductId);
             }
 
-            await generateStatement(Number(selectedCustomerId), fromDate, toDate, filters);
+            if (editingStatementId) {
+                await regenerateStatement(editingStatementId, fromDate, toDate, filters);
+            } else {
+                await generateStatement(Number(selectedCustomerId), fromDate, toDate, filters);
+            }
             resetGenerateModal();
             loadStatements();
             loadStats();
@@ -247,6 +267,7 @@ export default function StatementsPage() {
         setPreviewBills([]);
         setSelectedBillIds(new Set());
         setUseBillSelection(false);
+        setEditingStatementId(null);
         setError("");
     };
 
@@ -549,6 +570,17 @@ export default function StatementsPage() {
                                                             </button>
                                                         </PermissionGate>
                                                     )}
+                                                    {stmt.status !== "PAID" && Number(stmt.receivedAmount || 0) === 0 && (
+                                                        <PermissionGate permission="PAYMENT_UPDATE">
+                                                            <button
+                                                                onClick={() => handleEditStatement(stmt)}
+                                                                className="p-1.5 rounded-md hover:bg-amber-500/20 text-amber-400 transition-colors"
+                                                                title="Edit / Regenerate"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </button>
+                                                        </PermissionGate>
+                                                    )}
                                                     {stmt.status !== "PAID" && (
                                                         <PermissionGate permission="PAYMENT_DELETE">
                                                             <button
@@ -664,7 +696,7 @@ export default function StatementsPage() {
             <Modal
                 isOpen={showGenerateModal}
                 onClose={resetGenerateModal}
-                title="Generate Statement"
+                title={editingStatementId ? "Edit / Regenerate Statement" : "Generate Statement"}
             >
                 <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
                     {error && (
@@ -683,6 +715,7 @@ export default function StatementsPage() {
                             onChange={(id) => setSelectedCustomerId(id ? Number(id) : "")}
                             customers={customers}
                             placeholder="Search customer..."
+                            disabled={!!editingStatementId}
                         />
                     </div>
 
@@ -843,7 +876,7 @@ export default function StatementsPage() {
                             disabled={generating || (showPreview && selectedBillIds.size === 0)}
                             className="btn-gradient px-6 py-2 rounded-lg font-medium disabled:opacity-50"
                         >
-                            {generating ? "Generating..." : `Generate${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
+                            {generating ? (editingStatementId ? "Regenerating..." : "Generating...") : `${editingStatementId ? "Regenerate" : "Generate"}${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
                         </button>
                     </div>
                 </div>
@@ -932,6 +965,19 @@ export default function StatementsPage() {
                                         )}
                                         Generate PDF
                                     </button>
+                                )}
+                                {detailStatement.status !== "PAID" && Number(detailStatement.receivedAmount || 0) === 0 && (
+                                    <PermissionGate permission="PAYMENT_UPDATE">
+                                        <button
+                                            onClick={() => {
+                                                setShowDetailModal(false);
+                                                handleEditStatement(detailStatement);
+                                            }}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors flex items-center gap-1.5"
+                                        >
+                                            <Pencil className="w-3.5 h-3.5" /> Edit / Regenerate
+                                        </button>
+                                    </PermissionGate>
                                 )}
                                 {detailStatement.status !== "PAID" && (
                                     <PermissionGate permission="PAYMENT_DELETE">

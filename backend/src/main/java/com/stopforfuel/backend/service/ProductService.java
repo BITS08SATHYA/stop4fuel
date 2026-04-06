@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -84,6 +85,13 @@ public class ProductService {
                         grade.getOilType().getName() + "', not the selected oil type");
             }
         }
+    }
+
+    @Transactional
+    public Product updatePrice(Long id, BigDecimal newPrice) {
+        Product product = getProductById(id);
+        product.setPrice(newPrice);
+        return productRepository.save(product);
     }
 
     public Product toggleStatus(Long id) {

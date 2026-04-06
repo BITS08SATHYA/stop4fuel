@@ -3,7 +3,10 @@ package com.stopforfuel.app.ui.product
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stopforfuel.app.data.remote.ApiService
+import com.stopforfuel.app.data.remote.dto.CreatePriceHistoryRequest
+import com.stopforfuel.app.data.remote.dto.PriceUpdateRequest
 import com.stopforfuel.app.data.remote.dto.ProductDto
+import com.stopforfuel.app.data.remote.dto.ProductIdRef
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,11 +51,11 @@ class ProductManageViewModel @Inject constructor(
         val priceVal = newPrice.toBigDecimalOrNull() ?: return
         viewModelScope.launch {
             runCatching {
-                api.updateProduct(productId, mapOf("price" to priceVal))
-                api.createPriceHistory(mapOf(
-                    "product" to mapOf("id" to productId),
-                    "price" to priceVal,
-                    "effectiveDate" to LocalDate.now().toString()
+                api.updateProductPrice(productId, PriceUpdateRequest(priceVal))
+                api.createPriceHistory(CreatePriceHistoryRequest(
+                    product = ProductIdRef(productId),
+                    price = priceVal,
+                    effectiveDate = LocalDate.now().toString()
                 ))
             }.fold(
                 onSuccess = {

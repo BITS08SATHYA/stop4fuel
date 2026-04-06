@@ -165,6 +165,95 @@ public class StatementService {
     }
 
     /**
+     * Regenerate an existing statement in-place, keeping the same statement number.
+     * Unlinks old bills, fetches new bills based on updated filters, recalculates totals.
+     */
+    @Transactional
+    public Statement regenerateStatement(Long statementId, LocalDate fromDate, LocalDate toDate,
+                                         Long vehicleId, Long productId, List<Long> billIds) {
+        Statement statement = statementRepository.findByIdForUpdate(statementId)
+                .orElseThrow(() -> new RuntimeException("Statement not found with id: " + statementId));
+
+        if (statement.getReceivedAmount() != null && statement.getReceivedAmount().compareTo(BigDecimal.ZERO) > 0) {
+            throw new BusinessException("Cannot regenerate a statement that has received payments");
+        }
+
+        Long customerId = statement.getCustomer().getId();
+
+        // Unlink all currently linked bills
+        List<InvoiceBill> oldBills = invoiceBillRepository.findByStatementId(statementId);
+        for (InvoiceBill bill : oldBills) {
+            bill.setStatement(null);
+            invoiceBillRepository.save(bill);
+        }
+
+        // Fetch new bills based on updated parameters
+        List<InvoiceBill> newBills;
+        if (billIds != null && !billIds.isEmpty()) {
+            newBills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds);
+            for (InvoiceBill bill : newBills) {
+                if (!bill.getCustomer().getId().equals(customerId)) {
+                    throw new BusinessException("Bill " + bill.getId() + " does not belong to customer " + customerId);
+                }
+            }
+        } else {
+            LocalDateTime fromDateTime = fromDate.atStartOfDay();
+            LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
+
+            if (vehicleId != null && productId != null) {
+                newBills = invoiceBillRepository.findUnlinkedCreditBillsByVehicleAndProduct(
+                        customerId, fromDateTime, toDateTime, vehicleId, productId);
+            } else if (vehicleId != null) {
+                newBills = invoiceBillRepository.findUnlinkedCreditBillsByVehicle(
+                        customerId, fromDateTime, toDateTime, vehicleId);
+            } else if (productId != null) {
+                newBills = invoiceBillRepository.findUnlinkedCreditBillsByProduct(
+                        customerId, fromDateTime, toDateTime, productId);
+            } else {
+                newBills = invoiceBillRepository.findUnlinkedCreditBills(
+                        customerId, fromDateTime, toDateTime);
+            }
+        }
+
+        if (newBills.isEmpty()) {
+            throw new BusinessException("No unlinked credit bills found for the selected filters");
+        }
+
+        // Recalculate totals
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (InvoiceBill bill : newBills) {
+            if (bill.getNetAmount() != null) {
+                totalAmount = totalAmount.add(bill.getNetAmount());
+            }
+        }
+        BigDecimal netAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
+        BigDecimal roundingAmount = netAmount.subtract(totalAmount);
+
+        // Update statement in-place (keep statementNo)
+        statement.setFromDate(fromDate);
+        statement.setToDate(toDate);
+        statement.setStatementDate(LocalDate.now());
+        statement.setNumberOfBills(newBills.size());
+        statement.setTotalAmount(totalAmount);
+        statement.setRoundingAmount(roundingAmount);
+        statement.setNetAmount(netAmount);
+        statement.setReceivedAmount(BigDecimal.ZERO);
+        statement.setBalanceAmount(netAmount);
+        statement.setStatus("NOT_PAID");
+        statement.setStatementPdfUrl(null);
+
+        Statement saved = statementRepository.save(statement);
+
+        // Link new bills
+        for (InvoiceBill bill : newBills) {
+            bill.setStatement(saved);
+            invoiceBillRepository.save(bill);
+        }
+
+        return saved;
+    }
+
+    /**
      * Approve a DRAFT statement: set status to NOT_PAID and auto-generate PDF.
      */
     @Transactional
@@ -307,6 +396,7 @@ public class StatementService {
         return s3StorageService.getPresignedUrl(statement.getStatementPdfUrl());
     }
 
+    @Transactional
     public void deleteStatement(Long id) {
         Statement statement = statementRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Statement not found"));
