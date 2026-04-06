@@ -23,12 +23,12 @@ public class CustomerBlockEvent extends BaseEntity {
 
     /** BLOCKED or UNBLOCKED */
     @NotBlank
-    @Column(name = "event_type", nullable = false, length = 20)
+    @Column(name = "event_type", nullable = false, length = 30)
     private String eventType;
 
     /** AUTO_SCHEDULED, AUTO_INVOICE, or MANUAL */
     @NotBlank
-    @Column(name = "trigger_type", nullable = false, length = 20)
+    @Column(name = "trigger_type", nullable = false, length = 30)
     private String triggerType;
 
     /** Human-readable reason, e.g. "Aging 95 days exceeds 90-day threshold" */

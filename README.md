@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/logo.png" alt="StopForFuel Logo" width="120" />
+  <img src="icons/logo-full-dark.png" alt="StopForFuel Logo" width="200" />
 </p>
 
 <h1 align="center">StopForFuel</h1>
