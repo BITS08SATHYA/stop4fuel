@@ -24,6 +24,11 @@ public class BillSequenceService {
 
     @Transactional
     public String getNextBillNo(BillType billType) {
+        // Statements use global sequential numbering: S-12186, S-12187, ...
+        if (billType == BillType.STMT) {
+            return getNextGlobalBillNo(billType, "S-");
+        }
+
         int fyYear = getCurrentFyYear();
 
         BillSequence seq = billSequenceRepository.findByTypeAndFyYear(billType, fyYear)
@@ -40,6 +45,25 @@ public class BillSequenceService {
 
         String prefix = PREFIX_MAP.getOrDefault(billType, billType.name().substring(0, 1));
         return prefix + fyYear + "/" + seq.getLastNumber();
+    }
+
+    /**
+     * Global sequential numbering (not FY-based). Uses fyYear=0 as a sentinel.
+     */
+    private String getNextGlobalBillNo(BillType billType, String prefix) {
+        BillSequence seq = billSequenceRepository.findByTypeAndFyYear(billType, 0)
+                .orElseGet(() -> {
+                    BillSequence newSeq = new BillSequence();
+                    newSeq.setType(billType);
+                    newSeq.setFyYear(0);
+                    newSeq.setLastNumber(0L);
+                    return billSequenceRepository.save(newSeq);
+                });
+
+        seq.setLastNumber(seq.getLastNumber() + 1);
+        billSequenceRepository.save(seq);
+
+        return prefix + seq.getLastNumber();
     }
 
     private int getCurrentFyYear() {

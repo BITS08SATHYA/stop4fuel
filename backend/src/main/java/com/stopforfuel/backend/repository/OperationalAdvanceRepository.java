@@ -20,7 +20,7 @@ public interface OperationalAdvanceRepository extends ScidRepository<Operational
     @Query("SELECT oa FROM OperationalAdvance oa WHERE oa.id = :id")
     Optional<OperationalAdvance> findByIdForUpdate(@Param("id") Long id);
     List<OperationalAdvance> findByStatusOrderByAdvanceDateDesc(AdvanceStatus status);
-    List<OperationalAdvance> findByShiftIdOrderByAdvanceDateDesc(Long shiftId);
+    List<OperationalAdvance> findByShiftIdOrderByIdDesc(Long shiftId);
     List<OperationalAdvance> findAllByOrderByAdvanceDateDesc();
     List<OperationalAdvance> findByAdvanceTypeOrderByAdvanceDateDesc(AdvanceType advanceType);
     List<OperationalAdvance> findByEmployeeIdOrderByAdvanceDateDesc(Long employeeId);

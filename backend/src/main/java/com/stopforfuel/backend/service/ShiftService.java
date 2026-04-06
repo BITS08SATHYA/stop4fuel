@@ -415,7 +415,7 @@ public class ShiftService {
         dto.setEAdvanceTotals(eAdvTotals);
 
         // Operational advance totals by type
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(shiftId);
         Map<String, BigDecimal> opAdvTotals = new LinkedHashMap<>();
         for (OperationalAdvance oa : opAdvances) {
             if (oa.getStatus() == AdvanceStatus.CANCELLED) continue;

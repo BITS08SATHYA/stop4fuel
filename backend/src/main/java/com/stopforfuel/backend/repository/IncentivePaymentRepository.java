@@ -11,7 +11,7 @@ import java.util.List;
 
 @Repository
 public interface IncentivePaymentRepository extends ScidRepository<IncentivePayment> {
-    List<IncentivePayment> findByShiftIdOrderByPaymentDateDesc(Long shiftId);
+    List<IncentivePayment> findByShiftIdOrderByIdDesc(Long shiftId);
     List<IncentivePayment> findByCustomerIdOrderByPaymentDateDesc(Long customerId);
     List<IncentivePayment> findAllByOrderByPaymentDateDesc();
 

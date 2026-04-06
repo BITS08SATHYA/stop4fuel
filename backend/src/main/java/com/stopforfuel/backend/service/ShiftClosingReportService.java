@@ -447,7 +447,7 @@ public class ShiftClosingReportService {
         salesCalculationService.populateStockData(data, shiftId);
 
         // Delegate financial print data sections
-        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(shiftId);
         financialCalculationService.populateAdvanceEntries(data, shiftId, invoices);
 
         // Add test quantity as advance entry (fuel expense)

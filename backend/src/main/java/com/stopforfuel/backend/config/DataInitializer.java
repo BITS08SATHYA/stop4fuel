@@ -1,10 +1,12 @@
 package com.stopforfuel.backend.config;
 
+import com.stopforfuel.backend.entity.BillSequence;
 import com.stopforfuel.backend.entity.Group;
 import com.stopforfuel.backend.entity.Party;
 import com.stopforfuel.backend.entity.Permission;
 import com.stopforfuel.backend.entity.RolePermission;
 import com.stopforfuel.backend.entity.Roles;
+import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.repository.GroupRepository;
 import com.stopforfuel.backend.repository.PartyRepository;
 import com.stopforfuel.backend.repository.PermissionRepository;
@@ -33,6 +35,8 @@ public class DataInitializer implements ApplicationRunner {
     private final PartyRepository partyRepository;
     private final GroupRepository groupRepository;
     private final CacheManager cacheManager;
+    private final com.stopforfuel.backend.repository.BillSequenceRepository billSequenceRepository;
+    private final com.stopforfuel.backend.repository.StatementRepository statementRepository;
 
     @Override
     @Transactional
@@ -44,6 +48,7 @@ public class DataInitializer implements ApplicationRunner {
         migrateManagePermissions();
         seedRolePermissions();
         patchCashierPermissions();
+        patchStatementSequence();
     }
 
     private void seedRoles() {
@@ -206,6 +211,43 @@ public class DataInitializer implements ApplicationRunner {
             var roleCache = cacheManager.getCache("rolePermissions");
             if (roleCache != null) roleCache.clear();
             log.info("Cleared permission caches after CASHIER patch");
+        }
+    }
+
+    /**
+     * Ensure the global STMT sequence (fyYear=0) is initialized from the max existing statement number.
+     * This handles migration from FY-based S26/1 format to global S-{number} format.
+     */
+    private void patchStatementSequence() {
+        var existing = billSequenceRepository.findByTypeAndFyYear(BillType.STMT, 0);
+        if (existing.isPresent() && existing.get().getLastNumber() > 0) return; // Already set
+
+        // Find the max numeric part from existing statement numbers (e.g., S-12185 → 12185)
+        long maxNumber = 0;
+        var allStatements = statementRepository.findAll();
+        for (var stmt : allStatements) {
+            String no = stmt.getStatementNo();
+            if (no == null) continue;
+            try {
+                // Handle formats: S-12185, S26/1, etc.
+                String numPart = no.replaceAll("[^0-9]", "");
+                if (!numPart.isEmpty()) {
+                    long num = Long.parseLong(numPart);
+                    if (num > maxNumber) maxNumber = num;
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+
+        if (maxNumber > 0) {
+            BillSequence seq = existing.orElseGet(() -> {
+                BillSequence newSeq = new BillSequence();
+                newSeq.setType(BillType.STMT);
+                newSeq.setFyYear(0);
+                return newSeq;
+            });
+            seq.setLastNumber(maxNumber);
+            billSequenceRepository.save(seq);
+            log.info("Initialized STMT global sequence to {}", maxNumber);
         }
     }
 

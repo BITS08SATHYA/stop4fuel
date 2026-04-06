@@ -26,7 +26,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     Optional<InvoiceBill> findByIdForUpdate(@Param("id") Long id);
     List<InvoiceBill> findByScid(Long scid);
     @EntityGraph(attributePaths = {"customer", "products", "products.product", "products.nozzle"})
-    List<InvoiceBill> findByShiftId(Long shiftId);
+    List<InvoiceBill> findByShiftIdOrderByIdDesc(Long shiftId);
     List<InvoiceBill> findByBillType(BillType billType);
 
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CASH'")

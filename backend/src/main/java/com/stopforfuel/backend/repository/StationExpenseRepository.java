@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface StationExpenseRepository extends ScidRepository<StationExpense> {
     List<StationExpense> findAllByOrderByExpenseDateDesc();
-    List<StationExpense> findByShiftId(Long shiftId);
+    List<StationExpense> findByShiftIdOrderByIdDesc(Long shiftId);
     List<StationExpense> findByExpenseDateBetweenOrderByExpenseDateDesc(LocalDate from, LocalDate to);
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM StationExpense e WHERE e.expenseDate BETWEEN :from AND :to")

@@ -316,7 +316,7 @@ export default function InvoiceHistoryPage() {
             </div>
 
             {/* Filter Bar */}
-            <GlassCard className="p-4">
+            <GlassCard className="p-4 relative z-10">
                 <div className="flex flex-wrap items-end gap-3">
                     <div className="flex-1 min-w-[180px]">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">From Date</label>

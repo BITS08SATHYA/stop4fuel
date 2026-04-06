@@ -48,7 +48,7 @@ public class OperationalAdvanceService {
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getByShift(Long shiftId) {
-        return repository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        return repository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional(readOnly = true)

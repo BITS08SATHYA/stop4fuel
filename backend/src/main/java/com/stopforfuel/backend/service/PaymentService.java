@@ -85,7 +85,7 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<Payment> getPaymentsByShift(Long shiftId) {
-        return paymentRepository.findByShiftId(shiftId);
+        return paymentRepository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     /**

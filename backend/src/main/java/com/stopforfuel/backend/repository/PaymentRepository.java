@@ -27,10 +27,10 @@ public interface PaymentRepository extends ScidRepository<Payment> {
 
     @Query("SELECT p FROM Payment p JOIN FETCH p.customer " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
-           "WHERE p.shiftId = :shiftId ORDER BY p.paymentDate DESC")
+           "WHERE p.shiftId = :shiftId ORDER BY p.id DESC")
     List<Payment> findByShiftIdEager(@Param("shiftId") Long shiftId);
 
-    List<Payment> findByShiftId(Long shiftId);
+    List<Payment> findByShiftIdOrderByIdDesc(Long shiftId);
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.shiftId = :shiftId AND p.invoiceBill IS NOT NULL")
     BigDecimal sumBillPaymentsByShift(@Param("shiftId") Long shiftId);
