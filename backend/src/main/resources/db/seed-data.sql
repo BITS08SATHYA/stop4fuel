@@ -8,14 +8,7 @@
 -- PHASE 0: Core Reference Data
 -- =====================
 
--- Payment Modes (unique constraint on mode_name)
-INSERT INTO payment_mode (mode_name) VALUES ('CASH') ON CONFLICT (mode_name) DO NOTHING;;
-INSERT INTO payment_mode (mode_name) VALUES ('CHEQUE') ON CONFLICT (mode_name) DO NOTHING;;
-INSERT INTO payment_mode (mode_name) VALUES ('UPI') ON CONFLICT (mode_name) DO NOTHING;;
-INSERT INTO payment_mode (mode_name) VALUES ('NEFT') ON CONFLICT (mode_name) DO NOTHING;;
-INSERT INTO payment_mode (mode_name) VALUES ('CARD') ON CONFLICT (mode_name) DO NOTHING;;
-INSERT INTO payment_mode (mode_name) VALUES ('BANK') ON CONFLICT (mode_name) DO NOTHING;;
-INSERT INTO payment_mode (mode_name) VALUES ('CCMS') ON CONFLICT (mode_name) DO NOTHING;;
+-- Payment Modes: now a Java enum (PaymentMode), no DB table needed
 
 -- Parties (no unique constraint, use count guard)
 DO $$
