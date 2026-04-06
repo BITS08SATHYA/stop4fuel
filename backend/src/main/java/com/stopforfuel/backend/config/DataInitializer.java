@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ public class DataInitializer implements ApplicationRunner {
     private final RolePermissionRepository rolePermissionRepository;
     private final PartyRepository partyRepository;
     private final GroupRepository groupRepository;
+    private final CacheManager cacheManager;
 
     @Override
     @Transactional
@@ -185,6 +187,7 @@ public class DataInitializer implements ApplicationRunner {
     private void patchCashierPermissions() {
         Roles cashier = rolesRepository.findByRoleType("CASHIER").orElse(null);
         if (cashier == null) return;
+        boolean patched = false;
         for (String code : List.of("CUSTOMER_VIEW")) {
             if (!rolePermissionRepository.existsByRoleIdAndPermissionCode(cashier.getId(), code)) {
                 permissionRepository.findByCode(code).ifPresent(p -> {
@@ -194,7 +197,15 @@ public class DataInitializer implements ApplicationRunner {
                     rolePermissionRepository.save(rp);
                     log.info("Patched CASHIER: added {}", code);
                 });
+                patched = true;
             }
+        }
+        if (patched) {
+            var permCache = cacheManager.getCache("permissions");
+            if (permCache != null) permCache.clear();
+            var roleCache = cacheManager.getCache("rolePermissions");
+            if (roleCache != null) roleCache.clear();
+            log.info("Cleared permission caches after CASHIER patch");
         }
     }
 
