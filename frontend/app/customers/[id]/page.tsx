@@ -311,7 +311,7 @@ export default function CustomerProfilePage() {
                         {customerStatus === "INACTIVE" && <><ShieldOff className="w-4 h-4" /> Activate</>}
                         {customerStatus === "BLOCKED" && <><ShieldAlert className="w-4 h-4" /> Unblock</>}
                     </button>
-                    <PermissionGate permission="CUSTOMER_MANAGE">
+                    <PermissionGate permission="CUSTOMER_UPDATE">
                         <button
                             onClick={() => {
                                 if (isEditing) {

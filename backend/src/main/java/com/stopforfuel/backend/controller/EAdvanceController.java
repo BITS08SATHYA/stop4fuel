@@ -62,19 +62,19 @@ public class EAdvanceController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_CREATE')")
     public EAdvanceDTO create(@Valid @RequestBody EAdvance eAdvance) {
         return EAdvanceDTO.from(service.create(eAdvance));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public EAdvanceDTO update(@PathVariable Long id, @Valid @RequestBody EAdvance eAdvance) {
         return EAdvanceDTO.from(service.update(id, eAdvance));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

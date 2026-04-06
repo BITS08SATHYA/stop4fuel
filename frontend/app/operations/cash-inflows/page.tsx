@@ -281,7 +281,7 @@ export default function CashInflowsPage() {
                                 <span className="text-sm font-medium text-amber-500">No active shift</span>
                             </div>
                         )}
-                        <PermissionGate permission="FINANCE_MANAGE">
+                        <PermissionGate permission="FINANCE_CREATE">
                             <button
                                 onClick={handleOpenAddModal}
                                 disabled={!activeShift}
@@ -450,7 +450,7 @@ export default function CashInflowsPage() {
                                                                     <Eye className="w-4 h-4" />
                                                                 </button>
                                                                 {canRepay && (
-                                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                                    <PermissionGate permission="FINANCE_UPDATE">
                                                                         <button
                                                                             onClick={() => handleOpenRepayModal(inf)}
                                                                             className="p-1.5 rounded-lg text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"

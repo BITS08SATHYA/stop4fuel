@@ -35,19 +35,19 @@ public class CashierStockController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_CREATE')")
     public CashierStockDTO create(@Valid @RequestBody CashierStock stock) {
         return CashierStockDTO.from(service.save(stock));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_UPDATE')")
     public CashierStockDTO update(@PathVariable Long id, @Valid @RequestBody CashierStock stock) {
         return CashierStockDTO.from(service.update(id, stock));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

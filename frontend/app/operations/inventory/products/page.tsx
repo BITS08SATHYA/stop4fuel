@@ -206,7 +206,7 @@ export default function ProductInventoryPage() {
                             Monitor fuel, lubricants, accessories, and all product inventory levels.
                         </p>
                     </div>
-                    <PermissionGate permission="INVENTORY_MANAGE">
+                    <PermissionGate permission="INVENTORY_CREATE">
                         <button
                             onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -368,7 +368,7 @@ export default function ProductInventoryPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center gap-2">
-                                                    <PermissionGate permission="INVENTORY_MANAGE">
+                                                    <PermissionGate permission="INVENTORY_UPDATE">
                                                         <button
                                                             onClick={() => handleEdit(inv)}
                                                             className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"

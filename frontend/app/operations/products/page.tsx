@@ -218,7 +218,7 @@ export default function ProductsPage() {
                             Manage fuel products, lubricants, and other retail items.
                         </p>
                     </div>
-                    <PermissionGate permission="PRODUCT_MANAGE">
+                    <PermissionGate permission="PRODUCT_CREATE">
                         <button
                             onClick={() => openModal()}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -275,7 +275,7 @@ export default function ProductsPage() {
                         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                             Your product catalog is currently empty. Add fuel products or shop items to get started.
                         </p>
-                        <PermissionGate permission="PRODUCT_MANAGE">
+                        <PermissionGate permission="PRODUCT_CREATE">
                             <button
                                 onClick={() => openModal()}
                                 className="bg-primary/10 text-primary hover:bg-primary/20 px-6 py-2 rounded-xl font-medium transition-colors"
@@ -372,7 +372,7 @@ export default function ProductsPage() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <PermissionGate permission="PRODUCT_MANAGE">
+                                                <PermissionGate permission="PRODUCT_UPDATE">
                                                     <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={() => openModal(product)}

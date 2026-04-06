@@ -42,19 +42,19 @@ public class ProductPriceHistoryController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_CREATE')")
     public ProductPriceHistoryDTO create(@Valid @RequestBody ProductPriceHistory entry) {
         return ProductPriceHistoryDTO.from(service.create(entry));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public ProductPriceHistoryDTO update(@PathVariable Long id, @Valid @RequestBody ProductPriceHistory entry) {
         return ProductPriceHistoryDTO.from(service.update(id, entry));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_DELETE')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.ok().build();

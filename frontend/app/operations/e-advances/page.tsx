@@ -381,7 +381,7 @@ export default function EAdvancesPage() {
                             Track electronic advance entries — Card, UPI, Cheque, CCMS, Bank Transfer.
                         </p>
                     </div>
-                    <PermissionGate permission="SHIFT_MANAGE">
+                    <PermissionGate permission="SHIFT_CREATE">
                         <button
                             onClick={handleOpenAdd}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -535,7 +535,7 @@ export default function EAdvancesPage() {
                                                         {entry.shiftId ? `#${entry.shiftId}` : "-"}
                                                     </td>
                                                     <td className="px-5 py-3 text-center">
-                                                        <PermissionGate permission="SHIFT_MANAGE">
+                                                        <PermissionGate permission="SHIFT_UPDATE">
                                                             <div className="flex items-center justify-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all">
                                                                 <button
                                                                     onClick={() => handleOpenEdit(entry)}

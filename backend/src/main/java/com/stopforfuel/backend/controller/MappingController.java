@@ -32,7 +32,7 @@ public class MappingController {
     }
 
     @PatchMapping("/assign-customers-to-group")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public List<Customer> assignCustomersToGroup(@RequestBody Map<String, Object> body) {
         List<Long> customerIds = ((List<Number>) body.get("customerIds")).stream()
                 .map(Number::longValue).toList();
@@ -41,7 +41,7 @@ public class MappingController {
     }
 
     @PatchMapping("/unassign-customers-from-group")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public List<Customer> unassignCustomersFromGroup(@RequestBody Map<String, Object> body) {
         List<Long> customerIds = ((List<Number>) body.get("customerIds")).stream()
                 .map(Number::longValue).toList();
@@ -49,7 +49,7 @@ public class MappingController {
     }
 
     @PatchMapping("/assign-vehicles-to-customer")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public List<Vehicle> assignVehiclesToCustomer(@RequestBody Map<String, Object> body) {
         List<Long> vehicleIds = ((List<Number>) body.get("vehicleIds")).stream()
                 .map(Number::longValue).toList();
@@ -58,7 +58,7 @@ public class MappingController {
     }
 
     @PatchMapping("/unassign-vehicles-from-customer")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public List<Vehicle> unassignVehiclesFromCustomer(@RequestBody Map<String, Object> body) {
         List<Long> vehicleIds = ((List<Number>) body.get("vehicleIds")).stream()
                 .map(Number::longValue).toList();

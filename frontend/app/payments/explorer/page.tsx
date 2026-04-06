@@ -783,7 +783,7 @@ function SummaryTab({
 
             {/* Record Payment */}
             {statement.status === "NOT_PAID" && (statement.balanceAmount || 0) > 0 && (
-                <PermissionGate permission="PAYMENT_MANAGE">
+                <PermissionGate permission="PAYMENT_CREATE">
                     <button
                         onClick={onRecordPayment}
                         className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
@@ -975,7 +975,7 @@ function PaymentsTab({
 
             {/* Record payment button */}
             {canPay && !showForm && (
-                <PermissionGate permission="PAYMENT_MANAGE">
+                <PermissionGate permission="PAYMENT_CREATE">
                     <button
                         onClick={() => onShowForm(true)}
                         className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
@@ -1080,7 +1080,7 @@ function PaymentsTab({
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm font-bold text-green-400">{formatCurrency(pmt.amount)}</span>
-                                        <PermissionGate permission="PAYMENT_MANAGE">
+                                        <PermissionGate permission="PAYMENT_DELETE">
                                             <button
                                                 onClick={() => onDeletePayment(pmt.id!)}
                                                 className="p-1 rounded-md hover:bg-rose-500/20 text-rose-400/60 hover:text-rose-400 transition-colors"

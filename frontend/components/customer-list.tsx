@@ -317,7 +317,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                                         </div>
                                     </td>
                                     <td className="p-4 text-right">
-                                        <PermissionGate permission="CUSTOMER_MANAGE">
+                                        <PermissionGate permission="CUSTOMER_UPDATE">
                                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button className="p-2 hover:bg-accent/10 hover:text-accent rounded-md transition-colors" title="Edit">
                                                     <Edit className="w-4 h-4" />
@@ -378,7 +378,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                     >
                         <Eye className="w-4 h-4" /> View Profile
                     </button>
-                    <PermissionGate permission="CUSTOMER_MANAGE">
+                    <PermissionGate permission="CUSTOMER_UPDATE">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();

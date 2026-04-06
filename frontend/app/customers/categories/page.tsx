@@ -124,7 +124,7 @@ export default function CategoriesPage() {
                             </Badge>
                         </div>
                     </div>
-                    <PermissionGate permission="CUSTOMER_MANAGE">
+                    <PermissionGate permission="CUSTOMER_CREATE">
                         <button
                             onClick={() => { setFormData({}); setError(""); setIsModalOpen(true); }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -175,7 +175,7 @@ export default function CategoriesPage() {
                                     </td>
                                     <td className="px-6 py-4 text-muted-foreground">{cat.description || "-"}</td>
                                     <td className="px-6 py-4 text-right">
-                                        <PermissionGate permission="CUSTOMER_MANAGE">
+                                        <PermissionGate permission="CUSTOMER_UPDATE">
                                             <div className="flex justify-end gap-2">
                                                 <button
                                                     onClick={() => handleEdit(cat)}

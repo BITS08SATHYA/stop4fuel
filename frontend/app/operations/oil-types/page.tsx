@@ -116,7 +116,7 @@ export default function OilTypesPage() {
                             Manage fluid/oil type categories (e.g. Engine Oil, Gear Oil, Diesel, Petrol).
                         </p>
                     </div>
-                    <PermissionGate permission="PRODUCT_MANAGE">
+                    <PermissionGate permission="PRODUCT_CREATE">
                         <button
                             onClick={() => { resetForm(); setIsModalOpen(true); }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -170,7 +170,7 @@ export default function OilTypesPage() {
                                     <div className="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
                                         <Droplets className="w-8 h-8" />
                                     </div>
-                                    <PermissionGate permission="PRODUCT_MANAGE">
+                                    <PermissionGate permission="PRODUCT_UPDATE">
                                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => handleEdit(oilType)}
@@ -189,7 +189,7 @@ export default function OilTypesPage() {
                                 </div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <h3 className="text-2xl font-black text-foreground">{oilType.name}</h3>
-                                    <PermissionGate permission="PRODUCT_MANAGE">
+                                    <PermissionGate permission="PRODUCT_UPDATE">
                                         <button onClick={() => handleToggleStatus(oilType.id)}>
                                             {oilType.active ? (
                                                 <CheckCircle2 className="w-4 h-4 text-green-500 cursor-pointer hover:opacity-70" />

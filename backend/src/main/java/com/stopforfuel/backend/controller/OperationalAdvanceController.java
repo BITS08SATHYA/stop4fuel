@@ -75,13 +75,13 @@ public class OperationalAdvanceController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_CREATE')")
     public OperationalAdvanceDTO create(@Valid @RequestBody OperationalAdvance advance) {
         return OperationalAdvanceDTO.from(service.create(advance));
     }
 
     @PostMapping("/{id}/return")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public OperationalAdvanceDTO recordReturn(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         BigDecimal returnedAmount = new BigDecimal(body.get("returnedAmount").toString());
         String returnRemarks = body.get("returnRemarks") != null ? body.get("returnRemarks").toString() : null;
@@ -89,13 +89,13 @@ public class OperationalAdvanceController {
     }
 
     @PostMapping("/{id}/invoices/{invoiceId}")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public OperationalAdvanceDTO assignInvoice(@PathVariable Long id, @PathVariable Long invoiceId) {
         return OperationalAdvanceDTO.from(service.assignInvoice(id, invoiceId));
     }
 
     @DeleteMapping("/{id}/invoices/{invoiceId}")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public OperationalAdvanceDTO unassignInvoice(@PathVariable Long id, @PathVariable Long invoiceId) {
         return OperationalAdvanceDTO.from(service.unassignInvoice(id, invoiceId));
     }
@@ -107,31 +107,31 @@ public class OperationalAdvanceController {
     }
 
     @PostMapping("/{id}/statement/{statementId}")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public OperationalAdvanceDTO assignStatement(@PathVariable Long id, @PathVariable Long statementId) {
         return OperationalAdvanceDTO.from(service.assignStatement(id, statementId));
     }
 
     @DeleteMapping("/{id}/statement")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public OperationalAdvanceDTO unassignStatement(@PathVariable Long id) {
         return OperationalAdvanceDTO.from(service.unassignStatement(id));
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public OperationalAdvanceDTO updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return OperationalAdvanceDTO.from(service.updateStatus(id, body.get("status")));
     }
 
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public OperationalAdvanceDTO cancel(@PathVariable Long id) {
         return OperationalAdvanceDTO.from(service.cancel(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

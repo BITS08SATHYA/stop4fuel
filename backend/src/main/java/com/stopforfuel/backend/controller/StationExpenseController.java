@@ -36,13 +36,13 @@ public class StationExpenseController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_CREATE')")
     public StationExpenseDTO createExpense(@Valid @RequestBody StationExpense expense) {
         return StationExpenseDTO.from(stationExpenseService.createExpense(expense));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_UPDATE')")
     public ResponseEntity<StationExpenseDTO> updateExpense(@PathVariable Long id, @Valid @RequestBody StationExpense expense) {
         try {
             return ResponseEntity.ok(StationExpenseDTO.from(stationExpenseService.updateExpense(id, expense)));
@@ -52,7 +52,7 @@ public class StationExpenseController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'FINANCE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_DELETE')")
     public ResponseEntity<Void> deleteExpense(@PathVariable Long id) {
         stationExpenseService.deleteExpense(id);
         return ResponseEntity.ok().build();

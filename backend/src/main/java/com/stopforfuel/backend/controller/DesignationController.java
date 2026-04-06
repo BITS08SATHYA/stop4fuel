@@ -25,13 +25,13 @@ public class DesignationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public ResponseEntity<Designation> create(@Valid @RequestBody Designation designation) {
         return ResponseEntity.ok(designationRepository.save(designation));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<Designation> update(@PathVariable Long id, @Valid @RequestBody Designation details) {
         Designation designation = designationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Designation not found"));
@@ -42,7 +42,7 @@ public class DesignationController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         designationRepository.deleteById(id);
         return ResponseEntity.ok().build();

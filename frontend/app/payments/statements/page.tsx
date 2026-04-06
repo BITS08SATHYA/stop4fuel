@@ -351,7 +351,7 @@ export default function StatementsPage() {
                             Generate and manage monthly credit statements for statement customers.
                         </p>
                     </div>
-                    <PermissionGate permission="PAYMENT_MANAGE">
+                    <PermissionGate permission="PAYMENT_CREATE">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={handleAutoGenerate}
@@ -534,7 +534,7 @@ export default function StatementsPage() {
                                                         </button>
                                                     )}
                                                     {stmt.status === "DRAFT" && (
-                                                        <PermissionGate permission="PAYMENT_MANAGE">
+                                                        <PermissionGate permission="PAYMENT_UPDATE">
                                                             <button
                                                                 onClick={() => handleApprove(stmt.id!)}
                                                                 disabled={approvingId === stmt.id}
@@ -550,7 +550,7 @@ export default function StatementsPage() {
                                                         </PermissionGate>
                                                     )}
                                                     {stmt.status !== "PAID" && (
-                                                        <PermissionGate permission="PAYMENT_MANAGE">
+                                                        <PermissionGate permission="PAYMENT_DELETE">
                                                             <button
                                                                 onClick={() => handleDelete(stmt.id!)}
                                                                 className="p-1.5 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"
@@ -934,7 +934,7 @@ export default function StatementsPage() {
                                     </button>
                                 )}
                                 {detailStatement.status !== "PAID" && (
-                                    <PermissionGate permission="PAYMENT_MANAGE">
+                                    <PermissionGate permission="PAYMENT_DELETE">
                                         <button
                                             onClick={async () => {
                                                 if (!confirm("Delete this statement? Bills will be unlinked.")) return;
@@ -1010,7 +1010,7 @@ export default function StatementsPage() {
                                                         </td>
                                                         <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                                                             {detailStatement.status !== "PAID" && (
-                                                                <PermissionGate permission="PAYMENT_MANAGE">
+                                                                <PermissionGate permission="PAYMENT_DELETE">
                                                                     <button
                                                                         onClick={() => handleRemoveBill(detailStatement.id!, bill.id!)}
                                                                         className="p-1 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"

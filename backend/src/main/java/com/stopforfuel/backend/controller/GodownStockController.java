@@ -41,19 +41,19 @@ public class GodownStockController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_CREATE')")
     public GodownStockDTO create(@Valid @RequestBody GodownStock stock) {
         return GodownStockDTO.from(service.save(stock));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_UPDATE')")
     public GodownStockDTO update(@PathVariable Long id, @Valid @RequestBody GodownStock stock) {
         return GodownStockDTO.from(service.update(id, stock));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVENTORY_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

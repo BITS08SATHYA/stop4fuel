@@ -37,13 +37,13 @@ public class ExternalCashInflowController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_CREATE')")
     public ExternalCashInflowDTO create(@Valid @RequestBody ExternalCashInflow inflow) {
         return ExternalCashInflowDTO.from(service.create(inflow));
     }
 
     @PostMapping("/{id}/repay")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public CashInflowRepayment recordRepayment(@PathVariable Long id,
                                                 @Valid @RequestBody CashInflowRepayment repayment) {
         return service.recordRepayment(id, repayment);

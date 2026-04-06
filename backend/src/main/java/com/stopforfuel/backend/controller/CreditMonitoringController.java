@@ -35,7 +35,7 @@ public class CreditMonitoringController {
     }
 
     @PostMapping("/scan")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public ResponseEntity<Map<String, Object>> triggerManualScan() {
         int blocked = creditMonitoringService.runManualScan();
         return ResponseEntity.ok(Map.of("blockedCount", blocked));

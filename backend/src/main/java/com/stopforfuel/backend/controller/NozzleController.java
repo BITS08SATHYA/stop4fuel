@@ -49,25 +49,25 @@ public class NozzleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_CREATE')")
     public NozzleDTO createNozzle(@Valid @RequestBody Nozzle nozzle) {
         return NozzleDTO.from(nozzleService.createNozzle(nozzle));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_UPDATE')")
     public NozzleDTO updateNozzle(@PathVariable Long id, @Valid @RequestBody Nozzle nozzle) {
         return NozzleDTO.from(nozzleService.updateNozzle(id, nozzle));
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_UPDATE')")
     public NozzleDTO toggleStatus(@PathVariable Long id) {
         return NozzleDTO.from(nozzleService.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_DELETE')")
     public ResponseEntity<?> deleteNozzle(@PathVariable Long id) {
         nozzleService.deleteNozzle(id);
         return ResponseEntity.ok().build();

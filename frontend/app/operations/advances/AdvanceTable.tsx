@@ -118,7 +118,7 @@ export function AdvanceTable({ filtered, onOpenDetail, onOpenReturn, onCancel }:
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </button>
                                                 {canReturn && (
-                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                    <PermissionGate permission="FINANCE_UPDATE">
                                                         <button
                                                             onClick={() => onOpenReturn(adv)}
                                                             title="Record return"
@@ -129,7 +129,7 @@ export function AdvanceTable({ filtered, onOpenDetail, onOpenReturn, onCancel }:
                                                     </PermissionGate>
                                                 )}
                                                 {canCancel && (
-                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                    <PermissionGate permission="FINANCE_UPDATE">
                                                         <button
                                                             onClick={() => onCancel(adv)}
                                                             title="Cancel advance"

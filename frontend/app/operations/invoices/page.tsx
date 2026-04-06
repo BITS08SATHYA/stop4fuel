@@ -846,8 +846,8 @@ export default function InvoicesPage() {
                         { label: "XP", matcher: (n: string, c: string) => c.toLowerCase() === "fuel" && (n.toLowerCase().includes("xtra premium") || n.toLowerCase().includes("extra premium")) },
                         { label: "HSD", matcher: (n: string, c: string) => c.toLowerCase() === "fuel" && n.toLowerCase().includes("diesel") && !n.toLowerCase().includes("additive") },
                         { label: "2T Loose", matcher: (n: string, c: string) => n.toLowerCase().includes("2t") && n.toLowerCase().includes("loose") },
-                        { label: "2T 20ml", matcher: (n: string, c: string) => n.toLowerCase().includes("20") && (n.toLowerCase().includes("ml") || n.toLowerCase().includes("pouch")) },
-                        { label: "40ml", matcher: (n: string, c: string) => n.toLowerCase().includes("40") && (n.toLowerCase().includes("ml") || n.toLowerCase().includes("pouch")) },
+                        { label: "2T 20ml", matcher: (n: string, c: string) => n.toLowerCase().includes("2t") && n.toLowerCase().includes("20") },
+                        { label: "2T 40ml", matcher: (n: string, c: string) => n.toLowerCase().includes("2t") && n.toLowerCase().includes("40") },
                     ].map(({ label, matcher }) => {
                         const matched = products.find(p => matcher(p.name || "", p.category || ""));
                         if (!matched) return null;

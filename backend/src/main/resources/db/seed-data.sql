@@ -33,36 +33,118 @@ INSERT INTO roles (role_type) VALUES ('OWNER') ON CONFLICT (role_type) DO NOTHIN
 INSERT INTO roles (role_type) VALUES ('ADMIN') ON CONFLICT (role_type) DO NOTHING;;
 INSERT INTO roles (role_type) VALUES ('CASHIER') ON CONFLICT (role_type) DO NOTHING;;
 
--- Permissions (seed all permission codes)
+-- Add action and system_default columns if missing (idempotent)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'permissions' AND column_name = 'action') THEN
+        ALTER TABLE permissions ADD COLUMN action VARCHAR(255) NOT NULL DEFAULT 'VIEW';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'permissions' AND column_name = 'system_default') THEN
+        ALTER TABLE permissions ADD COLUMN system_default BOOLEAN NOT NULL DEFAULT true;
+    END IF;
+END $$;;
+
+-- Migrate old MANAGE permissions to fine-grained CREATE/UPDATE/DELETE
+DO $$
+DECLARE
+    v_manage_id BIGINT;
+    v_module TEXT;
+    v_new_code TEXT;
+    v_new_action TEXT;
+    v_new_desc TEXT;
+    v_new_perm_id BIGINT;
+    v_role_rec RECORD;
+BEGIN
+    -- For each _MANAGE permission that still exists, create _CREATE, _UPDATE, _DELETE
+    FOR v_manage_id, v_module IN
+        SELECT id, module FROM permissions WHERE code LIKE '%_MANAGE'
+    LOOP
+        FOREACH v_new_action IN ARRAY ARRAY['CREATE', 'UPDATE', 'DELETE']
+        LOOP
+            v_new_code := v_module || '_' || v_new_action;
+            v_new_desc := initcap(v_new_action) || ' ' || lower(v_module);
+            INSERT INTO permissions (code, description, module, action, system_default)
+                VALUES (v_new_code, v_new_desc, v_module, v_new_action, true)
+                ON CONFLICT (code) DO NOTHING;
+        END LOOP;
+
+        -- Copy role assignments from _MANAGE to the 3 new permissions
+        FOR v_role_rec IN SELECT role_id FROM role_permissions WHERE permission_id = v_manage_id
+        LOOP
+            INSERT INTO role_permissions (role_id, permission_id)
+                SELECT v_role_rec.role_id, p.id FROM permissions p
+                WHERE p.module = v_module AND p.action IN ('CREATE', 'UPDATE', 'DELETE')
+                ON CONFLICT DO NOTHING;
+        END LOOP;
+
+        -- Delete old _MANAGE role assignments and permission
+        DELETE FROM role_permissions WHERE permission_id = v_manage_id;
+        DELETE FROM permissions WHERE id = v_manage_id;
+    END LOOP;
+    RAISE NOTICE 'Migrated MANAGE to fine-grained permissions';
+END $$;;
+
+-- Backfill action column for existing VIEW permissions
+UPDATE permissions SET action = 'VIEW' WHERE code LIKE '%_VIEW' AND action = 'VIEW';;
+UPDATE permissions SET action = 'GENERATE' WHERE code = 'REPORT_GENERATE';;
+
+-- Seed fine-grained permissions (fresh installs)
 DO $$
 BEGIN
 IF (SELECT COUNT(*) FROM permissions) = 0 THEN
-    INSERT INTO permissions (code, description, module) VALUES
-        ('DASHBOARD_VIEW', 'View dashboard', 'DASHBOARD'),
-        ('CUSTOMER_VIEW', 'View customers', 'CUSTOMER'),
-        ('CUSTOMER_MANAGE', 'Manage customers', 'CUSTOMER'),
-        ('EMPLOYEE_VIEW', 'View employees', 'EMPLOYEE'),
-        ('EMPLOYEE_MANAGE', 'Manage employees', 'EMPLOYEE'),
-        ('PRODUCT_VIEW', 'View products', 'PRODUCT'),
-        ('PRODUCT_MANAGE', 'Manage products', 'PRODUCT'),
-        ('STATION_VIEW', 'View station layout', 'STATION'),
-        ('STATION_MANAGE', 'Manage station layout', 'STATION'),
-        ('INVENTORY_VIEW', 'View inventory', 'INVENTORY'),
-        ('INVENTORY_MANAGE', 'Manage inventory', 'INVENTORY'),
-        ('SHIFT_VIEW', 'View shifts', 'SHIFT'),
-        ('SHIFT_MANAGE', 'Manage shifts', 'SHIFT'),
-        ('INVOICE_VIEW', 'View invoices', 'INVOICE'),
-        ('INVOICE_MANAGE', 'Manage invoices', 'INVOICE'),
-        ('PAYMENT_VIEW', 'View payments', 'PAYMENT'),
-        ('PAYMENT_MANAGE', 'Manage payments', 'PAYMENT'),
-        ('FINANCE_VIEW', 'View finance', 'FINANCE'),
-        ('FINANCE_MANAGE', 'Manage finance', 'FINANCE'),
-        ('REPORT_VIEW', 'View reports', 'REPORT'),
-        ('SETTINGS_VIEW', 'View settings', 'SETTINGS'),
-        ('SETTINGS_MANAGE', 'Manage settings', 'SETTINGS'),
-        ('USER_VIEW', 'View users', 'USER'),
-        ('USER_MANAGE', 'Manage users', 'USER');
-    RAISE NOTICE 'Seeded permissions';
+    INSERT INTO permissions (code, description, module, action, system_default) VALUES
+        ('DASHBOARD_VIEW', 'View dashboard', 'DASHBOARD', 'VIEW', true),
+        ('CUSTOMER_VIEW', 'View customers', 'CUSTOMER', 'VIEW', true),
+        ('CUSTOMER_CREATE', 'Create customers', 'CUSTOMER', 'CREATE', true),
+        ('CUSTOMER_UPDATE', 'Update customers', 'CUSTOMER', 'UPDATE', true),
+        ('CUSTOMER_DELETE', 'Delete customers', 'CUSTOMER', 'DELETE', true),
+        ('EMPLOYEE_VIEW', 'View employees', 'EMPLOYEE', 'VIEW', true),
+        ('EMPLOYEE_CREATE', 'Create employees', 'EMPLOYEE', 'CREATE', true),
+        ('EMPLOYEE_UPDATE', 'Update employees', 'EMPLOYEE', 'UPDATE', true),
+        ('EMPLOYEE_DELETE', 'Delete employees', 'EMPLOYEE', 'DELETE', true),
+        ('PRODUCT_VIEW', 'View products', 'PRODUCT', 'VIEW', true),
+        ('PRODUCT_CREATE', 'Create products', 'PRODUCT', 'CREATE', true),
+        ('PRODUCT_UPDATE', 'Update products', 'PRODUCT', 'UPDATE', true),
+        ('PRODUCT_DELETE', 'Delete products', 'PRODUCT', 'DELETE', true),
+        ('STATION_VIEW', 'View station layout', 'STATION', 'VIEW', true),
+        ('STATION_CREATE', 'Create station layout', 'STATION', 'CREATE', true),
+        ('STATION_UPDATE', 'Update station layout', 'STATION', 'UPDATE', true),
+        ('STATION_DELETE', 'Delete station layout', 'STATION', 'DELETE', true),
+        ('INVENTORY_VIEW', 'View inventory', 'INVENTORY', 'VIEW', true),
+        ('INVENTORY_CREATE', 'Create inventory', 'INVENTORY', 'CREATE', true),
+        ('INVENTORY_UPDATE', 'Update inventory', 'INVENTORY', 'UPDATE', true),
+        ('INVENTORY_DELETE', 'Delete inventory', 'INVENTORY', 'DELETE', true),
+        ('SHIFT_VIEW', 'View shifts', 'SHIFT', 'VIEW', true),
+        ('SHIFT_CREATE', 'Create shifts', 'SHIFT', 'CREATE', true),
+        ('SHIFT_UPDATE', 'Update shifts', 'SHIFT', 'UPDATE', true),
+        ('SHIFT_DELETE', 'Delete shifts', 'SHIFT', 'DELETE', true),
+        ('INVOICE_VIEW', 'View invoices', 'INVOICE', 'VIEW', true),
+        ('INVOICE_CREATE', 'Create invoices', 'INVOICE', 'CREATE', true),
+        ('INVOICE_UPDATE', 'Update invoices', 'INVOICE', 'UPDATE', true),
+        ('INVOICE_DELETE', 'Delete invoices', 'INVOICE', 'DELETE', true),
+        ('PAYMENT_VIEW', 'View payments', 'PAYMENT', 'VIEW', true),
+        ('PAYMENT_CREATE', 'Create payments', 'PAYMENT', 'CREATE', true),
+        ('PAYMENT_UPDATE', 'Update payments', 'PAYMENT', 'UPDATE', true),
+        ('PAYMENT_DELETE', 'Delete payments', 'PAYMENT', 'DELETE', true),
+        ('FINANCE_VIEW', 'View finance', 'FINANCE', 'VIEW', true),
+        ('FINANCE_CREATE', 'Create finance', 'FINANCE', 'CREATE', true),
+        ('FINANCE_UPDATE', 'Update finance', 'FINANCE', 'UPDATE', true),
+        ('FINANCE_DELETE', 'Delete finance', 'FINANCE', 'DELETE', true),
+        ('PURCHASE_VIEW', 'View purchases', 'PURCHASE', 'VIEW', true),
+        ('PURCHASE_CREATE', 'Create purchases', 'PURCHASE', 'CREATE', true),
+        ('PURCHASE_UPDATE', 'Update purchases', 'PURCHASE', 'UPDATE', true),
+        ('PURCHASE_DELETE', 'Delete purchases', 'PURCHASE', 'DELETE', true),
+        ('REPORT_VIEW', 'View reports', 'REPORT', 'VIEW', true),
+        ('REPORT_GENERATE', 'Generate reports', 'REPORT', 'GENERATE', true),
+        ('SETTINGS_VIEW', 'View settings', 'SETTINGS', 'VIEW', true),
+        ('SETTINGS_CREATE', 'Create settings', 'SETTINGS', 'CREATE', true),
+        ('SETTINGS_UPDATE', 'Update settings', 'SETTINGS', 'UPDATE', true),
+        ('SETTINGS_DELETE', 'Delete settings', 'SETTINGS', 'DELETE', true),
+        ('USER_VIEW', 'View users', 'USER', 'VIEW', true),
+        ('USER_CREATE', 'Create users', 'USER', 'CREATE', true),
+        ('USER_UPDATE', 'Update users', 'USER', 'UPDATE', true),
+        ('USER_DELETE', 'Delete users', 'USER', 'DELETE', true);
+    RAISE NOTICE 'Seeded fine-grained permissions';
 END IF;
 END $$;;
 
@@ -74,9 +156,10 @@ SELECT id INTO v_role_id FROM roles WHERE role_type = 'CASHIER';
 IF v_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = v_role_id) THEN
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT v_role_id, id FROM permissions WHERE code IN (
-        'DASHBOARD_VIEW', 'SHIFT_VIEW', 'SHIFT_MANAGE',
-        'INVOICE_VIEW', 'INVOICE_MANAGE',
-        'PAYMENT_VIEW', 'PAYMENT_MANAGE',
+        'DASHBOARD_VIEW',
+        'SHIFT_VIEW', 'SHIFT_CREATE', 'SHIFT_UPDATE',
+        'INVOICE_VIEW', 'INVOICE_CREATE', 'INVOICE_UPDATE',
+        'PAYMENT_VIEW', 'PAYMENT_CREATE', 'PAYMENT_UPDATE',
         'FINANCE_VIEW'
     )
     ON CONFLICT DO NOTHING;
@@ -84,7 +167,7 @@ IF v_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM role_permissions WHERE ro
 END IF;
 END $$;;
 
--- Assign permissions to ADMIN role
+-- Assign permissions to ADMIN role (everything except settings/user delete)
 DO $$
 DECLARE v_role_id BIGINT;
 BEGIN
@@ -92,7 +175,7 @@ SELECT id INTO v_role_id FROM roles WHERE role_type = 'ADMIN';
 IF v_role_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM role_permissions WHERE role_id = v_role_id) THEN
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT v_role_id, id FROM permissions
-    WHERE code NOT IN ('SETTINGS_MANAGE', 'USER_MANAGE')
+    WHERE code NOT IN ('SETTINGS_DELETE', 'USER_DELETE')
     ON CONFLICT DO NOTHING;
     RAISE NOTICE 'Assigned permissions to ADMIN';
 END IF;

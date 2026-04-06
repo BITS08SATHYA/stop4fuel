@@ -65,7 +65,7 @@ export default function CustomersPage() {
                             Manage fleets, credit limits, and vehicle associations.
                         </p>
                     </div>
-                    <PermissionGate permission="CUSTOMER_MANAGE">
+                    <PermissionGate permission="CUSTOMER_CREATE">
                         <button
                             onClick={() => setIsModalOpen(true)}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"

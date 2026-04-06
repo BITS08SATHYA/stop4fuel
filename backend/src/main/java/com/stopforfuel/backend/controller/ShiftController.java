@@ -43,13 +43,13 @@ public class ShiftController {
     }
 
     @PostMapping("/open")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_CREATE')")
     public ShiftDTO open(@Valid @RequestBody Shift shift) {
         return ShiftDTO.from(service.openShift(shift));
     }
 
     @PostMapping("/{id}/close")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public ShiftDTO close(@PathVariable Long id) {
         return ShiftDTO.from(service.closeShift(id));
     }
@@ -63,31 +63,31 @@ public class ShiftController {
     }
 
     @PostMapping("/{id}/submit-for-review")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public ShiftDTO submitForReview(@PathVariable Long id, @Valid @RequestBody ShiftClosingSubmitDTO dto) {
         return ShiftDTO.from(service.submitForReview(id, dto));
     }
 
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public ShiftDTO approve(@PathVariable Long id) {
         return ShiftDTO.from(service.approveAndClose(id));
     }
 
     @PostMapping("/{id}/reopen")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public ShiftDTO reopen(@PathVariable Long id) {
         return ShiftDTO.from(service.reopenForReview(id));
     }
 
     @PostMapping("/{id}/reopen-to-edit")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public ShiftDTO reopenToEdit(@PathVariable Long id) {
         return ShiftDTO.from(service.reopenToEdit(id));
     }
 
     @PostMapping("/{id}/seed-test-data")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public Map<String, Object> seedTestData(@PathVariable Long id) {
         if (testDataSeeder == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Test data seeding is not available in this environment");

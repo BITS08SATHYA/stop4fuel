@@ -82,7 +82,7 @@ export default function CompanyListPage() {
                             Manage company profiles, documents, and certifications.
                         </p>
                     </div>
-                    <PermissionGate permission="SETTINGS_MANAGE">
+                    <PermissionGate permission="SETTINGS_CREATE">
                         <button
                             onClick={() => router.push("/company/new")}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -155,7 +155,7 @@ export default function CompanyListPage() {
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
-                                                <PermissionGate permission="SETTINGS_MANAGE">
+                                                <PermissionGate permission="SETTINGS_UPDATE">
                                                     <button
                                                         onClick={() => router.push(`/company/${company.id}?edit=true`)}
                                                         className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"

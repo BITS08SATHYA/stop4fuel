@@ -218,7 +218,7 @@ export default function AttendancePage() {
                                                 <td className="px-6 py-4 font-medium text-foreground">{emp.name}</td>
                                                 <td className="px-6 py-4 text-sm text-muted-foreground">{emp.designation}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                    <PermissionGate permission="EMPLOYEE_UPDATE">
                                                         <input
                                                             type="time"
                                                             defaultValue={att?.checkInTime || ""}
@@ -232,7 +232,7 @@ export default function AttendancePage() {
                                                     </PermissionGate>
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                    <PermissionGate permission="EMPLOYEE_UPDATE">
                                                         <input
                                                             type="time"
                                                             defaultValue={att?.checkOutTime || ""}
@@ -252,7 +252,7 @@ export default function AttendancePage() {
                                                     {att?.totalHoursWorked ? att.totalHoursWorked.toFixed(1) + "h" : "-"}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                    <PermissionGate permission="EMPLOYEE_UPDATE">
                                                         <div className="flex justify-center gap-1">
                                                             {statusOptions.map((opt) => (
                                                                 <button

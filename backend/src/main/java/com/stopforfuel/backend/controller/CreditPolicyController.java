@@ -31,7 +31,7 @@ public class CreditPolicyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_CREATE')")
     public CreditPolicy createPolicy(@Valid @RequestBody CreditPolicy policy) {
         if (policy.getScid() == null) {
             policy.setScid(SecurityUtils.getScid());
@@ -40,13 +40,13 @@ public class CreditPolicyController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public CreditPolicy updatePolicy(@PathVariable Long id, @Valid @RequestBody CreditPolicy policy) {
         return creditPolicyService.updatePolicy(id, policy);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_DELETE')")
     public ResponseEntity<Void> deletePolicy(@PathVariable Long id) {
         creditPolicyService.deletePolicy(id);
         return ResponseEntity.noContent().build();

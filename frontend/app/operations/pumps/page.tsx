@@ -104,7 +104,7 @@ export default function PumpsPage() {
                             Manage physical fuel dispenser pumps.
                         </p>
                     </div>
-                    <PermissionGate permission="STATION_MANAGE">
+                    <PermissionGate permission="STATION_CREATE">
                         <button
                             onClick={() => openModal()}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -159,7 +159,7 @@ export default function PumpsPage() {
                                 </div>
                                 <h3 className="text-2xl font-bold text-foreground mb-4">{pump.name}</h3>
                                 
-                                <PermissionGate permission="STATION_MANAGE">
+                                <PermissionGate permission="STATION_UPDATE">
                                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => openModal(pump)} className="p-2 bg-orange-500/10 text-orange-500 rounded-lg hover:bg-orange-500/20 transition-colors">
                                             <Edit2 className="w-4 h-4" />

@@ -269,7 +269,7 @@ export default function LeaveManagementPage() {
                         <p className="text-muted-foreground mt-2">Manage employee leave requests, types, and balances</p>
                     </div>
                     {activeTab === "requests" && (
-                        <PermissionGate permission="EMPLOYEE_MANAGE">
+                        <PermissionGate permission="EMPLOYEE_CREATE">
                             <button
                                 onClick={() => { clearAllReqErrors(); setApiError(""); setIsRequestModalOpen(true); }}
                                 className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -280,7 +280,7 @@ export default function LeaveManagementPage() {
                         </PermissionGate>
                     )}
                     {activeTab === "types" && (
-                        <PermissionGate permission="EMPLOYEE_MANAGE">
+                        <PermissionGate permission="EMPLOYEE_CREATE">
                             <button
                                 onClick={() => {
                                     setEditingType(null);
@@ -386,7 +386,7 @@ export default function LeaveManagementPage() {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {r.status === "PENDING" && (
-                                                            <PermissionGate permission="EMPLOYEE_MANAGE">
+                                                            <PermissionGate permission="EMPLOYEE_UPDATE">
                                                                 <div className="flex justify-center gap-2">
                                                                     <button
                                                                         onClick={() => handleApprove(r.id)}
@@ -438,7 +438,7 @@ export default function LeaveManagementPage() {
                                     <GlassCard key={lt.id} className="p-5">
                                         <div className="flex justify-between items-start mb-3">
                                             <h3 className="text-lg font-semibold text-foreground">{lt.name}</h3>
-                                            <PermissionGate permission="EMPLOYEE_MANAGE">
+                                            <PermissionGate permission="EMPLOYEE_UPDATE">
                                                 <div className="flex gap-1">
                                                     <button onClick={() => handleEditType(lt)} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground">
                                                         <CalendarDays className="w-4 h-4" />

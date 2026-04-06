@@ -203,7 +203,7 @@ export default function UtilityBillsPage() {
                         </h1>
                         <p className="text-muted-foreground mt-2">Track electricity, water, and other utility bills</p>
                     </div>
-                    <PermissionGate permission="FINANCE_MANAGE">
+                    <PermissionGate permission="FINANCE_CREATE">
                         <div className="flex gap-3">
                             <input
                                 ref={fileInputRef}
@@ -338,10 +338,10 @@ export default function UtilityBillsPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                    <PermissionGate permission="FINANCE_UPDATE">
                                                         <button onClick={() => handleEdit(b)} className="p-2 rounded-lg hover:bg-white/10"><Pencil className="w-4 h-4" /></button>
                                                     </PermissionGate>
-                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                    <PermissionGate permission="FINANCE_DELETE">
                                                         <button onClick={() => handleDelete(b.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500"><Trash2 className="w-4 h-4" /></button>
                                                     </PermissionGate>
                                                 </div>

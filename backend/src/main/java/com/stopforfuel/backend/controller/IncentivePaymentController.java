@@ -60,13 +60,13 @@ public class IncentivePaymentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_CREATE')")
     public IncentivePaymentDTO create(@Valid @RequestBody IncentivePayment payment) {
         return IncentivePaymentDTO.from(service.create(payment));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SHIFT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

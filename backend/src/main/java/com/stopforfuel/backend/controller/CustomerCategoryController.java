@@ -30,19 +30,19 @@ public class CustomerCategoryController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_CREATE')")
     public CustomerCategory create(@Valid @RequestBody CustomerCategory category) {
         return categoryService.createCategory(category);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public CustomerCategory update(@PathVariable Long id, @Valid @RequestBody CustomerCategory category) {
         return categoryService.updateCategory(id, category);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_DELETE')")
     public void delete(@PathVariable Long id) {
         categoryService.deleteCategory(id);
     }

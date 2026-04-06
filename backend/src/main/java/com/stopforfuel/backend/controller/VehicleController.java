@@ -36,43 +36,43 @@ public class VehicleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_CREATE')")
     public VehicleDTO createVehicle(@Valid @RequestBody Vehicle vehicle) {
         return VehicleDTO.from(vehicleService.createVehicle(vehicle));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_UPDATE')")
     public VehicleDTO updateVehicle(@PathVariable Long id, @Valid @RequestBody Vehicle vehicle) {
         return VehicleDTO.from(vehicleService.updateVehicle(id, vehicle));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_DELETE')")
     public void deleteVehicle(@PathVariable Long id) {
         vehicleService.deleteVehicle(id);
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_UPDATE')")
     public VehicleDTO toggleStatus(@PathVariable Long id) {
         return VehicleDTO.from(vehicleService.toggleStatus(id));
     }
 
     @PatchMapping("/{id}/block")
-    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_UPDATE')")
     public VehicleDTO blockVehicle(@PathVariable Long id) {
         return VehicleDTO.from(vehicleService.blockVehicle(id));
     }
 
     @PatchMapping("/{id}/unblock")
-    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_UPDATE')")
     public VehicleDTO unblockVehicle(@PathVariable Long id) {
         return VehicleDTO.from(vehicleService.unblockVehicle(id));
     }
 
     @PatchMapping("/{id}/liter-limit")
-    @PreAuthorize("hasPermission(null, 'VEHICLE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'VEHICLE_UPDATE')")
     public VehicleDTO updateLiterLimit(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
         return VehicleDTO.from(vehicleService.updateLiterLimit(id, body.get("maxLitersPerMonth")));
     }

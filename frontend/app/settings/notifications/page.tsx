@@ -212,7 +212,7 @@ export default function NotificationSettingsPage() {
                                         </div>
 
                                         {/* Save button */}
-                                        <PermissionGate permission="SETTINGS_MANAGE">
+                                        <PermissionGate permission="SETTINGS_UPDATE">
                                             <div className="flex items-center gap-3 pt-2">
                                                 <button
                                                     onClick={() => handleSave(alertType.value)}

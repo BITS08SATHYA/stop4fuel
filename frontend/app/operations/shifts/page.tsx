@@ -460,7 +460,7 @@ export default function ShiftsPage() {
                                         Active
                                     </span>
                                 </div>
-                                <PermissionGate permission="SHIFT_MANAGE">
+                                <PermissionGate permission="SHIFT_UPDATE">
                                     <button
                                         onClick={handleCloseShift}
                                         className="px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-colors"
@@ -471,7 +471,7 @@ export default function ShiftsPage() {
                                 </PermissionGate>
                             </>
                         ) : (
-                            <PermissionGate permission="SHIFT_MANAGE">
+                            <PermissionGate permission="SHIFT_CREATE">
                                 <button
                                     onClick={handleOpenShift}
                                     className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -496,7 +496,7 @@ export default function ShiftsPage() {
                         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                             Open a new shift to start recording transactions.
                         </p>
-                        <PermissionGate permission="SHIFT_MANAGE">
+                        <PermissionGate permission="SHIFT_CREATE">
                             <button
                                 onClick={handleOpenShift}
                                 className="bg-primary/10 text-primary hover:bg-primary/20 px-6 py-2 rounded-xl font-medium transition-colors"
@@ -584,7 +584,7 @@ export default function ShiftsPage() {
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold text-blue-500">{formatCurrency(eAdvanceTotal)}</span>
                                             {isViewingActive && (
-                                                <PermissionGate permission="SHIFT_MANAGE">
+                                                <PermissionGate permission="SHIFT_CREATE">
                                                     <button
                                                         onClick={handleOpenAddModal}
                                                         className="text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1"
@@ -626,7 +626,7 @@ export default function ShiftsPage() {
                                                                 <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(ea.amount)}</td>
                                                                 {isViewingActive && (
                                                                     <td className="py-1.5 text-center">
-                                                                        <PermissionGate permission="SHIFT_MANAGE">
+                                                                        <PermissionGate permission="SHIFT_DELETE">
                                                                             <button
                                                                                 onClick={() => handleDeleteEAdvance(ea.id!)}
                                                                                 className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
@@ -712,7 +712,7 @@ export default function ShiftsPage() {
                                                             <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(exp.amount)}</td>
                                                             {isViewingActive && (
                                                                 <td className="py-1.5 text-center">
-                                                                    <PermissionGate permission="SHIFT_MANAGE">
+                                                                    <PermissionGate permission="SHIFT_DELETE">
                                                                         <button
                                                                             onClick={() => handleDeleteExpense(exp.id!)}
                                                                             className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
