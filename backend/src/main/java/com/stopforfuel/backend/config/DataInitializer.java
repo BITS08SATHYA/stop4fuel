@@ -188,7 +188,7 @@ public class DataInitializer implements ApplicationRunner {
         Roles cashier = rolesRepository.findByRoleType("CASHIER").orElse(null);
         if (cashier == null) return;
         boolean patched = false;
-        for (String code : List.of("CUSTOMER_VIEW")) {
+        for (String code : List.of("CUSTOMER_VIEW", "VEHICLE_VIEW", "PRODUCT_VIEW", "STATION_VIEW")) {
             if (!rolePermissionRepository.existsByRoleIdAndPermissionCode(cashier.getId(), code)) {
                 permissionRepository.findByCode(code).ifPresent(p -> {
                     RolePermission rp = new RolePermission();
@@ -213,7 +213,7 @@ public class DataInitializer implements ApplicationRunner {
         Map<String, Set<String>> defaults = Map.of(
             "CASHIER", Set.of(
                 "DASHBOARD_VIEW",
-                "CUSTOMER_VIEW",
+                "CUSTOMER_VIEW", "VEHICLE_VIEW", "PRODUCT_VIEW", "STATION_VIEW",
                 "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
                 "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
                 "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE",

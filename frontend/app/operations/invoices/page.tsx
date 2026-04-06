@@ -900,19 +900,56 @@ export default function InvoicesPage() {
                     {selectedProducts.map((line: any, idx: number) => (
                         <div key={idx} className="p-5 bg-background border border-border rounded-2xl space-y-4 relative border-l-4 border-l-primary">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                                <div className="lg:col-span-2">
+                                <div className="lg:col-span-2 relative">
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Product</label>
-                                    <StyledSelect
-                                        value={String(line.product?.id || "")}
-                                        onChange={(val) => {
-                                            const p = products.find(prod => prod.id === parseInt(val));
-                                            if (p) updateProductLine(idx, { product: p, unitPrice: String(p.price) });
+                                    <input
+                                        type="text"
+                                        placeholder="Type to search products..."
+                                        value={line._productSearch ?? (line.product ? `${line.product.name} (${line.product.category})` : "")}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            updateProductLine(idx, { _productSearch: val, _showProductDropdown: true });
+                                            if (!val) updateProductLine(idx, { product: null, unitPrice: "", _productSearch: "", _showProductDropdown: false });
                                         }}
-                                        options={[
-                                            { value: "", label: "Select Product..." },
-                                            ...products.map(p => ({ value: String(p.id), label: `${p.name} (${p.category} - ${p.unit})` })),
-                                        ]}
+                                        onFocus={() => updateProductLine(idx, { _showProductDropdown: true, _productSearch: line._productSearch ?? "" })}
+                                        onBlur={() => setTimeout(() => updateProductLine(idx, { _showProductDropdown: false }), 200)}
+                                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     />
+                                    {line._showProductDropdown && (
+                                        <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            {products
+                                                .filter(p => {
+                                                    const q = (line._productSearch || "").toLowerCase();
+                                                    if (!q) return true;
+                                                    return p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
+                                                })
+                                                .map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        type="button"
+                                                        onMouseDown={(e) => e.preventDefault()}
+                                                        onClick={() => {
+                                                            updateProductLine(idx, {
+                                                                product: p,
+                                                                unitPrice: String(p.price),
+                                                                _productSearch: undefined,
+                                                                _showProductDropdown: false,
+                                                            });
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors flex justify-between items-center"
+                                                    >
+                                                        <span className="font-medium">{p.name}</span>
+                                                        <span className="text-xs text-muted-foreground ml-2">{p.category} - {p.unit}</span>
+                                                    </button>
+                                                ))}
+                                            {products.filter(p => {
+                                                const q = (line._productSearch || "").toLowerCase();
+                                                return !q || p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
+                                            }).length === 0 && (
+                                                <div className="px-3 py-2 text-sm text-muted-foreground">No products found</div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {line.product?.category?.toLowerCase() === "fuel" && (
