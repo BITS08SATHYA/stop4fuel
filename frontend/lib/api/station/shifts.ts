@@ -195,6 +195,13 @@ export const openShift = (shift: Partial<Shift>): Promise<Shift> =>
         body: JSON.stringify(shift),
     }).then(handleResponse);
 
+export const changeShiftAttendant = (shiftId: number, attendantId: number): Promise<Shift> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/attendant`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendantId }),
+    }).then(handleResponse);
+
 export const closeShift = (id: number): Promise<Shift> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/${id}/close`, {
         method: 'POST',

@@ -61,6 +61,14 @@ public class ShiftController {
         return all.stream().map(UserListDTO::from).toList();
     }
 
+    @PatchMapping("/{id}/attendant")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
+    public ShiftDTO changeAttendant(@PathVariable Long id, @RequestBody java.util.Map<String, Long> body) {
+        Long attendantId = body.get("attendantId");
+        if (attendantId == null) throw new IllegalArgumentException("attendantId is required");
+        return ShiftDTO.from(service.changeAttendant(id, attendantId));
+    }
+
     @PostMapping("/open")
     @PreAuthorize("hasPermission(null, 'SHIFT_CREATE')")
     public ShiftDTO open(@Valid @RequestBody Shift shift) {
