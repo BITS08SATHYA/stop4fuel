@@ -43,6 +43,7 @@ public class ShiftService {
     private final S3StorageService s3StorageService;
     private final ShiftClosingReportRepository shiftClosingReportRepository;
     private final StatementAutoGenerationService statementAutoGenerationService;
+    private final com.stopforfuel.backend.repository.UserRepository userRepository;
 
     public ShiftService(ShiftRepository repository,
                         @Lazy ShiftClosingReportService shiftClosingReportService,
@@ -64,7 +65,8 @@ public class ShiftService {
                         ShiftReportPdfGenerator pdfGenerator,
                         S3StorageService s3StorageService,
                         ShiftClosingReportRepository shiftClosingReportRepository,
-                        @Lazy StatementAutoGenerationService statementAutoGenerationService) {
+                        @Lazy StatementAutoGenerationService statementAutoGenerationService,
+                        com.stopforfuel.backend.repository.UserRepository userRepository) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
         this.productInventoryService = productInventoryService;
@@ -86,6 +88,7 @@ public class ShiftService {
         this.s3StorageService = s3StorageService;
         this.shiftClosingReportRepository = shiftClosingReportRepository;
         this.statementAutoGenerationService = statementAutoGenerationService;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
@@ -103,6 +106,15 @@ public class ShiftService {
         if (shift.getScid() == null) {
             shift.setScid(SecurityUtils.getScid());
         }
+
+        // Auto-assign current user as attendant if not explicitly set
+        if (shift.getAttendant() == null || shift.getAttendant().getId() == null) {
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            if (currentUserId != null) {
+                userRepository.findById(currentUserId).ifPresent(shift::setAttendant);
+            }
+        }
+
         Shift saved = repository.save(shift);
 
         // Auto-create ProductInventory records for all active products

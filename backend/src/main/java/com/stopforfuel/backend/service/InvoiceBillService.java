@@ -366,7 +366,11 @@ public class InvoiceBillService {
         }
 
         // Create EAdvance for electronic payment modes (CARD, UPI, CHEQUE, CCMS, BANK_TRANSFER)
-        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : null;
+        Customer resolvedCustomer = null;
+        if (invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+            resolvedCustomer = customerRepository.findById(invoice.getCustomer().getId()).orElse(null);
+        }
+        String customerName = resolvedCustomer != null ? resolvedCustomer.getName() : null;
         String remark = "Auto: Invoice #" + invoice.getId()
                 + (customerName != null ? " - " + customerName : "");
         EAdvance eAdv = new EAdvance();
@@ -400,11 +404,15 @@ public class InvoiceBillService {
             return;
         }
 
-        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : "Walk-in";
+        Customer customer = null;
+        if (invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+            customer = customerRepository.findById(invoice.getCustomer().getId()).orElse(null);
+        }
+        String customerName = customer != null ? customer.getName() : "Walk-in";
         IncentivePayment incentivePayment = new IncentivePayment();
         incentivePayment.setAmount(discount);
         incentivePayment.setDescription("Auto: Discount on Invoice #" + invoice.getBillNo() + " - " + customerName);
-        incentivePayment.setCustomer(invoice.getCustomer());
+        incentivePayment.setCustomer(customer);
         incentivePayment.setInvoiceBill(invoice);
         incentivePayment.setShiftId(activeShift.getId());
         incentivePayment.setScid(invoice.getScid());

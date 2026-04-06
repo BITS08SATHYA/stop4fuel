@@ -9,6 +9,8 @@ import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import {
     getActiveShift,
     openShift,
+    getShiftCashiers,
+    CashierUser,
     getEAdvancesByShift,
     getEAdvanceSummary,
     createEAdvance,
@@ -61,6 +63,7 @@ import {
     TrendingDown,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
+import { useAuth } from "@/lib/auth/auth-context";
 
 // --- Constants ---
 
@@ -113,8 +116,15 @@ interface MeterReadingLocal {
 
 export default function ShiftsPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [activeShift, setActiveShift] = useState<Shift | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Cashier selection for opening shift
+    const [showCashierModal, setShowCashierModal] = useState(false);
+    const [cashiers, setCashiers] = useState<CashierUser[]>([]);
+    const [selectedCashierId, setSelectedCashierId] = useState<number | "">("");
+    const [openingShift, setOpeningShift] = useState(false);
 
     // All data
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
@@ -257,12 +267,44 @@ export default function ShiftsPage() {
     }, [loadData]);
 
     const handleOpenShift = async () => {
+        const isOwnerOrAdmin = user?.role === "OWNER" || user?.role === "ADMIN";
+        if (isOwnerOrAdmin) {
+            // Show cashier selection modal
+            try {
+                const list = await getShiftCashiers();
+                setCashiers(list);
+                setSelectedCashierId("");
+                setShowCashierModal(true);
+            } catch (err: any) {
+                alert(err.message || "Failed to load cashiers");
+            }
+        } else {
+            // Cashier opens directly — backend auto-assigns them
+            try {
+                const shift = await openShift({});
+                setActiveShift(shift);
+                await loadAllData(shift.id);
+            } catch (err: any) {
+                alert(err.message || "Failed to open shift");
+            }
+        }
+    };
+
+    const handleConfirmOpenShift = async () => {
+        if (!selectedCashierId) {
+            alert("Please select a cashier for this shift");
+            return;
+        }
+        setOpeningShift(true);
         try {
-            const shift = await openShift({});
+            const shift = await openShift({ attendant: { id: Number(selectedCashierId), name: "" } } as any);
             setActiveShift(shift);
+            setShowCashierModal(false);
             await loadAllData(shift.id);
         } catch (err: any) {
             alert(err.message || "Failed to open shift");
+        } finally {
+            setOpeningShift(false);
         }
     };
 
@@ -447,7 +489,7 @@ export default function ShiftsPage() {
                         </h1>
                         <p className="text-muted-foreground mt-1 text-sm">
                             {activeShift
-                                ? `Shift #${activeShift.id} - Started ${formatDateTime(activeShift.startTime)}`
+                                ? `Shift #${activeShift.id}${activeShift.attendant?.name ? ` · ${activeShift.attendant.name}` : ""} · Started ${formatDateTime(activeShift.startTime)}`
                                 : "No active shift"}
                         </p>
                     </div>
@@ -1176,6 +1218,60 @@ export default function ShiftsPage() {
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Cashier Selection Modal for OWNER/ADMIN */}
+            <Modal
+                isOpen={showCashierModal}
+                onClose={() => setShowCashierModal(false)}
+                title="Select Cashier for Shift"
+            >
+                <div className="p-6 space-y-4">
+                    <p className="text-sm text-muted-foreground">Choose which cashier will be in charge of this shift.</p>
+                    <div className="space-y-2">
+                        {cashiers.map(c => (
+                            <button
+                                key={c.id}
+                                onClick={() => setSelectedCashierId(c.id)}
+                                className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between ${
+                                    selectedCashierId === c.id
+                                        ? "border-primary bg-primary/10 text-foreground"
+                                        : "border-border hover:bg-muted/50 text-foreground"
+                                }`}
+                            >
+                                <div>
+                                    <div className="font-medium">{c.name}</div>
+                                    <div className="text-xs text-muted-foreground">{c.role}{c.phone ? ` · ${c.phone}` : ""}</div>
+                                </div>
+                                {selectedCashierId === c.id && (
+                                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                        {cashiers.length === 0 && (
+                            <p className="text-center text-muted-foreground py-4">No active cashiers found</p>
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button
+                            onClick={() => setShowCashierModal(false)}
+                            className="px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleConfirmOpenShift}
+                            disabled={!selectedCashierId || openingShift}
+                            className="btn-gradient px-6 py-2 rounded-lg font-medium disabled:opacity-50"
+                        >
+                            {openingShift ? "Opening..." : "Open Shift"}
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );
