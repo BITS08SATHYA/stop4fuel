@@ -47,6 +47,7 @@ public class DataInitializer implements ApplicationRunner {
         seedPermissions();
         migrateManagePermissions();
         seedRolePermissions();
+        patchMissingPermissions();
         patchCashierPermissions();
         patchStatementSequence();
     }
@@ -100,6 +101,10 @@ public class DataInitializer implements ApplicationRunner {
             {"PRODUCT_CREATE", "Create products", "PRODUCT", "CREATE"},
             {"PRODUCT_UPDATE", "Update products", "PRODUCT", "UPDATE"},
             {"PRODUCT_DELETE", "Delete products", "PRODUCT", "DELETE"},
+            {"VEHICLE_VIEW", "View vehicles", "VEHICLE", "VIEW"},
+            {"VEHICLE_CREATE", "Create vehicles", "VEHICLE", "CREATE"},
+            {"VEHICLE_UPDATE", "Update vehicles", "VEHICLE", "UPDATE"},
+            {"VEHICLE_DELETE", "Delete vehicles", "VEHICLE", "DELETE"},
             {"STATION_VIEW", "View station layout", "STATION", "VIEW"},
             {"STATION_CREATE", "Create station layout", "STATION", "CREATE"},
             {"STATION_UPDATE", "Update station layout", "STATION", "UPDATE"},
@@ -189,6 +194,25 @@ public class DataInitializer implements ApplicationRunner {
      * Ensure CASHIER role has CUSTOMER_VIEW (needed for invoice customer search).
      * Runs idempotently on every startup to patch existing deployments.
      */
+    /**
+     * Ensure all required permissions exist (handles adding new permissions to existing deployments).
+     */
+    private void patchMissingPermissions() {
+        String[][] required = {
+            {"VEHICLE_VIEW", "View vehicles", "VEHICLE", "VIEW"},
+            {"VEHICLE_CREATE", "Create vehicles", "VEHICLE", "CREATE"},
+            {"VEHICLE_UPDATE", "Update vehicles", "VEHICLE", "UPDATE"},
+            {"VEHICLE_DELETE", "Delete vehicles", "VEHICLE", "DELETE"},
+        };
+        for (String[] p : required) {
+            if (permissionRepository.findByCode(p[0]).isEmpty()) {
+                Permission perm = new Permission(p[0], p[1], p[2], p[3], true);
+                permissionRepository.save(perm);
+                log.info("Created missing permission: {}", p[0]);
+            }
+        }
+    }
+
     private void patchCashierPermissions() {
         Roles cashier = rolesRepository.findByRoleType("CASHIER").orElse(null);
         if (cashier == null) return;
