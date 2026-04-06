@@ -123,6 +123,16 @@ public class ShiftService {
         return saved;
     }
 
+    @Transactional
+    public Shift changeAttendant(Long shiftId, Long attendantId) {
+        Shift shift = repository.findById(shiftId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
+        User attendant = userRepository.findById(attendantId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        shift.setAttendant(attendant);
+        return repository.save(shift);
+    }
+
     public Shift closeShift(Long id) {
         Shift shift = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));

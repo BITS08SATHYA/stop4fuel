@@ -10,6 +10,7 @@ import {
     getActiveShift,
     openShift,
     getShiftCashiers,
+    changeShiftAttendant,
     CashierUser,
     getEAdvancesByShift,
     getEAdvanceSummary,
@@ -61,6 +62,7 @@ import {
     ArrowDownLeft,
     ArrowUpRight,
     TrendingDown,
+    User,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -120,8 +122,9 @@ export default function ShiftsPage() {
     const [activeShift, setActiveShift] = useState<Shift | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Cashier selection for opening shift
+    // Cashier selection for opening shift or changing attendant
     const [showCashierModal, setShowCashierModal] = useState(false);
+    const [cashierModalMode, setCashierModalMode] = useState<"open" | "change">("open");
     const [cashiers, setCashiers] = useState<CashierUser[]>([]);
     const [selectedCashierId, setSelectedCashierId] = useState<number | "">("");
     const [openingShift, setOpeningShift] = useState(false);
@@ -266,20 +269,23 @@ export default function ShiftsPage() {
         loadData();
     }, [loadData]);
 
+    const showCashierSelection = async (mode: "open" | "change") => {
+        try {
+            const list = await getShiftCashiers();
+            setCashiers(list);
+            setSelectedCashierId(mode === "change" && activeShift?.attendant?.id ? activeShift.attendant.id : "");
+            setCashierModalMode(mode);
+            setShowCashierModal(true);
+        } catch (err: any) {
+            alert(err.message || "Failed to load cashiers");
+        }
+    };
+
     const handleOpenShift = async () => {
         const isOwnerOrAdmin = user?.role === "OWNER" || user?.role === "ADMIN";
         if (isOwnerOrAdmin) {
-            // Show cashier selection modal
-            try {
-                const list = await getShiftCashiers();
-                setCashiers(list);
-                setSelectedCashierId("");
-                setShowCashierModal(true);
-            } catch (err: any) {
-                alert(err.message || "Failed to load cashiers");
-            }
+            showCashierSelection("open");
         } else {
-            // Cashier opens directly — backend auto-assigns them
             try {
                 const shift = await openShift({});
                 setActiveShift(shift);
@@ -290,19 +296,24 @@ export default function ShiftsPage() {
         }
     };
 
-    const handleConfirmOpenShift = async () => {
+    const handleConfirmCashierAction = async () => {
         if (!selectedCashierId) {
-            alert("Please select a cashier for this shift");
+            alert("Please select a cashier");
             return;
         }
         setOpeningShift(true);
         try {
-            const shift = await openShift({ attendant: { id: Number(selectedCashierId), name: "" } } as any);
-            setActiveShift(shift);
+            if (cashierModalMode === "open") {
+                const shift = await openShift({ attendant: { id: Number(selectedCashierId), name: "" } } as any);
+                setActiveShift(shift);
+                await loadAllData(shift.id);
+            } else if (activeShift) {
+                const updated = await changeShiftAttendant(activeShift.id, Number(selectedCashierId));
+                setActiveShift(updated);
+            }
             setShowCashierModal(false);
-            await loadAllData(shift.id);
         } catch (err: any) {
-            alert(err.message || "Failed to open shift");
+            alert(err.message || "Failed to update shift");
         } finally {
             setOpeningShift(false);
         }
@@ -502,6 +513,15 @@ export default function ShiftsPage() {
                                         Active
                                     </span>
                                 </div>
+                                <PermissionGate permission="SHIFT_UPDATE">
+                                    <button
+                                        onClick={() => showCashierSelection("change")}
+                                        className="px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors text-sm"
+                                    >
+                                        <User className="w-4 h-4" />
+                                        Change Cashier
+                                    </button>
+                                </PermissionGate>
                                 <PermissionGate permission="SHIFT_UPDATE">
                                     <button
                                         onClick={handleCloseShift}
@@ -1224,7 +1244,7 @@ export default function ShiftsPage() {
             <Modal
                 isOpen={showCashierModal}
                 onClose={() => setShowCashierModal(false)}
-                title="Select Cashier for Shift"
+                title={cashierModalMode === "open" ? "Select Cashier for Shift" : "Change Shift Cashier"}
             >
                 <div className="p-6 space-y-4">
                     <p className="text-sm text-muted-foreground">Choose which cashier will be in charge of this shift.</p>
@@ -1264,11 +1284,13 @@ export default function ShiftsPage() {
                             Cancel
                         </button>
                         <button
-                            onClick={handleConfirmOpenShift}
+                            onClick={handleConfirmCashierAction}
                             disabled={!selectedCashierId || openingShift}
                             className="btn-gradient px-6 py-2 rounded-lg font-medium disabled:opacity-50"
                         >
-                            {openingShift ? "Opening..." : "Open Shift"}
+                            {openingShift
+                                ? (cashierModalMode === "open" ? "Opening..." : "Updating...")
+                                : (cashierModalMode === "open" ? "Open Shift" : "Update Cashier")}
                         </button>
                     </div>
                 </div>
