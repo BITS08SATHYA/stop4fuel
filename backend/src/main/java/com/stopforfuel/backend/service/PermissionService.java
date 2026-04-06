@@ -47,6 +47,11 @@ public class PermissionService {
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = {"permissions", "rolePermissions"}, allEntries = true)
+    public void clearCaches() {
+        // Spring handles cache eviction via annotation
+    }
+
     @Transactional
     @CacheEvict(value = {"permissions", "rolePermissions"}, allEntries = true)
     public void grantPermission(Long roleId, Long permissionId) {
