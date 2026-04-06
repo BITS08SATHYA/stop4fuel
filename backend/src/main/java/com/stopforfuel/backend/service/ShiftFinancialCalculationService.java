@@ -63,6 +63,8 @@ public class ShiftFinancialCalculationService {
                 eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.BANK_TRANSFER), "Bank Transfer Advance", ++sortOrder);
         addTransactionLineItem(lineItems, report, shiftId, "CHEQUE",
                 eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.CHEQUE), "Cheque Advance", ++sortOrder);
+        addTransactionLineItem(lineItems, report, shiftId, "PAYTM",
+                eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.PAYTM), "PayTM Advance", ++sortOrder);
 
         // 11. Operational Advances (Cash, Salary, Management)
         List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(shiftId);

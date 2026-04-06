@@ -7,5 +7,6 @@ public enum PaymentMode {
     CHEQUE,
     CCMS,
     BANK_TRANSFER,
-    NEFT
+    NEFT,
+    PAYTM
 }

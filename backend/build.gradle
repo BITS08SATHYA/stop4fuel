@@ -30,6 +30,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'software.amazon.awssdk:cognitoidentityprovider:2.25.16'
 	implementation 'com.bucket4j:bucket4j-core:8.10.1'
 	implementation 'org.apache.pdfbox:pdfbox:3.0.1'

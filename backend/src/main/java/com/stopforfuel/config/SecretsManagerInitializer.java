@@ -38,7 +38,9 @@ public class SecretsManagerInitializer implements EnvironmentPostProcessor {
             "COGNITO_ISSUER_URI", "spring.security.oauth2.resourceserver.jwt.issuer-uri",
             "COGNITO_JWK_URI", "spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
             "COGNITO_USER_POOL_ID", "app.cognito.user-pool-id",
-            "COGNITO_CLIENT_ID", "app.cognito.client-id"
+            "COGNITO_CLIENT_ID", "app.cognito.client-id",
+            "PAYTM_MERCHANT_ID", "app.paytm.merchant-id",
+            "PAYTM_MERCHANT_KEY", "app.paytm.merchant-key"
     );
 
     @Override

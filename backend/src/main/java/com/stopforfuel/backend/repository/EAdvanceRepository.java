@@ -31,4 +31,16 @@ public interface EAdvanceRepository extends ScidRepository<EAdvance> {
     BigDecimal sumByShiftAndType(@Param("shiftId") Long shiftId, @Param("type") PaymentMode type);
 
     Optional<EAdvance> findByPaymentId(Long paymentId);
+
+    @Query("SELECT e FROM EAdvance e WHERE e.scid = :scid AND e.advanceType = 'PAYTM' " +
+           "AND (e.tid = :ref OR e.remarks LIKE CONCAT('%', :ref, '%'))")
+    List<EAdvance> findByPaytmReference(@Param("scid") Long scid, @Param("ref") String ref);
+
+    @Query("SELECT e FROM EAdvance e WHERE e.scid = :scid AND e.advanceType = 'PAYTM' " +
+           "AND e.amount = :amount AND e.transactionDate BETWEEN :from AND :to " +
+           "AND e.id NOT IN (SELECT pt.matchedEAdvanceId FROM PaytmTransaction pt WHERE pt.matchedEAdvanceId IS NOT NULL)")
+    List<EAdvance> findUnmatchedPaytmByAmountAndTimeRange(@Param("scid") Long scid,
+                                                          @Param("amount") BigDecimal amount,
+                                                          @Param("from") LocalDateTime from,
+                                                          @Param("to") LocalDateTime to);
 }

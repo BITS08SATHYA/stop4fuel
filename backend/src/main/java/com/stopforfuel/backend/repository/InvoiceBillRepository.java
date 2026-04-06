@@ -392,4 +392,21 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
 
     // Unassigned invoices in a shift (available for advance assignment)
     List<InvoiceBill> findByShiftIdAndOperationalAdvanceIsNull(Long shiftId);
+
+    // PayTM reconciliation: find PAYTM invoices not matched to any PaytmTransaction
+    @Query("SELECT i FROM InvoiceBill i WHERE i.scid = :scid AND i.paymentMode = 'PAYTM' " +
+           "AND i.date BETWEEN :from AND :to " +
+           "AND i.id NOT IN (SELECT pt.matchedInvoiceId FROM PaytmTransaction pt WHERE pt.matchedInvoiceId IS NOT NULL)")
+    List<InvoiceBill> findUnmatchedPaytmInvoices(@Param("scid") Long scid,
+                                                  @Param("from") LocalDateTime from,
+                                                  @Param("to") LocalDateTime to);
+
+    // PayTM reconciliation: find PAYTM invoices by amount and date for matching
+    @Query("SELECT i FROM InvoiceBill i WHERE i.scid = :scid AND i.paymentMode = 'PAYTM' " +
+           "AND i.netAmount = :amount AND i.date BETWEEN :from AND :to " +
+           "AND i.id NOT IN (SELECT pt.matchedInvoiceId FROM PaytmTransaction pt WHERE pt.matchedInvoiceId IS NOT NULL)")
+    List<InvoiceBill> findUnmatchedPaytmByAmountAndDateRange(@Param("scid") Long scid,
+                                                              @Param("amount") BigDecimal amount,
+                                                              @Param("from") LocalDateTime from,
+                                                              @Param("to") LocalDateTime to);
 }

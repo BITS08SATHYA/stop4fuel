@@ -105,6 +105,7 @@ public class EAdvanceService {
             "cheque", repository.sumByShiftAndType(shiftId, PaymentMode.CHEQUE),
             "ccms", repository.sumByShiftAndType(shiftId, PaymentMode.CCMS),
             "bank_transfer", repository.sumByShiftAndType(shiftId, PaymentMode.BANK_TRANSFER),
+            "paytm", repository.sumByShiftAndType(shiftId, PaymentMode.PAYTM),
             "total", repository.sumAllByShift(shiftId)
         );
     }
