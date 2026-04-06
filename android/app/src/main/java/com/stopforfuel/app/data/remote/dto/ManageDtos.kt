@@ -82,7 +82,8 @@ data class ProductIdRef(val id: Long)
 // --- Force Unblock ---
 
 data class ForceUnblockRequest(
-    val forceUnblocked: Boolean
+    val enabled: Boolean,
+    val byUser: String = "Mobile App"
 )
 
 // --- Vehicle Creation ---
