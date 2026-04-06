@@ -535,22 +535,24 @@ export default function EAdvancesPage() {
                                                         {entry.shiftId ? `#${entry.shiftId}` : "-"}
                                                     </td>
                                                     <td className="px-5 py-3 text-center">
-                                                        <PermissionGate permission="SHIFT_UPDATE">
-                                                            <div className="flex items-center justify-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all">
+                                                        <div className="flex items-center justify-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all">
+                                                            <PermissionGate permission="SHIFT_UPDATE">
                                                                 <button
                                                                     onClick={() => handleOpenEdit(entry)}
                                                                     className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-all"
                                                                 >
                                                                     <Pencil className="w-3.5 h-3.5" />
                                                                 </button>
+                                                            </PermissionGate>
+                                                            <PermissionGate permission="SHIFT_DELETE">
                                                                 <button
                                                                     onClick={() => entry.id && handleDelete(entry.id)}
                                                                     className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all"
                                                                 >
                                                                     <Trash2 className="w-3.5 h-3.5" />
                                                                 </button>
-                                                            </div>
-                                                        </PermissionGate>
+                                                            </PermissionGate>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );
