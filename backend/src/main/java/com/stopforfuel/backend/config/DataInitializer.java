@@ -205,12 +205,13 @@ public class DataInitializer implements ApplicationRunner {
                 patched = true;
             }
         }
+        // Always clear permission caches on startup to ensure consistency
+        var permCache = cacheManager.getCache("permissions");
+        if (permCache != null) permCache.clear();
+        var roleCache = cacheManager.getCache("rolePermissions");
+        if (roleCache != null) roleCache.clear();
         if (patched) {
-            var permCache = cacheManager.getCache("permissions");
-            if (permCache != null) permCache.clear();
-            var roleCache = cacheManager.getCache("rolePermissions");
-            if (roleCache != null) roleCache.clear();
-            log.info("Cleared permission caches after CASHIER patch");
+            log.info("Patched CASHIER permissions and cleared caches");
         }
     }
 
