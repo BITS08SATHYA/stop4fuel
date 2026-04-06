@@ -35,7 +35,8 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CREDIT'")
     BigDecimal sumCreditBillsByShift(@Param("shiftId") Long shiftId);
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
-    List<InvoiceBill> findByStatementId(Long statementId);
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.statement.id = :statementId ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
+    List<InvoiceBill> findByStatementId(@Param("statementId") Long statementId);
 
     // Find unpaid credit bills for a customer in a date range that are not yet linked to a statement
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
@@ -43,7 +44,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
-           "ORDER BY ib.date ASC")
+           "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findUnlinkedCreditBills(
             @Param("customerId") Long customerId,
             @Param("fromDate") LocalDateTime fromDate,
@@ -56,7 +57,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ib.vehicle.id = :vehicleId " +
-           "ORDER BY ib.date ASC")
+           "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findUnlinkedCreditBillsByVehicle(
             @Param("customerId") Long customerId,
             @Param("fromDate") LocalDateTime fromDate,
@@ -71,7 +72,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus = 'NOT_PAID' " +
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ip.product.id = :productId " +
-           "ORDER BY ib.date ASC")
+           "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findUnlinkedCreditBillsByProduct(
             @Param("customerId") Long customerId,
             @Param("fromDate") LocalDateTime fromDate,
@@ -87,7 +88,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.date BETWEEN :fromDate AND :toDate " +
            "AND ib.vehicle.id = :vehicleId " +
            "AND ip.product.id = :productId " +
-           "ORDER BY ib.date ASC")
+           "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findUnlinkedCreditBillsByVehicleAndProduct(
             @Param("customerId") Long customerId,
             @Param("fromDate") LocalDateTime fromDate,
@@ -100,7 +101,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.id IN :billIds " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.paymentStatus = 'NOT_PAID' " +
-           "ORDER BY ib.date ASC")
+           "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findUnlinkedCreditBillsByIds(
             @Param("billIds") List<Long> billIds);
 
