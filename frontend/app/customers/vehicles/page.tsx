@@ -325,7 +325,7 @@ export default function VehiclesPage() {
                             Manage fleet vehicles and their customer associations.
                         </p>
                     </div>
-                    <PermissionGate permission="VEHICLE_MANAGE">
+                    <PermissionGate permission="VEHICLE_CREATE">
                         <button
                             onClick={() => {
                                 setFormData({});
@@ -411,7 +411,7 @@ export default function VehiclesPage() {
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <PermissionGate permission="VEHICLE_MANAGE">
+                                            <PermissionGate permission="VEHICLE_UPDATE">
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => handleEdit(vehicle)}

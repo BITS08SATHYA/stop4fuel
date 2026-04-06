@@ -261,7 +261,7 @@ export default function IncentivesPage() {
                             Manage discount rules across all customers and products.
                         </p>
                     </div>
-                    <PermissionGate permission="CUSTOMER_MANAGE">
+                    <PermissionGate permission="CUSTOMER_CREATE">
                         <button
                             onClick={handleOpenCreate}
                             className="btn-gradient px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -408,7 +408,7 @@ export default function IncentivesPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-3 text-center">
-                                                        <PermissionGate permission="CUSTOMER_MANAGE">
+                                                        <PermissionGate permission="CUSTOMER_UPDATE">
                                                             <div className="flex items-center justify-center gap-1">
                                                                 <button
                                                                     onClick={() => handleOpenEdit(inc)}

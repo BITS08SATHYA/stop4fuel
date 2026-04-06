@@ -136,7 +136,7 @@ export default function TanksPage() {
                             Manage underground fuel storage tanks and capacities.
                         </p>
                     </div>
-                    <PermissionGate permission="STATION_MANAGE">
+                    <PermissionGate permission="STATION_CREATE">
                         <button
                             onClick={() => openModal()}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -330,7 +330,7 @@ export default function TanksPage() {
                                     </div>
                                 </div>
 
-                                <PermissionGate permission="STATION_MANAGE">
+                                <PermissionGate permission="STATION_UPDATE">
                                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => openModal(tank)} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition-colors">
                                             <Edit2 className="w-4 h-4" />

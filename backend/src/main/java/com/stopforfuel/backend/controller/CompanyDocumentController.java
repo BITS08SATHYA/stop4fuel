@@ -34,20 +34,20 @@ public class CompanyDocumentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_CREATE')")
     public CompanyDocument createDocument(@PathVariable Long companyId, @Valid @RequestBody CompanyDocument document) {
         return documentService.createDocument(companyId, document);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
     public CompanyDocument updateDocument(@PathVariable Long companyId, @PathVariable Long id,
                                           @Valid @RequestBody CompanyDocument document) {
         return documentService.updateDocument(id, document);
     }
 
     @PostMapping("/{id}/upload")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
     public CompanyDocument uploadFile(@PathVariable Long companyId, @PathVariable Long id,
                                       @RequestParam("file") MultipartFile file) throws IOException {
         return documentService.uploadFile(id, file);
@@ -61,7 +61,7 @@ public class CompanyDocumentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_DELETE')")
     public void deleteDocument(@PathVariable Long companyId, @PathVariable Long id) {
         documentService.deleteDocument(id);
     }

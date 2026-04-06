@@ -141,7 +141,7 @@ export default function SuppliersPage() {
                             Manage entities that supply oil, lubricants, and other retail products.
                         </p>
                     </div>
-                    <PermissionGate permission="STATION_MANAGE">
+                    <PermissionGate permission="STATION_CREATE">
                         <button
                             onClick={() => { resetForm(); setIsModalOpen(true); }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -236,7 +236,7 @@ export default function SuppliersPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <PermissionGate permission="STATION_MANAGE">
+                                                <PermissionGate permission="STATION_UPDATE">
                                                     <button onClick={() => handleToggleStatus(s.id)}>
                                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase cursor-pointer hover:opacity-80 transition-opacity ${
                                                             s.active ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
@@ -247,7 +247,7 @@ export default function SuppliersPage() {
                                                 </PermissionGate>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <PermissionGate permission="STATION_MANAGE">
+                                                <PermissionGate permission="STATION_UPDATE">
                                                     <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={() => handleEdit(s)}

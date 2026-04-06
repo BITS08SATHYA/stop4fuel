@@ -206,7 +206,7 @@ function CustomerGroupMapping() {
                     className="min-w-[160px]"
                 />
 
-                <PermissionGate permission="CUSTOMER_MANAGE">
+                <PermissionGate permission="CUSTOMER_UPDATE">
                     <button
                         onClick={handleAssign}
                         disabled={loading || selectedIds.size === 0 || !targetGroupId}
@@ -449,7 +449,7 @@ function VehicleCustomerMapping() {
                     placeholder="Search customer..."
                 />
 
-                <PermissionGate permission="VEHICLE_MANAGE">
+                <PermissionGate permission="VEHICLE_UPDATE">
                     <button
                         onClick={handleAssign}
                         disabled={loading || selectedIds.size === 0 || !targetCustomerId}

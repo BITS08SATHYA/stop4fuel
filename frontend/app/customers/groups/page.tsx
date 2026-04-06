@@ -130,7 +130,7 @@ export default function GroupsPage() {
                             Manage logical groupings of customers for easier billing and reporting.
                         </p>
                     </div>
-                    <PermissionGate permission="CUSTOMER_MANAGE">
+                    <PermissionGate permission="CUSTOMER_CREATE">
                         <button
                             onClick={() => {
                                 setFormData({});
@@ -187,7 +187,7 @@ export default function GroupsPage() {
                                         <td className="px-6 py-4 font-medium">{group.groupName}</td>
                                         <td className="px-6 py-4 text-muted-foreground">{group.description || "-"}</td>
                                         <td className="px-6 py-4 text-right">
-                                            <PermissionGate permission="CUSTOMER_MANAGE">
+                                            <PermissionGate permission="CUSTOMER_UPDATE">
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => handleEdit(group)}

@@ -426,7 +426,7 @@ export default function PaymentsPage() {
                             <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                             {exportingExcel ? "Exporting..." : "Excel"}
                         </button>
-                        <PermissionGate permission="PAYMENT_MANAGE">
+                        <PermissionGate permission="PAYMENT_CREATE">
                             <button
                                 onClick={() => setShowPayModal(true)}
                                 className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -629,7 +629,7 @@ export default function PaymentsPage() {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
-                                                    <PermissionGate permission="PAYMENT_MANAGE">
+                                                    <PermissionGate permission="PAYMENT_DELETE">
                                                         <button
                                                             onClick={() => handleDeletePayment(p.id!)}
                                                             className="p-1.5 rounded-md hover:bg-rose-500/20 text-rose-400 transition-colors"
@@ -1104,7 +1104,7 @@ export default function PaymentsPage() {
                                 <Download className="w-4 h-4 text-primary" />
                                 Download Receipt
                             </button>
-                            <PermissionGate permission="PAYMENT_MANAGE">
+                            <PermissionGate permission="PAYMENT_DELETE">
                                 <button
                                     onClick={() => handleDeletePayment(viewPayment.id!)}
                                     className="flex items-center gap-2 px-3 py-2 rounded-lg border border-rose-500/30 text-sm text-rose-400 hover:bg-rose-500/20 transition-colors"

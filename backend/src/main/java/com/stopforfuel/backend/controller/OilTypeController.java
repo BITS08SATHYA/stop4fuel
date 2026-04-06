@@ -36,25 +36,25 @@ public class OilTypeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_CREATE')")
     public OilTypeDTO create(@Valid @RequestBody OilType oilType) {
         return OilTypeDTO.from(service.createOilType(oilType));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public OilTypeDTO update(@PathVariable Long id, @Valid @RequestBody OilType oilType) {
         return OilTypeDTO.from(service.updateOilType(id, oilType));
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public OilTypeDTO toggleStatus(@PathVariable Long id) {
         return OilTypeDTO.from(service.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_DELETE')")
     public void delete(@PathVariable Long id) {
         service.deleteOilType(id);
     }

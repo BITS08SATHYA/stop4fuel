@@ -24,7 +24,7 @@ public class UpiCompanyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SETTINGS_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_CREATE')")
     public UpiCompany create(@Valid @RequestBody UpiCompany upiCompany) {
         return repository.save(upiCompany);
     }

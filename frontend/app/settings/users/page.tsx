@@ -202,7 +202,7 @@ export default function UsersPage() {
                         <h1 className="text-2xl font-bold text-foreground">User Management</h1>
                         <p className="text-sm text-muted-foreground">Manage all users - employees and customers</p>
                     </div>
-                    <PermissionGate permission="USER_MANAGE">
+                    <PermissionGate permission="USER_CREATE">
                         <button
                             onClick={() => setShowCreateModal(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
@@ -300,7 +300,7 @@ export default function UsersPage() {
                                                     {formatRelativeTime(user.lastLoginAt)}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <PermissionGate permission="USER_MANAGE">
+                                                    <PermissionGate permission="USER_UPDATE">
                                                         <div className="flex items-center gap-1">
                                                             <button
                                                                 onClick={() => openEditModal(user)}

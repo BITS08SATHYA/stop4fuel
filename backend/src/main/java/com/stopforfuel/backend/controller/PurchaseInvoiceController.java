@@ -77,32 +77,32 @@ public class PurchaseInvoiceController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_CREATE')")
     public PurchaseInvoiceDTO create(@Valid @RequestBody PurchaseInvoice invoice) {
         return PurchaseInvoiceDTO.from(service.save(invoice));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_UPDATE')")
     public PurchaseInvoiceDTO update(@PathVariable Long id, @Valid @RequestBody PurchaseInvoice invoice) {
         return PurchaseInvoiceDTO.from(service.update(id, invoice));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_DELETE')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_UPDATE')")
     public PurchaseInvoiceDTO updateStatus(@PathVariable Long id, @RequestParam String status) {
         return PurchaseInvoiceDTO.from(service.updateStatus(id, status));
     }
 
     @PostMapping("/{id}/upload-pdf")
-    @PreAuthorize("hasPermission(null, 'PURCHASE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_UPDATE')")
     public ResponseEntity<PurchaseInvoiceDTO> uploadPdf(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try {
             PurchaseInvoice updated = service.uploadPdf(id, file);

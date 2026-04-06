@@ -49,25 +49,25 @@ public class TankController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_CREATE')")
     public TankDTO createTank(@Valid @RequestBody Tank tank) {
         return TankDTO.from(tankService.createTank(tank));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_UPDATE')")
     public TankDTO updateTank(@PathVariable Long id, @Valid @RequestBody Tank tank) {
         return TankDTO.from(tankService.updateTank(id, tank));
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_UPDATE')")
     public TankDTO toggleStatus(@PathVariable Long id) {
         return TankDTO.from(tankService.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_DELETE')")
     public ResponseEntity<?> deleteTank(@PathVariable Long id) {
         tankService.deleteTank(id);
         return ResponseEntity.ok().build();

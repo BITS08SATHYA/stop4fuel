@@ -37,14 +37,14 @@ public class StockAlertController {
     }
 
     @PatchMapping("/{id}/acknowledge")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_UPDATE')")
     public StockAlertDTO acknowledgeAlert(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
         String acknowledgedBy = body != null ? body.getOrDefault("acknowledgedBy", "MANUAL") : "MANUAL";
         return StockAlertDTO.from(stockAlertService.acknowledgeAlert(id, acknowledgedBy));
     }
 
     @PostMapping("/acknowledge-all")
-    @PreAuthorize("hasPermission(null, 'STATION_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'STATION_UPDATE')")
     public ResponseEntity<?> acknowledgeAll(@RequestBody(required = false) Map<String, String> body) {
         String acknowledgedBy = body != null ? body.getOrDefault("acknowledgedBy", "MANUAL") : "MANUAL";
         stockAlertService.acknowledgeAllAlerts(acknowledgedBy);

@@ -102,7 +102,7 @@ public class StatementController {
      * Optional filters: vehicleId, productId, billIds (comma-separated)
      */
     @PostMapping("/generate")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_CREATE')")
     public ResponseEntity<StatementDTO> generate(
             @RequestParam Long customerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -128,7 +128,7 @@ public class StatementController {
      * Remove a disputed bill from a statement and recalculate totals.
      */
     @DeleteMapping("/{statementId}/bills/{billId}")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_DELETE')")
     public ResponseEntity<StatementDTO> removeBillFromStatement(
             @PathVariable Long statementId,
             @PathVariable Long billId) {
@@ -137,7 +137,7 @@ public class StatementController {
     }
 
     @PostMapping("/{id}/generate-pdf")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
     public ResponseEntity<StatementDTO> generatePdf(@PathVariable Long id) {
         Statement updated = statementService.generateAndStorePdf(id);
         return ResponseEntity.ok(StatementDTO.from(updated));
@@ -151,21 +151,21 @@ public class StatementController {
     }
 
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
     public ResponseEntity<StatementDTO> approve(@PathVariable Long id) {
         Statement approved = statementService.approveStatement(id);
         return ResponseEntity.ok(StatementDTO.from(approved));
     }
 
     @PostMapping("/auto-generate")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_CREATE')")
     public ResponseEntity<Map<String, Integer>> autoGenerate() {
         int count = statementAutoGenerationService.generateDraftsManually(SecurityUtils.getScid());
         return ResponseEntity.ok(Map.of("count", count));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_DELETE')")
     public void delete(@PathVariable Long id) {
         statementService.deleteStatement(id);
     }

@@ -100,4 +100,46 @@ public class PermissionService {
     public List<Permission> getAllPermissions() {
         return permissionRepository.findAllByOrderByModuleAscCodeAsc();
     }
+
+    @Transactional
+    @CacheEvict(value = {"permissions", "rolePermissions"}, allEntries = true)
+    public List<Permission> createModulePermissions(String module, String description) {
+        String mod = module.toUpperCase().trim();
+        if (permissionRepository.existsByCode(mod + "_VIEW")) {
+            throw new RuntimeException("Module '" + mod + "' already exists");
+        }
+
+        String desc = (description != null && !description.isBlank()) ? description : mod.toLowerCase();
+        String[][] actions = {
+            {"VIEW", "View " + desc},
+            {"CREATE", "Create " + desc},
+            {"UPDATE", "Update " + desc},
+            {"DELETE", "Delete " + desc}
+        };
+
+        List<Permission> created = new ArrayList<>();
+        for (String[] action : actions) {
+            Permission p = new Permission(
+                mod + "_" + action[0], action[1], mod, action[0], false
+            );
+            created.add(permissionRepository.save(p));
+        }
+        return created;
+    }
+
+    @Transactional
+    @CacheEvict(value = {"permissions", "rolePermissions"}, allEntries = true)
+    public void deleteModulePermissions(String module) {
+        List<Permission> perms = permissionRepository.findByModule(module.toUpperCase());
+        if (perms.isEmpty()) {
+            throw new RuntimeException("Module not found: " + module);
+        }
+        if (perms.stream().anyMatch(Permission::isSystemDefault)) {
+            throw new RuntimeException("Cannot delete system default module: " + module);
+        }
+        for (Permission p : perms) {
+            rolePermissionRepository.deleteByPermissionId(p.getId());
+        }
+        permissionRepository.deleteByModule(module.toUpperCase());
+    }
 }

@@ -30,19 +30,19 @@ public class IncentiveController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_CREATE')")
     public Incentive create(@Valid @RequestBody Incentive incentive) {
         return service.create(incentive);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
     public Incentive update(@PathVariable Long id, @Valid @RequestBody Incentive incentive) {
         return service.update(id, incentive);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_DELETE')")
     public void deactivate(@PathVariable Long id) {
         service.deactivate(id);
     }

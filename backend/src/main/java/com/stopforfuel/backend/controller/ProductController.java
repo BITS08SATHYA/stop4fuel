@@ -49,25 +49,25 @@ public class ProductController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_CREATE')")
     public ProductDTO createProduct(@Valid @RequestBody Product product) {
         return ProductDTO.from(productService.createProduct(product));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public ProductDTO updateProduct(@PathVariable Long id, @Valid @RequestBody Product product) {
         return ProductDTO.from(productService.updateProduct(id, product));
     }
 
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public ProductDTO toggleStatus(@PathVariable Long id) {
         return ProductDTO.from(productService.toggleStatus(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'PRODUCT_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_DELETE')")
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok().build();

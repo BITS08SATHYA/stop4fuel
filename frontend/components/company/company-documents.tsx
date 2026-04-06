@@ -199,7 +199,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
                     <h2 className="text-base font-semibold">Documents & Certificates</h2>
                     <span className="text-xs text-muted-foreground">({documents.length})</span>
                 </div>
-                <PermissionGate permission="SETTINGS_MANAGE">
+                <PermissionGate permission="SETTINGS_CREATE">
                     <button
                         onClick={() => { closeForm(); setShowForm(true); }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
@@ -358,7 +358,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
                                 {/* Actions */}
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                     {/* Upload file */}
-                                    <PermissionGate permission="SETTINGS_MANAGE">
+                                    <PermissionGate permission="SETTINGS_UPDATE">
                                         <input
                                             type="file"
                                             id={`doc-upload-${doc.id}`}
@@ -396,7 +396,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
                                     )}
 
                                     {/* Edit */}
-                                    <PermissionGate permission="SETTINGS_MANAGE">
+                                    <PermissionGate permission="SETTINGS_UPDATE">
                                         <button
                                             onClick={() => openEdit(doc)}
                                             className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -407,7 +407,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
                                     </PermissionGate>
 
                                     {/* Delete */}
-                                    <PermissionGate permission="SETTINGS_MANAGE">
+                                    <PermissionGate permission="SETTINGS_DELETE">
                                         <button
                                             onClick={() => setDeleteId(doc.id)}
                                             className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/30 transition-colors text-muted-foreground hover:text-red-600"

@@ -63,19 +63,19 @@ public class EmployeeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public EmployeeDetailDTO createEmployee(@Valid @RequestBody Employee employee) {
         return EmployeeDetailDTO.from(employeeService.createEmployee(employee));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<EmployeeDetailDTO> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
         return ResponseEntity.ok(EmployeeDetailDTO.from(employeeService.updateEmployee(id, employee)));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_DELETE')")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok().build();
@@ -88,7 +88,7 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/salary-revision")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public SalaryHistory addSalaryRevision(@PathVariable Long id, @Valid @RequestBody SalaryHistory history) {
         Employee employee = new Employee();
         employee.setId(id);
@@ -103,7 +103,7 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/advances")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
     public OperationalAdvance addAdvance(@PathVariable Long id, @Valid @RequestBody OperationalAdvance advance) {
         Employee employee = new Employee();
         employee.setId(id);
@@ -112,7 +112,7 @@ public class EmployeeController {
     }
 
     @PatchMapping("/advances/{advanceId}/status")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<OperationalAdvance> updateAdvanceStatus(@PathVariable Long advanceId, @RequestParam String status) {
         try {
             return ResponseEntity.ok(employeeService.updateAdvanceStatus(advanceId, status));
@@ -124,7 +124,7 @@ public class EmployeeController {
     // ── File Upload Endpoints ───────────────────────────────────
 
     @PostMapping("/{id}/upload-photo")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<?> uploadPhoto(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try {
             return ResponseEntity.ok(employeeService.uploadPhoto(id, file));
@@ -136,7 +136,7 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/upload-aadhar-doc")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<?> uploadAadharDoc(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try {
             return ResponseEntity.ok(employeeService.uploadAadharDoc(id, file));
@@ -148,7 +148,7 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/upload-pan-doc")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_MANAGE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
     public ResponseEntity<?> uploadPanDoc(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try {
             return ResponseEntity.ok(employeeService.uploadPanDoc(id, file));

@@ -188,7 +188,7 @@ export default function ExpensesPage() {
                         </h1>
                         <p className="text-muted-foreground mt-2">Track and manage station operating expenses</p>
                     </div>
-                    <PermissionGate permission="FINANCE_MANAGE">
+                    <PermissionGate permission="FINANCE_CREATE">
                         <button
                             onClick={() => { resetForm(); setEditingExpense(null); setIsModalOpen(true); }}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -281,10 +281,10 @@ export default function ExpensesPage() {
                                             <td className="px-6 py-4 text-right font-bold text-primary">{formatRupees(exp.amount || 0)}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                    <PermissionGate permission="FINANCE_UPDATE">
                                                         <button onClick={() => handleEdit(exp)} className="p-2 rounded-lg hover:bg-white/10"><Pencil className="w-4 h-4" /></button>
                                                     </PermissionGate>
-                                                    <PermissionGate permission="FINANCE_MANAGE">
+                                                    <PermissionGate permission="FINANCE_DELETE">
                                                         <button onClick={() => handleDelete(exp.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500"><Trash2 className="w-4 h-4" /></button>
                                                     </PermissionGate>
                                                 </div>
