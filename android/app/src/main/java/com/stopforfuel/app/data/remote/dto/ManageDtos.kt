@@ -78,3 +78,20 @@ data class CreatePriceHistoryRequest(
 )
 
 data class ProductIdRef(val id: Long)
+
+// --- Force Unblock ---
+
+data class ForceUnblockRequest(
+    val forceUnblocked: Boolean
+)
+
+// --- Vehicle Creation ---
+
+data class CreateVehicleRequest(
+    val vehicleNumber: String,
+    val customer: IdRef,
+    val vehicleType: IdRef? = null,
+    val maxLitersPerMonth: BigDecimal? = null
+)
+
+data class IdRef(val id: Long)
