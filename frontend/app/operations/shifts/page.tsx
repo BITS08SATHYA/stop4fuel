@@ -127,6 +127,7 @@ export default function ShiftsPage() {
     const [cashierModalMode, setCashierModalMode] = useState<"open" | "change">("open");
     const [cashiers, setCashiers] = useState<CashierUser[]>([]);
     const [selectedCashierId, setSelectedCashierId] = useState<number | "">("");
+    const [cashierSearch, setCashierSearch] = useState("");
     const [openingShift, setOpeningShift] = useState(false);
 
     // All data
@@ -275,6 +276,7 @@ export default function ShiftsPage() {
             setCashiers(list);
             setSelectedCashierId(mode === "change" && activeShift?.attendant?.id ? activeShift.attendant.id : "");
             setCashierModalMode(mode);
+            setCashierSearch("");
             setShowCashierModal(true);
         } catch (err: any) {
             alert(err.message || "Failed to load cashiers");
@@ -1248,14 +1250,27 @@ export default function ShiftsPage() {
             >
                 <div className="p-6 space-y-4">
                     <p className="text-sm text-muted-foreground">Choose which cashier will be in charge of this shift.</p>
-                    <div className="space-y-2">
-                        {cashiers.map(c => (
+                    <input
+                        type="text"
+                        placeholder="Search by name or phone..."
+                        value={cashierSearch}
+                        onChange={(e) => setCashierSearch(e.target.value)}
+                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                        {cashiers
+                            .filter(c => {
+                                const q = cashierSearch.toLowerCase();
+                                if (!q) return true;
+                                return c.name?.toLowerCase().includes(q) || c.phone?.includes(q);
+                            })
+                            .map(c => (
                             <button
                                 key={c.id}
                                 onClick={() => setSelectedCashierId(c.id)}
                                 className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between ${
                                     selectedCashierId === c.id
-                                        ? "border-primary bg-primary/10 text-foreground"
+                                        ? "border-orange-500 bg-orange-500/10 text-foreground"
                                         : "border-border hover:bg-muted/50 text-foreground"
                                 }`}
                             >
@@ -1264,7 +1279,7 @@ export default function ShiftsPage() {
                                     <div className="text-xs text-muted-foreground">{c.role}{c.phone ? ` · ${c.phone}` : ""}</div>
                                 </div>
                                 {selectedCashierId === c.id && (
-                                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                    <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
                                         <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                         </svg>
@@ -1272,11 +1287,14 @@ export default function ShiftsPage() {
                                 )}
                             </button>
                         ))}
-                        {cashiers.length === 0 && (
-                            <p className="text-center text-muted-foreground py-4">No active cashiers found</p>
+                        {cashiers.filter(c => {
+                            const q = cashierSearch.toLowerCase();
+                            return !q || c.name?.toLowerCase().includes(q) || c.phone?.includes(q);
+                        }).length === 0 && (
+                            <p className="text-center text-muted-foreground py-4">No cashiers found</p>
                         )}
                     </div>
-                    <div className="flex justify-end gap-3 pt-2">
+                    <div className="flex justify-end gap-3 pt-2 border-t border-border">
                         <button
                             onClick={() => setShowCashierModal(false)}
                             className="px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
