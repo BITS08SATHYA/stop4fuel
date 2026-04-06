@@ -93,5 +93,3 @@ data class CreateVehicleRequest(
     val vehicleType: IdRef? = null,
     val maxLitersPerMonth: BigDecimal? = null
 )
-
-data class IdRef(val id: Long)
