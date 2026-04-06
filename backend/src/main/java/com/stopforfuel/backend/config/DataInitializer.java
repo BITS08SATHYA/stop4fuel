@@ -41,6 +41,7 @@ public class DataInitializer implements ApplicationRunner {
         seedPermissions();
         migrateManagePermissions();
         seedRolePermissions();
+        patchCashierPermissions();
     }
 
     private void seedRoles() {
@@ -177,10 +178,31 @@ public class DataInitializer implements ApplicationRunner {
         }
     }
 
+    /**
+     * Ensure CASHIER role has CUSTOMER_VIEW (needed for invoice customer search).
+     * Runs idempotently on every startup to patch existing deployments.
+     */
+    private void patchCashierPermissions() {
+        Roles cashier = rolesRepository.findByRoleType("CASHIER").orElse(null);
+        if (cashier == null) return;
+        for (String code : List.of("CUSTOMER_VIEW")) {
+            if (!rolePermissionRepository.existsByRoleIdAndPermissionCode(cashier.getId(), code)) {
+                permissionRepository.findByCode(code).ifPresent(p -> {
+                    RolePermission rp = new RolePermission();
+                    rp.setRole(cashier);
+                    rp.setPermission(p);
+                    rolePermissionRepository.save(rp);
+                    log.info("Patched CASHIER: added {}", code);
+                });
+            }
+        }
+    }
+
     private void seedRolePermissions() {
         Map<String, Set<String>> defaults = Map.of(
             "CASHIER", Set.of(
                 "DASHBOARD_VIEW",
+                "CUSTOMER_VIEW",
                 "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
                 "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
                 "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE",

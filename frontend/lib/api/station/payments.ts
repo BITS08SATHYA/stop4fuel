@@ -168,6 +168,21 @@ export const getStatementPdfUrl = (id: number): Promise<string> =>
 export const approveStatement = (id: number): Promise<Statement> =>
     fetchWithAuth(`${API_BASE_URL}/statements/${id}/approve`, { method: 'POST' }).then(handleResponse);
 
+export const regenerateStatement = (
+    statementId: number, fromDate: string, toDate: string,
+    filters?: { vehicleId?: number; productId?: number; billIds?: number[] }
+): Promise<Statement> => {
+    const params = new URLSearchParams({ fromDate, toDate });
+    if (filters?.vehicleId) params.append('vehicleId', String(filters.vehicleId));
+    if (filters?.productId) params.append('productId', String(filters.productId));
+    if (filters?.billIds?.length) {
+        filters.billIds.forEach(id => params.append('billIds', String(id)));
+    }
+    return fetchWithAuth(`${API_BASE_URL}/statements/${statementId}/regenerate?${params}`, {
+        method: 'PUT',
+    }).then(handleResponse);
+};
+
 export const autoGenerateStatementDrafts = (): Promise<{ count: number }> =>
     fetchWithAuth(`${API_BASE_URL}/statements/auto-generate`, { method: 'POST' }).then(handleResponse);
 

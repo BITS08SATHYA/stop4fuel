@@ -116,6 +116,24 @@ public class StatementController {
     }
 
     /**
+     * Regenerate an existing statement with new parameters, keeping the same statement number.
+     * PUT /api/statements/{id}/regenerate?fromDate=2025-06-01&toDate=2025-06-30
+     */
+    @PutMapping("/{id}/regenerate")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    public ResponseEntity<StatementDTO> regenerate(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Long vehicleId,
+            @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) List<Long> billIds) {
+        Statement statement = statementService.regenerateStatement(
+                id, fromDate, toDate, vehicleId, productId, billIds);
+        return ResponseEntity.ok(StatementDTO.from(statement));
+    }
+
+    /**
      * Get all bills linked to a statement (for detail/print view).
      */
     @GetMapping("/{id}/bills")

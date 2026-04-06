@@ -64,3 +64,17 @@ data class VehicleTypeDto(
     val id: Long,
     val typeName: String?
 )
+
+// --- Product Management ---
+
+data class PriceUpdateRequest(
+    val price: BigDecimal
+)
+
+data class CreatePriceHistoryRequest(
+    val product: ProductIdRef,
+    val price: BigDecimal,
+    val effectiveDate: String
+)
+
+data class ProductIdRef(val id: Long)
