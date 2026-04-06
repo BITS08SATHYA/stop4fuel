@@ -107,7 +107,7 @@ export default function StatementsPage() {
 
     const loadCustomers = async () => {
         try {
-            const custs = await getCustomers();
+            const custs = await getCustomers(undefined, 1000);
             setCustomers(Array.isArray(custs) ? custs : custs.content || []);
         } catch (e) {
             console.error("Failed to load customers", e);
