@@ -172,6 +172,14 @@ public class PaymentService {
             throw new BusinessException("Bill is already fully paid");
         }
 
+        // Block direct payment for statement-party customers unless invoice is marked independent
+        Customer billCustomer = bill.getCustomer();
+        if (billCustomer != null && billCustomer.getParty() != null
+                && "Statement".equals(billCustomer.getParty().getPartyType())
+                && !bill.isIndependent()) {
+            throw new BusinessException("This invoice belongs to a statement customer. Mark it as independent first.");
+        }
+
         if (payment.getAmount() == null || payment.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("Payment amount must be greater than zero");
         }

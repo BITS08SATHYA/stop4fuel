@@ -98,6 +98,9 @@ public class InvoiceBill extends BaseEntity {
     @Column(name = "payment_status")
     private PaymentStatus paymentStatus;
 
+    @Column(name = "is_independent", nullable = false)
+    private boolean independent = false; // when true, excluded from statements and allows direct payment
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "statement_id")
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

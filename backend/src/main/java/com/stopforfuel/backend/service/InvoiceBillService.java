@@ -38,6 +38,7 @@ public class InvoiceBillService {
     private final EAdvanceService eAdvanceService;
     private final IncentivePaymentService incentivePaymentService;
     private final BillSequenceService billSequenceService;
+    private final StatementRepository statementRepository;
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -734,5 +735,54 @@ public class InvoiceBillService {
     private String getExtension(String filename) {
         if (filename == null || !filename.contains(".")) return "bin";
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+    }
+
+    /**
+     * Mark an invoice as independent — allows direct payment and excludes from future statements.
+     * If the invoice is linked to a statement, it is unlinked and the statement is recalculated.
+     */
+    @Transactional
+    public InvoiceBill markIndependent(Long invoiceBillId) {
+        InvoiceBill bill = repository.findById(invoiceBillId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
+
+        if (bill.isIndependent()) {
+            throw new BusinessException("Invoice is already marked as independent");
+        }
+
+        // If linked to a statement, unlink and recalculate
+        Statement statement = bill.getStatement();
+        if (statement != null) {
+            bill.setStatement(null);
+
+            // Recalculate statement totals
+            java.util.List<InvoiceBill> remainingBills = repository.findByStatementId(statement.getId());
+            remainingBills.remove(bill); // remove current bill from list
+
+            if (remainingBills.isEmpty()) {
+                // No bills left — delete the statement
+                statementRepository.delete(statement);
+            } else {
+                java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+                for (InvoiceBill rb : remainingBills) {
+                    if (rb.getNetAmount() != null) {
+                        totalAmount = totalAmount.add(rb.getNetAmount());
+                    }
+                }
+                java.math.BigDecimal netAmount = totalAmount.setScale(0, java.math.RoundingMode.HALF_UP);
+                java.math.BigDecimal roundingAmount = netAmount.subtract(totalAmount);
+
+                statement.setTotalAmount(totalAmount);
+                statement.setNetAmount(netAmount);
+                statement.setRoundingAmount(roundingAmount);
+                statement.setNumberOfBills(remainingBills.size());
+                statement.setBalanceAmount(netAmount.subtract(
+                        statement.getReceivedAmount() != null ? statement.getReceivedAmount() : java.math.BigDecimal.ZERO));
+                statementRepository.save(statement);
+            }
+        }
+
+        bill.setIndependent(true);
+        return repository.save(bill);
     }
 }
