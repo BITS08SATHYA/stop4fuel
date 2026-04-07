@@ -44,6 +44,16 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
+  paytm:
+    enabled: ${PAYTM_ENABLED:false}
+    mid: ${PAYTM_MID:PLACEHOLDER_MID}
+    store-id: ${PAYTM_STORE_ID:PLACEHOLDER_STORE}
+    client-id: ${PAYTM_CLIENT_ID:PLACEHOLDER_CLIENT}
+    client-secret: ${PAYTM_CLIENT_SECRET:PLACEHOLDER_SECRET}
+    base-url: ${PAYTM_BASE_URL:https://securegw-stage.paytm.in}
+    callback-url: ${PAYTM_CALLBACK_URL:http://localhost:8080/api/paytm/callback}
+    timeout-minutes: ${PAYTM_TIMEOUT_MINUTES:5}
+
 aws:
   s3:
     bucket: ${AWS_S3_BUCKET:stopforfuel}

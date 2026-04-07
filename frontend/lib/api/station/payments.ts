@@ -3,7 +3,7 @@ import { fetchWithAuth } from '../fetch-with-auth';
 import type { InvoiceBill } from './invoices';
 
 // --- Types ---
-export const PAYMENT_MODES = ["CASH", "CARD", "UPI", "CHEQUE", "CCMS", "BANK_TRANSFER", "NEFT"] as const;
+export const PAYMENT_MODES = ["CASH", "CARD", "UPI", "CHEQUE", "CCMS", "BANK_TRANSFER", "NEFT", "PAYTM"] as const;
 export type PaymentModeType = typeof PAYMENT_MODES[number];
 
 export interface Statement {
@@ -307,3 +307,38 @@ export const deletePayment = (id: number): Promise<void> =>
 
 export const deleteIncentivePayment = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/incentive-payments/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// --- Paytm POS Integration ---
+
+export interface PaytmInitiateRequest {
+    amount: number;
+    invoiceBillId?: number;
+    statementId?: number;
+    txnType: 'CASH_INVOICE' | 'CREDIT_PAYMENT';
+}
+
+export interface PaytmInitiateResponse {
+    merchantTxnId: string;
+    cpayId: string;
+    status: 'INITIATED';
+}
+
+export interface PaytmStatusResponse {
+    merchantTxnId: string;
+    status: 'INITIATED' | 'SUCCESS' | 'FAILED' | 'TIMEOUT';
+    amount?: number;
+    paytmTxnId?: string;
+    bankTxnId?: string;
+    paymentMode?: string;
+    respMsg?: string;
+}
+
+export const initiatePaytmPayment = (req: PaytmInitiateRequest): Promise<PaytmInitiateResponse> =>
+    fetchWithAuth(`${API_BASE_URL}/paytm/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req),
+    }).then(handleResponse);
+
+export const getPaytmStatus = (merchantTxnId: string): Promise<PaytmStatusResponse> =>
+    fetchWithAuth(`${API_BASE_URL}/paytm/status/${merchantTxnId}`).then(handleResponse);

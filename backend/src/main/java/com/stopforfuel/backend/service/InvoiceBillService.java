@@ -312,6 +312,12 @@ public class InvoiceBillService {
         String billNo = billSequenceService.getNextBillNo(invoice.getBillType());
         invoice.setBillNo(billNo);
 
+        // --- PAYTM CASH invoices start as NOT_PAID (will be set to PAID on callback) ---
+        if (invoice.getPaymentMode() == com.stopforfuel.backend.enums.PaymentMode.PAYTM
+                && com.stopforfuel.backend.enums.BillType.CASH.equals(invoice.getBillType())) {
+            invoice.setPaymentStatus(com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID);
+        }
+
         // --- Save the invoice ---
         InvoiceBill saved = repository.save(invoice);
 
@@ -333,12 +339,24 @@ public class InvoiceBillService {
         }
 
         // --- Auto-create shift transaction for CASH invoices ---
-        autoCreateShiftTransaction(saved);
+        // Skip for PAYTM — will be created on successful callback
+        if (saved.getPaymentMode() != com.stopforfuel.backend.enums.PaymentMode.PAYTM) {
+            autoCreateShiftTransaction(saved);
+        }
 
         // --- Auto-create incentive payment for CASH invoices with discount ---
-        autoCreateIncentivePayment(saved);
+        if (saved.getPaymentMode() != com.stopforfuel.backend.enums.PaymentMode.PAYTM) {
+            autoCreateIncentivePayment(saved);
+        }
 
         return saved;
+    }
+
+    /**
+     * Public wrapper for creating shift transaction after Paytm callback.
+     */
+    public void createShiftTransactionForInvoice(InvoiceBill invoice) {
+        autoCreateShiftTransaction(invoice);
     }
 
     /**

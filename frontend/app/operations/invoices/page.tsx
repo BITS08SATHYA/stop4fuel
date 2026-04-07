@@ -25,6 +25,8 @@ import {
     getCustomerCreditInfo
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
+import { initiatePaytmPayment, type PaytmStatusResponse } from "@/lib/api/station/payments";
+import { PaytmPosStatus } from "@/components/ui/paytm-pos-status";
 
 interface CustomerWithCredit extends Customer {
     creditLimitAmount?: number | null;
@@ -85,6 +87,8 @@ export default function InvoicesPage() {
     const [customerVehicles, setCustomerVehicles] = useState<Vehicle[]>([]);
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>(undefined);
     const [isSaving, setIsSaving] = useState(false);
+    const [paytmMerchantTxnId, setPaytmMerchantTxnId] = useState<string | null>(null);
+    const [paytmAmount, setPaytmAmount] = useState(0);
     const [isWalkIn, setIsWalkIn] = useState(false);
     const [walkInCustomerName, setWalkInCustomerName] = useState("");
     const [walkInVehicleNo, setWalkInVehicleNo] = useState("");
@@ -439,6 +443,27 @@ export default function InvoicesPage() {
             };
 
             const saved = await createInvoice(payload);
+
+            // For PAYTM payments, initiate POS transaction
+            if (billType === 'CASH' && paymentMode === 'PAYTM' && saved.id) {
+                try {
+                    const paytmRes = await initiatePaytmPayment({
+                        amount: saved.netAmount || calculateTotal(),
+                        invoiceBillId: saved.id,
+                        txnType: 'CASH_INVOICE',
+                    });
+                    setPaytmMerchantTxnId(paytmRes.merchantTxnId);
+                    setPaytmAmount(saved.netAmount || calculateTotal());
+                    setLastCreatedInvoice(saved);
+                    // Don't go to step 6 yet — wait for POS result
+                    return;
+                } catch (paytmErr: any) {
+                    console.error("Paytm POS initiation failed", paytmErr);
+                    setError("Invoice created but POS payment failed: " + (paytmErr.message || "Unknown error"));
+                    // Still show the invoice even if POS fails
+                }
+            }
+
             setLastCreatedInvoice(saved);
             setCurrentStep(6);
             loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
@@ -1135,7 +1160,7 @@ export default function InvoicesPage() {
                             <div>
                                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Payment Method</label>
                                 <div className="grid grid-cols-3 gap-2">
-                                    {["CASH", "CARD", "UPI", "CCMS"].map(mode => (
+                                    {["CASH", "PAYTM", "CCMS"].map(mode => (
                                         <button
                                             key={mode}
                                             onClick={() => setPaymentMode(mode)}
@@ -1628,6 +1653,30 @@ export default function InvoicesPage() {
                     </GlassCard>
                 )}
             </div>
+
+            {/* Paytm POS Status Overlay */}
+            {paytmMerchantTxnId && (
+                <PaytmPosStatus
+                    merchantTxnId={paytmMerchantTxnId}
+                    amount={paytmAmount}
+                    onSuccess={() => {
+                        setPaytmMerchantTxnId(null);
+                        setCurrentStep(6);
+                        loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
+                    }}
+                    onFailure={() => {
+                        setPaytmMerchantTxnId(null);
+                        setError("POS payment failed. Invoice created but payment not collected.");
+                        setCurrentStep(6);
+                        loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
+                    }}
+                    onClose={() => {
+                        setPaytmMerchantTxnId(null);
+                        setCurrentStep(6);
+                        loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
+                    }}
+                />
+            )}
         </div>
     );
 }

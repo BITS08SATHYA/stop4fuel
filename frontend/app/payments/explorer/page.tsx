@@ -56,6 +56,7 @@ const PAYMENT_MODE_COLORS: Record<string, string> = {
     BANK_TRANSFER: "bg-cyan-500/20 text-cyan-400",
     NEFT: "bg-cyan-500/20 text-cyan-400",
     RTGS: "bg-cyan-500/20 text-cyan-400",
+    PAYTM: "bg-sky-500/20 text-sky-400",
 };
 
 export default function ExplorerPage() {

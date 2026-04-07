@@ -21,6 +21,8 @@ import {
     type InvoiceBill, type Payment,
     type PageResponse, type BillPaymentSummary
 } from "@/lib/api/station";
+import { initiatePaytmPayment, type PaytmStatusResponse } from "@/lib/api/station/payments";
+import { PaytmPosStatus } from "@/components/ui/paytm-pos-status";
 
 function formatCurrency(val?: number | null) {
     if (val == null) return "0.00";
@@ -55,6 +57,7 @@ const PAYMENT_MODE_COLORS: Record<string, string> = {
     BANK_TRANSFER: "bg-cyan-500/20 text-cyan-400",
     NEFT: "bg-cyan-500/20 text-cyan-400",
     RTGS: "bg-cyan-500/20 text-cyan-400",
+    PAYTM: "bg-sky-500/20 text-sky-400",
 };
 
 export default function InvoiceExplorerPage() {
@@ -88,6 +91,8 @@ export default function InvoiceExplorerPage() {
     const [paymentRemarks, setPaymentRemarks] = useState("");
     const [paymentSubmitting, setPaymentSubmitting] = useState(false);
     const [paymentError, setPaymentError] = useState("");
+    const [paytmMerchantTxnId, setPaytmMerchantTxnId] = useState<string | null>(null);
+    const [paytmPaymentAmount, setPaytmPaymentAmount] = useState(0);
 
     // Customer KPI
     const [customerInfo, setCustomerInfo] = useState<{
@@ -201,6 +206,19 @@ export default function InvoiceExplorerPage() {
         setPaymentSubmitting(true);
         setPaymentError("");
         try {
+            // PAYTM POS flow — initiate POS transaction instead of direct payment
+            if (paymentModeId === "PAYTM") {
+                const paytmRes = await initiatePaytmPayment({
+                    amount: Number(paymentAmount),
+                    invoiceBillId: selectedInvoice.id!,
+                    txnType: 'CREDIT_PAYMENT',
+                });
+                setPaytmMerchantTxnId(paytmRes.merchantTxnId);
+                setPaytmPaymentAmount(Number(paymentAmount));
+                setPaymentSubmitting(false);
+                return;
+            }
+
             await recordBillPayment(selectedInvoice.id!, {
                 amount: Number(paymentAmount),
                 paymentMode: paymentModeId,
@@ -215,7 +233,7 @@ export default function InvoiceExplorerPage() {
             setPaymentModeId("");
             setPaymentRef("");
             setPaymentRemarks("");
-            fetchInvoices(); // refresh list to update statuses
+            fetchInvoices();
         } catch (err: any) {
             setPaymentError(err?.message || "Payment failed");
         } finally {
@@ -587,6 +605,33 @@ export default function InvoiceExplorerPage() {
                     </div>
                 </div>
             </div>
+            {/* Paytm POS Status Overlay */}
+            {paytmMerchantTxnId && (
+                <PaytmPosStatus
+                    merchantTxnId={paytmMerchantTxnId}
+                    amount={paytmPaymentAmount}
+                    onSuccess={async () => {
+                        setPaytmMerchantTxnId(null);
+                        if (selectedInvoice) {
+                            const payments = await getPaymentsByBill(selectedInvoice.id!);
+                            setInvoicePayments(payments);
+                        }
+                        setShowPaymentForm(false);
+                        setPaymentAmount("");
+                        setPaymentModeId("");
+                        setPaymentRef("");
+                        setPaymentRemarks("");
+                        fetchInvoices();
+                    }}
+                    onFailure={() => {
+                        setPaytmMerchantTxnId(null);
+                        setPaymentError("POS payment failed. Please try again.");
+                    }}
+                    onClose={() => {
+                        setPaytmMerchantTxnId(null);
+                    }}
+                />
+            )}
         </PermissionGate>
     );
 }

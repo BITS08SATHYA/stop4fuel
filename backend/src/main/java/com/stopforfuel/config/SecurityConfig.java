@@ -73,6 +73,7 @@ public class SecurityConfig {
                     .requestMatchers("/actuator/health", "/health").permitAll()
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/signup-callback").permitAll()
+                    .requestMatchers("/api/paytm/callback").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/**").authenticated()
                     .anyRequest().permitAll()
