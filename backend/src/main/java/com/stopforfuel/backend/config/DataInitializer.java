@@ -300,16 +300,12 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     /**
-     * Migrate old-format statement numbers (e.g. S26/1) to S-{number} format,
-     * and ensure the global STMT sequence continues from the max NEW-system number only.
-     * Ignores migrated old data (pre-2025) to prevent huge sequence jumps.
+     * Ensure the global STMT sequence continues from the max new-system (2025+) statement number.
+     * Old-format statements (S26/1, etc.) are left as-is — no renaming.
      */
     private void patchStatementSequence() {
-        var allStatements = statementRepository.findAll();
-
-        // Rename any old-format statements (S26/1, S26/2, etc.) — find current max first
         long maxNewSystem = 0;
-        for (var stmt : allStatements) {
+        for (var stmt : statementRepository.findAll()) {
             String no = stmt.getStatementNo();
             if (no == null || !no.startsWith("S-")) continue;
             try {
@@ -321,19 +317,6 @@ public class DataInitializer implements ApplicationRunner {
             } catch (NumberFormatException ignored) {}
         }
 
-        // Rename any old-format statements (S26/1, S26/2, etc.) to S-{next number}
-        for (var stmt : allStatements) {
-            String no = stmt.getStatementNo();
-            if (no != null && no.contains("/")) {
-                maxNewSystem++;
-                String newNo = "S-" + maxNewSystem;
-                stmt.setStatementNo(newNo);
-                statementRepository.save(stmt);
-                log.info("Renamed statement {} → {}", no, newNo);
-            }
-        }
-
-        // Set global sequence to max new-system number only
         if (maxNewSystem > 0) {
             var existing = billSequenceRepository.findByTypeAndFyYear(BillType.STMT, 0);
             BillSequence seq = existing.orElseGet(() -> {
@@ -342,7 +325,6 @@ public class DataInitializer implements ApplicationRunner {
                 newSeq.setFyYear(0);
                 return newSeq;
             });
-            // Only update if current sequence is higher than new-system max (reset from migrated jump)
             if (seq.getLastNumber() == null || seq.getLastNumber() != maxNewSystem) {
                 log.info("Resetting STMT sequence from {} to {}", seq.getLastNumber(), maxNewSystem);
                 seq.setLastNumber(maxNewSystem);

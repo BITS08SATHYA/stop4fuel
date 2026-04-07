@@ -45,7 +45,7 @@ public class StatementController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String categoryType,
-            @RequestParam(required = false, defaultValue = "id,desc") String sort) {
+            @RequestParam(required = false, defaultValue = "statementDate,desc") String sort) {
         String[] parts = sort.split(",");
         String sortField = parts[0];
         org.springframework.data.domain.Sort.Direction dir = parts.length > 1 && "asc".equalsIgnoreCase(parts[1])

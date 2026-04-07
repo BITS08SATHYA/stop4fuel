@@ -240,8 +240,6 @@ public class StatementService {
         statement.setReceivedAmount(BigDecimal.ZERO);
         statement.setBalanceAmount(netAmount);
         statement.setStatus("NOT_PAID");
-        statement.setStatementPdfUrl(null);
-
         Statement saved = statementRepository.save(statement);
 
         // Link new bills
@@ -249,6 +247,9 @@ public class StatementService {
             bill.setStatement(saved);
             invoiceBillRepository.save(bill);
         }
+
+        // Auto-generate PDF with updated data
+        generateAndStorePdf(saved.getId());
 
         return saved;
     }
