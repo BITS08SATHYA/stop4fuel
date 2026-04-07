@@ -6,8 +6,6 @@ services:
       POSTGRES_DB: stopforfuel
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-    ports:
-      - "5432:5432"
     volumes:
       - stopforfuel_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -15,11 +13,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: 971422715802.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-backend:latest
     container_name: stopforfuel-backend
     ports:
       - "8080:8080"
@@ -27,6 +24,7 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/stopforfuel
       DATABASE_USER: postgres
       DATABASE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,11 +37,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
+    image: 971422715802.dkr.ecr.us-east-1.amazonaws.com/stopforfuel-frontend:latest
     container_name: stopforfuel-frontend
     ports:
       - "3000:3000"
