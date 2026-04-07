@@ -813,7 +813,18 @@ function InvoicePaymentsTab({
 
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Amount *</label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-xs text-muted-foreground">Amount *</label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={paymentAmount === String(balance)}
+                                        onChange={(e) => onAmountChange(e.target.checked ? String(balance) : "")}
+                                        className="w-3.5 h-3.5 rounded accent-primary"
+                                    />
+                                    <span className="text-xs text-muted-foreground">Full Bal</span>
+                                </label>
+                            </div>
                             <input
                                 type="number"
                                 value={paymentAmount}
