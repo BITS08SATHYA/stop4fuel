@@ -96,6 +96,12 @@ public class InvoiceBillController {
                 .map(InvoiceBillDTO::from);
     }
 
+    @PatchMapping("/{id}/independent")
+    @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
+    public InvoiceBillDTO markIndependent(@PathVariable Long id) {
+        return InvoiceBillDTO.from(service.markIndependent(id));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
     public void delete(@PathVariable Long id) {

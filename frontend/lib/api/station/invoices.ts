@@ -38,8 +38,9 @@ export interface InvoiceBill {
     indentPic?: string;
     status: string;
     paymentStatus?: 'PAID' | 'NOT_PAID';
+    independent?: boolean;
     statement?: { id: number; statementNo: string };
-    customer?: { id: number; name: string; username?: string } | any;
+    customer?: { id: number; name: string; username?: string; partyType?: string } | any;
     vehicle?: { id: number; vehicleNumber: string };
     driverName?: string;
     driverPhone?: string;
@@ -85,6 +86,9 @@ export const updateInvoice = (id: number, invoice: Partial<InvoiceBill>): Promis
 
 export const deleteInvoice = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+export const markInvoiceIndependent = (id: number): Promise<InvoiceBill> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}/independent`, { method: 'PATCH' }).then(handleResponse);
 
 export const uploadInvoiceFile = (id: number, type: string, file: File): Promise<InvoiceBill> => {
     const formData = new FormData();
