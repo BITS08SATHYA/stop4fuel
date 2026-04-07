@@ -53,7 +53,7 @@ public class StatementController {
         org.springframework.data.domain.Sort sorting = org.springframework.data.domain.Sort.by(dir, sortField)
                 .and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         return statementService.getStatements(customerId, status, categoryType, fromDate, toDate, search,
-                PageRequest.of(page, size, sorting))
+                PageRequest.of(page, Math.min(size, 100), sorting))
                 .map(StatementDTO::from);
     }
 

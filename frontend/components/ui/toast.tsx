@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { X, CheckCircle, AlertCircle, Info } from "lucide-react";
 
 type ToastType = "success" | "error" | "info";
@@ -11,15 +11,18 @@ interface Toast {
     type: ToastType;
 }
 
-interface ToastContextType {
-    toast: {
-        success: (message: string) => void;
-        error: (message: string) => void;
-        info: (message: string) => void;
-    };
-}
+// --- Global imperative API (works without hooks) ---
+type ToastListener = (message: string, type: ToastType) => void;
+let globalListener: ToastListener | null = null;
 
-const ToastContext = createContext<ToastContextType | null>(null);
+export const showToast = {
+    success: (message: string) => globalListener?.(message, "success"),
+    error: (message: string) => globalListener?.(message, "error"),
+    info: (message: string) => globalListener?.(message, "info"),
+};
+
+// --- React context API (for components that prefer hooks) ---
+const ToastContext = createContext(showToast);
 
 let nextId = 0;
 
@@ -34,15 +37,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }, 4000);
     }, []);
 
+    // Register as the global listener
+    useEffect(() => {
+        globalListener = addToast;
+        return () => { globalListener = null; };
+    }, [addToast]);
+
     const removeToast = useCallback((id: number) => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
-
-    const toast = {
-        success: (msg: string) => addToast(msg, "success"),
-        error: (msg: string) => addToast(msg, "error"),
-        info: (msg: string) => addToast(msg, "info"),
-    };
 
     const icons: Record<ToastType, React.ReactNode> = {
         success: <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />,
@@ -57,7 +60,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <ToastContext.Provider value={{ toast }}>
+        <ToastContext.Provider value={showToast}>
             {children}
             <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm">
                 {toasts.map((t) => (
@@ -78,7 +81,5 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useToast() {
-    const ctx = useContext(ToastContext);
-    if (!ctx) throw new Error("useToast must be used within ToastProvider");
-    return ctx.toast;
+    return useContext(ToastContext);
 }

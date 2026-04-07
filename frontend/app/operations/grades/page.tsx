@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/station";
 import { Award, Plus, Edit2, Trash2, FileText, CheckCircle2, XCircle, Search } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 export default function GradeTypesPage() {
     const [grades, setGrades] = useState<GradeType[]>([]);
@@ -69,7 +70,7 @@ export default function GradeTypesPage() {
             loadData();
         } catch (err) {
             console.error("Failed to delete grade", err);
-            alert("Error deleting grade. It may be in use by products.");
+            showToast.error("Error deleting grade. It may be in use by products.");
         }
     };
 
@@ -101,7 +102,7 @@ export default function GradeTypesPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save grade", err);
-            alert("Error saving grade details");
+            showToast.error("Error saving grade details");
         }
     };
 

@@ -7,6 +7,7 @@ import {
     downloadTankInventoryReport,
     downloadCustomerBalanceReport,
 } from "@/lib/api/station";
+import { showToast } from "@/components/ui/toast";
 import {
     FileText,
     FileSpreadsheet,
@@ -114,7 +115,7 @@ export default function ReportsPage() {
                     break;
             }
         } catch {
-            alert("Failed to generate report. Please try again.");
+            showToast.error("Failed to generate report. Please try again.");
         } finally {
             setDownloading(null);
         }

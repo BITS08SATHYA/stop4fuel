@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/station";
 import { Droplets, Plus, Edit2, Trash2, CheckCircle2, XCircle, Search, FileText } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 export default function OilTypesPage() {
     const [oilTypes, setOilTypes] = useState<OilType[]>([]);
@@ -59,7 +60,7 @@ export default function OilTypesPage() {
             loadData();
         } catch (err) {
             console.error("Failed to delete oil type", err);
-            alert("Error deleting oil type. It may be in use by grades or products.");
+            showToast.error("Error deleting oil type. It may be in use by grades or products.");
         }
     };
 
@@ -86,7 +87,7 @@ export default function OilTypesPage() {
             loadData();
         } catch (err) {
             console.error("Failed to save oil type", err);
-            alert("Error saving oil type details");
+            showToast.error("Error saving oil type details");
         }
     };
 

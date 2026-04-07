@@ -66,6 +66,7 @@ import {
 } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
+import { showToast } from "@/components/ui/toast";
 
 // --- Constants ---
 
@@ -279,7 +280,7 @@ export default function ShiftsPage() {
             setCashierSearch("");
             setShowCashierModal(true);
         } catch (err: any) {
-            alert(err.message || "Failed to load cashiers");
+            showToast.error(err.message || "Failed to load cashiers");
         }
     };
 
@@ -293,14 +294,14 @@ export default function ShiftsPage() {
                 setActiveShift(shift);
                 await loadAllData(shift.id);
             } catch (err: any) {
-                alert(err.message || "Failed to open shift");
+                showToast.error(err.message || "Failed to open shift");
             }
         }
     };
 
     const handleConfirmCashierAction = async () => {
         if (!selectedCashierId) {
-            alert("Please select a cashier");
+            showToast.error("Please select a cashier");
             return;
         }
         setOpeningShift(true);
@@ -315,7 +316,7 @@ export default function ShiftsPage() {
             }
             setShowCashierModal(false);
         } catch (err: any) {
-            alert(err.message || "Failed to update shift");
+            showToast.error(err.message || "Failed to update shift");
         } finally {
             setOpeningShift(false);
         }
@@ -410,7 +411,7 @@ export default function ShiftsPage() {
             setIsAddModalOpen(false);
             await loadAllData(viewingShift.id);
         } catch (err: any) {
-            alert(err.message || "Failed to add transaction");
+            showToast.error(err.message || "Failed to add transaction");
         }
     };
 
@@ -420,7 +421,7 @@ export default function ShiftsPage() {
             await deleteEAdvance(id);
             if (viewingShift) await loadAllData(viewingShift.id);
         } catch {
-            alert("Failed to delete entry");
+            showToast.error("Failed to delete entry");
         }
     };
 
@@ -430,7 +431,7 @@ export default function ShiftsPage() {
             await deleteExpense(id);
             if (viewingShift) await loadAllData(viewingShift.id);
         } catch {
-            alert("Failed to delete expense");
+            showToast.error("Failed to delete expense");
         }
     };
 

@@ -54,7 +54,7 @@ public class GroupController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return customerService.getCustomersByGroupId(id, PageRequest.of(page, size))
+        return customerService.getCustomersByGroupId(id, PageRequest.of(page, Math.min(size, 100)))
                 .map(CustomerListDTO::from);
     }
 }
