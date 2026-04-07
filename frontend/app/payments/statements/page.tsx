@@ -426,23 +426,30 @@ export default function StatementsPage() {
 
                 {/* Filters */}
                 <div className="flex flex-wrap gap-3 items-center mb-6">
-                    <div className="relative flex-1 min-w-[200px] max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Search by customer name or statement no..."
-                            value={searchInput}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setSearchInput(val);
-                                if (searchTimeout) clearTimeout(searchTimeout);
-                                setSearchTimeout(setTimeout(() => {
-                                    setTableSearch(val);
-                                    setPage(0);
-                                }, 400));
-                            }}
-                            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        />
+                    <div className="relative flex-1 min-w-[200px] max-w-md flex gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Search by customer name or statement no..."
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        if (searchTimeout) clearTimeout(searchTimeout);
+                                        setTableSearch(searchInput);
+                                        setPage(0);
+                                    }
+                                }}
+                                className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
+                        <button
+                            onClick={() => { setTableSearch(searchInput); setPage(0); }}
+                            className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
+                        >
+                            Search
+                        </button>
                     </div>
                     <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />

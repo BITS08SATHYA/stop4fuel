@@ -98,7 +98,7 @@ public class InvoiceBill extends BaseEntity {
     @Column(name = "payment_status")
     private PaymentStatus paymentStatus;
 
-    @Column(name = "is_independent", nullable = false)
+    @Column(name = "is_independent", nullable = false, columnDefinition = "boolean not null default false")
     private boolean independent = false; // when true, excluded from statements and allows direct payment
 
     @ManyToOne(fetch = FetchType.LAZY)
