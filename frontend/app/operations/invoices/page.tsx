@@ -232,9 +232,7 @@ export default function InvoicesPage() {
         const timeout = setTimeout(async () => {
             try {
                 const results = await searchVehicles(query);
-                // Exclude vehicles already shown in the customer's list
-                const customerVehicleIds = new Set(customerVehicles.map((v: any) => v.id));
-                setVehicleSearchResults(results.filter(v => !customerVehicleIds.has(v.id)));
+                setVehicleSearchResults(results);
             } catch (err) {
                 console.error("Vehicle search failed", err);
             }
