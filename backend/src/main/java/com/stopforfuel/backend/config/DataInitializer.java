@@ -301,38 +301,40 @@ public class DataInitializer implements ApplicationRunner {
 
     /**
      * Migrate old-format statement numbers (e.g. S26/1) to S-{number} format,
-     * and ensure the global STMT sequence continues from the max existing number.
+     * and ensure the global STMT sequence continues from the max NEW-system number only.
+     * Ignores migrated old data (pre-2025) to prevent huge sequence jumps.
      */
     private void patchStatementSequence() {
-        // Find max S-{number} from existing statements
-        long maxNumber = 0;
         var allStatements = statementRepository.findAll();
+
+        // Rename any old-format statements (S26/1, S26/2, etc.) — find current max first
+        long maxNewSystem = 0;
         for (var stmt : allStatements) {
             String no = stmt.getStatementNo();
-            if (no == null) continue;
-            // Extract number from S-12185 format
-            if (no.startsWith("S-")) {
-                try {
-                    long num = Long.parseLong(no.substring(2));
-                    if (num > maxNumber) maxNumber = num;
-                } catch (NumberFormatException ignored) {}
-            }
+            if (no == null || !no.startsWith("S-")) continue;
+            try {
+                long num = Long.parseLong(no.substring(2));
+                // Only consider statements from 2025+ as new-system
+                if (stmt.getStatementDate() != null && stmt.getStatementDate().getYear() >= 2025) {
+                    if (num > maxNewSystem) maxNewSystem = num;
+                }
+            } catch (NumberFormatException ignored) {}
         }
 
         // Rename any old-format statements (S26/1, S26/2, etc.) to S-{next number}
         for (var stmt : allStatements) {
             String no = stmt.getStatementNo();
             if (no != null && no.contains("/")) {
-                maxNumber++;
-                String newNo = "S-" + maxNumber;
+                maxNewSystem++;
+                String newNo = "S-" + maxNewSystem;
                 stmt.setStatementNo(newNo);
                 statementRepository.save(stmt);
                 log.info("Renamed statement {} → {}", no, newNo);
             }
         }
 
-        // Set global sequence to max
-        if (maxNumber > 0) {
+        // Set global sequence to max new-system number only
+        if (maxNewSystem > 0) {
             var existing = billSequenceRepository.findByTypeAndFyYear(BillType.STMT, 0);
             BillSequence seq = existing.orElseGet(() -> {
                 BillSequence newSeq = new BillSequence();
@@ -340,10 +342,11 @@ public class DataInitializer implements ApplicationRunner {
                 newSeq.setFyYear(0);
                 return newSeq;
             });
-            if (seq.getLastNumber() == null || seq.getLastNumber() < maxNumber) {
-                seq.setLastNumber(maxNumber);
+            // Only update if current sequence is higher than new-system max (reset from migrated jump)
+            if (seq.getLastNumber() == null || seq.getLastNumber() != maxNewSystem) {
+                log.info("Resetting STMT sequence from {} to {}", seq.getLastNumber(), maxNewSystem);
+                seq.setLastNumber(maxNewSystem);
                 billSequenceRepository.save(seq);
-                log.info("Set STMT global sequence to {}", maxNumber);
             }
         }
     }
