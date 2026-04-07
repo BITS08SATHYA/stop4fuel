@@ -54,7 +54,8 @@ async function fetchCustomers(): Promise<Customer[]> {
     try {
         const res = await fetchWithAuth(`${API_BASE_URL}/customers`);
         if (!res.ok) return [];
-        return res.json();
+        const data = await res.json();
+        return data.content || [];
     } catch {
         return [];
     }
