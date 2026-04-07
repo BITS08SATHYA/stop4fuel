@@ -10,6 +10,7 @@ import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 export default function TanksPage() {
     const [tanks, setTanks] = useState<Tank[]>([]);
@@ -119,7 +120,7 @@ export default function TanksPage() {
                 loadData();
             } catch (err) {
                 console.error("Failed to deactivate tank", err);
-                alert("Failed to deactivate tank.");
+                showToast.error("Failed to deactivate tank.");
             }
         }
     };

@@ -5,6 +5,7 @@ import { RouteGuard } from "@/components/route-guard";
 import { PermissionGate } from "@/components/permission-gate";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { Save, Loader2, Plus, Trash2 } from "lucide-react";
+import { showToast } from "@/components/ui/toast";
 
 const getApiBaseUrl = () => {
     if (typeof window !== "undefined") {
@@ -116,7 +117,7 @@ export default function PermissionsPage() {
             });
             if (!res.ok) {
                 const err = await res.text();
-                alert(err || "Failed to add module");
+                showToast.error(err || "Failed to add module");
                 return;
             }
             setNewModule("");
@@ -137,7 +138,7 @@ export default function PermissionsPage() {
             const res = await fetchWithAuth(`${API}/permissions/module/${module}`, { method: "DELETE" });
             if (!res.ok) {
                 const err = await res.text();
-                alert(err || "Failed to delete module");
+                showToast.error(err || "Failed to delete module");
                 return;
             }
             await loadData();

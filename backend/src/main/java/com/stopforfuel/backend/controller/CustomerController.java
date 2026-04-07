@@ -42,7 +42,7 @@ public class CustomerController {
             @RequestParam(required = false) Long groupId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String categoryType) {
-        return customerService.getCustomers(search, groupId, status, categoryType, org.springframework.data.domain.PageRequest.of(page, size))
+        return customerService.getCustomers(search, groupId, status, categoryType, org.springframework.data.domain.PageRequest.of(page, Math.min(size, 100)))
                 .map(CustomerListDTO::from);
     }
 

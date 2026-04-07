@@ -15,6 +15,7 @@ import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { showToast } from "@/components/ui/toast";
 
 const API = API_BASE_URL;
 
@@ -171,11 +172,11 @@ export default function CustomerProfilePage() {
                 setCustomer(await res.json());
                 setIsEditing(false);
             } else {
-                alert("Failed to save changes");
+                showToast.error("Failed to save changes");
             }
         } catch (error) {
             console.error("Failed to save customer", error);
-            alert("Error saving changes");
+            showToast.error("Error saving changes");
         }
     };
 
@@ -267,7 +268,7 @@ export default function CustomerProfilePage() {
             try {
                 const res = await fetchWithAuth(`${API}/vehicles/${vehicleId}`, { method: "DELETE" });
                 if (res.ok) fetchData();
-                else alert("Failed to delete vehicle");
+                else showToast.error("Failed to delete vehicle");
             } catch (error) {
                 console.error("Failed to delete vehicle", error);
             }

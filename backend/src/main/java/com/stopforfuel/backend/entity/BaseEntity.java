@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import com.stopforfuel.config.SecurityUtils;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 @MappedSuperclass
 @Getter
 @Setter
+@EqualsAndHashCode(of = "id")
 public abstract class BaseEntity {
 
     @PrePersist

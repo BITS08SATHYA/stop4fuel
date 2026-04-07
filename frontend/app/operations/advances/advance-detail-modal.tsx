@@ -10,6 +10,7 @@ import {
     Receipt,
     ChevronRight,
 } from "lucide-react";
+import { showToast } from "@/components/ui/toast";
 import {
     OperationalAdvance,
     InvoiceBill,
@@ -81,7 +82,7 @@ export function AdvanceDetailModal({ isOpen, onClose, advance, onDataChanged }: 
             setAvailableInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
             onDataChanged();
         } catch (err: any) {
-            alert(err.message || "Failed to assign invoice");
+            showToast.error(err.message || "Failed to assign invoice");
         }
     };
 
@@ -94,7 +95,7 @@ export function AdvanceDetailModal({ isOpen, onClose, advance, onDataChanged }: 
             setAssignedInvoices(invoices);
             onDataChanged();
         } catch (err: any) {
-            alert(err.message || "Failed to unassign invoice");
+            showToast.error(err.message || "Failed to unassign invoice");
         }
     };
 
@@ -116,7 +117,7 @@ export function AdvanceDetailModal({ isOpen, onClose, advance, onDataChanged }: 
             setShowStatementPanel(false);
             onDataChanged();
         } catch (err: any) {
-            alert(err.message || "Failed to assign statement");
+            showToast.error(err.message || "Failed to assign statement");
         }
     };
 
@@ -127,7 +128,7 @@ export function AdvanceDetailModal({ isOpen, onClose, advance, onDataChanged }: 
             setDetailAdvance(updated);
             onDataChanged();
         } catch (err: any) {
-            alert(err.message || "Failed to unassign statement");
+            showToast.error(err.message || "Failed to unassign statement");
         }
     };
 

@@ -50,7 +50,7 @@ public class AuditLogService {
 
     @Transactional(readOnly = true)
     public Page<AuditLog> getAuditLogs(String action, Long userId, int page, int size) {
-        return repository.findFiltered(SecurityUtils.getScid(), action, userId, PageRequest.of(page, size));
+        return repository.findFiltered(SecurityUtils.getScid(), action, userId, PageRequest.of(page, Math.min(size, 100)));
     }
 
     @Transactional(readOnly = true)
