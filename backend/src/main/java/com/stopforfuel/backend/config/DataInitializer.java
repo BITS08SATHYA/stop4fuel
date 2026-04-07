@@ -196,13 +196,65 @@ public class DataInitializer implements ApplicationRunner {
      */
     /**
      * Ensure all required permissions exist (handles adding new permissions to existing deployments).
+     * Uses the same full list as seedPermissions so any new permission added there auto-creates in prod.
      */
     private void patchMissingPermissions() {
         String[][] required = {
+            {"DASHBOARD_VIEW", "View dashboard", "DASHBOARD", "VIEW"},
+            {"CUSTOMER_VIEW", "View customers", "CUSTOMER", "VIEW"},
+            {"CUSTOMER_CREATE", "Create customers", "CUSTOMER", "CREATE"},
+            {"CUSTOMER_UPDATE", "Update customers", "CUSTOMER", "UPDATE"},
+            {"CUSTOMER_DELETE", "Delete customers", "CUSTOMER", "DELETE"},
+            {"EMPLOYEE_VIEW", "View employees", "EMPLOYEE", "VIEW"},
+            {"EMPLOYEE_CREATE", "Create employees", "EMPLOYEE", "CREATE"},
+            {"EMPLOYEE_UPDATE", "Update employees", "EMPLOYEE", "UPDATE"},
+            {"EMPLOYEE_DELETE", "Delete employees", "EMPLOYEE", "DELETE"},
+            {"PRODUCT_VIEW", "View products", "PRODUCT", "VIEW"},
+            {"PRODUCT_CREATE", "Create products", "PRODUCT", "CREATE"},
+            {"PRODUCT_UPDATE", "Update products", "PRODUCT", "UPDATE"},
+            {"PRODUCT_DELETE", "Delete products", "PRODUCT", "DELETE"},
             {"VEHICLE_VIEW", "View vehicles", "VEHICLE", "VIEW"},
             {"VEHICLE_CREATE", "Create vehicles", "VEHICLE", "CREATE"},
             {"VEHICLE_UPDATE", "Update vehicles", "VEHICLE", "UPDATE"},
             {"VEHICLE_DELETE", "Delete vehicles", "VEHICLE", "DELETE"},
+            {"STATION_VIEW", "View station layout", "STATION", "VIEW"},
+            {"STATION_CREATE", "Create station layout", "STATION", "CREATE"},
+            {"STATION_UPDATE", "Update station layout", "STATION", "UPDATE"},
+            {"STATION_DELETE", "Delete station layout", "STATION", "DELETE"},
+            {"INVENTORY_VIEW", "View inventory", "INVENTORY", "VIEW"},
+            {"INVENTORY_CREATE", "Create inventory", "INVENTORY", "CREATE"},
+            {"INVENTORY_UPDATE", "Update inventory", "INVENTORY", "UPDATE"},
+            {"INVENTORY_DELETE", "Delete inventory", "INVENTORY", "DELETE"},
+            {"SHIFT_VIEW", "View shifts", "SHIFT", "VIEW"},
+            {"SHIFT_CREATE", "Create shifts", "SHIFT", "CREATE"},
+            {"SHIFT_UPDATE", "Update shifts", "SHIFT", "UPDATE"},
+            {"SHIFT_DELETE", "Delete shifts", "SHIFT", "DELETE"},
+            {"INVOICE_VIEW", "View invoices", "INVOICE", "VIEW"},
+            {"INVOICE_CREATE", "Create invoices", "INVOICE", "CREATE"},
+            {"INVOICE_UPDATE", "Update invoices", "INVOICE", "UPDATE"},
+            {"INVOICE_DELETE", "Delete invoices", "INVOICE", "DELETE"},
+            {"PAYMENT_VIEW", "View payments", "PAYMENT", "VIEW"},
+            {"PAYMENT_CREATE", "Create payments", "PAYMENT", "CREATE"},
+            {"PAYMENT_UPDATE", "Update payments", "PAYMENT", "UPDATE"},
+            {"PAYMENT_DELETE", "Delete payments", "PAYMENT", "DELETE"},
+            {"FINANCE_VIEW", "View finance", "FINANCE", "VIEW"},
+            {"FINANCE_CREATE", "Create finance", "FINANCE", "CREATE"},
+            {"FINANCE_UPDATE", "Update finance", "FINANCE", "UPDATE"},
+            {"FINANCE_DELETE", "Delete finance", "FINANCE", "DELETE"},
+            {"PURCHASE_VIEW", "View purchases", "PURCHASE", "VIEW"},
+            {"PURCHASE_CREATE", "Create purchases", "PURCHASE", "CREATE"},
+            {"PURCHASE_UPDATE", "Update purchases", "PURCHASE", "UPDATE"},
+            {"PURCHASE_DELETE", "Delete purchases", "PURCHASE", "DELETE"},
+            {"REPORT_VIEW", "View reports", "REPORT", "VIEW"},
+            {"REPORT_GENERATE", "Generate reports", "REPORT", "GENERATE"},
+            {"SETTINGS_VIEW", "View settings", "SETTINGS", "VIEW"},
+            {"SETTINGS_CREATE", "Create settings", "SETTINGS", "CREATE"},
+            {"SETTINGS_UPDATE", "Update settings", "SETTINGS", "UPDATE"},
+            {"SETTINGS_DELETE", "Delete settings", "SETTINGS", "DELETE"},
+            {"USER_VIEW", "View users", "USER", "VIEW"},
+            {"USER_CREATE", "Create users", "USER", "CREATE"},
+            {"USER_UPDATE", "Update users", "USER", "UPDATE"},
+            {"USER_DELETE", "Delete users", "USER", "DELETE"},
         };
         for (String[] p : required) {
             if (permissionRepository.findByCode(p[0]).isEmpty()) {
@@ -217,7 +269,15 @@ public class DataInitializer implements ApplicationRunner {
         Roles cashier = rolesRepository.findByRoleType("CASHIER").orElse(null);
         if (cashier == null) return;
         boolean patched = false;
-        for (String code : List.of("CUSTOMER_VIEW", "VEHICLE_VIEW", "PRODUCT_VIEW", "STATION_VIEW")) {
+        // Full set of CASHIER permissions — ensures any new additions reach prod
+        for (String code : List.of(
+                "DASHBOARD_VIEW",
+                "CUSTOMER_VIEW", "VEHICLE_VIEW", "PRODUCT_VIEW", "STATION_VIEW",
+                "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
+                "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
+                "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE",
+                "FINANCE_VIEW", "FINANCE_CREATE"
+        )) {
             if (!rolePermissionRepository.existsByRoleIdAndPermissionCode(cashier.getId(), code)) {
                 permissionRepository.findByCode(code).ifPresent(p -> {
                     RolePermission rp = new RolePermission();
@@ -296,7 +356,7 @@ public class DataInitializer implements ApplicationRunner {
                 "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
                 "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
                 "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE",
-                "FINANCE_VIEW"
+                "FINANCE_VIEW", "FINANCE_CREATE"
             ),
             "ADMIN", Set.of(), // gets all except SETTINGS_DELETE, USER_DELETE — handled below
             "EMPLOYEE", Set.of(
