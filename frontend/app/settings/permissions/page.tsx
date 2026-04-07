@@ -68,17 +68,34 @@ export default function PermissionsPage() {
         });
     };
 
-    const saveRole = async (role: string) => {
-        setSaving(role);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const [saveError, setSaveError] = useState("");
+
+    const saveAll = async () => {
+        setSaving("ALL");
+        setSaveError("");
+        setSaveSuccess(false);
         try {
             const API = getApiBaseUrl();
-            await fetchWithAuth(`${API}/permissions/role/${role}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ permissionCodes: rolePermissions[role] || [] }),
-            });
-        } catch (err) {
+            for (const role of EDITABLE_ROLES) {
+                const res = await fetchWithAuth(`${API}/permissions/role/${role}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ permissionCodes: rolePermissions[role] || [] }),
+                });
+                if (!res.ok) {
+                    throw new Error(`Failed to save ${role}: ${res.status}`);
+                }
+            }
+            // Clear backend caches
+            await fetchWithAuth(`${API}/permissions/clear-cache`, { method: "POST" });
+            // Reload to confirm
+            await loadData();
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (err: any) {
             console.error("Failed to save:", err);
+            setSaveError(err?.message || "Failed to save permissions");
         } finally {
             setSaving(null);
         }
@@ -266,22 +283,25 @@ export default function PermissionsPage() {
                     </div>
                 </div>
 
-                <div className="flex gap-3">
-                    {EDITABLE_ROLES.map(role => (
-                        <button
-                            key={role}
-                            onClick={() => saveRole(role)}
-                            disabled={saving !== null}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                        >
-                            {saving === role ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <Save className="w-4 h-4" />
-                            )}
-                            Save {role}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={saveAll}
+                        disabled={saving !== null}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                        {saving ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Save className="w-4 h-4" />
+                        )}
+                        {saving ? "Saving..." : "Save All Permissions"}
+                    </button>
+                    {saveSuccess && (
+                        <span className="text-sm text-green-400 font-medium">Saved successfully</span>
+                    )}
+                    {saveError && (
+                        <span className="text-sm text-red-400 font-medium">{saveError}</span>
+                    )}
                 </div>
             </div>
         </RouteGuard>

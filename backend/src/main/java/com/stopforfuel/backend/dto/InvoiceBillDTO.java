@@ -96,11 +96,15 @@ public class InvoiceBillDTO {
 
         public static CustomerSummary from(Customer c) {
             if (c == null) return null;
+            String pt = null;
+            try {
+                if (c.getParty() != null) pt = c.getParty().getPartyType();
+            } catch (org.hibernate.LazyInitializationException ignored) {}
             return CustomerSummary.builder()
                     .id(c.getId())
                     .name(c.getName())
                     .username(c.getUsername())
-                    .partyType(c.getParty() != null ? c.getParty().getPartyType() : null)
+                    .partyType(pt)
                     .build();
         }
     }

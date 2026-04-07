@@ -192,7 +192,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
 
     // Paginated filtered history query (all invoices, not customer-specific)
     // Note: no JOIN FETCH on collections (products) — causes Hibernate to load ALL rows in memory with pagination
-    @EntityGraph(attributePaths = {"customer", "vehicle", "customer.customerCategory"})
+    @EntityGraph(attributePaths = {"customer", "vehicle", "customer.customerCategory", "customer.party"})
     @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v "
          + "LEFT JOIN c.customerCategory cc WHERE "
          + "(:billType IS NULL OR ib.billType = :billType) "
