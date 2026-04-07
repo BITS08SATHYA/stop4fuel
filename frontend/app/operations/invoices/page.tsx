@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { useToast } from "@/components/ui/toast";
 import {
     getInvoices,
     getInvoicesByShift,
@@ -64,6 +65,7 @@ import Link from "next/link";
 import { PermissionGate } from "@/components/permission-gate";
 
 export default function InvoicesPage() {
+    const toast = useToast();
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [nozzles, setNozzles] = useState<Nozzle[]>([]);
@@ -439,10 +441,12 @@ export default function InvoicesPage() {
             const saved = await createInvoice(payload);
             setLastCreatedInvoice(saved);
             setCurrentStep(6);
+            toast.success("Invoice created successfully");
             loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
         } catch (err: any) {
             console.error("Failed to save invoice", err);
             setError(err.message || "Error saving invoice");
+            toast.error(err.message || "Error saving invoice");
         } finally {
             setIsSaving(false);
         }
