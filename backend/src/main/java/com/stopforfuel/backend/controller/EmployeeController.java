@@ -70,7 +70,7 @@ public class EmployeeController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
-    public ResponseEntity<EmployeeDetailDTO> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
+    public ResponseEntity<EmployeeDetailDTO> updateEmployee(@PathVariable Long id, @jakarta.validation.Valid @RequestBody Employee employee) {
         return ResponseEntity.ok(EmployeeDetailDTO.from(employeeService.updateEmployee(id, employee)));
     }
 

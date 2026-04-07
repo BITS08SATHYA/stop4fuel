@@ -43,7 +43,7 @@ public class UserProfileController {
     }
 
     @PutMapping
-    public ProfileResponse updateProfile(@RequestBody UpdateProfileRequest request) {
+    public ProfileResponse updateProfile(@jakarta.validation.Valid @RequestBody UpdateProfileRequest request) {
         User user = getCurrentUser();
 
         if (request.getName() != null && !request.getName().isBlank()) {
