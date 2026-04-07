@@ -79,7 +79,7 @@ export default function StatementsPage() {
     const [editingStatementId, setEditingStatementId] = useState<number | null>(null);
 
     // Sort
-    const [sortField, setSortField] = useState("statementDate");
+    const [sortField, setSortField] = useState("id");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
     // Set as Limit
