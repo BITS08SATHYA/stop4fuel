@@ -408,7 +408,9 @@ public class InvoiceBillService {
         if (invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
             customer = customerRepository.findById(invoice.getCustomer().getId()).orElse(null);
         }
-        String customerName = customer != null ? customer.getName() : "Walk-in";
+        String customerName = customer != null ? customer.getName()
+                : (invoice.getSignatoryName() != null && !invoice.getSignatoryName().isBlank()
+                        ? invoice.getSignatoryName() : "Walk-in");
         IncentivePayment incentivePayment = new IncentivePayment();
         incentivePayment.setAmount(discount);
         incentivePayment.setDescription("Auto: Discount on Invoice #" + invoice.getBillNo() + " - " + customerName);

@@ -84,7 +84,7 @@ export interface IncentivePayment {
     amount: number;
     description?: string;
     customer?: { id: number; name?: string } | null;
-    invoiceBill?: { id: number; billNo?: string; billType?: string; netAmount?: number } | null;
+    invoiceBill?: { id: number; billNo?: string; billType?: string; netAmount?: number; signatoryName?: string; billDesc?: string } | null;
     statement?: { id: number; statementNo?: string } | null;
 }
 
