@@ -12,6 +12,7 @@ import com.stopforfuel.config.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -46,8 +47,10 @@ public class AuthController {
     }
 
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
     private static final String AUTH_COOKIE_NAME = "sff-auth-session";
+
+    @Value("${app.auth.enabled:true}")
+    private boolean authEnabled;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> request,
@@ -60,8 +63,11 @@ public class AuthController {
         String phone = request.get("phone");
         String passcode = request.get("passcode");
 
-        if (phone == null || passcode == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Phone and passcode are required"));
+        if (phone == null || phone.isBlank() || phone.length() > 20) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid phone number"));
+        }
+        if (passcode == null || passcode.isBlank() || passcode.length() > 10) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid passcode"));
         }
 
         // Normalize phone: strip +91 prefix if present
@@ -116,7 +122,7 @@ public class AuthController {
         // Set httpOnly auth cookie
         ResponseCookie cookie = ResponseCookie.from(AUTH_COOKIE_NAME, token)
                 .httpOnly(true)
-                .secure(false) // dev mode; set true in production
+                .secure(authEnabled) // true in production (HTTPS), false in dev
                 .path("/")
                 .sameSite("Lax")
                 .maxAge(8 * 60 * 60) // 8 hours
@@ -203,7 +209,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> logout(HttpServletResponse httpResponse) {
         ResponseCookie cookie = ResponseCookie.from(AUTH_COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(authEnabled)
                 .path("/")
                 .sameSite("Lax")
                 .maxAge(0)
