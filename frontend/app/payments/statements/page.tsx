@@ -77,6 +77,7 @@ export default function StatementsPage() {
 
     // Edit/Regenerate
     const [editingStatementId, setEditingStatementId] = useState<number | null>(null);
+    const [editingStatementNo, setEditingStatementNo] = useState<string>("");
 
     // Sort
     const [sortField, setSortField] = useState("statementDate");
@@ -212,6 +213,7 @@ export default function StatementsPage() {
 
     const handleEditStatement = async (stmt: Statement) => {
         setEditingStatementId(stmt.id!);
+        setEditingStatementNo(stmt.statementNo || "");
         setSelectedCustomerId(stmt.customer?.id || "");
         setFromDate(stmt.fromDate || "");
         setToDate(stmt.toDate || "");
@@ -273,6 +275,7 @@ export default function StatementsPage() {
         setSelectedBillIds(new Set());
         setUseBillSelection(false);
         setEditingStatementId(null);
+        setEditingStatementNo("");
         setError("");
     };
 
@@ -734,7 +737,7 @@ export default function StatementsPage() {
             <Modal
                 isOpen={showGenerateModal}
                 onClose={resetGenerateModal}
-                title={editingStatementId ? "Edit / Regenerate Statement" : "Generate Statement"}
+                title={editingStatementId ? `Edit / Regenerate Statement #${editingStatementNo}` : "Generate Statement"}
             >
                 <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
                     {error && (
@@ -854,9 +857,11 @@ export default function StatementsPage() {
                                                         className="rounded border-border"
                                                     />
                                                 </th>
+                                                <th className="py-2 px-3 text-left">Bill No</th>
                                                 <th className="py-2 px-3 text-left">Date</th>
                                                 <th className="py-2 px-3 text-left">Vehicle</th>
                                                 <th className="py-2 px-3 text-left">Products</th>
+                                                <th className="py-2 px-3 text-right">Qty</th>
                                                 <th className="py-2 px-3 text-left">Indent No</th>
                                                 <th className="py-2 px-3 text-right">Amount</th>
                                             </tr>
@@ -878,6 +883,7 @@ export default function StatementsPage() {
                                                             className="rounded border-border"
                                                         />
                                                     </td>
+                                                    <td className="py-2 px-3 font-medium">{bill.billNo || "-"}</td>
                                                     <td className="py-2 px-3">
                                                         {bill.date ? new Date(bill.date).toLocaleDateString("en-IN") : "-"}
                                                     </td>
@@ -886,6 +892,9 @@ export default function StatementsPage() {
                                                     </td>
                                                     <td className="py-2 px-3 text-muted-foreground">
                                                         {bill.products?.map(p => p.productName).filter(Boolean).join(", ") || "-"}
+                                                    </td>
+                                                    <td className="py-2 px-3 text-right">
+                                                        {bill.products?.reduce((sum, p) => sum + Number(p.quantity || 0), 0).toFixed(2) || "-"}
                                                     </td>
                                                     <td className="py-2 px-3">{bill.indentNo || "-"}</td>
                                                     <td className="py-2 px-3 text-right font-medium">
