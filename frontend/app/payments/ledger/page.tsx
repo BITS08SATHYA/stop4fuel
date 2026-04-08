@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import {
-    getCustomers, getCustomerLedger, getOpeningBalance, downloadLedgerPdf,
+    getCustomersForAutocomplete, getCustomerLedger, getOpeningBalance, downloadLedgerPdf,
     type CustomerLedger, type Customer
 } from "@/lib/api/station";
 
@@ -24,8 +24,8 @@ export default function LedgerPage() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        getCustomers(undefined, 10000).then((data) => {
-            setCustomers(Array.isArray(data) ? data : data.content || []);
+        getCustomersForAutocomplete().then((data) => {
+            setCustomers(Array.isArray(data) ? data : []);
         }).finally(() => setInitialLoading(false));
     }, []);
 

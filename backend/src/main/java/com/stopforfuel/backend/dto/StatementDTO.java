@@ -58,10 +58,16 @@ public class StatementDTO {
         private Long id;
         private String name;
         private String username;
+        private String categoryType;
 
         public static CustomerSummary from(Customer c) {
             if (c == null) return null;
-            return CustomerSummary.builder().id(c.getId()).name(c.getName()).username(c.getUsername()).build();
+            return CustomerSummary.builder()
+                    .id(c.getId())
+                    .name(c.getName())
+                    .username(c.getUsername())
+                    .categoryType(c.getCustomerCategory() != null ? c.getCustomerCategory().getCategoryType() : null)
+                    .build();
         }
     }
 }
