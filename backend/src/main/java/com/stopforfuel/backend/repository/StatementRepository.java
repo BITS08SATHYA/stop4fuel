@@ -28,10 +28,10 @@ public interface StatementRepository extends ScidRepository<Statement> {
 
     List<Statement> findByCustomerId(Long customerId);
 
-    List<Statement> findByStatus(String status);
+    List<Statement> findByStatusAndScid(String status, Long scid);
 
     // Paginated versions
-    Page<Statement> findAllBy(Pageable pageable);
+    Page<Statement> findAllByScid(Long scid, Pageable pageable);
 
     Page<Statement> findByCustomerId(Long customerId, Pageable pageable);
 
@@ -40,7 +40,7 @@ public interface StatementRepository extends ScidRepository<Statement> {
     Page<Statement> findByCustomerIdAndStatus(Long customerId, String status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"customer"})
-    @Query("SELECT s FROM Statement s LEFT JOIN s.customer.customerCategory cc WHERE " +
+    @Query("SELECT s FROM Statement s LEFT JOIN s.customer.customerCategory cc WHERE s.scid = :scid AND " +
            "(:status IS NULL OR s.status = :status) AND " +
            "(:customerId IS NULL OR s.customer.id = :customerId) AND " +
            "(:categoryType IS NULL OR cc.categoryType = :categoryType) AND " +
@@ -52,10 +52,11 @@ public interface StatementRepository extends ScidRepository<Statement> {
             @org.springframework.data.repository.query.Param("categoryType") String categoryType,
             @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,
             @org.springframework.data.repository.query.Param("toDate") LocalDate toDate,
+            @org.springframework.data.repository.query.Param("scid") Long scid,
             Pageable pageable);
 
     @EntityGraph(attributePaths = {"customer"})
-    @Query("SELECT s FROM Statement s LEFT JOIN s.customer.customerCategory cc WHERE " +
+    @Query("SELECT s FROM Statement s LEFT JOIN s.customer.customerCategory cc WHERE s.scid = :scid AND " +
            "(:status IS NULL OR s.status = :status) AND " +
            "(:customerId IS NULL OR s.customer.id = :customerId) AND " +
            "(:categoryType IS NULL OR cc.categoryType = :categoryType) AND " +
@@ -69,6 +70,7 @@ public interface StatementRepository extends ScidRepository<Statement> {
             @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,
             @org.springframework.data.repository.query.Param("toDate") LocalDate toDate,
             @org.springframework.data.repository.query.Param("search") String search,
+            @org.springframework.data.repository.query.Param("scid") Long scid,
             Pageable pageable);
 
     Optional<Statement> findByStatementNo(String statementNo);
@@ -78,38 +80,42 @@ public interface StatementRepository extends ScidRepository<Statement> {
     List<Statement> findByCustomerIdAndStatementDateBetween(Long customerId, LocalDate from, LocalDate to);
 
     // Stats aggregation queries
-    @Query("SELECT COUNT(s) FROM Statement s WHERE s.status = 'PAID'")
-    long countPaid();
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.status = 'PAID' AND s.scid = :scid")
+    long countPaid(@org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT COALESCE(SUM(s.balanceAmount), 0) FROM Statement s WHERE s.status = 'NOT_PAID'")
-    BigDecimal sumUnpaidBalance();
+    @Query("SELECT COALESCE(SUM(s.balanceAmount), 0) FROM Statement s WHERE s.status = 'NOT_PAID' AND s.scid = :scid")
+    BigDecimal sumUnpaidBalance(@org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM Statement s")
-    BigDecimal sumNetAmount();
+    @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM Statement s WHERE s.scid = :scid")
+    BigDecimal sumNetAmount(@org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT COALESCE(SUM(s.receivedAmount), 0) FROM Statement s")
-    BigDecimal sumReceivedAmount();
+    @Query("SELECT COALESCE(SUM(s.receivedAmount), 0) FROM Statement s WHERE s.scid = :scid")
+    BigDecimal sumReceivedAmount(@org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT COALESCE(AVG(s.netAmount), 0) FROM Statement s")
-    BigDecimal avgNetAmount();
+    @Query("SELECT COALESCE(AVG(s.netAmount), 0) FROM Statement s WHERE s.scid = :scid")
+    BigDecimal avgNetAmount(@org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end")
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.scid = :scid")
     long countByStatementDateRange(
             @org.springframework.data.repository.query.Param("start") LocalDate start,
-            @org.springframework.data.repository.query.Param("end") LocalDate end);
+            @org.springframework.data.repository.query.Param("end") LocalDate end,
+            @org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.status = 'PAID'")
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.status = 'PAID' AND s.scid = :scid")
     long countPaidByStatementDateRange(
             @org.springframework.data.repository.query.Param("start") LocalDate start,
-            @org.springframework.data.repository.query.Param("end") LocalDate end);
+            @org.springframework.data.repository.query.Param("end") LocalDate end,
+            @org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end")
+    @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.scid = :scid")
     BigDecimal sumNetAmountByDateRange(
             @org.springframework.data.repository.query.Param("start") LocalDate start,
-            @org.springframework.data.repository.query.Param("end") LocalDate end);
+            @org.springframework.data.repository.query.Param("end") LocalDate end,
+            @org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT COALESCE(SUM(s.receivedAmount), 0) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end")
+    @Query("SELECT COALESCE(SUM(s.receivedAmount), 0) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.scid = :scid")
     BigDecimal sumReceivedAmountByDateRange(
             @org.springframework.data.repository.query.Param("start") LocalDate start,
-            @org.springframework.data.repository.query.Param("end") LocalDate end);
+            @org.springframework.data.repository.query.Param("end") LocalDate end,
+            @org.springframework.data.repository.query.Param("scid") Long scid);
 }

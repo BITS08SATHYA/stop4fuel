@@ -17,6 +17,6 @@ public interface ExternalCashInflowRepository extends ScidRepository<ExternalCas
     @Query("SELECT e FROM ExternalCashInflow e WHERE e.id = :id AND e.scid = :scid")
     Optional<ExternalCashInflow> findByIdAndScidForUpdate(@Param("id") Long id, @Param("scid") Long scid);
     List<ExternalCashInflow> findByShiftIdOrderByInflowDateDesc(Long shiftId);
-    List<ExternalCashInflow> findByStatusOrderByInflowDateDesc(String status);
-    List<ExternalCashInflow> findAllByOrderByInflowDateDesc();
+    List<ExternalCashInflow> findByStatusAndScidOrderByInflowDateDesc(String status, Long scid);
+    List<ExternalCashInflow> findAllByScidOrderByInflowDateDesc(Long scid);
 }

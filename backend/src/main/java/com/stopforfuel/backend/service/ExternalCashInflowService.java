@@ -36,7 +36,7 @@ public class ExternalCashInflowService {
 
     @Transactional(readOnly = true)
     public List<ExternalCashInflow> getByStatus(String status) {
-        return inflowRepository.findByStatusOrderByInflowDateDesc(status);
+        return inflowRepository.findByStatusAndScidOrderByInflowDateDesc(status, SecurityUtils.getScid());
     }
 
     @Transactional

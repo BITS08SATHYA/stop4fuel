@@ -60,13 +60,14 @@ public class DailySalesReportService {
             LocalDateTime to = toDate.atTime(23, 59, 59);
 
             // Fetch all data
+            Long scid = com.stopforfuel.config.SecurityUtils.getScid();
             List<ProductSalesSummary> productSales = invoiceBillRepository.getProductSalesSummary(
-                    null, null, null, from, to);
-            List<Object[]> invoiceSummary = invoiceBillRepository.getInvoiceSummary(from, to);
-            List<Object[]> paymentModes = invoiceBillRepository.getPaymentModeDistribution(from, to);
-            List<Object[]> topCustomers = invoiceBillRepository.getTopCustomersByRevenue(from, to);
-            BigDecimal totalCollections = paymentRepository.sumPaymentsInDateRange(from, to);
-            Long collectionCount = paymentRepository.countPaymentsInDateRange(from, to);
+                    null, null, null, from, to, scid);
+            List<Object[]> invoiceSummary = invoiceBillRepository.getInvoiceSummary(from, to, scid);
+            List<Object[]> paymentModes = invoiceBillRepository.getPaymentModeDistribution(from, to, scid);
+            List<Object[]> topCustomers = invoiceBillRepository.getTopCustomersByRevenue(from, to, scid);
+            BigDecimal totalCollections = paymentRepository.sumPaymentsInDateRange(from, to, scid);
+            Long collectionCount = paymentRepository.countPaymentsInDateRange(from, to, scid);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             Document doc = new Document(PageSize.A4, 25, 25, 25, 25);
@@ -285,13 +286,14 @@ public class DailySalesReportService {
             LocalDateTime from = fromDate.atStartOfDay();
             LocalDateTime to = toDate.atTime(23, 59, 59);
 
+            Long scid = com.stopforfuel.config.SecurityUtils.getScid();
             List<ProductSalesSummary> productSales = invoiceBillRepository.getProductSalesSummary(
-                    null, null, null, from, to);
-            List<Object[]> invoiceSummary = invoiceBillRepository.getInvoiceSummary(from, to);
-            List<Object[]> paymentModes = invoiceBillRepository.getPaymentModeDistribution(from, to);
-            List<Object[]> topCustomers = invoiceBillRepository.getTopCustomersByRevenue(from, to);
-            BigDecimal totalCollections = paymentRepository.sumPaymentsInDateRange(from, to);
-            Long collectionCount = paymentRepository.countPaymentsInDateRange(from, to);
+                    null, null, null, from, to, scid);
+            List<Object[]> invoiceSummary = invoiceBillRepository.getInvoiceSummary(from, to, scid);
+            List<Object[]> paymentModes = invoiceBillRepository.getPaymentModeDistribution(from, to, scid);
+            List<Object[]> topCustomers = invoiceBillRepository.getTopCustomersByRevenue(from, to, scid);
+            BigDecimal totalCollections = paymentRepository.sumPaymentsInDateRange(from, to, scid);
+            Long collectionCount = paymentRepository.countPaymentsInDateRange(from, to, scid);
 
             // ---- Summary sheet ----
             XSSFSheet summarySheet = workbook.createSheet("Summary");

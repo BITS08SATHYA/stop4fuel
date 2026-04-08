@@ -26,12 +26,12 @@ public class TankInventoryService {
 
     @Transactional(readOnly = true)
     public List<TankInventory> getByDate(LocalDate date) {
-        return repository.findByDateWithTank(date);
+        return repository.findByDateWithTank(date, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<TankInventory> getByTankId(Long tankId) {
-        return repository.findByTankIdWithTank(tankId);
+        return repository.findByTankIdWithTank(tankId, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)

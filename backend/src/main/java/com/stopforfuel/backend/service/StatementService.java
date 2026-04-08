@@ -39,10 +39,11 @@ public class StatementService {
     @Transactional(readOnly = true)
     public Page<Statement> getStatements(Long customerId, String status, String categoryType, LocalDate fromDate, LocalDate toDate, String search, Pageable pageable) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
+        Long scid = SecurityUtils.getScid();
         if (search != null && !search.isBlank()) {
-            return statementRepository.findWithFiltersAndSearch(customerId, status, ct, fromDate, toDate, search.trim(), pageable);
+            return statementRepository.findWithFiltersAndSearch(customerId, status, ct, fromDate, toDate, search.trim(), scid, pageable);
         }
-        return statementRepository.findWithFilters(customerId, status, ct, fromDate, toDate, pageable);
+        return statementRepository.findWithFilters(customerId, status, ct, fromDate, toDate, scid, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +70,7 @@ public class StatementService {
 
     @Transactional(readOnly = true)
     public List<Statement> getOutstandingStatements() {
-        return statementRepository.findByStatus("NOT_PAID");
+        return statementRepository.findByStatusAndScid("NOT_PAID", SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
@@ -91,7 +92,7 @@ public class StatementService {
 
         if (billIds != null && !billIds.isEmpty()) {
             // Bill-wise: user selected specific bills
-            bills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds);
+            bills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds, SecurityUtils.getScid());
             // Validate all bills belong to this customer
             for (InvoiceBill bill : bills) {
                 if (!bill.getCustomer().getId().equals(customerId)) {
@@ -197,7 +198,7 @@ public class StatementService {
         // Fetch new bills based on updated parameters
         List<InvoiceBill> newBills;
         if (billIds != null && !billIds.isEmpty()) {
-            newBills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds);
+            newBills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds, SecurityUtils.getScid());
             for (InvoiceBill bill : newBills) {
                 if (!bill.getCustomer().getId().equals(customerId)) {
                     throw new BusinessException("Bill " + bill.getId() + " does not belong to customer " + customerId);
@@ -424,23 +425,25 @@ public class StatementService {
         LocalDate startOfThisMonth = LocalDate.now().withDayOfMonth(1);
         LocalDate startOfLastMonth = startOfThisMonth.minusMonths(1);
 
+        Long scid = SecurityUtils.getScid();
+
         // Last month metrics
-        long statementsLastMonth = statementRepository.countByStatementDateRange(startOfLastMonth, startOfThisMonth);
-        long paidLastMonth = statementRepository.countPaidByStatementDateRange(startOfLastMonth, startOfThisMonth);
-        BigDecimal amountGeneratedLastMonth = statementRepository.sumNetAmountByDateRange(startOfLastMonth, startOfThisMonth);
-        BigDecimal amountCollectedLastMonth = statementRepository.sumReceivedAmountByDateRange(startOfLastMonth, startOfThisMonth);
+        long statementsLastMonth = statementRepository.countByStatementDateRange(startOfLastMonth, startOfThisMonth, scid);
+        long paidLastMonth = statementRepository.countPaidByStatementDateRange(startOfLastMonth, startOfThisMonth, scid);
+        BigDecimal amountGeneratedLastMonth = statementRepository.sumNetAmountByDateRange(startOfLastMonth, startOfThisMonth, scid);
+        BigDecimal amountCollectedLastMonth = statementRepository.sumReceivedAmountByDateRange(startOfLastMonth, startOfThisMonth, scid);
 
         // All-time metrics
-        long totalStatements = statementRepository.count();
-        long totalPaid = statementRepository.countPaid();
+        long totalStatements = statementRepository.countByScid(scid);
+        long totalPaid = statementRepository.countPaid(scid);
         double paidPercentage = totalStatements > 0 ? (totalPaid * 100.0) / totalStatements : 0;
-        BigDecimal totalUnpaidAmount = statementRepository.sumUnpaidBalance();
-        BigDecimal totalNetAmount = statementRepository.sumNetAmount();
-        BigDecimal totalReceivedAmount = statementRepository.sumReceivedAmount();
+        BigDecimal totalUnpaidAmount = statementRepository.sumUnpaidBalance(scid);
+        BigDecimal totalNetAmount = statementRepository.sumNetAmount(scid);
+        BigDecimal totalReceivedAmount = statementRepository.sumReceivedAmount(scid);
         double collectionRate = totalNetAmount.compareTo(BigDecimal.ZERO) > 0
                 ? totalReceivedAmount.multiply(BigDecimal.valueOf(100)).divide(totalNetAmount, 2, RoundingMode.HALF_UP).doubleValue()
                 : 0;
-        BigDecimal avgStatementAmount = statementRepository.avgNetAmount();
+        BigDecimal avgStatementAmount = statementRepository.avgNetAmount(scid);
 
         return new StatementStats(
                 statementsLastMonth, paidLastMonth, amountGeneratedLastMonth, amountCollectedLastMonth,

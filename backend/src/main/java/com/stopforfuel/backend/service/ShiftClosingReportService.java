@@ -77,10 +77,11 @@ public class ShiftClosingReportService {
 
     @Transactional(readOnly = true)
     public List<ShiftClosingReport> getAllReports(String status) {
+        Long scid = SecurityUtils.getScid();
         if (status != null && !status.isEmpty()) {
-            return reportRepository.findByStatusOrderByReportDateDesc(status);
+            return reportRepository.findByStatusAndScidOrderByReportDateDesc(status, scid);
         }
-        return reportRepository.findAllByScid(SecurityUtils.getScid());
+        return reportRepository.findAllByScid(scid);
     }
 
     @Transactional

@@ -28,7 +28,7 @@ public class StationExpenseService {
 
     @Transactional(readOnly = true)
     public List<StationExpense> getExpensesBetween(LocalDate from, LocalDate to) {
-        return stationExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(from, to);
+        return stationExpenseRepository.findByExpenseDateBetweenAndScidOrderByExpenseDateDesc(from, to, SecurityUtils.getScid());
     }
 
     @Transactional
@@ -72,8 +72,9 @@ public class StationExpenseService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> getExpenseSummary(LocalDate from, LocalDate to) {
-        List<StationExpense> expenses = stationExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(from, to);
-        Double total = stationExpenseRepository.sumAmountBetween(from, to);
+        Long scid = SecurityUtils.getScid();
+        List<StationExpense> expenses = stationExpenseRepository.findByExpenseDateBetweenAndScidOrderByExpenseDateDesc(from, to, scid);
+        Double total = stationExpenseRepository.sumAmountBetween(from, to, scid);
 
         Map<String, Double> byCategory = new HashMap<>();
         for (StationExpense e : expenses) {

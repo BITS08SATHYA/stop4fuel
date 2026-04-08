@@ -9,5 +9,6 @@ import java.util.List;
 public interface PumpRepository extends ScidRepository<Pump> {
     List<Pump> findByActive(boolean active);
     long countByActive(boolean active);
+    long countByActiveAndScid(boolean active, Long scid);
     List<Pump> findByActiveAndScid(boolean active, Long scid);
 }

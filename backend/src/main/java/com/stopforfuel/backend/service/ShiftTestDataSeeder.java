@@ -108,7 +108,7 @@ public class ShiftTestDataSeeder {
 
         for (Nozzle nozzle : nozzles) {
             NozzleInventory lastReading = nozzleInventoryRepository
-                    .findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
+                    .findTopByNozzleIdAndScidOrderByDateDescIdDesc(nozzle.getId(), com.stopforfuel.config.SecurityUtils.getScid());
 
             double openReading;
             if (lastReading != null && lastReading.getCloseMeterReading() != null) {
@@ -147,7 +147,7 @@ public class ShiftTestDataSeeder {
 
         for (Tank tank : tanks) {
             TankInventory lastReading = tankInventoryRepository
-                    .findTopByTankIdOrderByDateDescIdDesc(tank.getId());
+                    .findTopByTankIdAndScidOrderByDateDescIdDesc(tank.getId(), com.stopforfuel.config.SecurityUtils.getScid());
 
             double openStock;
             if (lastReading != null && lastReading.getCloseStock() != null) {
