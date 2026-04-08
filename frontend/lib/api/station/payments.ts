@@ -333,3 +333,19 @@ export const deletePayment = (id: number): Promise<void> =>
 
 export const deleteIncentivePayment = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/incentive-payments/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// Statement Reports
+export const exportStatementsExcel = (fromDate: string, toDate: string, status?: string): Promise<Blob> => {
+    const params = new URLSearchParams({ fromDate, toDate });
+    if (status && status !== 'ALL') params.set('status', status);
+    return fetchWithAuth(`${API_BASE_URL}/statements/export/excel?${params}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Excel export failed');
+            return res.blob();
+        });
+};
+
+export const bulkGenerateStatementPdfs = (fromDate: string, toDate: string): Promise<{ generated: number }> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/bulk-generate-pdf?fromDate=${fromDate}&toDate=${toDate}`, {
+        method: 'POST'
+    }).then(handleResponse);

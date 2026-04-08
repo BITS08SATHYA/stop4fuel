@@ -5,13 +5,16 @@ import com.stopforfuel.backend.dto.StatementDTO;
 import com.stopforfuel.backend.dto.StatementStats;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.backend.service.StatementAutoGenerationService;
+import com.stopforfuel.backend.service.StatementExcelService;
 import com.stopforfuel.backend.service.StatementService;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,8 @@ public class StatementController {
 
     private final StatementService statementService;
     private final StatementAutoGenerationService statementAutoGenerationService;
+    private final StatementExcelService statementExcelService;
+    private final StatementRepository statementRepository;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
@@ -194,5 +199,39 @@ public class StatementController {
     @PreAuthorize("hasPermission(null, 'PAYMENT_DELETE')")
     public void delete(@PathVariable Long id) {
         statementService.deleteStatement(id);
+    }
+
+    @GetMapping("/export/excel")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public ResponseEntity<byte[]> exportExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String status) {
+        Long scid = SecurityUtils.getScid();
+        List<Statement> statements = (status != null && !status.isBlank())
+                ? statementRepository.findByDateRangeAndStatusAndScid(fromDate, toDate, status, scid)
+                : statementRepository.findByDateRangeAndScid(fromDate, toDate, scid);
+        byte[] bytes = statementExcelService.generateExcel(statements);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=statements_" + fromDate + "_" + toDate + ".xlsx");
+        headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        return ResponseEntity.ok().headers(headers).body(bytes);
+    }
+
+    @PostMapping("/bulk-generate-pdf")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public ResponseEntity<Map<String, Object>> bulkGeneratePdfs(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        Long scid = SecurityUtils.getScid();
+        List<Statement> statements = statementRepository.findByDateRangeAndScid(fromDate, toDate, scid);
+        int generated = 0;
+        for (Statement s : statements) {
+            if (s.getStatementPdfUrl() == null || s.getStatementPdfUrl().isBlank()) {
+                statementService.generateAndStorePdf(s.getId());
+                generated++;
+            }
+        }
+        return ResponseEntity.ok(Map.of("generated", generated));
     }
 }

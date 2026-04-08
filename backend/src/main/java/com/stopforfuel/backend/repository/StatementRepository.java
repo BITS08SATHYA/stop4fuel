@@ -5,6 +5,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import org.springframework.data.domain.Page;
@@ -78,6 +79,12 @@ public interface StatementRepository extends ScidRepository<Statement> {
     boolean existsByCustomerIdAndFromDateAndToDateAndScid(Long customerId, LocalDate fromDate, LocalDate toDate, Long scid);
 
     List<Statement> findByCustomerIdAndStatementDateBetween(Long customerId, LocalDate from, LocalDate to);
+
+    @Query("SELECT s FROM Statement s JOIN FETCH s.customer WHERE s.scid = :scid AND s.statementDate BETWEEN :fromDate AND :toDate ORDER BY s.statementDate DESC, s.id DESC")
+    List<Statement> findByDateRangeAndScid(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate, @Param("scid") Long scid);
+
+    @Query("SELECT s FROM Statement s JOIN FETCH s.customer WHERE s.scid = :scid AND s.statementDate BETWEEN :fromDate AND :toDate AND s.status = :status ORDER BY s.statementDate DESC, s.id DESC")
+    List<Statement> findByDateRangeAndStatusAndScid(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate, @Param("status") String status, @Param("scid") Long scid);
 
     // Stats aggregation queries
     @Query("SELECT COUNT(s) FROM Statement s WHERE s.status = 'PAID' AND s.scid = :scid")
