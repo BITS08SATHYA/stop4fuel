@@ -53,10 +53,9 @@ function formatCurrency(val?: number) {
 
 async function fetchCustomers(): Promise<Customer[]> {
     try {
-        const res = await fetchWithAuth(`${API_BASE_URL}/customers?size=10000`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/customers/autocomplete`);
         if (!res.ok) return [];
-        const data = await res.json();
-        return data.content || [];
+        return res.json();
     } catch {
         return [];
     }

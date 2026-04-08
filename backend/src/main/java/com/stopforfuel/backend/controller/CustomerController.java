@@ -46,6 +46,21 @@ public class CustomerController {
                 .map(CustomerListDTO::from);
     }
 
+    /** Lightweight endpoint for autocomplete — returns all customers (id, name, phone only). */
+    @GetMapping("/autocomplete")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
+    public java.util.List<java.util.Map<String, Object>> getCustomersForAutocomplete() {
+        return customerService.getAllCustomers().stream()
+                .map(c -> {
+                    java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", c.getId());
+                    m.put("name", c.getName());
+                    m.put("phoneNumbers", c.getPhoneNumbers());
+                    return m;
+                })
+                .toList();
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
     public CustomerDetailDTO getCustomerById(@PathVariable Long id) {
