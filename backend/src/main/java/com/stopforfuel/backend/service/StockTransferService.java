@@ -36,7 +36,7 @@ public class StockTransferService {
 
     @Transactional(readOnly = true)
     public List<StockTransfer> getByProduct(Long productId) {
-        return repository.findByProductId(productId);
+        return repository.findByProductIdAndScid(productId, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)

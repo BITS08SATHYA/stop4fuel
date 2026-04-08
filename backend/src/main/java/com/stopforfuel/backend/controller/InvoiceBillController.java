@@ -49,7 +49,7 @@ public class InvoiceBillController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String categoryType) {
-        return service.getInvoiceHistory(billType, paymentStatus, categoryType, fromDate, toDate, search, PageRequest.of(page, size))
+        return service.getInvoiceHistory(billType, paymentStatus, categoryType, fromDate, toDate, search, PageRequest.of(page, Math.min(size, 100)))
                 .map(InvoiceBillDTO::from);
     }
 
@@ -92,7 +92,7 @@ public class InvoiceBillController {
             @RequestParam(required = false) String paymentStatus,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate) {
-        return service.getInvoicesByCustomer(customerId, billType, paymentStatus, fromDate, toDate, PageRequest.of(page, size))
+        return service.getInvoicesByCustomer(customerId, billType, paymentStatus, fromDate, toDate, PageRequest.of(page, Math.min(size, 100)))
                 .map(InvoiceBillDTO::from);
     }
 

@@ -4,11 +4,13 @@ import com.stopforfuel.backend.entity.Attendance;
 import com.stopforfuel.backend.entity.Employee;
 import com.stopforfuel.backend.repository.AttendanceRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
+import com.stopforfuel.config.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
@@ -35,6 +37,8 @@ class AttendanceServiceTest {
     private Employee testEmployee;
     private Attendance testAttendance;
 
+    private static final Long TEST_SCID = 1L;
+
     @BeforeEach
     void setUp() {
         testEmployee = new Employee();
@@ -56,13 +60,16 @@ class AttendanceServiceTest {
     @Test
     void getDailyAttendance_returnsList() {
         LocalDate date = LocalDate.of(2026, 3, 19);
-        when(attendanceRepository.findByDateOrderByEmployeeNameAsc(date))
-                .thenReturn(List.of(testAttendance));
+        try (MockedStatic<SecurityUtils> mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getScid).thenReturn(TEST_SCID);
+            when(attendanceRepository.findByDateAndScidOrderByEmployeeNameAsc(date, TEST_SCID))
+                    .thenReturn(List.of(testAttendance));
 
-        List<Attendance> result = attendanceService.getDailyAttendance(date);
+            List<Attendance> result = attendanceService.getDailyAttendance(date);
 
-        assertEquals(1, result.size());
-        verify(attendanceRepository).findByDateOrderByEmployeeNameAsc(date);
+            assertEquals(1, result.size());
+            verify(attendanceRepository).findByDateAndScidOrderByEmployeeNameAsc(date, TEST_SCID);
+        }
     }
 
     // --- getEmployeeAttendance ---
@@ -72,27 +79,33 @@ class AttendanceServiceTest {
         LocalDate from = LocalDate.of(2026, 3, 1);
         LocalDate to = LocalDate.of(2026, 3, 31);
 
-        when(attendanceRepository.findByEmployeeIdAndDateBetweenOrderByDateDesc(1L, from, to))
-                .thenReturn(List.of(testAttendance));
+        try (MockedStatic<SecurityUtils> mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getScid).thenReturn(TEST_SCID);
+            when(attendanceRepository.findByEmployeeIdAndDateBetweenAndScidOrderByDateDesc(1L, from, to, TEST_SCID))
+                    .thenReturn(List.of(testAttendance));
 
-        List<Attendance> result = attendanceService.getEmployeeAttendance(1L, 3, 2026);
+            List<Attendance> result = attendanceService.getEmployeeAttendance(1L, 3, 2026);
 
-        assertEquals(1, result.size());
-        verify(attendanceRepository).findByEmployeeIdAndDateBetweenOrderByDateDesc(1L, from, to);
+            assertEquals(1, result.size());
+            verify(attendanceRepository).findByEmployeeIdAndDateBetweenAndScidOrderByDateDesc(1L, from, to, TEST_SCID);
+        }
     }
 
     // --- markAttendance ---
 
     @Test
     void markAttendance_new_savesNew() {
-        when(attendanceRepository.findByEmployeeIdAndDate(1L, testAttendance.getDate()))
-                .thenReturn(Optional.empty());
-        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
+        try (MockedStatic<SecurityUtils> mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getScid).thenReturn(TEST_SCID);
+            when(attendanceRepository.findByEmployeeIdAndDateAndScid(1L, testAttendance.getDate(), TEST_SCID))
+                    .thenReturn(Optional.empty());
+            when(attendanceRepository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
 
-        Attendance result = attendanceService.markAttendance(testAttendance);
+            Attendance result = attendanceService.markAttendance(testAttendance);
 
-        assertNotNull(result);
-        verify(attendanceRepository).save(testAttendance);
+            assertNotNull(result);
+            verify(attendanceRepository).save(testAttendance);
+        }
     }
 
     @Test
@@ -103,17 +116,20 @@ class AttendanceServiceTest {
         existing.setDate(testAttendance.getDate());
         existing.setStatus("ABSENT");
 
-        when(attendanceRepository.findByEmployeeIdAndDate(1L, testAttendance.getDate()))
-                .thenReturn(Optional.of(existing));
-        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
+        try (MockedStatic<SecurityUtils> mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getScid).thenReturn(TEST_SCID);
+            when(attendanceRepository.findByEmployeeIdAndDateAndScid(1L, testAttendance.getDate(), TEST_SCID))
+                    .thenReturn(Optional.of(existing));
+            when(attendanceRepository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
 
-        Attendance result = attendanceService.markAttendance(testAttendance);
+            Attendance result = attendanceService.markAttendance(testAttendance);
 
-        assertEquals(10L, result.getId());
-        assertEquals("PRESENT", result.getStatus());
-        assertEquals(LocalTime.of(9, 0), result.getCheckInTime());
-        assertEquals(LocalTime.of(17, 0), result.getCheckOutTime());
-        verify(attendanceRepository).save(existing);
+            assertEquals(10L, result.getId());
+            assertEquals("PRESENT", result.getStatus());
+            assertEquals(LocalTime.of(9, 0), result.getCheckInTime());
+            assertEquals(LocalTime.of(17, 0), result.getCheckOutTime());
+            verify(attendanceRepository).save(existing);
+        }
     }
 
     @Test
@@ -125,13 +141,16 @@ class AttendanceServiceTest {
         attendance.setCheckOutTime(LocalTime.of(17, 0));
         attendance.setStatus("PRESENT");
 
-        when(attendanceRepository.findByEmployeeIdAndDate(1L, attendance.getDate()))
-                .thenReturn(Optional.empty());
-        when(attendanceRepository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
+        try (MockedStatic<SecurityUtils> mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getScid).thenReturn(TEST_SCID);
+            when(attendanceRepository.findByEmployeeIdAndDateAndScid(1L, attendance.getDate(), TEST_SCID))
+                    .thenReturn(Optional.empty());
+            when(attendanceRepository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
 
-        Attendance result = attendanceService.markAttendance(attendance);
+            Attendance result = attendanceService.markAttendance(attendance);
 
-        assertEquals(8.0, result.getTotalHoursWorked());
+            assertEquals(8.0, result.getTotalHoursWorked());
+        }
     }
 
     // --- deleteAttendance ---
@@ -161,12 +180,15 @@ class AttendanceServiceTest {
         LocalDate from = LocalDate.of(2026, 3, 1);
         LocalDate to = LocalDate.of(2026, 3, 31);
 
-        when(attendanceRepository.findByEmployeeIdAndDateBetween(1L, from, to))
-                .thenReturn(List.of(present1, present2, present3, absent1, absent2));
+        try (MockedStatic<SecurityUtils> mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getScid).thenReturn(TEST_SCID);
+            when(attendanceRepository.findByEmployeeIdAndDateBetweenAndScid(1L, from, to, TEST_SCID))
+                    .thenReturn(List.of(present1, present2, present3, absent1, absent2));
 
-        long result = attendanceService.countPresentDays(1L, 3, 2026);
+            long result = attendanceService.countPresentDays(1L, 3, 2026);
 
-        assertEquals(3, result);
+            assertEquals(3, result);
+        }
     }
 
     // --- countAbsentDays ---
@@ -187,11 +209,14 @@ class AttendanceServiceTest {
         LocalDate from = LocalDate.of(2026, 3, 1);
         LocalDate to = LocalDate.of(2026, 3, 31);
 
-        when(attendanceRepository.findByEmployeeIdAndDateBetween(1L, from, to))
-                .thenReturn(List.of(present1, present2, present3, absent1, absent2));
+        try (MockedStatic<SecurityUtils> mocked = mockStatic(SecurityUtils.class)) {
+            mocked.when(SecurityUtils::getScid).thenReturn(TEST_SCID);
+            when(attendanceRepository.findByEmployeeIdAndDateBetweenAndScid(1L, from, to, TEST_SCID))
+                    .thenReturn(List.of(present1, present2, present3, absent1, absent2));
 
-        long result = attendanceService.countAbsentDays(1L, 3, 2026);
+            long result = attendanceService.countAbsentDays(1L, 3, 2026);
 
-        assertEquals(2, result);
+            assertEquals(2, result);
+        }
     }
 }

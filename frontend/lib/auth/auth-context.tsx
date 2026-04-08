@@ -63,15 +63,6 @@ export function useAuth() {
 
 const DEV_MODE = !process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
 
-function setAuthCookie(token: string) {
-    const secure = window.location.protocol === "https:" ? "; Secure" : "";
-    document.cookie = `sff-auth-session=${token}; path=/; max-age=3600; SameSite=Lax${secure}`;
-}
-
-function clearAuthCookie() {
-    document.cookie = "sff-auth-session=; path=/; max-age=0";
-}
-
 const getApiBaseUrl = () => {
     if (typeof window !== "undefined") {
         const host = window.location.hostname;
@@ -106,39 +97,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const loadUser = useCallback(async () => {
         try {
-            // Always check for passcode token first (works in both dev and prod)
-            const storedToken = localStorage.getItem("sff-token");
-            if (storedToken) {
-                const res = await fetch(
-                    `${getApiBaseUrl()}/auth/me`,
-                    { headers: { Authorization: `Bearer ${storedToken}` } }
-                );
-                if (res.ok) {
-                    const data = await res.json();
-                    setUser({
-                        id: data.id,
-                        cognitoId: data.cognitoId || "",
-                        username: data.username,
-                        name: data.name || "User",
-                        email: data.email,
-                        phone: data.phone,
-                        role: data.role || "EMPLOYEE",
-                        designation: data.designation,
-                        permissions: data.permissions || [],
-                    });
-                    setAccessToken(storedToken);
-                    setAuthCookie(storedToken);
-                    setIsLoading(false);
-                    return;
-                } else {
-                    // Token expired or invalid, clear it
-                    localStorage.removeItem("sff-token");
-                    clearAuthCookie();
-                }
+            // Try loading user via httpOnly cookie (sent automatically with credentials)
+            const res = await fetch(
+                `${getApiBaseUrl()}/auth/me`,
+                { credentials: "include" }
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setUser({
+                    id: data.id,
+                    cognitoId: data.cognitoId || "",
+                    username: data.username,
+                    name: data.name || "User",
+                    email: data.email,
+                    phone: data.phone,
+                    role: data.role || "EMPLOYEE",
+                    designation: data.designation,
+                    permissions: data.permissions || [],
+                });
+                setAccessToken(null);
+                setIsLoading(false);
+                return;
             }
 
             if (DEV_MODE) {
-                // No token and no Cognito: send to login page
+                // No valid cookie and no Cognito: send to login page
                 setUser(null);
                 setIsLoading(false);
                 return;
@@ -150,13 +133,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!token) {
                 setUser(null);
                 setAccessToken(null);
-                clearAuthCookie();
                 setIsLoading(false);
                 return;
             }
 
             setAccessToken(token);
-            setAuthCookie(token);
 
             const idToken = session.tokens?.idToken;
             const cognitoId =
@@ -165,12 +146,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 (idToken?.payload?.["custom:role"] as string) ||
                 "EMPLOYEE";
 
-            const res = await fetchWithAuth(
+            const meRes = await fetchWithAuth(
                 `${getApiBaseUrl()}/auth/me`,
             );
 
-            if (res.ok) {
-                const data = await res.json();
+            if (meRes.ok) {
+                const data = await meRes.json();
                 setUser({
                     id: data.id,
                     cognitoId: data.cognitoId || cognitoId,
@@ -200,7 +181,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch {
             setUser(null);
             setAccessToken(null);
-            clearAuthCookie();
         } finally {
             setIsLoading(false);
         }
@@ -258,6 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
+                        credentials: "include",
                         body: JSON.stringify({ phone, passcode }),
                     }
                 );
@@ -268,11 +249,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 const data = await res.json();
-                const token = data.token;
 
-                setAccessToken(token);
-                setAuthCookie(token);
-                localStorage.setItem("sff-token", token);
+                setAccessToken(null);
 
                 const userData = data.user;
                 setUser({
@@ -304,14 +282,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!DEV_MODE) {
                 await signOut();
             }
+            // Call backend to clear httpOnly cookie
+            await fetch(`${getApiBaseUrl()}/auth/logout`, {
+                method: "POST",
+                credentials: "include",
+            });
             setUser(null);
             setAccessToken(null);
-            clearAuthCookie();
-            localStorage.removeItem("sff-token");
             window.location.href = "/login";
         } catch {
-            clearAuthCookie();
-            localStorage.removeItem("sff-token");
             window.location.href = "/login";
         }
     }, []);

@@ -8,6 +8,7 @@ import { Plus, Search, RotateCcw, Loader2, Pencil, X, Save } from "lucide-react"
 import { CreateUserModal } from "@/components/users/create-user-modal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { showToast } from "@/components/ui/toast";
 
 const getApiBaseUrl = () => {
     if (typeof window !== "undefined") {
@@ -125,10 +126,10 @@ export default function UsersPage() {
                 setPasscodeResult({ name: userName, passcode: data.passcode });
             } else {
                 const data = await res.json().catch(() => ({}));
-                alert(`Failed to reset passcode: ${data.error || data.message || res.statusText}`);
+                showToast.error(`Failed to reset passcode: ${data.error || data.message || res.statusText}`);
             }
         } catch (err: any) {
-            alert(`Failed to reset passcode: ${err?.message || "Unknown error"}`);
+            showToast.error(`Failed to reset passcode: ${err?.message || "Unknown error"}`);
         } finally {
             setResetingId(null);
         }

@@ -58,6 +58,7 @@ public class EmployeeService {
         return employeeRepository.findBySearchAndStatus(
                 search != null && !search.isEmpty() ? search : null,
                 status != null && !status.isEmpty() ? status : null,
+                SecurityUtils.getScid(),
                 pageable);
     }
 
@@ -68,7 +69,7 @@ public class EmployeeService {
 
     @Transactional(readOnly = true)
     public List<Employee> getActiveEmployees() {
-        return employeeRepository.findByStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
+        return employeeRepository.findByStatusAndScid(com.stopforfuel.backend.enums.EntityStatus.ACTIVE, SecurityUtils.getScid());
     }
 
     @Transactional
@@ -195,12 +196,12 @@ public class EmployeeService {
     // Advances
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getAdvances(Long employeeId) {
-        return operationalAdvanceRepository.findByEmployeeIdOrderByAdvanceDateDesc(employeeId);
+        return operationalAdvanceRepository.findByEmployeeIdAndScidOrderByAdvanceDateDesc(employeeId, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getPendingAdvances(Long employeeId) {
-        return operationalAdvanceRepository.findByEmployeeIdAndStatus(employeeId, com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
+        return operationalAdvanceRepository.findByEmployeeIdAndStatusAndScid(employeeId, com.stopforfuel.backend.enums.AdvanceStatus.PENDING, SecurityUtils.getScid());
     }
 
     public OperationalAdvance addAdvance(OperationalAdvance advance) {

@@ -64,7 +64,7 @@ public class CustomerPortalController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         return statementService.getStatements(
                 getCustomerId(), status, null, fromDate, toDate, null,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "statementDate"))
+                PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "statementDate"))
         ).map(StatementDTO::from);
     }
 
@@ -74,7 +74,7 @@ public class CustomerPortalController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return paymentService.getPaymentsByCustomer(
-                getCustomerId(), PageRequest.of(page, size)
+                getCustomerId(), PageRequest.of(page, Math.min(size, 100))
         ).map(PaymentDTO::from);
     }
 
@@ -90,7 +90,7 @@ public class CustomerPortalController {
         LocalDateTime to = toDate != null ? toDate.atTime(23, 59, 59) : null;
         return invoiceBillService.getInvoicesByCustomer(
                 getCustomerId(), null, paymentStatus, from, to,
-                PageRequest.of(page, size)
+                PageRequest.of(page, Math.min(size, 100))
         ).map(InvoiceBillDTO::from);
     }
 

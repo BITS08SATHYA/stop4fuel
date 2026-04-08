@@ -24,6 +24,7 @@ import {
     type Product, type PageResponse, type StatementStats
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 export default function StatementsPage() {
     const [statements, setStatements] = useState<Statement[]>([]);
@@ -328,7 +329,7 @@ export default function StatementsPage() {
                 loadStatements();
                 loadStats();
             }
-            alert(`${result.count} draft statement(s) created.`);
+            showToast.error(`${result.count} draft statement(s) created.`);
         } catch (e: any) {
             setPdfError(e.message || "Failed to auto-generate drafts");
             setTimeout(() => setPdfError(""), 4000);

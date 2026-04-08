@@ -38,10 +38,11 @@ public class PaymentService {
                                       Pageable pageable) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         String pa = (paidAgainst != null && !paidAgainst.isEmpty()) ? paidAgainst : null;
+        Long scid = SecurityUtils.getScid();
         if (ct != null || pa != null || fromDate != null || toDate != null) {
-            return paymentRepository.findWithFilters(ct, pa, fromDate, toDate, pageable);
+            return paymentRepository.findWithFilters(ct, pa, fromDate, toDate, scid, pageable);
         }
-        return paymentRepository.findAllEager(pageable);
+        return paymentRepository.findAllEager(scid, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +50,7 @@ public class PaymentService {
                                                LocalDateTime fromDate, LocalDateTime toDate) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         String pa = (paidAgainst != null && !paidAgainst.isEmpty()) ? paidAgainst : null;
-        return paymentRepository.findAllForExport(ct, pa, fromDate, toDate);
+        return paymentRepository.findAllForExport(ct, pa, fromDate, toDate, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
@@ -390,6 +391,8 @@ public class PaymentService {
      */
     @Transactional
     public Payment uploadProofImage(Long paymentId, MultipartFile file) throws IOException {
+        com.stopforfuel.backend.util.FileUploadValidator.validateImage(file);
+
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
 

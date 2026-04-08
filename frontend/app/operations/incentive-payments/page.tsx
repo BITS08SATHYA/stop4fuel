@@ -25,6 +25,7 @@ import {
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { PermissionGate } from "@/components/permission-gate";
+import { useToast } from "@/components/ui/toast";
 
 // --- Types ---
 
@@ -88,6 +89,7 @@ async function fetchIncentivesByDateRange(fromDate: string, toDate: string): Pro
 // --- Page ---
 
 export default function IncentivePaymentsPage() {
+    const toast = useToast();
     const [payments, setPayments] = useState<IncentivePayment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeShiftId, setActiveShiftId] = useState<number | null>(null);
@@ -236,13 +238,14 @@ export default function IncentivePaymentsPage() {
             }
             await createIncentivePayment(payload);
             setIsModalOpen(false);
+            toast.success("Incentive payment added");
             if (viewMode === "dates" && fromDate && toDate) {
                 loadData("dates", null, fromDate, toDate);
             } else if (activeShiftId) {
                 loadData("shift", activeShiftId);
             }
         } catch (err: any) {
-            alert(err.message || "Failed to create incentive payment");
+            toast.error(err.message || "Failed to create incentive payment");
         }
     };
 
@@ -250,13 +253,14 @@ export default function IncentivePaymentsPage() {
         if (!confirm("Delete this incentive payment?")) return;
         try {
             await deleteIncentivePayment(id);
+            toast.success("Incentive payment deleted");
             if (viewMode === "dates" && fromDate && toDate) {
                 loadData("dates", null, fromDate, toDate);
             } else if (activeShiftId) {
                 loadData("shift", activeShiftId);
             }
         } catch (err) {
-            alert("Failed to delete");
+            toast.error("Failed to delete incentive payment");
         }
     };
 

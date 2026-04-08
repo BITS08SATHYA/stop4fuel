@@ -48,7 +48,7 @@ public class CreditManagementService {
         }
 
         // Load all credit bills (both paid and unpaid) for balance calculation
-        List<InvoiceBill> allCreditBills = invoiceBillRepository.findByBillType(com.stopforfuel.backend.enums.BillType.CREDIT);
+        List<InvoiceBill> allCreditBills = invoiceBillRepository.findByBillTypeAndScid(com.stopforfuel.backend.enums.BillType.CREDIT, SecurityUtils.getScid());
 
         // Load all payments
         List<Payment> allPayments = paymentRepository.findAllByScid(SecurityUtils.getScid());
@@ -238,7 +238,7 @@ public class CreditManagementService {
     @Transactional(readOnly = true)
     public CreditCustomerDetail getCustomerCreditDetail(Long customerId) {
         // All credit bills (both paid and unpaid)
-        List<InvoiceBill> allBills = invoiceBillRepository.findByBillType(com.stopforfuel.backend.enums.BillType.CREDIT).stream()
+        List<InvoiceBill> allBills = invoiceBillRepository.findByBillTypeAndScid(com.stopforfuel.backend.enums.BillType.CREDIT, SecurityUtils.getScid()).stream()
                 .filter(b -> b.getCustomer() != null && b.getCustomer().getId().equals(customerId))
                 .sorted((a, b) -> {
                     if (a.getDate() == null || b.getDate() == null) return 0;

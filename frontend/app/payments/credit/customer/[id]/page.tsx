@@ -21,6 +21,7 @@ import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
+import { showToast } from "@/components/ui/toast";
 
 const API = API_BASE_URL;
 
@@ -204,7 +205,7 @@ export default function CreditCustomerProfilePage() {
             if (customer.status === "BLOCKED") await unblockCustomer(customerId, notes || undefined);
             else await blockCustomer(customerId, notes || undefined);
             loadCore();
-        } catch (e: any) { alert(e.message || "Failed"); }
+        } catch (e: any) { showToast.error(e.message || "Failed"); }
     };
 
     const handleSaveLimits = async () => {
@@ -215,7 +216,7 @@ export default function CreditCustomerProfilePage() {
             });
             setEditingLimits(false);
             loadCore();
-        } catch (e: any) { alert(e.message || "Failed to save"); }
+        } catch (e: any) { showToast.error(e.message || "Failed to save"); }
     };
 
     const handleToggleVehicleStatus = async (vehicleId: number) => {
@@ -622,7 +623,7 @@ function StatementTable({ statements, loading, fmt, fmtCurrency, fmtDate }: {
             await generateStatementPdf(stmtId);
             const url = await getStatementPdfUrl(stmtId);
             window.open(url, "_blank");
-        } catch (e: any) { alert(e.message || "Failed to download PDF"); }
+        } catch (e: any) { showToast.error(e.message || "Failed to download PDF"); }
         finally { setDownloadingId(null); }
     };
 

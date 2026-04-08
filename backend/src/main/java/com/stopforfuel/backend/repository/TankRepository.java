@@ -10,6 +10,7 @@ public interface TankRepository extends ScidRepository<Tank> {
     List<Tank> findByProductId(Long productId);
     List<Tank> findByActive(boolean active);
     long countByActive(boolean active);
+    long countByActiveAndScid(boolean active, Long scid);
     List<Tank> findByActiveAndScid(boolean active, Long scid);
     List<Tank> findByProductIdAndScid(Long productId, Long scid);
 }
