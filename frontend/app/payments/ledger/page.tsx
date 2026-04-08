@@ -23,7 +23,7 @@ export default function LedgerPage() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        getCustomers().then((data) => {
+        getCustomers(undefined, 10000).then((data) => {
             setCustomers(Array.isArray(data) ? data : data.content || []);
         }).finally(() => setInitialLoading(false));
     }, []);
@@ -70,7 +70,7 @@ export default function LedgerPage() {
                 </div>
 
                 {/* Search Filters */}
-                <GlassCard className="mb-8">
+                <GlassCard className="mb-8 relative z-10">
                     <div className="flex flex-wrap gap-4 items-end">
                         <div className="flex-1 min-w-[200px]">
                             <label className="block text-sm font-medium text-muted-foreground mb-1">Customer</label>

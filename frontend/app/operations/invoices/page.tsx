@@ -1613,6 +1613,22 @@ export default function InvoicesPage() {
                             </div>
                         </div>
 
+                        {/* Last created invoice indicator */}
+                        {lastCreatedInvoice && (
+                            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                    <span className="text-sm font-bold text-foreground">Last Created:</span>
+                                    <span className="font-mono font-bold text-sm text-foreground">{lastCreatedInvoice.billNo}</span>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                        lastCreatedInvoice.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                                    }`}>{lastCreatedInvoice.billType}</span>
+                                    <span className="text-sm text-muted-foreground">{lastCreatedInvoice.customer?.name || "Walk-in"}</span>
+                                </div>
+                                <span className="font-bold text-foreground">₹{lastCreatedInvoice.netAmount?.toFixed(2)}</span>
+                            </div>
+                        )}
+
                         {/* Summary cards */}
                         {invoices.length > 0 && (
                             <div className="grid grid-cols-3 gap-3 mb-4">

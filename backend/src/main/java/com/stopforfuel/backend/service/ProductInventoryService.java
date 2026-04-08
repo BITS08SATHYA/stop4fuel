@@ -82,6 +82,9 @@ public class ProductInventoryService {
         existing.setOpenStock(details.getOpenStock());
         existing.setIncomeStock(details.getIncomeStock());
         existing.setCloseStock(details.getCloseStock());
+        if (details.getRate() != null) {
+            existing.setRate(details.getRate());
+        }
         calculateFields(existing);
         return repository.save(existing);
     }
@@ -179,5 +182,14 @@ public class ProductInventoryService {
         if (inventory.getCloseStock() != null) {
             inventory.setSales(total - inventory.getCloseStock());
         }
+
+        // Set rate from product price if not explicitly provided
+        if (inventory.getRate() == null && inventory.getProduct() != null && inventory.getProduct().getPrice() != null) {
+            inventory.setRate(inventory.getProduct().getPrice());
+        }
+        // Calculate amount = rate * sales
+        double sales = inventory.getSales() != null ? inventory.getSales() : 0.0;
+        BigDecimal rate = inventory.getRate();
+        inventory.setAmount(rate != null ? rate.multiply(BigDecimal.valueOf(sales)) : BigDecimal.ZERO);
     }
 }
