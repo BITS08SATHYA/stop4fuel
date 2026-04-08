@@ -1,6 +1,9 @@
 package com.stopforfuel.backend.controller;
 
 import com.stopforfuel.backend.entity.InvoiceBill;
+import com.stopforfuel.backend.repository.CompanyRepository;
+import com.stopforfuel.backend.repository.CustomerRepository;
+import com.stopforfuel.backend.service.LedgerPdfGenerator;
 import com.stopforfuel.backend.service.LedgerService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +35,15 @@ class LedgerControllerTest {
 
     @MockBean
     private LedgerService ledgerService;
+
+    @MockBean
+    private LedgerPdfGenerator ledgerPdfGenerator;
+
+    @MockBean
+    private CustomerRepository customerRepository;
+
+    @MockBean
+    private CompanyRepository companyRepository;
 
     @Test
     void getOpeningBalance_returnsBalance() throws Exception {

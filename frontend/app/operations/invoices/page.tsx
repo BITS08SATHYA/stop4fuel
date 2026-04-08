@@ -1540,22 +1540,31 @@ export default function InvoicesPage() {
                     </div>
                 </div>
 
-                {/* Latest bill banner — visible in both tabs */}
+                {/* Latest bills banner — show last cash AND last credit */}
                 {(() => {
-                    const latest = lastCreatedInvoice || (invoices.length > 0 ? invoices[0] : null);
-                    if (!latest) return null;
+                    const allInvs = lastCreatedInvoice ? [lastCreatedInvoice, ...invoices.filter(i => i.id !== lastCreatedInvoice.id)] : invoices;
+                    const latestCash = allInvs.find(i => i.billType === 'CASH');
+                    const latestCredit = allInvs.find(i => i.billType === 'CREDIT');
+                    if (!latestCash && !latestCredit) return null;
+
+                    const renderBill = (bill: any, color: string, bgClass: string, borderClass: string) => (
+                        <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${bgClass} ${color} border ${borderClass}`}>{bill.billType}</span>
+                            <span className="font-mono font-bold text-sm text-foreground">{bill.billNo}</span>
+                            <span className="text-xs text-muted-foreground">{bill.customer?.name || "Walk-in"}</span>
+                            <span className="font-bold text-foreground text-sm">₹{bill.netAmount?.toFixed(2)}</span>
+                        </div>
+                    );
+
                     return (
-                        <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                        <div className="mb-4 p-3 bg-card border border-border rounded-xl flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-1.5">
                                 <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                <span className="text-sm font-bold text-foreground">Latest Bill:</span>
-                                <span className="font-mono font-bold text-sm text-foreground">{latest.billNo}</span>
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                    latest.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                                }`}>{latest.billType}</span>
-                                <span className="text-sm text-muted-foreground">{latest.customer?.name || "Walk-in"}</span>
+                                <span className="text-sm font-bold text-foreground">Latest:</span>
                             </div>
-                            <span className="font-bold text-foreground">₹{latest.netAmount?.toFixed(2)}</span>
+                            {latestCash && renderBill(latestCash, "text-green-500", "bg-green-500/10", "border-green-500/20")}
+                            {latestCash && latestCredit && <span className="text-border">|</span>}
+                            {latestCredit && renderBill(latestCredit, "text-blue-500", "bg-blue-500/10", "border-blue-500/20")}
                         </div>
                     );
                 })()}
