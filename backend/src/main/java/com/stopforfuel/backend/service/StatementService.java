@@ -170,12 +170,19 @@ public class StatementService {
      */
     @Transactional
     public Statement regenerateStatement(Long statementId, LocalDate fromDate, LocalDate toDate,
-                                         Long vehicleId, Long productId, List<Long> billIds) {
+                                         Long vehicleId, Long productId, List<Long> billIds, Long newCustomerId) {
         Statement statement = statementRepository.findByIdForUpdate(statementId)
                 .orElseThrow(() -> new RuntimeException("Statement not found with id: " + statementId));
 
         if (statement.getReceivedAmount() != null && statement.getReceivedAmount().compareTo(BigDecimal.ZERO) > 0) {
             throw new BusinessException("Cannot regenerate a statement that has received payments");
+        }
+
+        // If a new customer is specified, update the statement's customer
+        if (newCustomerId != null && !newCustomerId.equals(statement.getCustomer().getId())) {
+            Customer newCustomer = customerRepository.findById(newCustomerId)
+                    .orElseThrow(() -> new RuntimeException("Customer not found with id: " + newCustomerId));
+            statement.setCustomer(newCustomer);
         }
 
         Long customerId = statement.getCustomer().getId();
