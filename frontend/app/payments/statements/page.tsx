@@ -880,6 +880,7 @@ export default function StatementsPage() {
                                                             type="checkbox"
                                                             checked={selectedBillIds.has(bill.id!)}
                                                             onChange={() => toggleBillSelection(bill.id!)}
+                                                            onClick={(e) => e.stopPropagation()}
                                                             className="rounded border-border"
                                                         />
                                                     </td>
