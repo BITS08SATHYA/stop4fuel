@@ -117,9 +117,8 @@ export default function StatementReportsPage() {
     const handleDownloadPdf = async (stmt: Statement) => {
         setGeneratingPdfId(stmt.id!);
         try {
-            if (!stmt.statementPdfUrl) {
-                await generateStatementPdf(stmt.id!);
-            }
+            // Always re-generate to include latest payments
+            await generateStatementPdf(stmt.id!);
             const url = await getStatementPdfUrl(stmt.id!);
             window.open(url, "_blank");
         } catch {
