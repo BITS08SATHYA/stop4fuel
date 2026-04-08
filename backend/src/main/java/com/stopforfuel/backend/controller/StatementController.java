@@ -134,9 +134,10 @@ public class StatementController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) Long vehicleId,
             @RequestParam(required = false) Long productId,
-            @RequestParam(required = false) List<Long> billIds) {
+            @RequestParam(required = false) List<Long> billIds,
+            @RequestParam(required = false) Long customerId) {
         Statement statement = statementService.regenerateStatement(
-                id, fromDate, toDate, vehicleId, productId, billIds);
+                id, fromDate, toDate, vehicleId, productId, billIds, customerId);
         return ResponseEntity.ok(StatementDTO.from(statement));
     }
 

@@ -172,9 +172,11 @@ export const approveStatement = (id: number): Promise<Statement> =>
 
 export const regenerateStatement = (
     statementId: number, fromDate: string, toDate: string,
-    filters?: { vehicleId?: number; productId?: number; billIds?: number[] }
+    filters?: { vehicleId?: number; productId?: number; billIds?: number[] },
+    customerId?: number
 ): Promise<Statement> => {
     const params = new URLSearchParams({ fromDate, toDate });
+    if (customerId) params.append('customerId', String(customerId));
     if (filters?.vehicleId) params.append('vehicleId', String(filters.vehicleId));
     if (filters?.productId) params.append('productId', String(filters.productId));
     if (filters?.billIds?.length) {

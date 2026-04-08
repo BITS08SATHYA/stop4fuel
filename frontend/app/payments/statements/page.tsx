@@ -247,7 +247,7 @@ export default function StatementsPage() {
             }
 
             if (editingStatementId) {
-                await regenerateStatement(editingStatementId, fromDate, toDate, filters);
+                await regenerateStatement(editingStatementId, fromDate, toDate, filters, Number(selectedCustomerId));
             } else {
                 await generateStatement(Number(selectedCustomerId), fromDate, toDate, filters);
             }
@@ -753,7 +753,6 @@ export default function StatementsPage() {
                             onChange={(id) => setSelectedCustomerId(id ? Number(id) : "")}
                             customers={customers}
                             placeholder="Search customer..."
-                            disabled={!!editingStatementId}
                         />
                     </div>
 
