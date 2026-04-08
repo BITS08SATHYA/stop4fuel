@@ -14,6 +14,7 @@ import {
     getShiftCashiers, changeShiftAttendant, CashierUser,
 } from "@/lib/api/station";
 import { Modal } from "@/components/ui/modal";
+import { showToast } from "@/components/ui/toast";
 
 const formatDateTime = (iso?: string) => {
     if (!iso) return "—";
@@ -77,7 +78,7 @@ export default function ShiftHistoryPage() {
             setEditingShiftId(shift.id);
             setShowCashierModal(true);
         } catch (err: any) {
-            alert(err.message || "Failed to load cashiers");
+            showToast.error(err.message || "Failed to load cashiers");
         }
     };
 
@@ -89,7 +90,7 @@ export default function ShiftHistoryPage() {
             setShowCashierModal(false);
             loadShifts();
         } catch (err: any) {
-            alert(err.message || "Failed to update attendant");
+            showToast.error(err.message || "Failed to update attendant");
         } finally {
             setSavingCashier(false);
         }
@@ -219,7 +220,7 @@ export default function ShiftHistoryPage() {
                                                                         await reopenShiftToEdit(shift.id);
                                                                         router.push(`/operations/shifts/close/${shift.id}`);
                                                                     } catch (e: any) {
-                                                                        alert(e.message || "Failed to reopen shift");
+                                                                        showToast.error(e.message || "Failed to reopen shift");
                                                                     }
                                                                 }}
                                                                 className="p-2 rounded-lg hover:bg-orange-500/10 text-orange-500 transition-colors"

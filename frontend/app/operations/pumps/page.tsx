@@ -10,6 +10,7 @@ import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 export default function PumpsPage() {
     const [pumps, setPumps] = useState<Pump[]>([]);
@@ -87,7 +88,7 @@ export default function PumpsPage() {
                 loadData();
             } catch (err) {
                 console.error("Failed to deactivate pump", err);
-                alert("Failed to deactivate pump.");
+                showToast.error("Failed to deactivate pump.");
             }
         }
     };

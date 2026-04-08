@@ -11,6 +11,7 @@ public interface NozzleRepository extends ScidRepository<Nozzle> {
     List<Nozzle> findByPumpId(Long pumpId);
     List<Nozzle> findByActive(boolean active);
     long countByActive(boolean active);
+    long countByActiveAndScid(boolean active, Long scid);
     List<Nozzle> findByActiveAndScid(boolean active, Long scid);
     List<Nozzle> findByTankIdAndScid(Long tankId, Long scid);
     List<Nozzle> findByPumpIdAndScid(Long pumpId, Long scid);

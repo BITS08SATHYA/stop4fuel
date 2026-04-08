@@ -35,7 +35,7 @@ public class EmployeeController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return employeeService.getEmployees(search, status, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))
+        return employeeService.getEmployees(search, status, PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "id")))
                 .map(EmployeeListDTO::from);
     }
 
@@ -70,7 +70,7 @@ public class EmployeeController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
-    public ResponseEntity<EmployeeDetailDTO> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
+    public ResponseEntity<EmployeeDetailDTO> updateEmployee(@PathVariable Long id, @jakarta.validation.Valid @RequestBody Employee employee) {
         return ResponseEntity.ok(EmployeeDetailDTO.from(employeeService.updateEmployee(id, employee)));
     }
 

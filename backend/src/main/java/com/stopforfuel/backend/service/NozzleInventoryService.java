@@ -29,12 +29,12 @@ public class NozzleInventoryService {
 
     @Transactional(readOnly = true)
     public List<NozzleInventory> getByDate(LocalDate date) {
-        return repository.findByDate(date);
+        return repository.findByDateAndScid(date, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<NozzleInventory> getByNozzleId(Long nozzleId) {
-        return repository.findByNozzleId(nozzleId);
+        return repository.findByNozzleIdAndScid(nozzleId, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)

@@ -19,15 +19,15 @@ public interface TankInventoryRepository extends ScidRepository<TankInventory> {
     @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.scid = :scid")
     List<TankInventory> findAllByScidWithTank(Long scid);
 
-    @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.date = :date")
-    List<TankInventory> findByDateWithTank(LocalDate date);
+    @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.date = :date AND ti.scid = :scid")
+    List<TankInventory> findByDateWithTank(@org.springframework.data.repository.query.Param("date") LocalDate date, @org.springframework.data.repository.query.Param("scid") Long scid);
 
-    @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.tank.id = :tankId")
-    List<TankInventory> findByTankIdWithTank(Long tankId);
+    @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.tank.id = :tankId AND ti.scid = :scid")
+    List<TankInventory> findByTankIdWithTank(@org.springframework.data.repository.query.Param("tankId") Long tankId, @org.springframework.data.repository.query.Param("scid") Long scid);
 
-    List<TankInventory> findByDate(LocalDate date);
-    List<TankInventory> findByTankId(Long tankId);
-    TankInventory findTopByTankIdOrderByDateDescIdDesc(Long tankId);
+    List<TankInventory> findByDateAndScid(LocalDate date, Long scid);
+    List<TankInventory> findByTankIdAndScid(Long tankId, Long scid);
+    TankInventory findTopByTankIdAndScidOrderByDateDescIdDesc(Long tankId, Long scid);
     List<TankInventory> findByShiftId(Long shiftId);
     List<TankInventory> findByShiftIdAndTankId(Long shiftId, Long tankId);
 

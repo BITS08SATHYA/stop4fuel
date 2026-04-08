@@ -23,6 +23,7 @@ import { TablePagination, useClientPagination } from "@/components/ui/table-pagi
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -163,7 +164,7 @@ export default function ProductsPage() {
                 loadData();
             } catch (err) {
                 console.error("Failed to delete product", err);
-                alert("Cannot delete product. It might be in use.");
+                showToast.error("Cannot delete product. It might be in use.");
             }
         }
     };

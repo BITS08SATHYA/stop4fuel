@@ -28,6 +28,7 @@ import {
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { showToast } from "@/components/ui/toast";
 
 const formatRupees = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
@@ -146,7 +147,7 @@ export default function ExpensesPage() {
             resetForm();
             loadData();
         } catch (e) {
-            alert("Failed to save expense");
+            showToast.error("Failed to save expense");
         }
     };
 

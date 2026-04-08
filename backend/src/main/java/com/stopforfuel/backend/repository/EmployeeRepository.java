@@ -15,11 +15,11 @@ import java.util.Optional;
 public interface EmployeeRepository extends ScidRepository<Employee> {
     Optional<Employee> findByAadharNumber(String aadharNumber);
     List<Employee> findByScid(Long scid);
-    List<Employee> findByStatus(EntityStatus status);
+    List<Employee> findByStatusAndScid(EntityStatus status, Long scid);
 
-    @Query("SELECT e FROM Employee e WHERE " +
-           "(:search IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+    @Query("SELECT e FROM Employee e WHERE e.scid = :scid " +
+           "AND (:search IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
            "OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
            "AND (:status IS NULL OR CAST(e.status AS string) = CAST(:status AS string))")
-    Page<Employee> findBySearchAndStatus(@Param("search") String search, @Param("status") String status, Pageable pageable);
+    Page<Employee> findBySearchAndStatus(@Param("search") String search, @Param("status") String status, @Param("scid") Long scid, Pageable pageable);
 }

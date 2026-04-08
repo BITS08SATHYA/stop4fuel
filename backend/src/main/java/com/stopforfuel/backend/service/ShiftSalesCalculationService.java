@@ -465,7 +465,7 @@ public class ShiftSalesCalculationService {
             productInvMap.put(pi.getProduct().getId(), pi);
         }
 
-        List<Product> allProductEntities = productRepository.findByActive(true);
+        List<Product> allProductEntities = productRepository.findByActiveAndScid(true, com.stopforfuel.config.SecurityUtils.getScid());
         for (Product product : allProductEntities) {
             ShiftReportPrintData.StockSummaryRow row = new ShiftReportPrintData.StockSummaryRow();
             row.setProductName(product.getName());

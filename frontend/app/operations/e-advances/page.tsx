@@ -33,6 +33,7 @@ import { TablePagination, useClientPagination } from "@/components/ui/table-pagi
 import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import { StatementAutocomplete } from "@/components/ui/statement-autocomplete";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 // --- Constants ---
 
@@ -350,7 +351,7 @@ export default function EAdvancesPage() {
                 loadData("shift", activeShiftId);
             }
         } catch (err: any) {
-            alert(err.message || "Failed to save e-advance");
+            showToast.error(err.message || "Failed to save e-advance");
         }
     };
 
@@ -364,7 +365,7 @@ export default function EAdvancesPage() {
                 loadData("shift", activeShiftId);
             }
         } catch (err) {
-            alert("Failed to delete");
+            showToast.error("Failed to delete");
         }
     };
 

@@ -55,7 +55,7 @@ public class SecurityConfig {
         if (!authEnabled) {
             http
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/login").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().permitAll()
                 );
@@ -71,7 +71,7 @@ public class SecurityConfig {
             http
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/actuator/health", "/health").permitAll()
-                    .requestMatchers("/api/auth/login").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
                     .requestMatchers("/api/auth/signup-callback").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/**").authenticated()

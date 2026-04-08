@@ -8,8 +8,8 @@ import java.util.List;
 
 @Repository
 public interface UtilityBillRepository extends ScidRepository<UtilityBill> {
-    List<UtilityBill> findByBillTypeOrderByBillDateDesc(String billType);
-    List<UtilityBill> findByStatusOrderByDueDateAsc(String status);
-    List<UtilityBill> findAllByOrderByBillDateDesc();
-    List<UtilityBill> findByBillDateBetweenOrderByBillDateDesc(LocalDate from, LocalDate to);
+    List<UtilityBill> findByBillTypeAndScidOrderByBillDateDesc(String billType, Long scid);
+    List<UtilityBill> findByStatusAndScidOrderByDueDateAsc(String status, Long scid);
+    List<UtilityBill> findAllByScidOrderByBillDateDesc(Long scid);
+    List<UtilityBill> findByBillDateBetweenAndScidOrderByBillDateDesc(LocalDate from, LocalDate to, Long scid);
 }

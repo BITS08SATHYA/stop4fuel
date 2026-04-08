@@ -14,6 +14,7 @@ import {
     InvoiceBill,
     Payment,
 } from "@/lib/api/station";
+import { showToast } from "@/components/ui/toast";
 import {
     ArrowLeft,
     Fuel,
@@ -170,14 +171,14 @@ export default function ShiftClosingWorkspace() {
         // Validate all nozzle close readings filled
         const missingNozzles = data.nozzleReadings.filter(n => !nozzleCloseReadings[n.nozzleId]);
         if (missingNozzles.length > 0) {
-            alert(`Please enter close readings for: ${missingNozzles.map(n => n.nozzleName).join(", ")}`);
+            showToast.error(`Please enter close readings for: ${missingNozzles.map(n => n.nozzleName).join(", ")}`);
             return;
         }
 
         // Validate all tank close stock filled
         const missingTanks = data.tankDips.filter(t => !tankCloseStock[t.tankId]);
         if (missingTanks.length > 0) {
-            alert(`Please enter close stock for: ${missingTanks.map(t => t.tankName).join(", ")}`);
+            showToast.error(`Please enter close stock for: ${missingTanks.map(t => t.tankName).join(", ")}`);
             return;
         }
 
@@ -205,7 +206,7 @@ export default function ShiftClosingWorkspace() {
             await submitShiftForReview(shiftId, { nozzleReadings, tankDips });
             router.push(`/operations/shifts/report/${shiftId}`);
         } catch (err: any) {
-            alert(err.message || "Failed to submit for review");
+            showToast.error(err.message || "Failed to submit for review");
         } finally {
             setIsSubmitting(false);
         }

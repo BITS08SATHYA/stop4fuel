@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { configureAmplify } from "@/lib/auth/amplify-config";
 import { AuthProvider, useAuth } from "@/lib/auth/auth-context";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ToastProvider } from "@/components/ui/toast";
 
 // Initialize Amplify on client side
 if (typeof window !== "undefined") {
@@ -51,7 +52,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 export function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     return (
         <AuthProvider>
-            <LayoutContent>{children}</LayoutContent>
+            <ToastProvider>
+                <LayoutContent>{children}</LayoutContent>
+            </ToastProvider>
         </AuthProvider>
     );
 }

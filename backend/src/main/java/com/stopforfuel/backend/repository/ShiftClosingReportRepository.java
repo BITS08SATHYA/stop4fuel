@@ -10,6 +10,6 @@ import java.util.Optional;
 public interface ShiftClosingReportRepository extends ScidRepository<ShiftClosingReport> {
     @EntityGraph(attributePaths = {"lineItems", "shift"})
     Optional<ShiftClosingReport> findByShift_Id(Long shiftId);
-    List<ShiftClosingReport> findByStatusOrderByReportDateDesc(String status);
-    List<ShiftClosingReport> findAllByOrderByReportDateDesc();
+    List<ShiftClosingReport> findByStatusAndScidOrderByReportDateDesc(String status, Long scid);
+    List<ShiftClosingReport> findAllByScidOrderByReportDateDesc(Long scid);
 }

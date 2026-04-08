@@ -13,10 +13,10 @@ public interface IncentiveRepository extends ScidRepository<Incentive> {
     @Query("SELECT i FROM Incentive i JOIN FETCH i.customer JOIN FETCH i.product WHERE i.scid = :scid ORDER BY i.customer.name, i.product.name")
     List<Incentive> findAllWithCustomerAndProduct(Long scid);
 
-    @Query("SELECT i FROM Incentive i JOIN FETCH i.product WHERE i.customer.id = :customerId")
-    List<Incentive> findByCustomerId(Long customerId);
+    @Query("SELECT i FROM Incentive i JOIN FETCH i.product WHERE i.customer.id = :customerId AND i.scid = :scid")
+    List<Incentive> findByCustomerId(@org.springframework.data.repository.query.Param("customerId") Long customerId, @org.springframework.data.repository.query.Param("scid") Long scid);
 
-    Optional<Incentive> findByCustomerIdAndProductIdAndActiveTrue(Long customerId, Long productId);
+    Optional<Incentive> findByCustomerIdAndProductIdAndActiveTrueAndScid(Long customerId, Long productId, Long scid);
 
-    List<Incentive> findByCustomerIdAndActiveTrue(Long customerId);
+    List<Incentive> findByCustomerIdAndActiveTrueAndScid(Long customerId, Long scid);
 }

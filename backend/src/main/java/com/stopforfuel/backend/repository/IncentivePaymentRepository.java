@@ -12,8 +12,8 @@ import java.util.List;
 @Repository
 public interface IncentivePaymentRepository extends ScidRepository<IncentivePayment> {
     List<IncentivePayment> findByShiftIdOrderByIdDesc(Long shiftId);
-    List<IncentivePayment> findByCustomerIdOrderByPaymentDateDesc(Long customerId);
-    List<IncentivePayment> findAllByOrderByPaymentDateDesc();
+    List<IncentivePayment> findByCustomerIdAndScidOrderByPaymentDateDesc(Long customerId, Long scid);
+    List<IncentivePayment> findAllByScidOrderByPaymentDateDesc(Long scid);
 
     @Query("SELECT ip FROM IncentivePayment ip WHERE ip.scid = :scid AND ip.paymentDate BETWEEN :from AND :to ORDER BY ip.paymentDate DESC")
     List<IncentivePayment> findByDateRange(@Param("scid") Long scid, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

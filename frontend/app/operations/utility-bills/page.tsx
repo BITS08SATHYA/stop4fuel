@@ -26,6 +26,7 @@ import {
     UtilityBill,
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 const formatRupees = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
@@ -124,7 +125,7 @@ export default function UtilityBillsPage() {
             resetForm();
             loadBills();
         } catch (e) {
-            alert("Failed to save bill");
+            showToast.error("Failed to save bill");
         }
     };
 
@@ -154,7 +155,7 @@ export default function UtilityBillsPage() {
             setEditingBill(null);
             setIsModalOpen(true);
         } catch (err) {
-            alert("Failed to parse PDF. Please enter details manually.");
+            showToast.error("Failed to parse PDF. Please enter details manually.");
             resetForm();
             setEditingBill(null);
             setIsModalOpen(true);

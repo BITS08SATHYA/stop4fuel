@@ -195,7 +195,7 @@ public class ShiftService {
                 row.setTestQuantity(currentShiftReading.getTestQuantity());
             } else {
                 // Fallback: get last close reading as the open reading
-                NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
+                NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdAndScidOrderByDateDescIdDesc(nozzle.getId(), com.stopforfuel.config.SecurityUtils.getScid());
                 if (lastReading != null && lastReading.getCloseMeterReading() != null) {
                     row.setOpenMeterReading(lastReading.getCloseMeterReading());
                 } else if (lastReading != null && lastReading.getOpenMeterReading() != null) {
@@ -228,7 +228,7 @@ public class ShiftService {
                 row.setCloseStock(currentShiftReading.getCloseStock());
             } else {
                 // Fallback: get last close reading as the open reading
-                TankInventory lastReading = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
+                TankInventory lastReading = tankInventoryRepository.findTopByTankIdAndScidOrderByDateDescIdDesc(tank.getId(), com.stopforfuel.config.SecurityUtils.getScid());
                 if (lastReading != null && lastReading.getCloseDip() != null) {
                     row.setOpenDip(lastReading.getCloseDip());
                 } else if (lastReading != null && lastReading.getOpenDip() != null) {
