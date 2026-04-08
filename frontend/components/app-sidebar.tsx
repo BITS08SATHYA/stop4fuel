@@ -124,6 +124,7 @@ const paymentManagementNav = [
     { name: "Credit Overview", href: "/payments/credit", icon: Eye },
     { name: "Watchlist", href: "/payments/credit/watchlist", icon: Shield },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
+    { name: "Statement Reports", href: "/payments/statements/reports", icon: FileText },
     { name: "Explorer", href: "/payments/explorer", icon: Search },
     { name: "Payments", href: "/payments", icon: CreditCard },
     { name: "Customer Ledger", href: "/payments/ledger", icon: BookOpen },
