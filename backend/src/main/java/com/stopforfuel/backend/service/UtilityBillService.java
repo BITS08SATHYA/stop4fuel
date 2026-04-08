@@ -33,12 +33,12 @@ public class UtilityBillService {
 
     @Transactional(readOnly = true)
     public List<UtilityBill> getBillsByType(String type) {
-        return utilityBillRepository.findByBillTypeOrderByBillDateDesc(type);
+        return utilityBillRepository.findByBillTypeAndScidOrderByBillDateDesc(type, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<UtilityBill> getPendingBills() {
-        return utilityBillRepository.findByStatusOrderByDueDateAsc("PENDING");
+        return utilityBillRepository.findByStatusAndScidOrderByDueDateAsc("PENDING", SecurityUtils.getScid());
     }
 
     public UtilityBill createBill(UtilityBill bill) {

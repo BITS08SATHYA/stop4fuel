@@ -176,7 +176,7 @@ public class InvoiceBillService {
                             Nozzle nozzle = nozzleRepository.findById(ip.getNozzle().getId()).orElse(null);
                             if (nozzle != null && nozzle.getTank() != null) {
                                 TankInventory tankInv = tankInventoryRepository
-                                        .findTopByTankIdOrderByDateDescIdDesc(nozzle.getTank().getId());
+                                        .findTopByTankIdAndScidOrderByDateDescIdDesc(nozzle.getTank().getId(), SecurityUtils.getScid());
                                 if (tankInv == null) {
                                     throw new BusinessException(
                                             "Cannot create invoice: No inventory record found for tank linked to product '"
@@ -199,7 +199,7 @@ public class InvoiceBillService {
 
                         // Check product inventory
                         ProductInventory productInv = productInventoryRepository
-                                .findTopByProductIdOrderByDateDescIdDesc(prod.getId());
+                                .findTopByProductIdAndScidOrderByDateDescIdDesc(prod.getId(), SecurityUtils.getScid());
                         if (productInv != null) {
                             double available = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
                             if (available <= 0) {
@@ -550,25 +550,26 @@ public class InvoiceBillService {
         com.stopforfuel.backend.enums.BillType bt = hasBillType ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
         com.stopforfuel.backend.enums.PaymentStatus ps = hasPaymentStatus ? com.stopforfuel.backend.enums.PaymentStatus.valueOf(paymentStatus) : null;
 
+        Long scid = SecurityUtils.getScid();
         if (hasDateRange) {
             if (hasBillType && hasPaymentStatus) {
-                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, bt, ps, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, bt, ps, fromDate, toDate, scid, pageable);
             } else if (hasBillType) {
-                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, bt, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, bt, fromDate, toDate, scid, pageable);
             } else if (hasPaymentStatus) {
-                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, ps, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, ps, fromDate, toDate, scid, pageable);
             } else {
-                return repository.findByCustomerIdAndDateRange(customerId, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndDateRange(customerId, fromDate, toDate, scid, pageable);
             }
         } else {
             if (hasBillType && hasPaymentStatus) {
-                return repository.findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(customerId, bt, ps, pageable);
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndScidOrderByDateDesc(customerId, bt, ps, scid, pageable);
             } else if (hasBillType) {
-                return repository.findByCustomerIdAndBillTypeOrderByDateDesc(customerId, bt, pageable);
+                return repository.findByCustomerIdAndBillTypeAndScidOrderByDateDesc(customerId, bt, scid, pageable);
             } else if (hasPaymentStatus) {
-                return repository.findByCustomerIdAndPaymentStatusOrderByDateDesc(customerId, ps, pageable);
+                return repository.findByCustomerIdAndPaymentStatusAndScidOrderByDateDesc(customerId, ps, scid, pageable);
             } else {
-                return repository.findByCustomerIdOrderByDateDesc(customerId, pageable);
+                return repository.findByCustomerIdAndScidOrderByDateDesc(customerId, scid, pageable);
             }
         }
     }
@@ -582,7 +583,7 @@ public class InvoiceBillService {
         String s = (search != null && !search.isEmpty()) ? search : "";
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
-        return repository.findAllFiltered(bt, ps, ct, fd, td, s, pageable);
+        return repository.findAllFiltered(bt, ps, ct, fd, td, s, SecurityUtils.getScid(), pageable);
     }
 
     @Transactional(readOnly = true)
@@ -593,7 +594,7 @@ public class InvoiceBillService {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
-        return repository.getProductSalesSummary(bt, ps, ct, fd, td);
+        return repository.getProductSalesSummary(bt, ps, ct, fd, td, SecurityUtils.getScid());
     }
 
     @Transactional

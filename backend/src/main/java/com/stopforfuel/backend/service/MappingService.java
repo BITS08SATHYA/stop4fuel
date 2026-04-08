@@ -74,8 +74,8 @@ public class MappingService {
             Customer oldCustomer = vehicle.getCustomer();
             if (oldCustomer != null && !oldCustomer.getId().equals(customerId)) {
                 // Check for unpaid credit bills before reassigning
-                long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
-                        vehicle.getId(), oldCustomer.getId(), PaymentStatus.NOT_PAID);
+                long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatusAndScid(
+                        vehicle.getId(), oldCustomer.getId(), PaymentStatus.NOT_PAID, com.stopforfuel.config.SecurityUtils.getScid());
                 if (unpaidCount > 0) {
                     throw new BusinessException(
                             "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +
@@ -110,8 +110,8 @@ public class MappingService {
             Customer oldCustomer = vehicle.getCustomer();
             if (oldCustomer != null) {
                 // Check for unpaid credit bills
-                long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatus(
-                        vehicle.getId(), oldCustomer.getId(), PaymentStatus.NOT_PAID);
+                long unpaidCount = invoiceBillRepository.countByVehicleIdAndCustomerIdAndPaymentStatusAndScid(
+                        vehicle.getId(), oldCustomer.getId(), PaymentStatus.NOT_PAID, com.stopforfuel.config.SecurityUtils.getScid());
                 if (unpaidCount > 0) {
                     throw new BusinessException(
                             "Vehicle " + vehicle.getVehicleNumber() + " has " + unpaidCount +

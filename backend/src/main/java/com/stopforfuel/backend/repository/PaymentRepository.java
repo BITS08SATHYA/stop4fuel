@@ -39,18 +39,19 @@ public interface PaymentRepository extends ScidRepository<Payment> {
     BigDecimal sumStatementPaymentsByShift(@Param("shiftId") Long shiftId);
 
     // Paginated versions
-    Page<Payment> findAllBy(Pageable pageable);
+    Page<Payment> findAllByScid(Long scid, Pageable pageable);
 
     @Query("SELECT p FROM Payment p JOIN FETCH p.customer c " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
            "LEFT JOIN c.customerCategory cc " +
-           "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType)")
-    Page<Payment> findWithCategoryFilter(@Param("categoryType") String categoryType, Pageable pageable);
+           "WHERE p.scid = :scid AND (:categoryType IS NULL OR cc.categoryType = :categoryType)")
+    Page<Payment> findWithCategoryFilter(@Param("categoryType") String categoryType, @Param("scid") Long scid, Pageable pageable);
 
     @Query("SELECT p FROM Payment p JOIN FETCH p.customer c " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
            "LEFT JOIN c.customerCategory cc " +
-           "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType) " +
+           "WHERE p.scid = :scid " +
+           "AND (:categoryType IS NULL OR cc.categoryType = :categoryType) " +
            "AND (:paidAgainst IS NULL OR " +
            "  (:paidAgainst = 'BILL' AND p.invoiceBill IS NOT NULL) OR " +
            "  (:paidAgainst = 'STATEMENT' AND p.statement IS NOT NULL)) " +
@@ -61,18 +62,21 @@ public interface PaymentRepository extends ScidRepository<Payment> {
             @Param("paidAgainst") String paidAgainst,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid,
             Pageable pageable);
 
     // Fetch all payments eagerly (for the default no-filter case)
     @Query("SELECT p FROM Payment p JOIN FETCH p.customer " +
-           "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy")
-    Page<Payment> findAllEager(Pageable pageable);
+           "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
+           "WHERE p.scid = :scid")
+    Page<Payment> findAllEager(@Param("scid") Long scid, Pageable pageable);
 
     // For export (no pagination)
     @Query("SELECT p FROM Payment p JOIN FETCH p.customer c " +
            "LEFT JOIN FETCH p.statement LEFT JOIN FETCH p.invoiceBill LEFT JOIN FETCH p.receivedBy " +
            "LEFT JOIN c.customerCategory cc " +
-           "WHERE (:categoryType IS NULL OR cc.categoryType = :categoryType) " +
+           "WHERE p.scid = :scid " +
+           "AND (:categoryType IS NULL OR cc.categoryType = :categoryType) " +
            "AND (:paidAgainst IS NULL OR " +
            "  (:paidAgainst = 'BILL' AND p.invoiceBill IS NOT NULL) OR " +
            "  (:paidAgainst = 'STATEMENT' AND p.statement IS NOT NULL)) " +
@@ -83,7 +87,8 @@ public interface PaymentRepository extends ScidRepository<Payment> {
             @Param("categoryType") String categoryType,
             @Param("paidAgainst") String paidAgainst,
             @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate);
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
 
     Page<Payment> findByCustomerId(Long customerId, Pageable pageable);
 
@@ -106,41 +111,46 @@ public interface PaymentRepository extends ScidRepository<Payment> {
 
     // Daily payment aggregation for dashboard analytics
     @Query("SELECT CAST(p.paymentDate AS LocalDate), COUNT(p), COALESCE(SUM(p.amount), 0) " +
-           "FROM Payment p WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate " +
+           "FROM Payment p WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate AND p.scid = :scid " +
            "GROUP BY CAST(p.paymentDate AS LocalDate) ORDER BY CAST(p.paymentDate AS LocalDate)")
     List<Object[]> getDailyPaymentStats(
             @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate);
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
 
     // Payment mode breakdown
     @Query("SELECT p.paymentMode, COUNT(p), COALESCE(SUM(p.amount), 0) " +
            "FROM Payment p " +
-           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate " +
+           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate AND p.scid = :scid " +
            "GROUP BY p.paymentMode ORDER BY SUM(p.amount) DESC")
     List<Object[]> getPaymentModeBreakdown(
             @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate);
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
 
     // Top paying customers
     @Query("SELECT c.name, COUNT(p), COALESCE(SUM(p.amount), 0) " +
            "FROM Payment p JOIN p.customer c " +
-           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate " +
+           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate AND p.scid = :scid " +
            "GROUP BY c.id, c.name ORDER BY SUM(p.amount) DESC")
     List<Object[]> getTopPayingCustomers(
             @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate);
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
 
     // Total collected in date range
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
-           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate")
+           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate AND p.scid = :scid")
     BigDecimal sumPaymentsInDateRange(
             @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate);
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
 
     // Count payments in date range
     @Query("SELECT COUNT(p) FROM Payment p " +
-           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate")
+           "WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate AND p.scid = :scid")
     long countPaymentsInDateRange(
             @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate);
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
 }

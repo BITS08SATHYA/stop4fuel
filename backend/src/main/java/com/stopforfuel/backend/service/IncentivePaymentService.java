@@ -40,7 +40,7 @@ public class IncentivePaymentService {
 
     @Transactional(readOnly = true)
     public List<IncentivePayment> getByCustomer(Long customerId) {
-        return repository.findByCustomerIdOrderByPaymentDateDesc(customerId);
+        return repository.findByCustomerIdAndScidOrderByPaymentDateDesc(customerId, SecurityUtils.getScid());
     }
 
     @Transactional

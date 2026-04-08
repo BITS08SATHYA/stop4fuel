@@ -16,9 +16,9 @@ public interface NozzleInventoryRepository extends ScidRepository<NozzleInventor
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT ni FROM NozzleInventory ni WHERE ni.nozzle.id = :nozzleId ORDER BY ni.date DESC, ni.id DESC LIMIT 1")
     NozzleInventory findTopByNozzleIdForUpdate(@Param("nozzleId") Long nozzleId);
-    List<NozzleInventory> findByDate(LocalDate date);
-    List<NozzleInventory> findByNozzleId(Long nozzleId);
-    NozzleInventory findTopByNozzleIdOrderByDateDescIdDesc(Long nozzleId);
+    List<NozzleInventory> findByDateAndScid(LocalDate date, Long scid);
+    List<NozzleInventory> findByNozzleIdAndScid(Long nozzleId, Long scid);
+    NozzleInventory findTopByNozzleIdAndScidOrderByDateDescIdDesc(Long nozzleId, Long scid);
     List<NozzleInventory> findByShiftId(Long shiftId);
     List<NozzleInventory> findByShiftIdAndNozzleId(Long shiftId, Long nozzleId);
 

@@ -23,12 +23,12 @@ public class IncentiveService {
 
     @Transactional(readOnly = true)
     public List<Incentive> getByCustomer(Long customerId) {
-        return repository.findByCustomerId(customerId);
+        return repository.findByCustomerId(customerId, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public Optional<Incentive> getActiveIncentive(Long customerId, Long productId) {
-        return repository.findByCustomerIdAndProductIdAndActiveTrue(customerId, productId);
+        return repository.findByCustomerIdAndProductIdAndActiveTrueAndScid(customerId, productId, SecurityUtils.getScid());
     }
 
     @Transactional

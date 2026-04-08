@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stopforfuel.config.SecurityUtils;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
@@ -23,21 +25,21 @@ public class AttendanceService {
 
     @Transactional(readOnly = true)
     public List<Attendance> getDailyAttendance(LocalDate date) {
-        return attendanceRepository.findByDateOrderByEmployeeNameAsc(date);
+        return attendanceRepository.findByDateAndScidOrderByEmployeeNameAsc(date, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<Attendance> getEmployeeAttendance(Long employeeId, Integer month, Integer year) {
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.withDayOfMonth(from.lengthOfMonth());
-        return attendanceRepository.findByEmployeeIdAndDateBetweenOrderByDateDesc(employeeId, from, to);
+        return attendanceRepository.findByEmployeeIdAndDateBetweenAndScidOrderByDateDesc(employeeId, from, to, SecurityUtils.getScid());
     }
 
     @Transactional
     public Attendance markAttendance(Attendance attendance) {
         // Check if already exists for this employee+date
         Attendance existing = attendanceRepository
-                .findByEmployeeIdAndDate(attendance.getEmployee().getId(), attendance.getDate())
+                .findByEmployeeIdAndDateAndScid(attendance.getEmployee().getId(), attendance.getDate(), SecurityUtils.getScid())
                 .orElse(null);
 
         if (existing != null) {
@@ -77,7 +79,7 @@ public class AttendanceService {
     public long countPresentDays(Long employeeId, Integer month, Integer year) {
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.withDayOfMonth(from.lengthOfMonth());
-        return attendanceRepository.findByEmployeeIdAndDateBetween(employeeId, from, to)
+        return attendanceRepository.findByEmployeeIdAndDateBetweenAndScid(employeeId, from, to, SecurityUtils.getScid())
                 .stream()
                 .filter(a -> "PRESENT".equals(a.getStatus()))
                 .count();
@@ -87,7 +89,7 @@ public class AttendanceService {
     public long countAbsentDays(Long employeeId, Integer month, Integer year) {
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.withDayOfMonth(from.lengthOfMonth());
-        return attendanceRepository.findByEmployeeIdAndDateBetween(employeeId, from, to)
+        return attendanceRepository.findByEmployeeIdAndDateBetweenAndScid(employeeId, from, to, SecurityUtils.getScid())
                 .stream()
                 .filter(a -> "ABSENT".equals(a.getStatus()))
                 .count();

@@ -24,11 +24,11 @@ public interface ProductInventoryRepository extends ScidRepository<ProductInvent
     @Query("SELECT pi FROM ProductInventory pi JOIN FETCH pi.product WHERE pi.scid = :scid ORDER BY pi.date DESC, pi.id DESC")
     List<ProductInventory> findAllByScidWithProduct(Long scid);
 
-    @Query("SELECT pi FROM ProductInventory pi JOIN FETCH pi.product WHERE pi.date = :date")
-    List<ProductInventory> findByDateWithProduct(LocalDate date);
+    @Query("SELECT pi FROM ProductInventory pi JOIN FETCH pi.product WHERE pi.date = :date AND pi.scid = :scid")
+    List<ProductInventory> findByDateWithProduct(@Param("date") LocalDate date, @Param("scid") Long scid);
 
-    @Query("SELECT pi FROM ProductInventory pi JOIN FETCH pi.product WHERE pi.product.id = :productId")
-    List<ProductInventory> findByProductIdWithProduct(Long productId);
+    @Query("SELECT pi FROM ProductInventory pi JOIN FETCH pi.product WHERE pi.product.id = :productId AND pi.scid = :scid")
+    List<ProductInventory> findByProductIdWithProduct(@Param("productId") Long productId, @Param("scid") Long scid);
 
     @Query("SELECT pi FROM ProductInventory pi JOIN FETCH pi.product WHERE pi.scid = :scid AND pi.date BETWEEN :fromDate AND :toDate ORDER BY pi.date DESC, pi.id DESC")
     List<ProductInventory> findByScidAndDateBetween(Long scid, LocalDate fromDate, LocalDate toDate);
@@ -36,9 +36,9 @@ public interface ProductInventoryRepository extends ScidRepository<ProductInvent
     @Query("SELECT pi FROM ProductInventory pi JOIN FETCH pi.product WHERE pi.scid = :scid AND pi.product.id = :productId AND pi.date BETWEEN :fromDate AND :toDate ORDER BY pi.date DESC, pi.id DESC")
     List<ProductInventory> findByScidAndProductIdAndDateBetween(Long scid, Long productId, LocalDate fromDate, LocalDate toDate);
 
-    List<ProductInventory> findByDate(LocalDate date);
-    List<ProductInventory> findByProductId(Long productId);
-    ProductInventory findTopByProductIdOrderByDateDescIdDesc(Long productId);
+    List<ProductInventory> findByDateAndScid(LocalDate date, Long scid);
+    List<ProductInventory> findByProductIdAndScid(Long productId, Long scid);
+    ProductInventory findTopByProductIdAndScidOrderByDateDescIdDesc(Long productId, Long scid);
     List<ProductInventory> findByShiftId(Long shiftId);
     ProductInventory findTopByShiftIdAndProductIdOrderByIdDesc(Long shiftId, Long productId);
 }
