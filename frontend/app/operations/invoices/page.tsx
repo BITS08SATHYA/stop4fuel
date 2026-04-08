@@ -1540,6 +1540,26 @@ export default function InvoicesPage() {
                     </div>
                 </div>
 
+                {/* Latest bill banner — visible in both tabs */}
+                {(() => {
+                    const latest = lastCreatedInvoice || (invoices.length > 0 ? invoices[0] : null);
+                    if (!latest) return null;
+                    return (
+                        <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                <span className="text-sm font-bold text-foreground">Latest Bill:</span>
+                                <span className="font-mono font-bold text-sm text-foreground">{latest.billNo}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    latest.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                                }`}>{latest.billType}</span>
+                                <span className="text-sm text-muted-foreground">{latest.customer?.name || "Walk-in"}</span>
+                            </div>
+                            <span className="font-bold text-foreground">₹{latest.netAmount?.toFixed(2)}</span>
+                        </div>
+                    );
+                })()}
+
                 {activeTab === 'create' ? (
                     renderCreateTab()
                 ) : (
@@ -1612,26 +1632,6 @@ export default function InvoicesPage() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Last invoice indicator — from session or from loaded list */}
-                        {(() => {
-                            const latest = lastCreatedInvoice || (invoices.length > 0 ? invoices[0] : null);
-                            if (!latest) return null;
-                            return (
-                                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                        <span className="text-sm font-bold text-foreground">Latest Bill:</span>
-                                        <span className="font-mono font-bold text-sm text-foreground">{latest.billNo}</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                            latest.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                                        }`}>{latest.billType}</span>
-                                        <span className="text-sm text-muted-foreground">{latest.customer?.name || "Walk-in"}</span>
-                                    </div>
-                                    <span className="font-bold text-foreground">₹{latest.netAmount?.toFixed(2)}</span>
-                                </div>
-                            );
-                        })()}
 
                         {/* Summary cards */}
                         {invoices.length > 0 && (
