@@ -22,14 +22,14 @@ public final class ShiftReportPdfUtils {
     // Fonts — ultra-compact for dense 2-page layout
     public static final Font COMPANY_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
     public static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
-    public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
-    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 6, Font.BOLD, Color.WHITE);
-    public static final Font HEADER_FONT = new Font(Font.HELVETICA, 5, Font.BOLD);
-    public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
-    public static final Font BOLD_FONT = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
-    public static final Font SMALL_FONT = new Font(Font.HELVETICA, 5, Font.NORMAL);
-    public static final Font SMALL_BOLD = new Font(Font.HELVETICA, 5, Font.BOLD);
-    public static final Font TOTAL_FONT = new Font(Font.HELVETICA, 6, Font.BOLD);
+    public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 8, Font.BOLD);
+    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 7, Font.BOLD, Color.WHITE);
+    public static final Font HEADER_FONT = new Font(Font.HELVETICA, 6, Font.BOLD);
+    public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 7, Font.NORMAL);
+    public static final Font BOLD_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
+    public static final Font SMALL_FONT = new Font(Font.HELVETICA, 6.5f, Font.NORMAL);
+    public static final Font SMALL_BOLD = new Font(Font.HELVETICA, 6.5f, Font.BOLD);
+    public static final Font TOTAL_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
     public static final Font FOOTER_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
     public static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
 

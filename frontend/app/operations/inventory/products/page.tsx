@@ -57,20 +57,23 @@ export default function ProductInventoryPage() {
     // Form State
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [productId, setProductId] = useState("");
+    const [productSearch, setProductSearch] = useState("");
     const [openStock, setOpenStock] = useState("");
     const [incomeStock, setIncomeStock] = useState("");
-    const [closeStock, setCloseStock] = useState("");
+    const [salesInput, setSalesInput] = useState("");
+    const [rateInput, setRateInput] = useState("");
     const [apiError, setApiError] = useState("");
     const validationRules = useMemo(() => ({
         productId: [required("Product is required")],
         openStock: [required("Opening stock is required")],
-        closeStock: [required("Closing stock is required")],
     }), []);
     const { errors, validate, clearError, clearAllErrors } = useFormValidation(validationRules);
 
     // Derived Calculations
-    const [totalStock, setTotalStock] = useState(0);
-    const [sales, setSales] = useState(0);
+    const totalStock = (parseFloat(openStock) || 0) + (parseFloat(incomeStock) || 0);
+    const sales = parseFloat(salesInput) || 0;
+    const closeStock = Math.max(0, totalStock - sales);
+    const amount = sales * (parseFloat(rateInput) || 0);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -97,16 +100,6 @@ export default function ProductInventoryPage() {
         loadData();
     }, [fromDate, toDate]);
 
-    // Derived auto-calculations
-    useEffect(() => {
-        const o = parseFloat(openStock) || 0;
-        const i = parseFloat(incomeStock) || 0;
-        const c = parseFloat(closeStock) || 0;
-
-        const total = o + i;
-        setTotalStock(total);
-        setSales(Math.max(0, total - c));
-    }, [openStock, incomeStock, closeStock]);
 
     const handleEdit = (inv: ProductInventory) => {
         clearAllErrors();
@@ -114,23 +107,26 @@ export default function ProductInventoryPage() {
         setEditingId(inv.id);
         setDate(inv.date);
         setProductId(String(inv.product.id));
+        setProductSearch(inv.product.name || "");
         setOpenStock(String(inv.openStock || ""));
         setIncomeStock(String(inv.incomeStock || ""));
-        setCloseStock(String(inv.closeStock || ""));
+        setSalesInput(String(inv.sales || ""));
+        setRateInput(String(inv.rate || ""));
         setIsModalOpen(true);
     };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setApiError("");
-        if (!validate({ productId, openStock, closeStock })) return;
+        if (!validate({ productId, openStock })) return;
         try {
             const payload = {
                 date,
                 product: { id: Number(productId) },
                 openStock: Number(openStock),
                 incomeStock: Number(incomeStock),
-                closeStock: Number(closeStock)
+                closeStock,
+                rate: rateInput ? Number(rateInput) : undefined,
             };
 
             if (editingId) {
@@ -184,9 +180,11 @@ export default function ProductInventoryPage() {
     const resetForm = () => {
         setEditingId(null);
         setProductId("");
+        setProductSearch("");
         setOpenStock("");
         setIncomeStock("");
-        setCloseStock("");
+        setSalesInput("");
+        setRateInput("");
     };
 
     const getUnit = () => {
@@ -417,18 +415,43 @@ export default function ProductInventoryPage() {
                             />
                         </div>
 
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-foreground mb-1.5">Select Product</label>
-                            <StyledSelect
-                                value={productId}
-                                onChange={(val) => { setProductId(val); clearError("productId"); }}
-                                options={[
-                                    { value: "", label: "Select a Product..." },
-                                    ...products.map(p => ({ value: String(p.id), label: `${p.name} (${p.unit})` })),
-                                ]}
-                                placeholder="Select a Product..."
-                                className={`w-full ${inputErrorClass(errors.productId)}`}
-                            />
+                        <div className="md:col-span-2 relative z-10">
+                            <label className="block text-sm font-medium text-foreground mb-1.5">Product</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                                <input
+                                    type="text"
+                                    placeholder="Search product..."
+                                    value={productSearch}
+                                    onChange={(e) => {
+                                        setProductSearch(e.target.value);
+                                        if (!e.target.value) { setProductId(""); setRateInput(""); }
+                                    }}
+                                    className={`w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 ${inputErrorClass(errors.productId)}`}
+                                />
+                            </div>
+                            {productSearch && !productId && (
+                                <div className="absolute left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+                                    {products
+                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                        .map(p => (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                className="w-full px-4 py-2.5 text-left hover:bg-primary/10 text-foreground transition-colors flex items-center justify-between text-sm"
+                                                onClick={() => {
+                                                    setProductId(String(p.id));
+                                                    setProductSearch(p.name);
+                                                    setRateInput(String(p.price || ""));
+                                                    clearError("productId");
+                                                }}
+                                            >
+                                                <span className="font-medium">{p.name}</span>
+                                                <span className="text-xs text-muted-foreground">{p.unit} {p.price ? `| ₹${p.price}` : ""}</span>
+                                            </button>
+                                        ))}
+                                </div>
+                            )}
                             <FieldError error={errors.productId} />
                         </div>
 
@@ -455,16 +478,27 @@ export default function ProductInventoryPage() {
                             />
                         </div>
 
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-foreground mb-1.5 font-bold">Actual Closing Physical Stock</label>
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-1.5 font-bold">Units Sold</label>
                             <input
                                 type="number"
-                                value={closeStock}
-                                onChange={(e) => { setCloseStock(e.target.value); clearError("closeStock"); }}
-                                className={`w-full bg-primary/5 border-primary/30 border rounded-xl px-4 py-3 text-foreground text-center text-xl font-bold ${inputErrorClass(errors.closeStock)}`}
-                                placeholder="Count them now"
+                                value={salesInput}
+                                onChange={(e) => setSalesInput(e.target.value)}
+                                className="w-full bg-primary/5 border-primary/30 border rounded-xl px-4 py-3 text-foreground text-center text-xl font-bold"
+                                placeholder="Enter sales"
                             />
-                            <FieldError error={errors.closeStock} />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">Rate (₹)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={rateInput}
+                                onChange={(e) => setRateInput(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                placeholder="0.00"
+                            />
                         </div>
                     </div>
 
@@ -476,8 +510,13 @@ export default function ProductInventoryPage() {
                             </div>
                             <div className="w-px h-8 bg-border"></div>
                             <div className="flex-1">
-                                <p className="text-[10px] text-primary uppercase font-bold tracking-widest">Units Sold</p>
-                                <p className="text-3xl font-black text-primary">{sales} <span className="text-sm">{getUnit()}</span></p>
+                                <p className="text-[10px] text-primary uppercase font-bold tracking-widest">Closing Stock</p>
+                                <p className="text-2xl font-black text-primary">{closeStock} <span className="text-sm">{getUnit()}</span></p>
+                            </div>
+                            <div className="w-px h-8 bg-border"></div>
+                            <div className="flex-1">
+                                <p className="text-[10px] text-amber-500 uppercase font-bold tracking-widest">Amount</p>
+                                <p className="text-2xl font-black text-amber-500">₹{amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
                             </div>
                         </div>
                     </div>
