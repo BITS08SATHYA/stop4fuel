@@ -304,6 +304,13 @@ export const getCustomerLedger = (customerId: number, fromDate: string, toDate: 
 export const getOutstandingBills = (customerId: number): Promise<InvoiceBill[]> =>
     fetchWithAuth(`${API_BASE_URL}/ledger/outstanding/${customerId}`).then(handleResponse);
 
+export const downloadLedgerPdf = (customerId: number, fromDate: string, toDate: string): Promise<Blob> =>
+    fetchWithAuth(`${API_BASE_URL}/ledger/customer/${customerId}/pdf?fromDate=${fromDate}&toDate=${toDate}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Ledger PDF generation failed');
+            return res.blob();
+        });
+
 // Incentive Payments
 export const getIncentivePayments = (): Promise<IncentivePayment[]> =>
     fetchWithAuth(`${API_BASE_URL}/incentive-payments`).then(handleResponse);

@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import {
-    BookOpen, Search, Calendar, ArrowUpRight, ArrowDownLeft
+    BookOpen, Search, Calendar, ArrowUpRight, ArrowDownLeft, FileText
 } from "lucide-react";
 import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import {
-    getCustomers, getCustomerLedger, getOpeningBalance,
+    getCustomers, getCustomerLedger, getOpeningBalance, downloadLedgerPdf,
     type CustomerLedger, type Customer
 } from "@/lib/api/station";
 
@@ -20,6 +20,7 @@ export default function LedgerPage() {
     const [ledger, setLedger] = useState<CustomerLedger | null>(null);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
@@ -47,6 +48,27 @@ export default function LedgerPage() {
     };
 
     const selectedCustomer = customers.find((c: any) => c.id === Number(selectedCustomerId));
+
+    const handleDownloadPdf = async () => {
+        if (!selectedCustomerId || !fromDate || !toDate) return;
+        setIsDownloading(true);
+        try {
+            const blob = await downloadLedgerPdf(Number(selectedCustomerId), fromDate, toDate);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            const name = selectedCustomer?.name?.replace(/[^a-zA-Z0-9]/g, "_") || "Customer";
+            a.download = `Ledger_${name}_${fromDate}_to_${toDate}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Failed to download ledger PDF", err);
+            setError("Failed to generate PDF");
+        }
+        setIsDownloading(false);
+    };
 
     if (initialLoading) {
         return (
@@ -111,6 +133,17 @@ export default function LedgerPage() {
                             <Search className="w-4 h-4" />
                             {loading ? "Loading..." : "View Ledger"}
                         </button>
+                        {ledger && (
+                            <button
+                                onClick={handleDownloadPdf}
+                                disabled={isDownloading}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                title="Download Ledger PDF"
+                            >
+                                <FileText className="w-4 h-4" />
+                                {isDownloading ? "Generating..." : "PDF"}
+                            </button>
+                        )}
                     </div>
                     {error && (
                         <div className="mt-3 bg-rose-500/20 border border-rose-500/30 text-rose-400 px-4 py-2 rounded-lg text-sm">
