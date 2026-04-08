@@ -114,6 +114,16 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
 
     List<InvoiceBill> findByCustomerIdAndPaymentStatus(Long customerId, PaymentStatus paymentStatus);
 
+    // Credit bills for a customer in a date range (for ledger)
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
+           "AND ib.billType = 'CREDIT' AND ib.date >= :fromDate AND ib.date <= :toDate " +
+           "AND ib.scid = :scid ORDER BY ib.date ASC")
+    List<InvoiceBill> findCreditBillsByCustomerAndDateRange(
+            @Param("customerId") Long customerId,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
+
     List<InvoiceBill> findByBillTypeAndPaymentStatus(BillType billType, PaymentStatus paymentStatus);
 
     // Sum of all credit bills for a customer (total credit ever billed)

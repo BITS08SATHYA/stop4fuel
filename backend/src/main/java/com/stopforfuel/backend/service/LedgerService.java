@@ -50,14 +50,9 @@ public class LedgerService {
 
         BigDecimal openingBalance = getOpeningBalance(customerId, fromDate);
 
-        // Fetch all credit bills in period (both linked and unlinked to statements)
-        List<InvoiceBill> allCreditBills = invoiceBillRepository.findAllByScid(SecurityUtils.getScid()).stream()
-                .filter(b -> b.getCustomer() != null && b.getCustomer().getId().equals(customerId))
-                .filter(b -> com.stopforfuel.backend.enums.BillType.CREDIT.equals(b.getBillType()))
-                .filter(b -> b.getDate() != null
-                        && !b.getDate().isBefore(fromDateTime)
-                        && !b.getDate().isAfter(toDateTime))
-                .toList();
+        // Fetch credit bills for this customer in the date range
+        List<InvoiceBill> allCreditBills = invoiceBillRepository.findCreditBillsByCustomerAndDateRange(
+                customerId, fromDateTime, toDateTime, SecurityUtils.getScid());
 
         // Fetch payments in period
         List<Payment> payments = paymentRepository.findByCustomerIdAndPaymentDateBetween(
