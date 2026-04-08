@@ -104,6 +104,7 @@ public class PurchaseInvoiceService {
     }
 
     public PurchaseInvoice uploadPdf(Long id, MultipartFile file) throws IOException {
+        com.stopforfuel.backend.util.FileUploadValidator.validatePdf(file);
         PurchaseInvoice invoice = getById(id);
         LocalDate date = invoice.getInvoiceDate() != null ? invoice.getInvoiceDate() : LocalDate.now();
         Long scid = invoice.getScid() != null ? invoice.getScid() : SecurityUtils.getScid();

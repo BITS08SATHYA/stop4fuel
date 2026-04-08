@@ -66,6 +66,8 @@ public class CompanyController {
     @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
     public ResponseEntity<CompanyDTO> uploadLogo(@PathVariable Long id,
                                                   @RequestParam("file") MultipartFile file) {
+        com.stopforfuel.backend.util.FileUploadValidator.validateImage(file);
+
         Company company = companyService.getCompanyById(id)
                 .orElseThrow(() -> new RuntimeException("Company not found"));
 

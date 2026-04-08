@@ -391,6 +391,8 @@ public class PaymentService {
      */
     @Transactional
     public Payment uploadProofImage(Long paymentId, MultipartFile file) throws IOException {
+        com.stopforfuel.backend.util.FileUploadValidator.validateImage(file);
+
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
 

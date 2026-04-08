@@ -69,6 +69,7 @@ public class UtilityBillService {
     }
 
     public UtilityBill parseTnebPdf(MultipartFile file) {
+        com.stopforfuel.backend.util.FileUploadValidator.validatePdf(file);
         try {
             PDDocument document = Loader.loadPDF(file.getBytes());
             PDFTextStripper stripper = new PDFTextStripper();

@@ -675,9 +675,7 @@ public class InvoiceBillService {
     // --- File Uploads to S3 ---
 
     public InvoiceBill uploadFile(Long id, String type, MultipartFile file) throws IOException {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
+        com.stopforfuel.backend.util.FileUploadValidator.validateDocument(file);
 
         InvoiceBill invoice = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
