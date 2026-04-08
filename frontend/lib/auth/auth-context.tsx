@@ -116,12 +116,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     permissions: data.permissions || [],
                 });
                 setAccessToken(null);
+                // Refresh client-side session cookie for middleware
+                document.cookie = `sff-auth-session=1; path=/; max-age=${8 * 60 * 60}; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
                 setIsLoading(false);
                 return;
             }
 
             if (DEV_MODE) {
                 // No valid cookie and no Cognito: send to login page
+                document.cookie = "sff-auth-session=; path=/; max-age=0";
                 setUser(null);
                 setIsLoading(false);
                 return;
@@ -179,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 });
             }
         } catch {
+            document.cookie = "sff-auth-session=; path=/; max-age=0";
             setUser(null);
             setAccessToken(null);
         } finally {
@@ -252,6 +256,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 setAccessToken(null);
 
+                // Set client-side cookie so Next.js middleware can detect the session
+                document.cookie = `sff-auth-session=1; path=/; max-age=${8 * 60 * 60}; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
+
                 const userData = data.user;
                 setUser({
                     id: userData.id,
@@ -287,6 +294,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 method: "POST",
                 credentials: "include",
             });
+            // Clear client-side session cookie
+            document.cookie = "sff-auth-session=; path=/; max-age=0";
             setUser(null);
             setAccessToken(null);
             window.location.href = "/login";
