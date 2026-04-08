@@ -10,7 +10,9 @@ import com.stopforfuel.backend.service.PermissionService;
 import com.stopforfuel.config.SecurityUtils;
 import com.stopforfuel.config.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -45,9 +47,12 @@ public class AuthController {
 
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    private static final String AUTH_COOKIE_NAME = "sff-auth-session";
+
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> request,
-                                                      HttpServletRequest httpRequest) {
+                                                      HttpServletRequest httpRequest,
+                                                      HttpServletResponse httpResponse) {
         if (jwtTokenProvider == null) {
             return ResponseEntity.status(404).body(Map.of("error", "Passcode login is not available in this environment"));
         }
@@ -107,6 +112,16 @@ public class AuthController {
         // Audit log
         auditLogService.logLogin("LOGIN_SUCCESS", user.getId(), user.getName(), clientIp,
                 "Successful login via passcode");
+
+        // Set httpOnly auth cookie
+        ResponseCookie cookie = ResponseCookie.from(AUTH_COOKIE_NAME, token)
+                .httpOnly(true)
+                .secure(false) // dev mode; set true in production
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(8 * 60 * 60) // 8 hours
+                .build();
+        httpResponse.addHeader("Set-Cookie", cookie.toString());
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
@@ -182,6 +197,19 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(HttpServletResponse httpResponse) {
+        ResponseCookie cookie = ResponseCookie.from(AUTH_COOKIE_NAME, "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(0)
+                .build();
+        httpResponse.addHeader("Set-Cookie", cookie.toString());
+        return ResponseEntity.ok(Map.of("message", "Logged out"));
     }
 
     private Map<String, Object> buildUserResponse(User user, List<String> permissions, String designation) {
