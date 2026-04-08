@@ -119,8 +119,16 @@ export default function LedgerPage() {
                     )}
                 </GlassCard>
 
+                {/* Loading spinner */}
+                {loading && (
+                    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+                        <p className="animate-pulse">Loading ledger...</p>
+                    </div>
+                )}
+
                 {/* Ledger Results */}
-                {ledger && (
+                {!loading && ledger && (
                     <>
                         {/* Balance Summary */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">

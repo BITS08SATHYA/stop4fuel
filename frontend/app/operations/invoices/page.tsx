@@ -1651,7 +1651,12 @@ export default function InvoicesPage() {
                             </div>
                         )}
 
-                        {invoices.length === 0 ? (
+                        {isLoading ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+                                <p className="animate-pulse">Loading invoices...</p>
+                            </div>
+                        ) : invoices.length === 0 ? (
                             <div className="text-center text-muted-foreground py-8">
                                 {viewMode === "shift"
                                     ? (activeShiftId ? "No invoices in the current shift yet." : "No active shift found.")

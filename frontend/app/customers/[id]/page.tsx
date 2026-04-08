@@ -274,7 +274,14 @@ export default function CustomerProfilePage() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+    if (loading) return (
+        <div className="p-8 flex items-center justify-center min-h-screen">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <p className="text-muted-foreground animate-pulse">Loading customer...</p>
+            </div>
+        </div>
+    );
     if (!customer) return <div className="p-8 text-center text-muted-foreground">Customer not found</div>;
 
     const creditLimit = customer.creditLimitLiters || 0;
