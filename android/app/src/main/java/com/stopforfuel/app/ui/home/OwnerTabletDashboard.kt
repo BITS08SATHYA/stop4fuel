@@ -28,7 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stopforfuel.app.data.remote.dto.AwsBillingDto
 import com.stopforfuel.app.data.remote.dto.BackendHealthDto
+import com.stopforfuel.app.data.remote.dto.ProductBreakdownDto
 import com.stopforfuel.app.data.remote.dto.ProductDto
+import com.stopforfuel.app.data.remote.dto.ProductSaleDto
 import com.stopforfuel.app.data.remote.dto.TankStatusDto
 import java.text.NumberFormat
 import java.util.Locale
@@ -51,172 +53,110 @@ fun OwnerTabletDashboard(
     uiState: HomeUiState,
     onNavigateToInvoice: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            // ─── LEFT PANEL ───
-            Column(
-                Modifier
-                    .weight(0.55f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                Text(
-                    "TODAY'S NUMBERS",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.5.sp
-                )
-                Spacer(Modifier.height(12.dp))
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val isTablet = maxWidth >= 600.dp
 
-                val stats = uiState.dashboardStats
-
-                // Row 1: Revenue + Volume
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GradientStatCard(
-                        icon = Icons.Default.CurrencyRupee,
-                        title = "Revenue",
-                        value = inrFormat.format(stats?.todayRevenue ?: 0),
-                        gradient = GradientTeal,
-                        modifier = Modifier.weight(1f)
+        Column(Modifier.fillMaxSize()) {
+            if (isTablet) {
+                // ─── TABLET: Two-panel layout ───
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    Column(
+                        Modifier.weight(0.55f).verticalScroll(rememberScrollState()).padding(16.dp)
+                    ) {
+                        StatsSection(uiState)
+                        Spacer(Modifier.height(16.dp))
+                        ProductSalesSection(uiState)
+                    }
+                    VerticalDivider(
+                        modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
-                    GradientStatCard(
-                        icon = Icons.Default.LocalGasStation,
-                        title = "Fuel Volume",
-                        value = "${stats?.todayFuelVolume ?: 0} L",
-                        gradient = GradientBlue,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(
+                        Modifier.weight(0.45f).verticalScroll(rememberScrollState()).padding(16.dp)
+                    ) {
+                        RightPanelContent(uiState)
+                    }
                 }
-                Spacer(Modifier.height(12.dp))
-
-                // Row 2: Invoices + Outstanding
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GradientStatCard(
-                        icon = Icons.Default.Receipt,
-                        title = "Invoices",
-                        value = "${stats?.todayInvoiceCount ?: 0}",
-                        subtitle = "${stats?.todayCashInvoices ?: 0} cash / ${stats?.todayCreditInvoices ?: 0} credit",
-                        gradient = GradientPurple,
-                        modifier = Modifier.weight(1f)
-                    )
-                    GradientStatCard(
-                        icon = Icons.Default.AccountBalanceWallet,
-                        title = "Outstanding",
-                        value = inrFormat.format(stats?.totalOutstanding ?: 0),
-                        gradient = GradientRed,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-
-                // Row 3: Customers + Employees
-                val health = uiState.systemHealth
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GradientStatCard(
-                        icon = Icons.Default.People,
-                        title = "Customers",
-                        value = "${health?.totalCustomers ?: 0}",
-                        gradient = GradientGreen,
-                        modifier = Modifier.weight(1f)
-                    )
-                    GradientStatCard(
-                        icon = Icons.Default.Badge,
-                        title = "Employees",
-                        value = "${health?.totalEmployees ?: 0}",
-                        gradient = GradientIndigo,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-
-                // Row 4: Products + Attendance
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GradientStatCard(
-                        icon = Icons.Default.Inventory,
-                        title = "Products",
-                        value = "${health?.totalProducts ?: 0}",
-                        gradient = GradientOrange,
-                        modifier = Modifier.weight(1f)
-                    )
-                    GradientStatCard(
-                        icon = Icons.Default.HowToReg,
-                        title = "Attendance",
-                        value = "${health?.todayAttendanceCount ?: 0}",
-                        gradient = GradientAmber,
-                        modifier = Modifier.weight(1f)
-                    )
+            } else {
+                // ─── PHONE: Single-column scrollable ───
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)
+                ) {
+                    StatsSection(uiState)
+                    Spacer(Modifier.height(16.dp))
+                    ProductSalesSection(uiState)
+                    Spacer(Modifier.height(16.dp))
+                    RightPanelContent(uiState)
                 }
             }
 
-            // ─── DIVIDER ───
-            VerticalDivider(
-                modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            // ─── RIGHT PANEL ───
-            Column(
-                Modifier
-                    .weight(0.45f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                // TANK STOCK
-                val tanks = uiState.dashboardStats?.tankStatuses
-                if (!tanks.isNullOrEmpty()) {
-                    SectionHeader(Icons.Default.PropaneTank, "TANK STOCK")
-                    Spacer(Modifier.height(8.dp))
-                    tanks.filter { it.active == true }.forEach { tank ->
-                        TankStockBar(tank)
-                    }
-                    Spacer(Modifier.height(16.dp))
+            // ─── BOTTOM NEW INVOICE BUTTON ───
+            Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
+                Button(
+                    onClick = onNavigateToInvoice,
+                    enabled = uiState.activeShift != null,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFA5)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).height(56.dp)
+                ) {
+                    Icon(Icons.Default.Receipt, contentDescription = null, tint = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Text("New Invoice", style = MaterialTheme.typography.titleMedium, color = Color.White)
                 }
-
-                // FUEL PRICES
-                if (uiState.fuelProducts.isNotEmpty()) {
-                    SectionHeader(Icons.Default.LocalOffer, "FUEL PRICES")
-                    Spacer(Modifier.height(8.dp))
-                    uiState.fuelProducts.forEach { product ->
-                        FuelPriceRow(product)
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // SYSTEM HEALTH + AWS
-                SectionHeader(Icons.Default.Monitor, "SYSTEM HEALTH")
-                Spacer(Modifier.height(8.dp))
-                HealthAndBillingSection(uiState.backendHealth, uiState.awsBilling)
-            }
-        }
-
-        // ─── BOTTOM NEW INVOICE BUTTON ───
-        Surface(
-            tonalElevation = 3.dp,
-            shadowElevation = 8.dp
-        ) {
-            Button(
-                onClick = onNavigateToInvoice,
-                enabled = uiState.activeShift != null,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF00BFA5)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .height(56.dp)
-            ) {
-                Icon(Icons.Default.Receipt, contentDescription = null, tint = Color.White)
-                Spacer(Modifier.width(8.dp))
-                Text("New Invoice", style = MaterialTheme.typography.titleMedium, color = Color.White)
             }
         }
     }
+}
+
+// ── Stats grid (shared between phone and tablet) ──
+@Composable
+private fun StatsSection(uiState: HomeUiState) {
+    Text(
+        "TODAY'S NUMBERS",
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        letterSpacing = 1.5.sp
+    )
+    Spacer(Modifier.height(12.dp))
+
+    val stats = uiState.dashboardStats
+    val health = uiState.systemHealth
+
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.CurrencyRupee, "Revenue", inrFormat.format(stats?.todayRevenue ?: 0), gradient = GradientTeal, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.AccountBalanceWallet, "Outstanding", inrFormat.format(stats?.totalOutstanding ?: 0), gradient = GradientRed, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.Receipt, "Invoices", "${stats?.todayInvoiceCount ?: 0}", subtitle = "${stats?.todayCashInvoices ?: 0} cash / ${stats?.todayCreditInvoices ?: 0} credit", gradient = GradientPurple, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.People, "Customers", "${health?.activeCustomers ?: 0} active", subtitle = "${health?.blockedCustomers ?: 0} blocked", gradient = GradientGreen, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.Badge, "Employees", "${health?.activeEmployees ?: 0} active", subtitle = "${health?.todayAttendanceCount ?: 0} present", gradient = GradientIndigo, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Description, "Statements", "${stats?.totalStatements ?: 0}", subtitle = "${stats?.unpaidStatements ?: 0} unpaid / ${stats?.paidStatements ?: 0} paid", gradient = GradientOrange, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.CreditCard, "MTD Credit", "${uiState.mtdInvoiceAnalytics?.creditCount ?: 0} bills", subtitle = inrFormat.format(uiState.mtdInvoiceAnalytics?.creditAmount ?: 0), gradient = GradientBlue, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Payments, "MTD Payments", "${uiState.mtdPaymentAnalytics?.totalPayments ?: 0} txns", subtitle = inrFormat.format(uiState.mtdPaymentAnalytics?.totalCollected ?: 0), gradient = GradientAmber, modifier = Modifier.weight(1f))
+    }
+}
+
+// ── Right panel content: tanks, fuel prices, health (shared) ──
+@Composable
+private fun RightPanelContent(uiState: HomeUiState) {
+    if (uiState.fuelProducts.isNotEmpty()) {
+        SectionHeader(Icons.Default.LocalOffer, "FUEL PRICES")
+        Spacer(Modifier.height(8.dp))
+        uiState.fuelProducts.forEach { product -> FuelPriceRow(product) }
+        Spacer(Modifier.height(16.dp))
+    }
+
+    SectionHeader(Icons.Default.Monitor, "SYSTEM HEALTH")
+    Spacer(Modifier.height(8.dp))
+    HealthAndBillingSection(uiState.backendHealth, uiState.awsBilling)
 }
 
 // ── Section header with icon ──
@@ -259,13 +199,13 @@ private fun GradientStatCard(
             Modifier
                 .background(gradient)
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Icon circle
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
@@ -274,11 +214,11 @@ private fun GradientStatCard(
                         icon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
-                Spacer(Modifier.width(12.dp))
-                Column {
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
                     Text(
                         title,
                         style = MaterialTheme.typography.labelSmall,
@@ -286,7 +226,7 @@ private fun GradientStatCard(
                     )
                     Text(
                         value,
-                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 1,
@@ -299,6 +239,99 @@ private fun GradientStatCard(
                             color = Color.White.copy(alpha = 0.7f)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+// ── Product sales sections ──
+@Composable
+private fun ProductSalesSection(uiState: HomeUiState) {
+    val lastShiftSales = uiState.dashboardStats?.lastShiftProductSales
+    if (!lastShiftSales.isNullOrEmpty()) {
+        val shiftLabel = uiState.dashboardStats?.lastShiftId?.let { "LAST SHIFT (#$it) SALES" } ?: "YESTERDAY SHIFT SALES"
+        SectionHeader(Icons.Default.BarChart, shiftLabel)
+        Spacer(Modifier.height(8.dp))
+        ProductSalesTable(
+            items = lastShiftSales.map { Triple(it.productName ?: "", it.quantity ?: 0.0, it.amount ?: 0.0) }
+        )
+        Spacer(Modifier.height(16.dp))
+    }
+
+    // Tank stock + MTD combined table
+    if (!uiState.dashboardStats?.tankStatuses.isNullOrEmpty()) {
+        SectionHeader(Icons.Default.PropaneTank, "STOCK & MTD SUMMARY")
+        Spacer(Modifier.height(8.dp))
+        StockMtdTable(uiState)
+    }
+}
+
+@Composable
+private fun ProductSalesTable(items: List<Triple<String, Double, Double>>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(Modifier.fillMaxWidth()) {
+                Text("Product", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                Text("Qty (L)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text("Amount", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+            }
+            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            items.forEach { (name, qty, amount) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                    Text(name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                    Text(String.format("%.1f", qty), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text(inrFormat.format(amount), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                }
+            }
+            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Row(Modifier.fillMaxWidth()) {
+                Text("Total", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(String.format("%.1f", items.sumOf { it.second }), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text(inrFormat.format(items.sumOf { it.third }), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun StockMtdTable(uiState: HomeUiState) {
+    val tanks = uiState.dashboardStats?.tankStatuses?.filter { it.active == true } ?: return
+    val mtdSales = uiState.mtdProductSales
+    val mtdPurchases = uiState.dashboardStats?.mtdPurchases ?: emptyList()
+
+    val stockByProduct = tanks.groupBy { it.productName ?: "Unknown" }
+        .mapValues { (_, t) -> t.sumOf { it.currentStock ?: 0.0 } }
+    val mtdSalesByProduct = mtdSales.associateBy { it.productName ?: "" }
+    val mtdPurchaseByProduct = mtdPurchases.associateBy { it.productName ?: "" }
+    val fuelProducts = stockByProduct.keys.toList()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(Modifier.fillMaxWidth()) {
+                Text("Product", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1.2f))
+                Text("Stock (L)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text("MTD Sales (L)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text("MTD Purchase (L)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+            }
+            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            fuelProducts.forEach { product ->
+                val stock = stockByProduct[product] ?: 0.0
+                val salesQty = mtdSalesByProduct[product]?.quantity?.toDouble() ?: 0.0
+                val purchaseQty = mtdPurchaseByProduct[product]?.quantity ?: 0.0
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                    Text(product, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.2f))
+                    Text(String.format("%.0f", stock), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text(String.format("%.1f", salesQty), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text(String.format("%.1f", purchaseQty), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -563,7 +596,7 @@ private fun AwsDonutChart(
 
             // Background track
             drawArc(
-                color = Color(0xFF2C2C2E),
+                color = Color(0xFFE2E8F0),
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -616,7 +649,7 @@ private fun AwsDonutChart(
                     "$${String.format("%.0f", cost)}",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color(0xFF0F172A)
                 )
             }
         }

@@ -36,6 +36,18 @@ fun InvoiceScreen(
     viewModel: InvoiceViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showPaytmDialog by remember { mutableStateOf(false) }
+
+    if (showPaytmDialog) {
+        AlertDialog(
+            onDismissRequest = { showPaytmDialog = false },
+            title = { Text("Paytm Integration") },
+            text = { Text("Paytm payment gateway integration is coming soon. You'll be able to collect payments directly via Paytm QR/UPI.") },
+            confirmButton = {
+                TextButton(onClick = { showPaytmDialog = false }) { Text("OK") }
+            }
+        )
+    }
 
     // Handle success
     LaunchedEffect(uiState.successBillNo) {
@@ -96,7 +108,8 @@ fun InvoiceScreen(
             Step2Content(
                 uiState = uiState,
                 viewModel = viewModel,
-                modifier = Modifier.padding(padding)
+                modifier = Modifier.padding(padding),
+                onPaytmSelected = { showPaytmDialog = true }
             )
         }
     }
@@ -572,7 +585,8 @@ private fun QuantitySection(
 private fun Step2Content(
     uiState: InvoiceUiState,
     viewModel: InvoiceViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPaytmSelected: () -> Unit = {}
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -591,11 +605,14 @@ private fun Step2Content(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val modes = listOf("CASH", "UPI", "CARD", "CHEQUE", "BANK TRANSFER")
+                    val modes = listOf("CASH", "UPI", "CARD", "CHEQUE", "BANK TRANSFER", "PAYTM")
                     items(modes) { mode ->
                         FilterChip(
                             selected = uiState.paymentMode == mode,
-                            onClick = { viewModel.setPaymentMode(mode) },
+                            onClick = {
+                                if (mode == "PAYTM") onPaytmSelected()
+                                else viewModel.setPaymentMode(mode)
+                            },
                             label = { Text(mode) }
                         )
                     }

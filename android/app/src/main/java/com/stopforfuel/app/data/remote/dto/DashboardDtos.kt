@@ -14,7 +14,14 @@ data class DashboardStatsDto(
     val shiftNet: BigDecimal?,
     val totalOutstanding: BigDecimal?,
     val totalCreditCustomers: Long?,
-    val productSales: List<ProductSaleDto>?
+    val productSales: List<ProductSaleDto>?,
+    val lastShiftProductSales: List<ProductSaleDto>?,
+    val lastShiftId: Long?,
+    val totalStatements: Long?,
+    val paidStatements: Long?,
+    val unpaidStatements: Long?,
+    val mtdPurchases: List<ProductPurchaseDto>?,
+    val tankStatuses: List<TankStatusDto>?
 )
 
 data class ProductSaleDto(
@@ -30,8 +37,37 @@ data class SystemHealthDto(
     val inactiveCustomers: Long?,
     val totalVehicles: Long?,
     val totalEmployees: Long?,
+    val activeEmployees: Long?,
     val activeShifts: Long?,
-    val totalProducts: Long?
+    val totalProducts: Long?,
+    val todayAttendanceCount: Long?
+)
+
+data class TankStatusDto(
+    val tankId: Long?,
+    val tankName: String?,
+    val productName: String?,
+    val capacity: Double?,
+    val currentStock: Double?,
+    val thresholdStock: Double?,
+    val productPrice: Double?,
+    val active: Boolean?,
+    val lastReadingDate: String?
+)
+
+data class BackendHealthDto(
+    val status: String?,
+    val database: String?,
+    val latencyMs: Long?,
+    val timestamp: String?
+)
+
+data class AwsBillingDto(
+    val available: Boolean?,
+    val monthToDateCost: Double?,
+    val currency: String?,
+    val periodStart: String?,
+    val periodEnd: String?
 )
 
 data class CashierDashboardDto(
@@ -63,4 +99,30 @@ data class CashierInvoiceItem(
     val netAmount: BigDecimal?,
     val date: String?,
     val customerName: String?
+)
+
+data class InvoiceAnalyticsDto(
+    val totalRevenue: BigDecimal?,
+    val totalInvoices: Long?,
+    val creditCount: Long?,
+    val creditAmount: BigDecimal?,
+    val cashCount: Long?,
+    val cashAmount: BigDecimal?,
+    val productBreakdown: List<ProductBreakdownDto>?
+)
+
+data class PaymentAnalyticsDto(
+    val totalCollected: BigDecimal?,
+    val totalPayments: Long?
+)
+
+data class ProductPurchaseDto(
+    val productName: String?,
+    val quantity: Double?
+)
+
+data class ProductBreakdownDto(
+    val productName: String?,
+    val quantity: BigDecimal?,
+    val amount: BigDecimal?
 )

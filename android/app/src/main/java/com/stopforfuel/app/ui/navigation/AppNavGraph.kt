@@ -18,6 +18,11 @@ import com.stopforfuel.app.ui.customer.CustomerDetailScreen
 import com.stopforfuel.app.ui.employee.EmployeeManageScreen
 import com.stopforfuel.app.ui.dashboard.DashboardScreen
 import com.stopforfuel.app.ui.product.ProductManageScreen
+import com.stopforfuel.app.ui.fastcash.FastCashInvoiceScreen
+import com.stopforfuel.app.ui.explorer.InvoiceBillExplorerScreen
+import com.stopforfuel.app.ui.explorer.StatementExplorerScreen
+import com.stopforfuel.app.ui.stocktransfer.StockTransferScreen
+import com.stopforfuel.app.ui.attendance.AttendanceScreen
 
 @Composable
 fun AppNavGraph() {
@@ -62,6 +67,21 @@ fun AppNavGraph() {
                 },
                 onNavigateToProducts = {
                     navController.navigate(Routes.ProductManage.route)
+                },
+                onNavigateToFastCashInvoice = {
+                    navController.navigate(Routes.FastCashInvoice.route)
+                },
+                onNavigateToInvoiceBillExplorer = {
+                    navController.navigate(Routes.InvoiceBillExplorer.route)
+                },
+                onNavigateToStatementExplorer = {
+                    navController.navigate(Routes.StatementExplorer.route)
+                },
+                onNavigateToStockTransfer = {
+                    navController.navigate(Routes.StockTransfer.route)
+                },
+                onNavigateToAttendance = {
+                    navController.navigate(Routes.Attendance.route)
                 },
                 onLogout = {
                     navController.navigate(Routes.Login.route) {
@@ -135,6 +155,39 @@ fun AppNavGraph() {
 
         composable(Routes.ProductManage.route) {
             ProductManageScreen(onBack = { navController.popBackStack() })
+        }
+
+        // ── New screens ──
+
+        composable(Routes.FastCashInvoice.route) {
+            FastCashInvoiceScreen(
+                onBack = { navController.popBackStack() },
+                onInvoiceCreated = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.InvoiceBillExplorer.route) {
+            InvoiceBillExplorerScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.StatementExplorer.route) {
+            StatementExplorerScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.StockTransfer.route) {
+            StockTransferScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.Attendance.route) {
+            AttendanceScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

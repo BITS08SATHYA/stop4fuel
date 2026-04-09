@@ -379,6 +379,13 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("toDate") LocalDateTime toDate,
             @Param("scid") Long scid);
 
+    // Dashboard aggregate: product sales by shift
+    @Query("SELECT p.name, COALESCE(SUM(ip.quantity), 0), COALESCE(SUM(ip.amount), 0) " +
+           "FROM InvoiceProduct ip JOIN ip.product p JOIN ip.invoiceBill ib " +
+           "WHERE ib.shiftId = :shiftId " +
+           "GROUP BY p.id, p.name")
+    List<Object[]> getProductSalesByShift(@Param("shiftId") Long shiftId);
+
     // Credit overview aggregates
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
            "WHERE ib.billType = 'CREDIT' AND ib.paymentStatus != 'PAID' AND ib.scid = :scid")

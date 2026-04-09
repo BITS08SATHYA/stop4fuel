@@ -1,6 +1,7 @@
 package com.stopforfuel.app.ui.home
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -33,6 +35,11 @@ fun HomeScreen(
     onNavigateToEmployees: () -> Unit = {},
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToProducts: () -> Unit = {},
+    onNavigateToFastCashInvoice: () -> Unit = {},
+    onNavigateToInvoiceBillExplorer: () -> Unit = {},
+    onNavigateToStatementExplorer: () -> Unit = {},
+    onNavigateToStockTransfer: () -> Unit = {},
+    onNavigateToAttendance: () -> Unit = {},
     onLogout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -49,48 +56,101 @@ fun HomeScreen(
             ModalDrawerSheet(
                 drawerContainerColor = MaterialTheme.colorScheme.surface
             ) {
-                // Header
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("StopForFuel", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(uiState.userName, style = MaterialTheme.typography.bodyMedium)
-                    Text(uiState.userRole, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                HorizontalDivider()
-
-                DrawerItem(Icons.Default.Dashboard, "Dashboard") {
-                    scope.launch { drawerState.close() }; onNavigateToDashboard()
-                }
-                DrawerItem(Icons.Default.Receipt, "New Invoice") {
-                    scope.launch { drawerState.close() }; onNavigateToInvoice()
-                }
-                DrawerItem(Icons.AutoMirrored.Filled.List, "Shift Bills") {
-                    scope.launch { drawerState.close() }; onNavigateToShiftInvoices()
-                }
-                DrawerItem(Icons.Default.LocalGasStation, "Pump Session") {
-                    scope.launch { drawerState.close() }
-                    if (uiState.activePumpSession != null) onNavigateToEndSession(uiState.activePumpSession!!.id)
-                    else onNavigateToStartSession()
-                }
-
-                if (isManager) {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text("Management", modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                    DrawerItem(Icons.Default.People, "Customers") {
-                        scope.launch { drawerState.close() }; onNavigateToCustomers()
+                Column(Modifier.fillMaxHeight()) {
+                    // Header
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "StopForFuel",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(uiState.userName, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            uiState.userRole,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    DrawerItem(Icons.Default.Badge, "Employees") {
-                        scope.launch { drawerState.close() }; onNavigateToEmployees()
-                    }
-                    DrawerItem(Icons.Default.Inventory, "Products") {
-                        scope.launch { drawerState.close() }; onNavigateToProducts()
-                    }
-                }
+                    HorizontalDivider()
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                DrawerItem(Icons.AutoMirrored.Filled.Logout, "Logout") {
-                    scope.launch { drawerState.close() }; viewModel.logout(); onLogout()
+                    // Scrollable menu items
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        // ── Operations ──
+                        DrawerSectionHeader("Operations")
+                        DrawerItem(Icons.Default.Receipt, "New Invoice") {
+                            scope.launch { drawerState.close() }; onNavigateToInvoice()
+                        }
+                        DrawerItem(Icons.AutoMirrored.Filled.List, "Shift Bills") {
+                            scope.launch { drawerState.close() }; onNavigateToShiftInvoices()
+                        }
+                        DrawerItem(Icons.Default.LocalGasStation, "Pump Session") {
+                            scope.launch { drawerState.close() }
+                            if (uiState.activePumpSession != null) onNavigateToEndSession(uiState.activePumpSession!!.id)
+                            else onNavigateToStartSession()
+                        }
+                        DrawerItem(Icons.Default.FlashOn, "Fast Cash Invoice") {
+                            scope.launch { drawerState.close() }; onNavigateToFastCashInvoice()
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // ── Payments ──
+                        DrawerSectionHeader("Payments")
+                        DrawerItem(Icons.Default.Search, "Invoice Explorer") {
+                            scope.launch { drawerState.close() }; onNavigateToInvoiceBillExplorer()
+                        }
+                        DrawerItem(Icons.Default.Description, "Statement Explorer") {
+                            scope.launch { drawerState.close() }; onNavigateToStatementExplorer()
+                        }
+
+                        if (isManager) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                            // ── Inventory ──
+                            DrawerSectionHeader("Inventory")
+                            DrawerItem(Icons.Default.SwapHoriz, "Stock Transfer") {
+                                scope.launch { drawerState.close() }; onNavigateToStockTransfer()
+                            }
+                            DrawerItem(Icons.Default.Inventory, "Products") {
+                                scope.launch { drawerState.close() }; onNavigateToProducts()
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                            // ── People ──
+                            DrawerSectionHeader("People")
+                            DrawerItem(Icons.Default.People, "Customers") {
+                                scope.launch { drawerState.close() }; onNavigateToCustomers()
+                            }
+                            DrawerItem(Icons.Default.Badge, "Employees") {
+                                scope.launch { drawerState.close() }; onNavigateToEmployees()
+                            }
+                            DrawerItem(Icons.Default.EventAvailable, "Attendance") {
+                                scope.launch { drawerState.close() }; onNavigateToAttendance()
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                            // ── Analytics ──
+                            DrawerSectionHeader("Analytics")
+                            DrawerItem(Icons.Default.Dashboard, "Dashboard") {
+                                scope.launch { drawerState.close() }; onNavigateToDashboard()
+                            }
+                        }
+                    }
+
+                    // Logout pinned at bottom
+                    HorizontalDivider()
+                    DrawerItem(Icons.AutoMirrored.Filled.Logout, "Logout") {
+                        scope.launch { drawerState.close() }; viewModel.logout(); onLogout()
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
@@ -112,21 +172,31 @@ fun HomeScreen(
                 )
             }
         ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (uiState.isLoading) {
+            if (uiState.isLoading) {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
-                } else if (uiState.error != null) {
+                }
+            } else if (uiState.error != null) {
+                Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(uiState.error!!, color = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = { viewModel.loadData() }) { Text("Retry") }
-                } else {
+                }
+            } else if (uiState.isManager) {
+                // --- OWNER/MANAGER: responsive dashboard (handles phone/tablet internally) ---
+                Box(Modifier.fillMaxSize().padding(padding)) {
+                    OwnerTabletDashboard(uiState, onNavigateToInvoice)
+                }
+            } else {
+                // --- CASHIER DASHBOARD ---
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     ShiftStatusCard(uiState)
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -153,17 +223,23 @@ fun HomeScreen(
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    if (uiState.isManager) {
-                        // --- OWNER/MANAGER DASHBOARD ---
-                        OwnerDashboard(uiState)
-                    } else {
-                        // --- CASHIER DASHBOARD ---
-                        CashierDashboard(uiState)
-                    }
+                    CashierDashboard(uiState)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun DrawerSectionHeader(title: String) {
+    Text(
+        title.uppercase(),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        letterSpacing = 1.sp
+    )
 }
 
 @Composable

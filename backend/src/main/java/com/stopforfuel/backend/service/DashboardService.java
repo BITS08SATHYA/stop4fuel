@@ -39,6 +39,8 @@ public class DashboardService {
     private final ShiftRepository shiftRepository;
     private final ProductRepository productRepository;
     private final VehicleRepository vehicleRepository;
+    private final StatementRepository statementRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
 
     @Transactional(readOnly = true)
     public DashboardStats getStats() {
@@ -145,6 +147,38 @@ public class DashboardService {
             return ps;
         }).collect(Collectors.toList());
         stats.setProductSales(productSales);
+
+        // --- Last closed shift product sales ---
+        shiftRepository.findTopByStatusAndScidOrderByIdDesc(
+                com.stopforfuel.backend.enums.ShiftStatus.CLOSED, scid
+        ).ifPresent(lastShift -> {
+            stats.setLastShiftId(lastShift.getId());
+            List<Object[]> lastShiftData = invoiceBillRepository.getProductSalesByShift(lastShift.getId());
+            List<ProductSales> lastShiftSales = lastShiftData.stream().map(row -> {
+                ProductSales ps = new ProductSales();
+                ps.setProductName((String) row[0]);
+                ps.setQuantity(row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO);
+                ps.setAmount(row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO);
+                return ps;
+            }).collect(Collectors.toList());
+            stats.setLastShiftProductSales(lastShiftSales);
+        });
+
+        // --- Statement counts ---
+        stats.setTotalStatements(statementRepository.countAll(scid));
+        stats.setPaidStatements(statementRepository.countPaid(scid));
+        stats.setUnpaidStatements(statementRepository.countUnpaid(scid));
+
+        // --- MTD purchase quantities by product ---
+        LocalDate monthStart = today.withDayOfMonth(1);
+        List<Object[]> purchaseData = purchaseOrderRepository.getMtdPurchaseByProduct(monthStart, today, scid);
+        List<ProductPurchase> mtdPurchases = purchaseData.stream().map(row -> {
+            ProductPurchase pp = new ProductPurchase();
+            pp.setProductName((String) row[0]);
+            pp.setQuantity(row[1] != null ? ((Number) row[1]).doubleValue() : 0.0);
+            return pp;
+        }).collect(Collectors.toList());
+        stats.setMtdPurchases(mtdPurchases);
 
         // --- Tank status ---
         List<Tank> tanks = tankRepository.findAllByScid(scid);
@@ -518,6 +552,9 @@ public class DashboardService {
         health.setInactiveCustomers(customerRepository.countByStatus(com.stopforfuel.backend.enums.EntityStatus.INACTIVE));
         health.setTotalVehicles(vehicleRepository.count());
         health.setTotalEmployees(employeeRepository.countByScid(scid));
+        // Count employees with ACTIVE status; fall back to total if status is not set
+        long activeEmp = employeeRepository.countByScidAndStatus(scid, com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
+        health.setActiveEmployees(activeEmp > 0 ? activeEmp : health.getTotalEmployees());
         health.setTotalUsers(userRepository.countByScid(scid));
         health.setTotalProducts(productRepository.countByScid(scid));
 
