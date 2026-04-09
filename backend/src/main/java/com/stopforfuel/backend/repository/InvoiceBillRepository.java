@@ -351,6 +351,10 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @Query("SELECT COUNT(ib) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate AND ib.billType = 'CREDIT' AND ib.scid = :scid")
     long countCreditByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate, @Param("scid") Long scid);
 
+    // Dashboard aggregate: sum credit invoice amounts in date range
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate AND ib.billType = 'CREDIT' AND ib.scid = :scid")
+    BigDecimal sumCreditAmountByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate, @Param("scid") Long scid);
+
     // Sum total quantity of all invoice products for given bill IDs
     @Query("SELECT COALESCE(SUM(ip.quantity), 0) FROM InvoiceProduct ip WHERE ip.invoiceBill.id IN :billIds")
     BigDecimal sumQuantityByBillIds(@Param("billIds") List<Long> billIds);

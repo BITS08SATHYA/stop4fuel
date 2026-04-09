@@ -65,7 +65,7 @@ fun OwnerTabletDashboard(
                     ) {
                         StatsSection(uiState)
                         Spacer(Modifier.height(16.dp))
-                        ProductSalesSection(uiState)
+                        FuelPricesSection(uiState)
                     }
                     VerticalDivider(
                         modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp),
@@ -74,7 +74,9 @@ fun OwnerTabletDashboard(
                     Column(
                         Modifier.weight(0.45f).verticalScroll(rememberScrollState()).padding(16.dp)
                     ) {
-                        RightPanelContent(uiState)
+                        ProductSalesSection(uiState)
+                        Spacer(Modifier.height(16.dp))
+                        SystemHealthSection(uiState)
                     }
                 }
             } else {
@@ -84,9 +86,11 @@ fun OwnerTabletDashboard(
                 ) {
                     StatsSection(uiState)
                     Spacer(Modifier.height(16.dp))
+                    FuelPricesSection(uiState)
+                    Spacer(Modifier.height(16.dp))
                     ProductSalesSection(uiState)
                     Spacer(Modifier.height(16.dp))
-                    RightPanelContent(uiState)
+                    SystemHealthSection(uiState)
                 }
             }
 
@@ -139,21 +143,24 @@ private fun StatsSection(uiState: HomeUiState) {
     }
     Spacer(Modifier.height(12.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        GradientStatCard(Icons.Default.CreditCard, "MTD Credit", "${uiState.mtdInvoiceAnalytics?.creditCount ?: 0} bills", subtitle = inrFormat.format(uiState.mtdInvoiceAnalytics?.creditAmount ?: 0), gradient = GradientBlue, modifier = Modifier.weight(1f))
-        GradientStatCard(Icons.Default.Payments, "MTD Payments", "${uiState.mtdPaymentAnalytics?.totalPayments ?: 0} txns", subtitle = inrFormat.format(uiState.mtdPaymentAnalytics?.totalCollected ?: 0), gradient = GradientAmber, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.CreditCard, "MTD Credit", "${stats?.mtdCreditCount ?: 0} bills", subtitle = inrFormat.format(stats?.mtdCreditAmount ?: 0), gradient = GradientBlue, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Payments, "MTD Payments", "${stats?.mtdPaymentCount ?: 0} txns", subtitle = inrFormat.format(stats?.mtdPaymentAmount ?: 0), gradient = GradientAmber, modifier = Modifier.weight(1f))
     }
 }
 
-// ── Right panel content: tanks, fuel prices, health (shared) ──
+// ── Fuel prices section ──
 @Composable
-private fun RightPanelContent(uiState: HomeUiState) {
+private fun FuelPricesSection(uiState: HomeUiState) {
     if (uiState.fuelProducts.isNotEmpty()) {
         SectionHeader(Icons.Default.LocalOffer, "FUEL PRICES")
         Spacer(Modifier.height(8.dp))
         uiState.fuelProducts.forEach { product -> FuelPriceRow(product) }
-        Spacer(Modifier.height(16.dp))
     }
+}
 
+// ── System health section ──
+@Composable
+private fun SystemHealthSection(uiState: HomeUiState) {
     SectionHeader(Icons.Default.Monitor, "SYSTEM HEALTH")
     Spacer(Modifier.height(8.dp))
     HealthAndBillingSection(uiState.backendHealth, uiState.awsBilling)
@@ -301,7 +308,7 @@ private fun ProductSalesTable(items: List<Triple<String, Double, Double>>) {
 @Composable
 private fun StockMtdTable(uiState: HomeUiState) {
     val tanks = uiState.dashboardStats?.tankStatuses?.filter { it.active == true } ?: return
-    val mtdSales = uiState.mtdProductSales
+    val mtdSales = uiState.dashboardStats?.mtdSales ?: emptyList()
     val mtdPurchases = uiState.dashboardStats?.mtdPurchases ?: emptyList()
 
     val stockByProduct = tanks.groupBy { it.productName ?: "Unknown" }
@@ -325,7 +332,7 @@ private fun StockMtdTable(uiState: HomeUiState) {
             HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             fuelProducts.forEach { product ->
                 val stock = stockByProduct[product] ?: 0.0
-                val salesQty = mtdSalesByProduct[product]?.quantity?.toDouble() ?: 0.0
+                val salesQty = mtdSalesByProduct[product]?.quantity ?: 0.0
                 val purchaseQty = mtdPurchaseByProduct[product]?.quantity ?: 0.0
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                     Text(product, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.2f))

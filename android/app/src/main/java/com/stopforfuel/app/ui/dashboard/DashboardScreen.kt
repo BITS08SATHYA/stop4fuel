@@ -153,8 +153,8 @@ private fun StatsSection(state: DashboardUiState) {
     }
     Spacer(Modifier.height(12.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        GradientStatCard(Icons.Default.CreditCard, "MTD Credit", "${state.mtdInvoiceAnalytics?.creditCount ?: 0} bills", subtitle = inrFormat.format(state.mtdInvoiceAnalytics?.creditAmount ?: 0), gradient = GradientBlue, modifier = Modifier.weight(1f))
-        GradientStatCard(Icons.Default.Payments, "MTD Payments", "${state.mtdPaymentAnalytics?.totalPayments ?: 0} txns", subtitle = inrFormat.format(state.mtdPaymentAnalytics?.totalCollected ?: 0), gradient = GradientAmber, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.CreditCard, "MTD Credit", "${state.stats?.mtdCreditCount ?: 0} bills", subtitle = inrFormat.format(state.stats?.mtdCreditAmount ?: 0), gradient = GradientBlue, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Payments, "MTD Payments", "${state.stats?.mtdPaymentCount ?: 0} txns", subtitle = inrFormat.format(state.stats?.mtdPaymentAmount ?: 0), gradient = GradientAmber, modifier = Modifier.weight(1f))
     }
 }
 
@@ -266,7 +266,7 @@ private fun ProductSalesTable(items: List<Triple<String, Double, Double>>) {
 @Composable
 private fun StockMtdTable(state: DashboardUiState) {
     val tanks = state.stats?.tankStatuses?.filter { it.active == true } ?: return
-    val mtdSales = state.mtdProductSales
+    val mtdSales = state.stats?.mtdSales ?: emptyList()
     val mtdPurchases = state.stats?.mtdPurchases ?: emptyList()
 
     // Group tanks by product, sum stock
@@ -292,7 +292,7 @@ private fun StockMtdTable(state: DashboardUiState) {
             HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             fuelProducts.forEach { product ->
                 val stock = stockByProduct[product] ?: 0.0
-                val salesQty = mtdSalesByProduct[product]?.quantity?.toDouble() ?: 0.0
+                val salesQty = mtdSalesByProduct[product]?.quantity ?: 0.0
                 val purchaseQty = mtdPurchaseByProduct[product]?.quantity ?: 0.0
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                     Text(product, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.2f))
