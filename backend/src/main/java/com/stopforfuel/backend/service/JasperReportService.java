@@ -1,11 +1,13 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.exception.ReportGenerationException;
+import com.stopforfuel.backend.repository.CompanyRepository;
+import lombok.RequiredArgsConstructor;
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -18,21 +20,12 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@RequiredArgsConstructor
 public class JasperReportService {
 
+    private final CompanyRepository companyRepository;
+
     private final Map<String, JasperReport> compiledReports = new ConcurrentHashMap<>();
-
-    @Value("${app.company.name:SATHYA FUELS}")
-    private String companyName;
-
-    @Value("${app.company.address:No. 45, GST Road, Tambaram, Chennai - 600045}")
-    private String companyAddress;
-
-    @Value("${app.company.gstin:33AABCS1234F1Z5}")
-    private String companyGstin;
-
-    @Value("${app.company.phone:044-2234 5678}")
-    private String companyPhone;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy, hh:mm a");
@@ -40,6 +33,12 @@ public class JasperReportService {
 
     public byte[] generateCustomerVehicleReport(Customer customer, List<Vehicle> vehicles) {
         try {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+            String companyGstin = companyEntity != null && companyEntity.getGstNo() != null ? companyEntity.getGstNo() : "";
+
             JasperReport report = getCompiledReport("reports/customer_vehicle_report.jrxml");
 
             Map<String, Object> params = new HashMap<>();
