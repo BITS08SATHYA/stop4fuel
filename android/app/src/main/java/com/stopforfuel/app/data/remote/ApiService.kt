@@ -114,6 +114,12 @@ interface ApiService {
     @GET("api/dashboard/cashier")
     suspend fun getCashierDashboard(): CashierDashboardDto
 
+    @GET("api/health")
+    suspend fun getBackendHealth(): BackendHealthDto
+
+    @GET("api/billing/aws-mtd")
+    suspend fun getAwsBilling(): AwsBillingDto
+
     // Products Management
     @PATCH("api/products/{id}/price")
     suspend fun updateProductPrice(@Path("id") id: Long, @Body request: PriceUpdateRequest): ProductDto
