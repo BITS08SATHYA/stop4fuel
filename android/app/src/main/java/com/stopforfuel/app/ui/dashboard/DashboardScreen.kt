@@ -23,14 +23,18 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.stopforfuel.app.data.remote.dto.AwsBillingDto
 import com.stopforfuel.app.data.remote.dto.BackendHealthDto
+import com.stopforfuel.app.data.remote.dto.ProductBreakdownDto
 import com.stopforfuel.app.data.remote.dto.ProductDto
+import com.stopforfuel.app.data.remote.dto.ProductSaleDto
 import com.stopforfuel.app.data.remote.dto.TankStatusDto
+import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -92,6 +96,8 @@ fun DashboardScreen(
                     Row(Modifier.fillMaxSize()) {
                         Column(Modifier.weight(0.55f).verticalScroll(rememberScrollState()).padding(16.dp)) {
                             StatsSection(state)
+                            Spacer(Modifier.height(16.dp))
+                            ProductSalesSection(state)
                         }
                         VerticalDivider(
                             modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp),
@@ -106,6 +112,8 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())
                     ) {
                         StatsSection(state)
+                        Spacer(Modifier.height(16.dp))
+                        ProductSalesSection(state)
                         Spacer(Modifier.height(16.dp))
                         RightPanelContent(state)
                     }
@@ -131,35 +139,27 @@ private fun StatsSection(state: DashboardUiState) {
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         GradientStatCard(Icons.Default.CurrencyRupee, "Revenue", inrFormat.format(stats?.todayRevenue ?: 0), gradient = GradientTeal, modifier = Modifier.weight(1f))
-        GradientStatCard(Icons.Default.LocalGasStation, "Fuel Volume", "${stats?.todayFuelVolume ?: 0} L", gradient = GradientBlue, modifier = Modifier.weight(1f))
-    }
-    Spacer(Modifier.height(12.dp))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        GradientStatCard(Icons.Default.Receipt, "Invoices", "${stats?.todayInvoiceCount ?: 0}", subtitle = "${stats?.todayCashInvoices ?: 0} cash / ${stats?.todayCreditInvoices ?: 0} credit", gradient = GradientPurple, modifier = Modifier.weight(1f))
         GradientStatCard(Icons.Default.AccountBalanceWallet, "Outstanding", inrFormat.format(stats?.totalOutstanding ?: 0), gradient = GradientRed, modifier = Modifier.weight(1f))
     }
     Spacer(Modifier.height(12.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        GradientStatCard(Icons.Default.People, "Customers", "${health?.activeCustomers ?: 0}", subtitle = "${health?.blockedCustomers ?: 0} blocked, ${health?.inactiveCustomers ?: 0} inactive", gradient = GradientGreen, modifier = Modifier.weight(1f))
-        GradientStatCard(Icons.Default.DirectionsCar, "Vehicles", "${health?.totalVehicles ?: 0}", gradient = GradientIndigo, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Receipt, "Invoices", "${stats?.todayInvoiceCount ?: 0}", subtitle = "${stats?.todayCashInvoices ?: 0} cash / ${stats?.todayCreditInvoices ?: 0} credit", gradient = GradientPurple, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.People, "Customers", "${health?.activeCustomers ?: 0} active", subtitle = "${health?.blockedCustomers ?: 0} blocked", gradient = GradientGreen, modifier = Modifier.weight(1f))
     }
     Spacer(Modifier.height(12.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        GradientStatCard(Icons.Default.Badge, "Employees", "${health?.totalEmployees ?: 0}", gradient = GradientOrange, modifier = Modifier.weight(1f))
-        GradientStatCard(Icons.Default.Inventory, "Products", "${health?.totalProducts ?: 0}", gradient = GradientAmber, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Badge, "Employees", "${health?.activeEmployees ?: 0} active", subtitle = "${health?.todayAttendanceCount ?: 0} present", gradient = GradientIndigo, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Description, "Statements", "${stats?.totalStatements ?: 0}", subtitle = "${stats?.unpaidStatements ?: 0} unpaid / ${stats?.paidStatements ?: 0} paid", gradient = GradientOrange, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.CreditCard, "MTD Credit", "${state.mtdInvoiceAnalytics?.creditCount ?: 0} bills", subtitle = inrFormat.format(state.mtdInvoiceAnalytics?.creditAmount ?: 0), gradient = GradientBlue, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Payments, "MTD Payments", "${state.mtdPaymentAnalytics?.totalPayments ?: 0} txns", subtitle = inrFormat.format(state.mtdPaymentAnalytics?.totalCollected ?: 0), gradient = GradientAmber, modifier = Modifier.weight(1f))
     }
 }
 
 @Composable
 private fun RightPanelContent(state: DashboardUiState) {
-    val tanks = state.stats?.tankStatuses
-    if (!tanks.isNullOrEmpty()) {
-        SectionHeader(Icons.Default.PropaneTank, "TANK STOCK")
-        Spacer(Modifier.height(8.dp))
-        tanks.filter { it.active == true }.forEach { tank -> TankStockBar(tank) }
-        Spacer(Modifier.height(16.dp))
-    }
-
     if (state.fuelProducts.isNotEmpty()) {
         SectionHeader(Icons.Default.LocalOffer, "FUEL PRICES")
         Spacer(Modifier.height(8.dp))
@@ -189,18 +189,116 @@ private fun GradientStatCard(
     gradient: Brush, modifier: Modifier = Modifier, subtitle: String? = null
 ) {
     Card(modifier = modifier, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
-        Box(Modifier.background(gradient).fillMaxWidth().padding(14.dp)) {
+        Box(Modifier.background(gradient).fillMaxWidth().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(42.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 }
-                Spacer(Modifier.width(12.dp))
-                Column {
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f))
-                    Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(value, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (subtitle != null) {
                         Text(subtitle, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductSalesSection(state: DashboardUiState) {
+    val lastShiftSales = state.stats?.lastShiftProductSales
+    if (!lastShiftSales.isNullOrEmpty()) {
+        val shiftLabel = state.stats?.lastShiftId?.let { "LAST SHIFT (#$it) SALES" } ?: "YESTERDAY SHIFT SALES"
+        SectionHeader(Icons.Default.BarChart, shiftLabel)
+        Spacer(Modifier.height(8.dp))
+        ProductSalesTable(
+            items = lastShiftSales.map { Triple(it.productName ?: "", it.quantity ?: 0.0, it.amount ?: 0.0) }
+        )
+        Spacer(Modifier.height(16.dp))
+    }
+
+    // Tank stock + MTD combined table
+    if (!state.stats?.tankStatuses.isNullOrEmpty()) {
+        SectionHeader(Icons.Default.PropaneTank, "STOCK & MTD SUMMARY")
+        Spacer(Modifier.height(8.dp))
+        StockMtdTable(state)
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ProductSalesTable(items: List<Triple<String, Double, Double>>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            // Header row
+            Row(Modifier.fillMaxWidth()) {
+                Text("Product", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                Text("Qty (L)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text("Amount", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+            }
+            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            // Data rows
+            items.forEach { (name, qty, amount) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                    Text(name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                    Text(String.format("%.1f", qty), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text(inrFormat.format(amount), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                }
+            }
+            // Total row
+            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Row(Modifier.fillMaxWidth()) {
+                Text("Total", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(String.format("%.1f", items.sumOf { it.second }), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text(inrFormat.format(items.sumOf { it.third }), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun StockMtdTable(state: DashboardUiState) {
+    val tanks = state.stats?.tankStatuses?.filter { it.active == true } ?: return
+    val mtdSales = state.mtdProductSales
+    val mtdPurchases = state.stats?.mtdPurchases ?: emptyList()
+
+    // Group tanks by product, sum stock
+    val stockByProduct = tanks.groupBy { it.productName ?: "Unknown" }
+        .mapValues { (_, t) -> t.sumOf { it.currentStock ?: 0.0 } }
+    val mtdSalesByProduct = mtdSales.associateBy { it.productName ?: "" }
+    val mtdPurchaseByProduct = mtdPurchases.associateBy { it.productName ?: "" }
+    // Only fuel products (from tanks)
+    val fuelProducts = stockByProduct.keys.toList()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(Modifier.fillMaxWidth()) {
+                Text("Product", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1.2f))
+                Text("Stock (L)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text("MTD Sales (L)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text("MTD Purchase (L)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+            }
+            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            fuelProducts.forEach { product ->
+                val stock = stockByProduct[product] ?: 0.0
+                val salesQty = mtdSalesByProduct[product]?.quantity?.toDouble() ?: 0.0
+                val purchaseQty = mtdPurchaseByProduct[product]?.quantity ?: 0.0
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                    Text(product, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.2f))
+                    Text(String.format("%.0f", stock), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text(String.format("%.1f", salesQty), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text(String.format("%.1f", purchaseQty), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                 }
             }
         }

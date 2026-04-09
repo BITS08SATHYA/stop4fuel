@@ -100,6 +100,12 @@ public class DashboardController {
         private BigDecimal creditAging90Plus;
         private List<DailyRevenue> dailyRevenue;
         private List<ProductSales> productSales;
+        private List<ProductSales> lastShiftProductSales;
+        private Long lastShiftId;
+        private long totalStatements;
+        private long paidStatements;
+        private long unpaidStatements;
+        private List<ProductPurchase> mtdPurchases;
         private List<TankStatus> tankStatuses;
         private List<RecentInvoiceItem> recentInvoices;
     }
@@ -117,6 +123,12 @@ public class DashboardController {
         private String productName;
         private BigDecimal quantity;
         private BigDecimal amount;
+    }
+
+    @Getter @Setter
+    public static class ProductPurchase {
+        private String productName;
+        private Double quantity;
     }
 
     @Getter @Setter
@@ -265,6 +277,7 @@ public class DashboardController {
         private long inactiveCustomers;
         private long totalVehicles;
         private long totalEmployees;
+        private long activeEmployees;
         private long totalUsers;
         private long activeShiftCount;
         private long todayAttendanceCount;

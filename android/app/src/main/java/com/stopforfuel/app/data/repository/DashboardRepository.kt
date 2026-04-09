@@ -32,4 +32,12 @@ class DashboardRepository @Inject constructor(
     suspend fun getAwsBilling(): Result<AwsBillingDto> = runCatching {
         api.getAwsBilling()
     }
+
+    suspend fun getInvoiceAnalytics(from: String, to: String): Result<InvoiceAnalyticsDto> = runCatching {
+        api.getInvoiceAnalytics(from, to)
+    }
+
+    suspend fun getPaymentAnalytics(from: String, to: String): Result<PaymentAnalyticsDto> = runCatching {
+        api.getPaymentAnalytics(from, to)
+    }
 }
