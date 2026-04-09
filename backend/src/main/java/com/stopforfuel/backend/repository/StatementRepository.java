@@ -93,6 +93,12 @@ public interface StatementRepository extends ScidRepository<Statement> {
     @Query("SELECT COUNT(s) FROM Statement s WHERE s.status = 'PAID' AND s.scid = :scid")
     long countPaid(@org.springframework.data.repository.query.Param("scid") Long scid);
 
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.status = 'NOT_PAID' AND s.scid = :scid")
+    long countUnpaid(@org.springframework.data.repository.query.Param("scid") Long scid);
+
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.scid = :scid")
+    long countAll(@org.springframework.data.repository.query.Param("scid") Long scid);
+
     @Query("SELECT COALESCE(SUM(s.balanceAmount), 0) FROM Statement s WHERE s.status = 'NOT_PAID' AND s.scid = :scid")
     BigDecimal sumUnpaidBalance(@org.springframework.data.repository.query.Param("scid") Long scid);
 

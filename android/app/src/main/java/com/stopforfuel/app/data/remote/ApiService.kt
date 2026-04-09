@@ -120,6 +120,18 @@ interface ApiService {
     @GET("api/billing/aws-mtd")
     suspend fun getAwsBilling(): AwsBillingDto
 
+    @GET("api/dashboard/invoice-analytics")
+    suspend fun getInvoiceAnalytics(
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): InvoiceAnalyticsDto
+
+    @GET("api/dashboard/payment-analytics")
+    suspend fun getPaymentAnalytics(
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): PaymentAnalyticsDto
+
     // Products Management
     @PATCH("api/products/{id}/price")
     suspend fun updateProductPrice(@Path("id") id: Long, @Body request: PriceUpdateRequest): ProductDto

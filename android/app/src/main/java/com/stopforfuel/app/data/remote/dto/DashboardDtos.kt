@@ -15,6 +15,12 @@ data class DashboardStatsDto(
     val totalOutstanding: BigDecimal?,
     val totalCreditCustomers: Long?,
     val productSales: List<ProductSaleDto>?,
+    val lastShiftProductSales: List<ProductSaleDto>?,
+    val lastShiftId: Long?,
+    val totalStatements: Long?,
+    val paidStatements: Long?,
+    val unpaidStatements: Long?,
+    val mtdPurchases: List<ProductPurchaseDto>?,
     val tankStatuses: List<TankStatusDto>?
 )
 
@@ -31,6 +37,7 @@ data class SystemHealthDto(
     val inactiveCustomers: Long?,
     val totalVehicles: Long?,
     val totalEmployees: Long?,
+    val activeEmployees: Long?,
     val activeShifts: Long?,
     val totalProducts: Long?,
     val todayAttendanceCount: Long?
@@ -92,4 +99,30 @@ data class CashierInvoiceItem(
     val netAmount: BigDecimal?,
     val date: String?,
     val customerName: String?
+)
+
+data class InvoiceAnalyticsDto(
+    val totalRevenue: BigDecimal?,
+    val totalInvoices: Long?,
+    val creditCount: Long?,
+    val creditAmount: BigDecimal?,
+    val cashCount: Long?,
+    val cashAmount: BigDecimal?,
+    val productBreakdown: List<ProductBreakdownDto>?
+)
+
+data class PaymentAnalyticsDto(
+    val totalCollected: BigDecimal?,
+    val totalPayments: Long?
+)
+
+data class ProductPurchaseDto(
+    val productName: String?,
+    val quantity: Double?
+)
+
+data class ProductBreakdownDto(
+    val productName: String?,
+    val quantity: BigDecimal?,
+    val amount: BigDecimal?
 )

@@ -16,6 +16,7 @@ public interface EmployeeRepository extends ScidRepository<Employee> {
     Optional<Employee> findByAadharNumber(String aadharNumber);
     List<Employee> findByScid(Long scid);
     List<Employee> findByStatusAndScid(EntityStatus status, Long scid);
+    long countByScidAndStatus(Long scid, EntityStatus status);
 
     @Query("SELECT e FROM Employee e WHERE e.scid = :scid " +
            "AND (:search IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
