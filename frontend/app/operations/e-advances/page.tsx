@@ -382,7 +382,7 @@ export default function EAdvancesPage() {
                             Track electronic advance entries — Card, UPI, Cheque, CCMS, Bank Transfer.
                         </p>
                     </div>
-                    <PermissionGate permission="SHIFT_CREATE">
+                    <PermissionGate permission="FINANCE_CREATE">
                         <button
                             onClick={handleOpenAdd}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"

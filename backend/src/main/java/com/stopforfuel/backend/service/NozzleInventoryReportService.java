@@ -10,15 +10,17 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.exception.ReportGenerationException;
+import com.stopforfuel.backend.repository.CompanyRepository;
+import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;
@@ -29,19 +31,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class NozzleInventoryReportService {
+
+    private final CompanyRepository companyRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final java.text.DecimalFormat NUM_FMT = new java.text.DecimalFormat("#,##0.00");
-
-    @Value("${app.company.name:SATHYA FUELS}")
-    private String companyName;
-
-    @Value("${app.company.address:No. 45, GST Road, Tambaram, Chennai - 600045}")
-    private String companyAddress;
-
-    @Value("${app.company.phone:044-2234 5678}")
-    private String companyPhone;
 
     // ======================== Aggregation helpers ========================
 
@@ -97,6 +93,11 @@ public class NozzleInventoryReportService {
 
     public byte[] generatePdf(List<NozzleInventory> data, LocalDate fromDate, LocalDate toDate, String filterLabel, String reportType) {
         try {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             Document doc = new Document(PageSize.A4.rotate(), 20, 20, 20, 20);
             PdfWriter.getInstance(doc, out);
@@ -367,6 +368,10 @@ public class NozzleInventoryReportService {
 
     public byte[] generateExcel(List<NozzleInventory> data, LocalDate fromDate, LocalDate toDate, String filterLabel, String reportType) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
 
             String reportTitle;
             switch (reportType) {
@@ -397,7 +402,7 @@ public class NozzleInventoryReportService {
 
             // Title rows
             int rowIdx = 0;
-            rowIdx = writeExcelHeader(sheet, workbook, rowIdx, colCount, titleStyle, subStyle, reportTitle, filterLabel, fromDate, toDate, reportType);
+            rowIdx = writeExcelHeader(sheet, workbook, rowIdx, colCount, titleStyle, subStyle, reportTitle, filterLabel, fromDate, toDate, reportType, companyName, companyAddress, companyPhone);
 
             switch (reportType) {
                 case "product_sales" -> rowIdx = buildProductSalesExcelRows(sheet, data, rowIdx, headerStyle, cellStyle, numStyle, salesStyle, summaryStyle, colCount);
@@ -415,7 +420,8 @@ public class NozzleInventoryReportService {
 
     private int writeExcelHeader(XSSFSheet sheet, XSSFWorkbook workbook, int rowIdx, int colCount,
             XSSFCellStyle titleStyle, XSSFCellStyle subStyle, String reportTitle, String filterLabel,
-            LocalDate fromDate, LocalDate toDate, String reportType) {
+            LocalDate fromDate, LocalDate toDate, String reportType,
+            String companyName, String companyAddress, String companyPhone) {
         XSSFRow titleRow = sheet.createRow(rowIdx++);
         XSSFCell titleCell = titleRow.createCell(0);
         titleCell.setCellValue(companyName);

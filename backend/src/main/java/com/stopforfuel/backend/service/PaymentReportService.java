@@ -1,13 +1,15 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Payment;
 import com.stopforfuel.backend.exception.ReportGenerationException;
+import com.stopforfuel.backend.repository.CompanyRepository;
+import lombok.RequiredArgsConstructor;
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -35,19 +37,10 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 
 @Service
+@RequiredArgsConstructor
 public class PaymentReportService {
 
-    @Value("${app.company.name:SATHYA FUELS}")
-    private String companyName;
-
-    @Value("${app.company.address:No. 45, GST Road, Tambaram, Chennai - 600045}")
-    private String companyAddress;
-
-    @Value("${app.company.phone:044-2234 5678}")
-    private String companyPhone;
-
-    @Value("${app.company.gstin:33AABCS1234F1Z5}")
-    private String companyGstin;
+    private final CompanyRepository companyRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy, hh:mm a");
@@ -60,6 +53,11 @@ public class PaymentReportService {
      */
     public byte[] generatePdf(List<Payment> payments, LocalDate fromDate, LocalDate toDate) {
         try {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+
             JasperReport report = getCompiledReport();
 
             Map<String, Object> params = new HashMap<>();
@@ -91,6 +89,11 @@ public class PaymentReportService {
      */
     public byte[] generateExcel(List<Payment> payments, LocalDate fromDate, LocalDate toDate) {
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+
             Sheet sheet = workbook.createSheet("Payment Report");
 
             // Header styles
@@ -173,6 +176,11 @@ public class PaymentReportService {
      */
     public byte[] generateReceipt(Payment payment) {
         try {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             Document doc = new Document(PageSize.A5);
             PdfWriter.getInstance(doc, out);

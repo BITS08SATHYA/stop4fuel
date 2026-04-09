@@ -62,7 +62,7 @@ public class EAdvanceController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SHIFT_CREATE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_CREATE')")
     public EAdvanceDTO create(@Valid @RequestBody EAdvance eAdvance) {
         return EAdvanceDTO.from(service.create(eAdvance));
     }

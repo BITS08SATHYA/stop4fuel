@@ -10,8 +10,10 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.exception.ReportGenerationException;
+import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
@@ -23,7 +25,6 @@ import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;
@@ -40,6 +41,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomerBalanceReportService {
 
+    private final CompanyRepository companyRepository;
     private final CustomerRepository customerRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final PaymentRepository paymentRepository;
@@ -48,18 +50,6 @@ public class CustomerBalanceReportService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy, hh:mm a");
     private static final java.text.DecimalFormat NUM_FMT = new java.text.DecimalFormat("#,##0.00");
-
-    @Value("${app.company.name:SATHYA FUELS}")
-    private String companyName;
-
-    @Value("${app.company.address:No. 45, GST Road, Tambaram, Chennai - 600045}")
-    private String companyAddress;
-
-    @Value("${app.company.phone:044-2234 5678}")
-    private String companyPhone;
-
-    @Value("${app.company.gstin:33AABCS1234F1Z5}")
-    private String companyGstin;
 
     /**
      * Build balance data for all credit customers (those with credit limit > 0 or any credit bills).
@@ -114,6 +104,12 @@ public class CustomerBalanceReportService {
 
     public byte[] generatePdf() {
         try {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+            String companyGstin = companyEntity != null && companyEntity.getGstNo() != null ? companyEntity.getGstNo() : "";
+
             List<CustomerBalance> balances = buildBalanceData();
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -262,6 +258,12 @@ public class CustomerBalanceReportService {
 
     public byte[] generateExcel() {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+            String companyGstin = companyEntity != null && companyEntity.getGstNo() != null ? companyEntity.getGstNo() : "";
+
             List<CustomerBalance> balances = buildBalanceData();
 
             // Styles

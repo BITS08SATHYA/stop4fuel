@@ -10,9 +10,11 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Tank;
 import com.stopforfuel.backend.entity.TankInventory;
 import com.stopforfuel.backend.exception.ReportGenerationException;
+import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.TankInventoryRepository;
 import com.stopforfuel.backend.repository.TankRepository;
 import com.stopforfuel.config.SecurityUtils;
@@ -23,7 +25,6 @@ import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;
@@ -41,21 +42,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TankInventorySummaryReportService {
 
+    private final CompanyRepository companyRepository;
     private final TankRepository tankRepository;
     private final TankInventoryRepository tankInventoryRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy, hh:mm a");
     private static final java.text.DecimalFormat NUM_FMT = new java.text.DecimalFormat("#,##0.00");
-
-    @Value("${app.company.name:SATHYA FUELS}")
-    private String companyName;
-
-    @Value("${app.company.address:No. 45, GST Road, Tambaram, Chennai - 600045}")
-    private String companyAddress;
-
-    @Value("${app.company.phone:044-2234 5678}")
-    private String companyPhone;
 
     /**
      * Build the report data: current tank status + period movement summary.
@@ -97,6 +90,11 @@ public class TankInventorySummaryReportService {
 
     public byte[] generatePdf(LocalDate fromDate, LocalDate toDate) {
         try {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+
             ReportData data = buildReportData(fromDate, toDate);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -270,6 +268,11 @@ public class TankInventorySummaryReportService {
 
     public byte[] generateExcel(LocalDate fromDate, LocalDate toDate) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Company companyEntity = companyRepository.findAll().stream().findFirst().orElse(null);
+            String companyName = companyEntity != null && companyEntity.getName() != null ? companyEntity.getName() : "StopForFuel";
+            String companyAddress = companyEntity != null && companyEntity.getAddress() != null ? companyEntity.getAddress() : "";
+            String companyPhone = companyEntity != null && companyEntity.getPhone() != null ? companyEntity.getPhone() : "";
+
             ReportData data = buildReportData(fromDate, toDate);
 
             // Styles
