@@ -258,8 +258,11 @@ export default function InvoicesPage() {
 
         const qty = parseFloat(line.quantity) || 0;
         const price = parseFloat(line.unitPrice) || 0;
-        const gross = qty * price;
+        // When user entered amount directly, use that exact value instead of qty * price
+        const gross = line.amountOverride != null ? line.amountOverride : qty * price;
         line.grossAmount = gross;
+        // Clear the override so future qty/rate changes recalculate normally
+        delete line.amountOverride;
 
         // Auto-apply incentive discount (customer-specific takes priority)
         const productId = line.product?.id;
@@ -1002,7 +1005,7 @@ export default function InvoicesPage() {
                                                     const amt = parseFloat(e.target.value) || 0;
                                                     const price = parseFloat(line.unitPrice) || 0;
                                                     const qty = price > 0 ? (amt / price).toFixed(3) : "0";
-                                                    updateProductLine(idx, { amountInput: e.target.value, quantity: qty });
+                                                    updateProductLine(idx, { amountInput: e.target.value, quantity: qty, amountOverride: amt });
                                                 }}
                                                 placeholder="₹0"
                                             />
