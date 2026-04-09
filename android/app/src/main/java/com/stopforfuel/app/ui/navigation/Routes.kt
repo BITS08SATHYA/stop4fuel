@@ -16,4 +16,9 @@ sealed class Routes(val route: String) {
     data object EmployeeManage : Routes("employee_manage")
     data object Dashboard : Routes("dashboard")
     data object ProductManage : Routes("product_manage")
+    data object FastCashInvoice : Routes("fast_cash_invoice")
+    data object InvoiceBillExplorer : Routes("invoice_bill_explorer")
+    data object StatementExplorer : Routes("statement_explorer")
+    data object StockTransfer : Routes("stock_transfer")
+    data object Attendance : Routes("attendance")
 }

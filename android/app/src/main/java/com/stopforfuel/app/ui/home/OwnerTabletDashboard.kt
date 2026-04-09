@@ -596,7 +596,7 @@ private fun AwsDonutChart(
 
             // Background track
             drawArc(
-                color = Color(0xFF2C2C2E),
+                color = Color(0xFFE2E8F0),
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -649,7 +649,7 @@ private fun AwsDonutChart(
                     "$${String.format("%.0f", cost)}",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color(0xFF0F172A)
                 )
             }
         }

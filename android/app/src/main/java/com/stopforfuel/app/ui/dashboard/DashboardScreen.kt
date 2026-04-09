@@ -403,7 +403,7 @@ private fun AwsDonutChart(cost: Float, currency: String, unavailable: Boolean = 
             val strokeWidth = 12.dp.toPx()
             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
             val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
-            drawArc(color = Color(0xFF2C2C2E), startAngle = -90f, sweepAngle = 360f, useCenter = false, style = Stroke(width = strokeWidth, cap = StrokeCap.Round), topLeft = topLeft, size = arcSize)
+            drawArc(color = Color(0xFFE2E8F0), startAngle = -90f, sweepAngle = 360f, useCenter = false, style = Stroke(width = strokeWidth, cap = StrokeCap.Round), topLeft = topLeft, size = arcSize)
             if (!unavailable) {
                 val sweepColor = when { fraction > 0.8f -> Color(0xFFEF5350); fraction > 0.5f -> Color(0xFFFF9800); else -> Color(0xFF4CAF50) }
                 drawArc(color = sweepColor, startAngle = -90f, sweepAngle = fraction * 360f, useCenter = false, style = Stroke(width = strokeWidth, cap = StrokeCap.Round), topLeft = topLeft, size = arcSize)
@@ -415,7 +415,7 @@ private fun AwsDonutChart(cost: Float, currency: String, unavailable: Boolean = 
                 Text("N/A", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             } else {
                 Icon(Icons.Default.AttachMoney, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(16.dp))
-                Text("$${String.format("%.0f", cost)}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("$${String.format("%.0f", cost)}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
             }
         }
     }
