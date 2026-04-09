@@ -74,6 +74,9 @@ public interface StatementRepository extends ScidRepository<Statement> {
             @org.springframework.data.repository.query.Param("scid") Long scid,
             Pageable pageable);
 
+    @Query("SELECT s FROM Statement s WHERE s.customer.id = :customerId AND s.status <> 'DRAFT' ORDER BY s.statementDate DESC")
+    List<Statement> findRecentByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
+
     Optional<Statement> findByStatementNo(String statementNo);
 
     boolean existsByCustomerIdAndFromDateAndToDateAndScid(Long customerId, LocalDate fromDate, LocalDate toDate, Long scid);

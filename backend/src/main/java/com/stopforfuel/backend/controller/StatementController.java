@@ -80,6 +80,14 @@ public class StatementController {
         return statementService.getStatementsByCustomer(customerId).stream().map(StatementDTO::from).toList();
     }
 
+    @GetMapping("/customer/{customerId}/recommended-limits")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public Map<String, java.math.BigDecimal> getRecommendedLimits(
+            @PathVariable Long customerId,
+            @RequestParam(defaultValue = "15") int count) {
+        return statementService.getRecommendedLimits(customerId, count);
+    }
+
     @GetMapping("/outstanding")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<StatementDTO> getOutstanding() {

@@ -21,6 +21,7 @@ public class StatementDTO {
     private BigDecimal totalAmount;
     private BigDecimal roundingAmount;
     private BigDecimal netAmount;
+    private BigDecimal totalQuantity;
     private BigDecimal receivedAmount;
     private BigDecimal balanceAmount;
     private String status;
@@ -41,6 +42,7 @@ public class StatementDTO {
                 .totalAmount(s.getTotalAmount())
                 .roundingAmount(s.getRoundingAmount())
                 .netAmount(s.getNetAmount())
+                .totalQuantity(s.getTotalQuantity())
                 .receivedAmount(s.getReceivedAmount())
                 .balanceAmount(s.getBalanceAmount())
                 .status(s.getStatus())

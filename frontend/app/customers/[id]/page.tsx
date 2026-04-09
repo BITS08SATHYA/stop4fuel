@@ -91,6 +91,9 @@ export default function CustomerProfilePage() {
     const [newIncentive, setNewIncentive] = useState({ productId: "", minQuantity: "", discountRate: "" });
     const [incentiveError, setIncentiveError] = useState("");
 
+    // Recommended limits
+    const [recommendedLimits, setRecommendedLimits] = useState<{ recommendedCreditLimit: number; recommendedMonthlyConsumption: number; statementCount: number } | null>(null);
+
     // Add Vehicle State
     const [showAddVehicle, setShowAddVehicle] = useState(false);
     const [newVehicle, setNewVehicle] = useState({
@@ -104,12 +107,14 @@ export default function CustomerProfilePage() {
 
     const fetchData = async () => {
         try {
-            const [customerRes, vehiclesRes] = await Promise.all([
+            const [customerRes, vehiclesRes, limitsRes] = await Promise.all([
                 fetchWithAuth(`${API}/customers/${params.id}`),
-                fetchWithAuth(`${API}/customers/${params.id}/vehicles`)
+                fetchWithAuth(`${API}/customers/${params.id}/vehicles`),
+                fetchWithAuth(`${API}/statements/customer/${params.id}/recommended-limits?count=15`)
             ]);
             if (customerRes.ok) setCustomer(await customerRes.json());
             if (vehiclesRes.ok) setVehicles(await vehiclesRes.json());
+            if (limitsRes.ok) setRecommendedLimits(await limitsRes.json());
         } catch (error) {
             console.error("Failed to fetch data", error);
         } finally {
@@ -707,6 +712,25 @@ export default function CustomerProfilePage() {
                                     </p>
                                 </div>
                             </div>
+
+                            {recommendedLimits && recommendedLimits.statementCount > 0 && (
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Recommended Credit Limit</p>
+                                        <p className="text-lg font-bold text-accent">
+                                            ₹{recommendedLimits.recommendedCreditLimit.toLocaleString()}
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground">Avg of {recommendedLimits.statementCount} statements</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Recommended Consumption</p>
+                                        <p className="text-lg font-bold text-accent">
+                                            {recommendedLimits.recommendedMonthlyConsumption} L
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground">Avg of {recommendedLimits.statementCount} statements</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </GlassCard>
                 </div>
