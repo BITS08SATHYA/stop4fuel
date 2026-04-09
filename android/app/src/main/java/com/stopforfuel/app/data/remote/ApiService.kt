@@ -157,6 +157,53 @@ interface ApiService {
     @GET("api/invoices/shift/{shiftId}")
     suspend fun getInvoicesByShift(@Path("shiftId") shiftId: Long): List<InvoiceBillDto>
 
+    @GET("api/invoices/history")
+    suspend fun getInvoiceHistory(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20,
+        @Query("billType") billType: String? = null,
+        @Query("paymentStatus") paymentStatus: String? = null,
+        @Query("fromDate") fromDate: String? = null,
+        @Query("toDate") toDate: String? = null,
+        @Query("search") search: String? = null,
+        @Query("categoryType") categoryType: String? = null
+    ): PageResponse<InvoiceBillDto>
+
+    @PUT("api/invoices/{id}")
+    suspend fun updateInvoice(@Path("id") id: Long, @Body invoice: Map<String, @JvmSuppressWildcards Any?>): InvoiceBillDto
+
+    // Statements
+    @GET("api/statements")
+    suspend fun getStatements(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20,
+        @Query("customerId") customerId: Long? = null,
+        @Query("status") status: String? = null,
+        @Query("fromDate") fromDate: String? = null,
+        @Query("toDate") toDate: String? = null,
+        @Query("search") search: String? = null,
+        @Query("categoryType") categoryType: String? = null,
+        @Query("sort") sort: String? = null
+    ): PageResponse<StatementDto>
+
+    // Stock Transfers
+    @POST("api/stock-transfers")
+    suspend fun createStockTransfer(@Body transfer: CreateStockTransferRequest): StockTransferDto
+
+    @GET("api/stock-transfers")
+    suspend fun getStockTransfers(
+        @Query("productId") productId: Long? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
+    ): List<StockTransferDto>
+
+    // Attendance
+    @POST("api/attendance/bulk")
+    suspend fun markBulkAttendance(@Body attendances: List<AttendanceBulkRequest>): List<AttendanceDto>
+
+    @GET("api/attendance/daily")
+    suspend fun getDailyAttendance(@Query("date") date: String): List<AttendanceDto>
+
     // Pump Sessions
     @POST("api/pump-sessions")
     suspend fun startPumpSession(@Body request: StartSessionRequest): PumpSessionDto
