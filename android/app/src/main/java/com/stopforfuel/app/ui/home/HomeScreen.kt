@@ -1,6 +1,7 @@
 package com.stopforfuel.app.ui.home
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -123,9 +124,34 @@ fun HomeScreen(
                     Button(onClick = { viewModel.loadData() }) { Text("Retry") }
                 }
             } else if (uiState.isManager) {
-                // --- OWNER/MANAGER: full tablet dashboard ---
-                Box(Modifier.fillMaxSize().padding(padding)) {
-                    OwnerTabletDashboard(uiState, onNavigateToInvoice)
+                // --- OWNER/MANAGER: responsive layout ---
+                BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
+                    if (maxWidth >= 600.dp) {
+                        // Tablet: two-panel dashboard
+                        OwnerTabletDashboard(uiState, onNavigateToInvoice)
+                    } else {
+                        // Phone: single-column scrollable layout
+                        Column(
+                            Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            ShiftStatusCard(uiState)
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = onNavigateToInvoice,
+                                enabled = uiState.activeShift != null,
+                                modifier = Modifier.fillMaxWidth().height(64.dp)
+                            ) {
+                                Icon(Icons.Default.Receipt, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("New Invoice", style = MaterialTheme.typography.titleMedium)
+                            }
+                            Spacer(Modifier.height(20.dp))
+                            HorizontalDivider()
+                            Spacer(Modifier.height(12.dp))
+                            OwnerDashboard(uiState)
+                        }
+                    }
                 }
             } else {
                 // --- CASHIER DASHBOARD ---
