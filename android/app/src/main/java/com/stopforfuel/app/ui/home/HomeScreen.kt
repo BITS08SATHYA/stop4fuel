@@ -112,21 +112,31 @@ fun HomeScreen(
                 )
             }
         ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (uiState.isLoading) {
+            if (uiState.isLoading) {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
-                } else if (uiState.error != null) {
+                }
+            } else if (uiState.error != null) {
+                Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(uiState.error!!, color = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = { viewModel.loadData() }) { Text("Retry") }
-                } else {
+                }
+            } else if (uiState.isManager) {
+                // --- OWNER/MANAGER: full tablet dashboard ---
+                Box(Modifier.fillMaxSize().padding(padding)) {
+                    OwnerTabletDashboard(uiState, onNavigateToInvoice)
+                }
+            } else {
+                // --- CASHIER DASHBOARD ---
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     ShiftStatusCard(uiState)
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -153,13 +163,7 @@ fun HomeScreen(
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    if (uiState.isManager) {
-                        // --- OWNER/MANAGER DASHBOARD ---
-                        OwnerDashboard(uiState)
-                    } else {
-                        // --- CASHIER DASHBOARD ---
-                        CashierDashboard(uiState)
-                    }
+                    CashierDashboard(uiState)
                 }
             }
         }
