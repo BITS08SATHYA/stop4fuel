@@ -169,7 +169,7 @@ export default function IncentivePaymentsPage() {
         let total = 0;
         for (const p of payments) {
             total += p.amount || 0;
-            const name = p.customer?.name || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc;
+            const name = p.customer?.name || p.invoiceBill?.customerName || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc;
             if (name) customerSet.add(name);
         }
         return { total, count: payments.length, customerCount: customerSet.size };
@@ -182,7 +182,7 @@ export default function IncentivePaymentsPage() {
             if (p.customer?.id && p.customer?.name) {
                 map.set(String(p.customer.id), p.customer.name);
             } else {
-                const walkInName = p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc;
+                const walkInName = p.invoiceBill?.customerName || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc;
                 if (walkInName) map.set("w_" + walkInName, walkInName);
             }
         }
@@ -192,12 +192,13 @@ export default function IncentivePaymentsPage() {
     // Filter
     const filtered = useMemo(() => {
         return payments.filter((p) => {
-            const customerKey = p.customer?.id ? String(p.customer.id) : ("w_" + (p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc || ""));
+            const customerKey = p.customer?.id ? String(p.customer.id) : ("w_" + (p.invoiceBill?.customerName || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc || ""));
             const matchCustomer = customerFilter === "ALL" || customerKey === customerFilter;
             const q = searchQuery.toLowerCase();
             const matchSearch = !searchQuery ||
                 p.description?.toLowerCase().includes(q) ||
                 p.customer?.name?.toLowerCase().includes(q) ||
+                p.invoiceBill?.customerName?.toLowerCase().includes(q) ||
                 p.invoiceBill?.signatoryName?.toLowerCase().includes(q) ||
                 p.invoiceBill?.billDesc?.toLowerCase().includes(q) ||
                 p.invoiceBill?.billNo?.toLowerCase().includes(q) ||
@@ -421,7 +422,7 @@ export default function IncentivePaymentsPage() {
                                                 <td className="px-5 py-3 text-xs text-muted-foreground">{formatDateTime(p.paymentDate)}</td>
                                                 <td className="px-5 py-3">
                                                     <span className="text-sm font-medium text-foreground">
-                                                        {p.customer?.name || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc || "Walk-in"}
+                                                        {p.customer?.name || p.invoiceBill?.customerName || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc || "Walk-in"}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3 text-right">
