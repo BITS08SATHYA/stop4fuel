@@ -45,8 +45,8 @@ public interface StatementRepository extends ScidRepository<Statement> {
            "(:status IS NULL OR s.status = :status) AND " +
            "(:customerId IS NULL OR s.customer.id = :customerId) AND " +
            "(:categoryType IS NULL OR cc.categoryType = :categoryType) AND " +
-           "(CAST(:fromDate AS date) IS NULL OR s.fromDate >= :fromDate) AND " +
-           "(CAST(:toDate AS date) IS NULL OR s.toDate <= :toDate)")
+           "(CAST(:fromDate AS date) IS NULL OR s.statementDate >= :fromDate) AND " +
+           "(CAST(:toDate AS date) IS NULL OR s.statementDate <= :toDate)")
     Page<Statement> findWithFilters(
             @org.springframework.data.repository.query.Param("customerId") Long customerId,
             @org.springframework.data.repository.query.Param("status") String status,
@@ -61,8 +61,8 @@ public interface StatementRepository extends ScidRepository<Statement> {
            "(:status IS NULL OR s.status = :status) AND " +
            "(:customerId IS NULL OR s.customer.id = :customerId) AND " +
            "(:categoryType IS NULL OR cc.categoryType = :categoryType) AND " +
-           "(CAST(:fromDate AS date) IS NULL OR s.fromDate >= :fromDate) AND " +
-           "(CAST(:toDate AS date) IS NULL OR s.toDate <= :toDate) AND " +
+           "(CAST(:fromDate AS date) IS NULL OR s.statementDate >= :fromDate) AND " +
+           "(CAST(:toDate AS date) IS NULL OR s.statementDate <= :toDate) AND " +
            "(LOWER(s.customer.name) LIKE LOWER(CONCAT('%', :search, '%')) OR s.statementNo LIKE CONCAT('%', :search, '%'))")
     Page<Statement> findWithFiltersAndSearch(
             @org.springframework.data.repository.query.Param("customerId") Long customerId,
