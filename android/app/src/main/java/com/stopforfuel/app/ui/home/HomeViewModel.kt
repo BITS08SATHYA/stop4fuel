@@ -89,8 +89,12 @@ class HomeViewModel @Inject constructor(
                     val fmt = DateTimeFormatter.ISO_LOCAL_DATE
                     val mtdFrom = monthStart.format(fmt)
                     val mtdTo = today.format(fmt)
-                    val mtdAnalytics = dashboardRepository.getInvoiceAnalytics(mtdFrom, mtdTo).getOrNull()
-                    val mtdPayments = dashboardRepository.getPaymentAnalytics(mtdFrom, mtdTo).getOrNull()
+                    val mtdAnalytics = dashboardRepository.getInvoiceAnalytics(mtdFrom, mtdTo).getOrElse {
+                        android.util.Log.w("HomeVM", "Failed to fetch MTD invoice analytics", it); null
+                    }
+                    val mtdPayments = dashboardRepository.getPaymentAnalytics(mtdFrom, mtdTo).getOrElse {
+                        android.util.Log.w("HomeVM", "Failed to fetch MTD payment analytics", it); null
+                    }
 
                     _uiState.value = _uiState.value.copy(
                         activeShift = shift,

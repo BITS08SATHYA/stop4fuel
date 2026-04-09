@@ -105,7 +105,12 @@ public class DashboardController {
         private long totalStatements;
         private long paidStatements;
         private long unpaidStatements;
+        private List<ProductSales> mtdSales;
         private List<ProductPurchase> mtdPurchases;
+        private long mtdCreditCount;
+        private BigDecimal mtdCreditAmount;
+        private long mtdPaymentCount;
+        private BigDecimal mtdPaymentAmount;
         private List<TankStatus> tankStatuses;
         private List<RecentInvoiceItem> recentInvoices;
     }

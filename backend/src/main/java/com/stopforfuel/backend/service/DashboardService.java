@@ -27,6 +27,7 @@ public class DashboardService {
     private final PumpRepository pumpRepository;
     private final NozzleRepository nozzleRepository;
     private final TankInventoryRepository tankInventoryRepository;
+    private final NozzleInventoryRepository nozzleInventoryRepository;
     private final ShiftService shiftService;
     private final EAdvanceService eAdvanceService;
     private final ExpenseService expenseService;
@@ -169,16 +170,35 @@ public class DashboardService {
         stats.setPaidStatements(statementRepository.countPaid(scid));
         stats.setUnpaidStatements(statementRepository.countUnpaid(scid));
 
-        // --- MTD purchase quantities by product ---
+        // --- MTD sales from nozzle inventory (grouped by product) ---
         LocalDate monthStart = today.withDayOfMonth(1);
-        List<Object[]> purchaseData = purchaseOrderRepository.getMtdPurchaseByProduct(monthStart, today, scid);
-        List<ProductPurchase> mtdPurchases = purchaseData.stream().map(row -> {
+        List<Object[]> nozzleSalesData = nozzleInventoryRepository.sumSalesByProductAndDateRange(scid, monthStart, today);
+        List<ProductSales> mtdSales = nozzleSalesData.stream().map(row -> {
+            ProductSales ps = new ProductSales();
+            ps.setProductName((String) row[0]);
+            ps.setQuantity(row[1] != null ? BigDecimal.valueOf(((Number) row[1]).doubleValue()) : BigDecimal.ZERO);
+            return ps;
+        }).collect(Collectors.toList());
+        stats.setMtdSales(mtdSales);
+
+        // --- MTD purchases from tank inventory (grouped by product) ---
+        List<Object[]> tankIncomeData = tankInventoryRepository.sumIncomeByProductAndDateRange(scid, monthStart, today);
+        List<ProductPurchase> mtdPurchases = tankIncomeData.stream().map(row -> {
             ProductPurchase pp = new ProductPurchase();
             pp.setProductName((String) row[0]);
             pp.setQuantity(row[1] != null ? ((Number) row[1]).doubleValue() : 0.0);
             return pp;
         }).collect(Collectors.toList());
         stats.setMtdPurchases(mtdPurchases);
+
+        // --- MTD credit bills (count + amount) ---
+        LocalDateTime mtdStart = monthStart.atStartOfDay();
+        stats.setMtdCreditCount(invoiceBillRepository.countCreditByDateRange(mtdStart, todayEnd, scid));
+        stats.setMtdCreditAmount(invoiceBillRepository.sumCreditAmountByDateRange(mtdStart, todayEnd, scid));
+
+        // --- MTD payments (count + amount) ---
+        stats.setMtdPaymentCount(paymentRepository.countPaymentsInDateRange(mtdStart, todayEnd, scid));
+        stats.setMtdPaymentAmount(paymentRepository.sumPaymentsInDateRange(mtdStart, todayEnd, scid));
 
         // --- Tank status ---
         List<Tank> tanks = tankRepository.findAllByScid(scid);

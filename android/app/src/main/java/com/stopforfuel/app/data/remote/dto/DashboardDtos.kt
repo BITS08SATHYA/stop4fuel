@@ -20,7 +20,12 @@ data class DashboardStatsDto(
     val totalStatements: Long?,
     val paidStatements: Long?,
     val unpaidStatements: Long?,
+    val mtdSales: List<ProductSaleDto>?,
     val mtdPurchases: List<ProductPurchaseDto>?,
+    val mtdCreditCount: Long?,
+    val mtdCreditAmount: BigDecimal?,
+    val mtdPaymentCount: Long?,
+    val mtdPaymentAmount: BigDecimal?,
     val tankStatuses: List<TankStatusDto>?
 )
 

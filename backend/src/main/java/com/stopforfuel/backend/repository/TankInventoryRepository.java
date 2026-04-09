@@ -36,4 +36,7 @@ public interface TankInventoryRepository extends ScidRepository<TankInventory> {
 
     @Query("SELECT ti FROM TankInventory ti JOIN FETCH ti.tank t JOIN FETCH t.product WHERE ti.scid = :scid AND ti.tank.id = :tankId AND ti.date BETWEEN :fromDate AND :toDate ORDER BY ti.date DESC, ti.id DESC")
     List<TankInventory> findByScidAndTankIdAndDateBetween(Long scid, Long tankId, LocalDate fromDate, LocalDate toDate);
+
+    @Query("SELECT t.product.name, COALESCE(SUM(ti.incomeStock), 0) FROM TankInventory ti JOIN ti.tank t WHERE ti.scid = :scid AND ti.date BETWEEN :fromDate AND :toDate GROUP BY t.product.name")
+    List<Object[]> sumIncomeByProductAndDateRange(@Param("scid") Long scid, @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 }

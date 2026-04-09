@@ -33,4 +33,7 @@ public interface NozzleInventoryRepository extends ScidRepository<NozzleInventor
 
     @Query("SELECT ni FROM NozzleInventory ni JOIN FETCH ni.nozzle n JOIN FETCH n.pump JOIN FETCH n.tank t JOIN FETCH t.product WHERE ni.scid = :scid AND t.product.id = :productId AND ni.date BETWEEN :fromDate AND :toDate ORDER BY ni.date DESC, ni.id DESC")
     List<NozzleInventory> findByScidAndProductIdAndDateBetween(Long scid, Long productId, LocalDate fromDate, LocalDate toDate);
+
+    @Query("SELECT t.product.name, COALESCE(SUM(ni.sales), 0) FROM NozzleInventory ni JOIN ni.nozzle n JOIN n.tank t WHERE ni.scid = :scid AND ni.date BETWEEN :fromDate AND :toDate GROUP BY t.product.name")
+    List<Object[]> sumSalesByProductAndDateRange(@Param("scid") Long scid, @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 }
