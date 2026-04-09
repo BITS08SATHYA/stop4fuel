@@ -165,8 +165,8 @@ export default function CustomerProfilePage() {
         try {
             const updatedCustomer = {
                 ...customer,
-                emails: Array.isArray(customer.emails) ? customer.emails : (customer.emails as string).split(',').map((s: string) => s.trim()),
-                phoneNumbers: Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers : (customer.phoneNumbers as string).split(',').map((s: string) => s.trim()),
+                emails: Array.isArray(customer.emails) ? customer.emails : customer.emails ? (customer.emails as string).split(',').map((s: string) => s.trim()) : [],
+                phoneNumbers: Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers : customer.phoneNumbers ? (customer.phoneNumbers as string).split(',').map((s: string) => s.trim()) : [],
             };
             const res = await fetchWithAuth(`${API}/customers/${params.id}`, {
                 method: "PUT",
