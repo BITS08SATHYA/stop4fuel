@@ -14,6 +14,8 @@ data class DashboardUiState(
     val stats: DashboardStatsDto? = null,
     val health: SystemHealthDto? = null,
     val fuelProducts: List<ProductDto> = emptyList(),
+    val backendHealth: BackendHealthDto? = null,
+    val awsBilling: AwsBillingDto? = null,
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -34,6 +36,8 @@ class DashboardViewModel @Inject constructor(
             val statsResult = repository.getStats()
             val healthResult = repository.getSystemHealth()
             val productsResult = repository.getProducts()
+            val backendHealthResult = repository.getBackendHealth()
+            val awsBillingResult = repository.getAwsBilling()
 
             statsResult.fold(
                 onSuccess = { stats ->
@@ -43,6 +47,8 @@ class DashboardViewModel @Inject constructor(
                         stats = stats,
                         health = healthResult.getOrNull(),
                         fuelProducts = fuelProducts,
+                        backendHealth = backendHealthResult.getOrNull(),
+                        awsBilling = awsBillingResult.getOrNull(),
                         isLoading = false
                     )
                 },

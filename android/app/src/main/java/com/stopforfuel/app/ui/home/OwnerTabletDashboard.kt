@@ -51,172 +51,114 @@ fun OwnerTabletDashboard(
     uiState: HomeUiState,
     onNavigateToInvoice: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            // ─── LEFT PANEL ───
-            Column(
-                Modifier
-                    .weight(0.55f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                Text(
-                    "TODAY'S NUMBERS",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.5.sp
-                )
-                Spacer(Modifier.height(12.dp))
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val isTablet = maxWidth >= 600.dp
 
-                val stats = uiState.dashboardStats
-
-                // Row 1: Revenue + Volume
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GradientStatCard(
-                        icon = Icons.Default.CurrencyRupee,
-                        title = "Revenue",
-                        value = inrFormat.format(stats?.todayRevenue ?: 0),
-                        gradient = GradientTeal,
-                        modifier = Modifier.weight(1f)
+        Column(Modifier.fillMaxSize()) {
+            if (isTablet) {
+                // ─── TABLET: Two-panel layout ───
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    Column(
+                        Modifier.weight(0.55f).verticalScroll(rememberScrollState()).padding(16.dp)
+                    ) {
+                        StatsSection(uiState)
+                    }
+                    VerticalDivider(
+                        modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
-                    GradientStatCard(
-                        icon = Icons.Default.LocalGasStation,
-                        title = "Fuel Volume",
-                        value = "${stats?.todayFuelVolume ?: 0} L",
-                        gradient = GradientBlue,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(
+                        Modifier.weight(0.45f).verticalScroll(rememberScrollState()).padding(16.dp)
+                    ) {
+                        RightPanelContent(uiState)
+                    }
                 }
-                Spacer(Modifier.height(12.dp))
-
-                // Row 2: Invoices + Outstanding
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GradientStatCard(
-                        icon = Icons.Default.Receipt,
-                        title = "Invoices",
-                        value = "${stats?.todayInvoiceCount ?: 0}",
-                        subtitle = "${stats?.todayCashInvoices ?: 0} cash / ${stats?.todayCreditInvoices ?: 0} credit",
-                        gradient = GradientPurple,
-                        modifier = Modifier.weight(1f)
-                    )
-                    GradientStatCard(
-                        icon = Icons.Default.AccountBalanceWallet,
-                        title = "Outstanding",
-                        value = inrFormat.format(stats?.totalOutstanding ?: 0),
-                        gradient = GradientRed,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-
-                // Row 3: Customers + Employees
-                val health = uiState.systemHealth
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GradientStatCard(
-                        icon = Icons.Default.People,
-                        title = "Customers",
-                        value = "${health?.totalCustomers ?: 0}",
-                        gradient = GradientGreen,
-                        modifier = Modifier.weight(1f)
-                    )
-                    GradientStatCard(
-                        icon = Icons.Default.Badge,
-                        title = "Employees",
-                        value = "${health?.totalEmployees ?: 0}",
-                        gradient = GradientIndigo,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-
-                // Row 4: Products + Attendance
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GradientStatCard(
-                        icon = Icons.Default.Inventory,
-                        title = "Products",
-                        value = "${health?.totalProducts ?: 0}",
-                        gradient = GradientOrange,
-                        modifier = Modifier.weight(1f)
-                    )
-                    GradientStatCard(
-                        icon = Icons.Default.HowToReg,
-                        title = "Attendance",
-                        value = "${health?.todayAttendanceCount ?: 0}",
-                        gradient = GradientAmber,
-                        modifier = Modifier.weight(1f)
-                    )
+            } else {
+                // ─── PHONE: Single-column scrollable ───
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)
+                ) {
+                    StatsSection(uiState)
+                    Spacer(Modifier.height(16.dp))
+                    RightPanelContent(uiState)
                 }
             }
 
-            // ─── DIVIDER ───
-            VerticalDivider(
-                modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            // ─── RIGHT PANEL ───
-            Column(
-                Modifier
-                    .weight(0.45f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                // TANK STOCK
-                val tanks = uiState.dashboardStats?.tankStatuses
-                if (!tanks.isNullOrEmpty()) {
-                    SectionHeader(Icons.Default.PropaneTank, "TANK STOCK")
-                    Spacer(Modifier.height(8.dp))
-                    tanks.filter { it.active == true }.forEach { tank ->
-                        TankStockBar(tank)
-                    }
-                    Spacer(Modifier.height(16.dp))
+            // ─── BOTTOM NEW INVOICE BUTTON ───
+            Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
+                Button(
+                    onClick = onNavigateToInvoice,
+                    enabled = uiState.activeShift != null,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFA5)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).height(56.dp)
+                ) {
+                    Icon(Icons.Default.Receipt, contentDescription = null, tint = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Text("New Invoice", style = MaterialTheme.typography.titleMedium, color = Color.White)
                 }
-
-                // FUEL PRICES
-                if (uiState.fuelProducts.isNotEmpty()) {
-                    SectionHeader(Icons.Default.LocalOffer, "FUEL PRICES")
-                    Spacer(Modifier.height(8.dp))
-                    uiState.fuelProducts.forEach { product ->
-                        FuelPriceRow(product)
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // SYSTEM HEALTH + AWS
-                SectionHeader(Icons.Default.Monitor, "SYSTEM HEALTH")
-                Spacer(Modifier.height(8.dp))
-                HealthAndBillingSection(uiState.backendHealth, uiState.awsBilling)
-            }
-        }
-
-        // ─── BOTTOM NEW INVOICE BUTTON ───
-        Surface(
-            tonalElevation = 3.dp,
-            shadowElevation = 8.dp
-        ) {
-            Button(
-                onClick = onNavigateToInvoice,
-                enabled = uiState.activeShift != null,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF00BFA5)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .height(56.dp)
-            ) {
-                Icon(Icons.Default.Receipt, contentDescription = null, tint = Color.White)
-                Spacer(Modifier.width(8.dp))
-                Text("New Invoice", style = MaterialTheme.typography.titleMedium, color = Color.White)
             }
         }
     }
+}
+
+// ── Stats grid (shared between phone and tablet) ──
+@Composable
+private fun StatsSection(uiState: HomeUiState) {
+    Text(
+        "TODAY'S NUMBERS",
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        letterSpacing = 1.5.sp
+    )
+    Spacer(Modifier.height(12.dp))
+
+    val stats = uiState.dashboardStats
+    val health = uiState.systemHealth
+
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.CurrencyRupee, "Revenue", inrFormat.format(stats?.todayRevenue ?: 0), gradient = GradientTeal, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.LocalGasStation, "Fuel Volume", "${stats?.todayFuelVolume ?: 0} L", gradient = GradientBlue, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.Receipt, "Invoices", "${stats?.todayInvoiceCount ?: 0}", subtitle = "${stats?.todayCashInvoices ?: 0} cash / ${stats?.todayCreditInvoices ?: 0} credit", gradient = GradientPurple, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.AccountBalanceWallet, "Outstanding", inrFormat.format(stats?.totalOutstanding ?: 0), gradient = GradientRed, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.People, "Customers", "${health?.totalCustomers ?: 0}", gradient = GradientGreen, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.Badge, "Employees", "${health?.totalEmployees ?: 0}", gradient = GradientIndigo, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        GradientStatCard(Icons.Default.Inventory, "Products", "${health?.totalProducts ?: 0}", gradient = GradientOrange, modifier = Modifier.weight(1f))
+        GradientStatCard(Icons.Default.HowToReg, "Attendance", "${health?.todayAttendanceCount ?: 0}", gradient = GradientAmber, modifier = Modifier.weight(1f))
+    }
+}
+
+// ── Right panel content: tanks, fuel prices, health (shared) ──
+@Composable
+private fun RightPanelContent(uiState: HomeUiState) {
+    val tanks = uiState.dashboardStats?.tankStatuses
+    if (!tanks.isNullOrEmpty()) {
+        SectionHeader(Icons.Default.PropaneTank, "TANK STOCK")
+        Spacer(Modifier.height(8.dp))
+        tanks.filter { it.active == true }.forEach { tank -> TankStockBar(tank) }
+        Spacer(Modifier.height(16.dp))
+    }
+
+    if (uiState.fuelProducts.isNotEmpty()) {
+        SectionHeader(Icons.Default.LocalOffer, "FUEL PRICES")
+        Spacer(Modifier.height(8.dp))
+        uiState.fuelProducts.forEach { product -> FuelPriceRow(product) }
+        Spacer(Modifier.height(16.dp))
+    }
+
+    SectionHeader(Icons.Default.Monitor, "SYSTEM HEALTH")
+    Spacer(Modifier.height(8.dp))
+    HealthAndBillingSection(uiState.backendHealth, uiState.awsBilling)
 }
 
 // ── Section header with icon ──
