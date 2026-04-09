@@ -53,6 +53,9 @@ public class Statement extends BaseEntity {
     @Column(name = "net_amount", precision = 19, scale = 4)
     private BigDecimal netAmount;
 
+    @Column(name = "total_quantity", precision = 19, scale = 4)
+    private BigDecimal totalQuantity;
+
     @Column(name = "received_amount", precision = 19, scale = 4)
     private BigDecimal receivedAmount = BigDecimal.ZERO;
 

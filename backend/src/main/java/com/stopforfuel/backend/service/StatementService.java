@@ -22,6 +22,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -154,6 +157,10 @@ public class StatementService {
         statement.setBalanceAmount(netAmount);
         statement.setStatus("NOT_PAID");
 
+        // Compute total quantity from invoice products
+        List<Long> invoiceBillIds = bills.stream().map(InvoiceBill::getId).toList();
+        statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(invoiceBillIds));
+
         Statement saved = statementRepository.save(statement);
 
         // Link all bills to this statement
@@ -248,6 +255,11 @@ public class StatementService {
         statement.setReceivedAmount(BigDecimal.ZERO);
         statement.setBalanceAmount(netAmount);
         statement.setStatus("NOT_PAID");
+
+        // Compute total quantity from invoice products
+        List<Long> newBillIds = newBills.stream().map(InvoiceBill::getId).toList();
+        statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(newBillIds));
+
         Statement saved = statementRepository.save(statement);
 
         // Link new bills
@@ -339,6 +351,14 @@ public class StatementService {
         statement.setRoundingAmount(roundingAmount);
         statement.setNetAmount(netAmount);
         statement.setBalanceAmount(balanceAmount);
+
+        // Recalculate total quantity from remaining bills
+        if (!remainingBills.isEmpty()) {
+            List<Long> remainingBillIds = remainingBills.stream().map(InvoiceBill::getId).toList();
+            statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(remainingBillIds));
+        } else {
+            statement.setTotalQuantity(BigDecimal.ZERO);
+        }
 
         // Check if already fully paid after removal
         if (balanceAmount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -450,5 +470,32 @@ public class StatementService {
                 totalStatements, totalPaid, paidPercentage, totalUnpaidAmount,
                 totalNetAmount, totalReceivedAmount, collectionRate, avgStatementAmount
         );
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, BigDecimal> getRecommendedLimits(Long customerId, int count) {
+        List<Statement> recent = statementRepository.findRecentByCustomerId(customerId, PageRequest.of(0, count));
+
+        if (recent.isEmpty()) {
+            return Map.of("recommendedCreditLimit", BigDecimal.ZERO,
+                          "recommendedMonthlyConsumption", BigDecimal.ZERO,
+                          "statementCount", BigDecimal.ZERO);
+        }
+
+        BigDecimal avgNetAmount = recent.stream()
+                .map(Statement::getNetAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(recent.size()), 0, RoundingMode.HALF_UP);
+
+        BigDecimal avgQuantity = recent.stream()
+                .map(Statement::getTotalQuantity)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(recent.size()), 2, RoundingMode.HALF_UP);
+
+        return Map.of("recommendedCreditLimit", avgNetAmount,
+                      "recommendedMonthlyConsumption", avgQuantity,
+                      "statementCount", BigDecimal.valueOf(recent.size()));
     }
 }

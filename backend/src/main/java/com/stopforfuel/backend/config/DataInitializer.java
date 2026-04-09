@@ -37,6 +37,7 @@ public class DataInitializer implements ApplicationRunner {
     private final CacheManager cacheManager;
     private final com.stopforfuel.backend.repository.BillSequenceRepository billSequenceRepository;
     private final com.stopforfuel.backend.repository.StatementRepository statementRepository;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Override
     @Transactional
@@ -50,6 +51,7 @@ public class DataInitializer implements ApplicationRunner {
         patchMissingPermissions();
         patchCashierPermissions();
         patchStatementSequence();
+        backfillStatementQuantity();
     }
 
     private void seedRoles() {
@@ -380,6 +382,19 @@ public class DataInitializer implements ApplicationRunner {
                 }
             }
             log.info("Seeded role permissions for {}", roleType);
+        }
+    }
+
+    private void backfillStatementQuantity() {
+        int updated = entityManager.createNativeQuery(
+                "UPDATE statement s SET total_quantity = (" +
+                "SELECT COALESCE(SUM(ip.quantity), 0) " +
+                "FROM invoice_product ip JOIN invoice_bill ib ON ip.invoice_bill_id = ib.id " +
+                "WHERE ib.statement_id = s.id" +
+                ") WHERE s.total_quantity IS NULL")
+                .executeUpdate();
+        if (updated > 0) {
+            log.info("Backfilled total_quantity for {} statements", updated);
         }
     }
 }

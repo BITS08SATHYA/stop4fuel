@@ -81,6 +81,7 @@ interface Statement {
     toDate: string;
     statementDate: string;
     netAmount: number;
+    totalQuantity?: number;
     receivedAmount: number;
     balanceAmount: number;
     status: string;
@@ -578,6 +579,7 @@ function InvoiceTable({ invoices, loading, page, totalPages, onPageChange, fmt, 
                         <th className="py-2 px-2">Date</th>
                         <th className="py-2 px-2">Vehicle</th>
                         <th className="py-2 px-2">Products</th>
+                        <th className="py-2 px-2 text-right">Qty</th>
                         <th className="py-2 px-2 text-right">Amount</th>
                         <th className="py-2 px-2 text-center">Status</th>
                     </tr>
@@ -592,8 +594,11 @@ function InvoiceTable({ invoices, loading, page, totalPages, onPageChange, fmt, 
                             </td>
                             <td className="py-1.5 px-2 text-muted-foreground">{fmtDate(inv.date)}</td>
                             <td className="py-1.5 px-2 text-muted-foreground">{inv.vehicle?.vehicleNumber || "-"}</td>
-                            <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[150px]">
-                                {inv.products?.map(p => p.product?.name).filter(Boolean).join(", ") || "-"}
+                            <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[200px]" title={inv.products?.map(p => `${p.product?.name}:${p.quantity}`).join(", ")}>
+                                {inv.products?.map(p => `${p.product?.name}:${p.quantity}`).filter(Boolean).join(", ") || "-"}
+                            </td>
+                            <td className="py-1.5 px-2 text-right text-muted-foreground">
+                                {inv.products?.reduce((sum, p) => sum + (p.quantity || 0), 0)?.toFixed(2) || "-"}
                             </td>
                             <td className="py-1.5 px-2 text-right font-medium text-foreground">{fmt(inv.netAmount)}</td>
                             <td className="py-1.5 px-2 text-center">
@@ -637,6 +642,7 @@ function StatementTable({ statements, loading, fmt, fmtCurrency, fmtDate }: {
                     <th className="py-2 px-2">Statement #</th>
                     <th className="py-2 px-2">Period</th>
                     <th className="py-2 px-2 text-center">Bills</th>
+                    <th className="py-2 px-2 text-right">Qty</th>
                     <th className="py-2 px-2 text-right">Net Amount</th>
                     <th className="py-2 px-2 text-right">Received</th>
                     <th className="py-2 px-2 text-right">Balance</th>
@@ -654,6 +660,7 @@ function StatementTable({ statements, loading, fmt, fmtCurrency, fmtDate }: {
                         </td>
                         <td className="py-1.5 px-2 text-muted-foreground">{fmtDate(s.fromDate)} — {fmtDate(s.toDate)}</td>
                         <td className="py-1.5 px-2 text-center text-muted-foreground">{s.numberOfBills}</td>
+                        <td className="py-1.5 px-2 text-right text-muted-foreground">{s.totalQuantity != null ? s.totalQuantity.toFixed(2) : "-"}</td>
                         <td className="py-1.5 px-2 text-right font-medium text-foreground">{fmt(s.netAmount)}</td>
                         <td className="py-1.5 px-2 text-right text-emerald-400">{fmt(s.receivedAmount)}</td>
                         <td className="py-1.5 px-2 text-right font-medium">
