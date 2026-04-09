@@ -24,4 +24,12 @@ class DashboardRepository @Inject constructor(
     suspend fun getCashierDashboard(): Result<CashierDashboardDto> = runCatching {
         api.getCashierDashboard()
     }
+
+    suspend fun getBackendHealth(): Result<BackendHealthDto> = runCatching {
+        api.getBackendHealth()
+    }
+
+    suspend fun getAwsBilling(): Result<AwsBillingDto> = runCatching {
+        api.getAwsBilling()
+    }
 }

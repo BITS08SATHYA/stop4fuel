@@ -24,6 +24,8 @@ data class HomeUiState(
     val systemHealth: SystemHealthDto? = null,
     val cashierDashboard: CashierDashboardDto? = null,
     val fuelProducts: List<ProductDto> = emptyList(),
+    val backendHealth: BackendHealthDto? = null,
+    val awsBilling: AwsBillingDto? = null,
     val isLoading: Boolean = true,
     val error: String? = null
 ) {
@@ -74,6 +76,8 @@ class HomeViewModel @Inject constructor(
                     val products = dashboardRepository.getProducts().getOrNull()
                         ?.filter { it.category.equals("FUEL", ignoreCase = true) }
                         ?: emptyList()
+                    val backendHealth = dashboardRepository.getBackendHealth().getOrNull()
+                    val awsBilling = dashboardRepository.getAwsBilling().getOrNull()
 
                     _uiState.value = _uiState.value.copy(
                         activeShift = shift,
@@ -81,6 +85,8 @@ class HomeViewModel @Inject constructor(
                         dashboardStats = stats,
                         systemHealth = health,
                         fuelProducts = products,
+                        backendHealth = backendHealth,
+                        awsBilling = awsBilling,
                         isLoading = false, error = null
                     )
                 } else {
