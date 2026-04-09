@@ -437,7 +437,8 @@ export default function InvoiceHistoryPage() {
                                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle</th>
                                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
                                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Payment</th>
-                                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Items</th>
+                                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Product</th>
+                                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Qty (L)</th>
                                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Net Amount</th>
                                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">Actions</th>
                             </tr>
@@ -446,14 +447,14 @@ export default function InvoiceHistoryPage() {
                             {loading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td className="px-4 py-4" colSpan={10}>
+                                        <td className="px-4 py-4" colSpan={11}>
                                             <div className="h-4 bg-muted rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : invoices.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">
+                                    <td colSpan={11} className="px-4 py-12 text-center text-muted-foreground">
                                         No invoices found for the selected filters.
                                     </td>
                                 </tr>
@@ -490,10 +491,17 @@ export default function InvoiceHistoryPage() {
                                                             : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                                                     }`}>{inv.paymentStatus === 'NOT_PAID' ? 'Unpaid' : 'Paid'}</span>
                                                 </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <span className="text-sm font-mono bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
-                                                        {inv.products?.length || 0}
-                                                    </span>
+                                                <td className="px-4 py-3 text-sm text-foreground truncate max-w-[160px]" title={inv.products?.map(p => p.productName).join(', ')}>
+                                                    {inv.products && inv.products.length > 0
+                                                        ? inv.products.length === 1
+                                                            ? inv.products[0].productName
+                                                            : `${inv.products[0].productName} +${inv.products.length - 1}`
+                                                        : "—"}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-mono text-sm text-foreground">
+                                                    {inv.products && inv.products.length > 0
+                                                        ? inv.products.reduce((sum, p) => sum + (p.quantity || 0), 0).toFixed(2)
+                                                        : "—"}
                                                 </td>
                                                 <td className="px-4 py-3 text-right font-bold text-foreground">
                                                     ₹{fmt(inv.netAmount || 0)}
@@ -523,7 +531,7 @@ export default function InvoiceHistoryPage() {
                                             </tr>
                                             {isExpanded && (
                                                 <tr key={`${inv.id}-detail`} className="bg-muted/30">
-                                                    <td colSpan={10} className="px-6 py-4">
+                                                    <td colSpan={11} className="px-6 py-4">
                                                         {inv.products && inv.products.length > 0 && (
                                                             <div className="mb-3">
                                                                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Product Details</div>
