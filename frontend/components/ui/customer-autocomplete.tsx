@@ -75,7 +75,7 @@ export function CustomerAutocomplete({
         } else {
             // Fetch from API
             try {
-                const data = await getCustomers(val);
+                const data = await getCustomers(val, 1000);
                 setSuggestions(data.content || data || []);
             } catch (err) {
                 console.error(err);
