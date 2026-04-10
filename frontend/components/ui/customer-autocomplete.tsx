@@ -75,7 +75,7 @@ export function CustomerAutocomplete({
         } else {
             // Fetch from API
             try {
-                const data = await getCustomers(val);
+                const data = await getCustomers(val, 1000);
                 setSuggestions(data.content || data || []);
             } catch (err) {
                 console.error(err);
@@ -110,12 +110,15 @@ export function CustomerAutocomplete({
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 {selectedName ? (
-                    <div className="w-full pl-9 pr-9 py-2 bg-card border border-border rounded-lg text-foreground flex items-center">
+                    <div
+                        className={`w-full pl-9 pr-9 py-2 bg-card border border-border rounded-lg text-foreground flex items-center ${!disabled ? "cursor-pointer hover:border-primary/50" : ""}`}
+                        onClick={() => { if (!disabled) handleClear(); }}
+                    >
                         <span className="truncate">{selectedName}</span>
                         {!disabled && (
                             <button
                                 type="button"
-                                onClick={handleClear}
+                                onClick={(e) => { e.stopPropagation(); handleClear(); }}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
                                 <X className="w-4 h-4" />

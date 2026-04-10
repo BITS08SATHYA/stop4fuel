@@ -65,7 +65,7 @@ public class ShiftFinancialCalculationService {
                 eAdvanceRepository.sumByShiftAndType(shiftId, com.stopforfuel.backend.enums.PaymentMode.CHEQUE), "Cheque Advance", ++sortOrder);
 
         // 11. Operational Advances (Cash, Salary, Management)
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(shiftId);
         Map<String, BigDecimal> opAdvanceTotals = new HashMap<>();
         for (OperationalAdvance oa : opAdvances) {
             if (oa.getStatus() == com.stopforfuel.backend.enums.AdvanceStatus.CANCELLED) continue;
@@ -172,7 +172,7 @@ public class ShiftFinancialCalculationService {
     @Transactional(readOnly = true)
     public void populateAdvanceEntries(ShiftReportPrintData data, Long shiftId, List<InvoiceBill> invoices) {
         // EAdvance entries (Card, UPI, Cheque, CCMS, Bank)
-        List<EAdvance> eAdvances = eAdvanceRepository.findByShiftIdOrderByTransactionDateDesc(shiftId);
+        List<EAdvance> eAdvances = eAdvanceRepository.findByShiftIdOrderByIdDesc(shiftId);
         for (EAdvance eAdv : eAdvances) {
             ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
             entry.setType(eAdv.getAdvanceType() != null ? eAdv.getAdvanceType().name() : "OTHER");
@@ -182,7 +182,7 @@ public class ShiftFinancialCalculationService {
         }
 
         // Operational advances
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(shiftId);
         for (OperationalAdvance oa : opAdvances) {
             if (oa.getStatus() == com.stopforfuel.backend.enums.AdvanceStatus.CANCELLED) continue;
             ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();

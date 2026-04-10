@@ -17,7 +17,7 @@ import {
 import {
     getInvoiceHistory, getCustomerInvoices,
     getPaymentsByBill, recordBillPayment, getBillPaymentSummary,
-    getCustomerCreditInfo, PAYMENT_MODES,
+    getCustomerCreditInfo, PAYMENT_MODES, markInvoiceIndependent,
     type InvoiceBill, type Payment,
     type PageResponse, type BillPaymentSummary
 } from "@/lib/api/station";
@@ -88,6 +88,7 @@ export default function InvoiceExplorerPage() {
     const [paymentRemarks, setPaymentRemarks] = useState("");
     const [paymentSubmitting, setPaymentSubmitting] = useState(false);
     const [paymentError, setPaymentError] = useState("");
+    const [markingIndependent, setMarkingIndependent] = useState(false);
 
     // Customer KPI
     const [customerInfo, setCustomerInfo] = useState<{
@@ -246,10 +247,26 @@ export default function InvoiceExplorerPage() {
     };
 
     // Can this invoice accept direct payment?
-    const canPayDirectly = (inv: InvoiceBill) => {
+    const canPayDirectly = (inv: InvoiceBill): boolean => {
+        const isStatementCustomer = inv.customer?.partyType === "Statement";
         return inv.billType === "CREDIT"
             && inv.paymentStatus !== "PAID"
-            && !inv.statement; // Not linked to a statement
+            && !inv.statement
+            && (!isStatementCustomer || !!inv.independent);
+    };
+
+    // Mark invoice as independent
+    const handleMarkIndependent = async (invoiceId: number) => {
+        setMarkingIndependent(true);
+        try {
+            const updated = await markInvoiceIndependent(invoiceId);
+            setSelectedInvoice(updated);
+            fetchInvoices();
+        } catch (err: any) {
+            setPaymentError(err?.message || "Failed to mark independent");
+        } finally {
+            setMarkingIndependent(false);
+        }
     };
 
     // Compute balance for selected invoice
@@ -556,6 +573,8 @@ export default function InvoiceExplorerPage() {
                                                 balance={selectedBalance}
                                                 canPay={canPayDirectly(selectedInvoice)}
                                                 onRecordPayment={() => { setActiveTab("payments"); setShowPaymentForm(true); }}
+                                                onMarkIndependent={() => handleMarkIndependent(selectedInvoice.id!)}
+                                                markingIndependent={markingIndependent}
                                             />
                                         ) : (
                                             <InvoicePaymentsTab
@@ -593,13 +612,15 @@ export default function InvoiceExplorerPage() {
 
 // --- Details Tab ---
 function InvoiceDetailsTab({
-    invoice, payments, balance, canPay, onRecordPayment
+    invoice, payments, balance, canPay, onRecordPayment, onMarkIndependent, markingIndependent
 }: {
     invoice: InvoiceBill;
     payments: Payment[];
     balance: number;
     canPay: boolean;
     onRecordPayment: () => void;
+    onMarkIndependent: () => void;
+    markingIndependent: boolean;
 }) {
     const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
 
@@ -623,25 +644,52 @@ function InvoiceDetailsTab({
             </div>
 
             {/* Statement link status */}
-            {invoice.billType === "CREDIT" && (
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${
-                    invoice.statement
-                        ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                        : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                }`}>
-                    {invoice.statement ? (
-                        <>
-                            <Link2 className="w-3.5 h-3.5" />
-                            Linked to statement <span className="font-bold">{invoice.statement.statementNo}</span> — pay via statement
-                        </>
-                    ) : (
-                        <>
+            {invoice.billType === "CREDIT" && (() => {
+                const isStatementCustomer = invoice.customer?.partyType === "Statement";
+                if (invoice.statement) {
+                    // Linked to a statement
+                    return (
+                        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            <div className="flex items-center gap-2">
+                                <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span>Linked to statement <span className="font-bold">{invoice.statement.statementNo}</span> — pay via statement</span>
+                            </div>
+                            <button
+                                onClick={onMarkIndependent}
+                                disabled={markingIndependent}
+                                className="px-2 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-xs font-medium hover:bg-amber-500/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                            >
+                                {markingIndependent ? "..." : "Unlink"}
+                            </button>
+                        </div>
+                    );
+                } else if (isStatementCustomer && !invoice.independent) {
+                    // Statement customer, not linked yet, not independent
+                    return (
+                        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span>Statement customer — awaiting statement</span>
+                            </div>
+                            <button
+                                onClick={onMarkIndependent}
+                                disabled={markingIndependent}
+                                className="px-2 py-1 bg-primary/20 text-primary border border-primary/30 rounded text-xs font-medium hover:bg-primary/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                            >
+                                {markingIndependent ? "..." : "Mark Independent"}
+                            </button>
+                        </div>
+                    );
+                } else {
+                    // Local customer or independent invoice
+                    return (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-green-500/10 text-green-400 border border-green-500/20">
                             <Link2Off className="w-3.5 h-3.5" />
-                            Not linked to any statement — direct payment allowed
-                        </>
-                    )}
-                </div>
-            )}
+                            {invoice.independent ? "Independent invoice — direct payment allowed" : "Not linked to any statement — direct payment allowed"}
+                        </div>
+                    );
+                }
+            })()}
 
             {/* Financial Cards */}
             <div className="grid grid-cols-2 gap-3">

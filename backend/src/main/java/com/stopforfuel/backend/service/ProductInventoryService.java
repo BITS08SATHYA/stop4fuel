@@ -36,12 +36,12 @@ public class ProductInventoryService {
 
     @Transactional(readOnly = true)
     public List<ProductInventory> getByDate(LocalDate date) {
-        return repository.findByDateWithProduct(date);
+        return repository.findByDateWithProduct(date, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<ProductInventory> getByProductId(Long productId) {
-        return repository.findByProductIdWithProduct(productId);
+        return repository.findByProductIdWithProduct(productId, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +82,9 @@ public class ProductInventoryService {
         existing.setOpenStock(details.getOpenStock());
         existing.setIncomeStock(details.getIncomeStock());
         existing.setCloseStock(details.getCloseStock());
+        if (details.getRate() != null) {
+            existing.setRate(details.getRate());
+        }
         calculateFields(existing);
         return repository.save(existing);
     }
@@ -97,7 +100,7 @@ public class ProductInventoryService {
      */
     public void autoCreateForShift(Shift shift) {
         LocalDate today = LocalDate.now();
-        List<Product> activeProducts = productRepository.findByActive(true);
+        List<Product> activeProducts = productRepository.findByActiveAndScid(true, SecurityUtils.getScid());
 
         // Find existing records for this shift to ensure idempotency
         List<ProductInventory> existingRecords = repository.findByShiftId(shift.getId());
@@ -117,7 +120,7 @@ public class ProductInventoryService {
                 openStock = cashierOpt.get().getCurrentStock() != null ? cashierOpt.get().getCurrentStock() : 0.0;
             } else {
                 // Fallback: previous ProductInventory closeStock
-                ProductInventory prev = repository.findTopByProductIdOrderByDateDescIdDesc(product.getId());
+                ProductInventory prev = repository.findTopByProductIdAndScidOrderByDateDescIdDesc(product.getId(), SecurityUtils.getScid());
                 openStock = (prev != null && prev.getCloseStock() != null) ? prev.getCloseStock() : 0.0;
             }
 
@@ -179,5 +182,14 @@ public class ProductInventoryService {
         if (inventory.getCloseStock() != null) {
             inventory.setSales(total - inventory.getCloseStock());
         }
+
+        // Set rate from product price if not explicitly provided
+        if (inventory.getRate() == null && inventory.getProduct() != null && inventory.getProduct().getPrice() != null) {
+            inventory.setRate(inventory.getProduct().getPrice());
+        }
+        // Calculate amount = rate * sales
+        double sales = inventory.getSales() != null ? inventory.getSales() : 0.0;
+        BigDecimal rate = inventory.getRate();
+        inventory.setAmount(rate != null ? rate.multiply(BigDecimal.valueOf(sales)) : BigDecimal.ZERO);
     }
 }

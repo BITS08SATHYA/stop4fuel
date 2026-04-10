@@ -18,6 +18,7 @@ import {
 import { CustomerProfileOverlay } from "@/components/customers/CustomerProfileOverlay";
 import { CreditHealthBadge } from "@/components/customers/CreditHealthBadge";
 import Link from "next/link";
+import { showToast } from "@/components/ui/toast";
 
 type DetailTab = "bills" | "statements" | "payments";
 type ListFilter = "all" | "outstanding" | "current" | "30+" | "60+" | "90+" | "zero";
@@ -55,7 +56,7 @@ export default function CreditOverviewPage() {
                 setDetail(await getCreditCustomerDetail(customerId));
             }
         } catch (e: any) {
-            alert(e.message || "Failed to update status");
+            showToast.error(e.message || "Failed to update status");
         }
     };
 

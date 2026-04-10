@@ -60,7 +60,7 @@ public class EmployeeDashboardService {
 
         // Today's status
         Attendance todayAttendance = attendanceRepository
-                .findByEmployeeIdAndDate(employeeId, now).orElse(null);
+                .findByEmployeeIdAndDateAndScid(employeeId, now, com.stopforfuel.config.SecurityUtils.getScid()).orElse(null);
         if (todayAttendance != null) {
             attendance.setTodayStatus(todayAttendance.getStatus());
             attendance.setTodayCheckIn(todayAttendance.getCheckInTime() != null ? todayAttendance.getCheckInTime().toString() : null);

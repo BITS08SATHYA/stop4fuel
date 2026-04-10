@@ -64,7 +64,7 @@ interface ApiService {
     @PATCH("api/customers/{id}/force-unblock")
     suspend fun toggleForceUnblock(
         @Path("id") id: Long,
-        @Body body: Map<String, Any>
+        @Body body: ForceUnblockRequest
     ): CustomerListDto
 
     // Vehicle Management
@@ -114,16 +114,34 @@ interface ApiService {
     @GET("api/dashboard/cashier")
     suspend fun getCashierDashboard(): CashierDashboardDto
 
+    @GET("api/health")
+    suspend fun getBackendHealth(): BackendHealthDto
+
+    @GET("api/billing/aws-mtd")
+    suspend fun getAwsBilling(): AwsBillingDto
+
+    @GET("api/dashboard/invoice-analytics")
+    suspend fun getInvoiceAnalytics(
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): InvoiceAnalyticsDto
+
+    @GET("api/dashboard/payment-analytics")
+    suspend fun getPaymentAnalytics(
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): PaymentAnalyticsDto
+
     // Products Management
-    @PUT("api/products/{id}")
-    suspend fun updateProduct(@Path("id") id: Long, @Body product: Map<String, Any?>): ProductDto
+    @PATCH("api/products/{id}/price")
+    suspend fun updateProductPrice(@Path("id") id: Long, @Body request: PriceUpdateRequest): ProductDto
 
     @POST("api/product-price-history")
-    suspend fun createPriceHistory(@Body entry: Map<String, Any?>): Any
+    suspend fun createPriceHistory(@Body entry: CreatePriceHistoryRequest): Any
 
     // Vehicle Creation
     @POST("api/vehicles")
-    suspend fun createVehicle(@Body vehicle: Map<String, Any?>): VehicleDto
+    suspend fun createVehicle(@Body vehicle: CreateVehicleRequest): VehicleDto
 
     @GET("api/vehicle-types")
     suspend fun getVehicleTypes(): List<VehicleTypeDto>
@@ -138,6 +156,53 @@ interface ApiService {
 
     @GET("api/invoices/shift/{shiftId}")
     suspend fun getInvoicesByShift(@Path("shiftId") shiftId: Long): List<InvoiceBillDto>
+
+    @GET("api/invoices/history")
+    suspend fun getInvoiceHistory(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20,
+        @Query("billType") billType: String? = null,
+        @Query("paymentStatus") paymentStatus: String? = null,
+        @Query("fromDate") fromDate: String? = null,
+        @Query("toDate") toDate: String? = null,
+        @Query("search") search: String? = null,
+        @Query("categoryType") categoryType: String? = null
+    ): PageResponse<InvoiceBillDto>
+
+    @PUT("api/invoices/{id}")
+    suspend fun updateInvoice(@Path("id") id: Long, @Body invoice: Map<String, @JvmSuppressWildcards Any?>): InvoiceBillDto
+
+    // Statements
+    @GET("api/statements")
+    suspend fun getStatements(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20,
+        @Query("customerId") customerId: Long? = null,
+        @Query("status") status: String? = null,
+        @Query("fromDate") fromDate: String? = null,
+        @Query("toDate") toDate: String? = null,
+        @Query("search") search: String? = null,
+        @Query("categoryType") categoryType: String? = null,
+        @Query("sort") sort: String? = null
+    ): PageResponse<StatementDto>
+
+    // Stock Transfers
+    @POST("api/stock-transfers")
+    suspend fun createStockTransfer(@Body transfer: CreateStockTransferRequest): StockTransferDto
+
+    @GET("api/stock-transfers")
+    suspend fun getStockTransfers(
+        @Query("productId") productId: Long? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
+    ): List<StockTransferDto>
+
+    // Attendance
+    @POST("api/attendance/bulk")
+    suspend fun markBulkAttendance(@Body attendances: List<AttendanceBulkRequest>): List<AttendanceDto>
+
+    @GET("api/attendance/daily")
+    suspend fun getDailyAttendance(@Query("date") date: String): List<AttendanceDto>
 
     // Pump Sessions
     @POST("api/pump-sessions")

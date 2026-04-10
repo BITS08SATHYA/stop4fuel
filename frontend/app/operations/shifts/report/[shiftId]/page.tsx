@@ -20,6 +20,7 @@ import {
     ReportAuditLog,
     ShiftReportPrintData,
 } from "@/lib/api/station";
+import { showToast } from "@/components/ui/toast";
 import {
     FileText,
     RefreshCw,
@@ -106,19 +107,19 @@ export default function ShiftReportPage() {
 
     const handleRecompute = async () => {
         if (!report) return;
-        try { const u = await recomputeShiftReport(report.id); setReport(u); loadData(); } catch (e: unknown) { alert(e instanceof Error ? e.message : "Failed"); }
+        try { const u = await recomputeShiftReport(report.id); setReport(u); loadData(); } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
     };
     const handleFinalize = async () => {
         if (!report) return;
-        try { await finalizeShiftReport(report.id, "manager"); setShowFinalizeConfirm(false); router.push("/operations/shifts"); } catch (e: unknown) { alert(e instanceof Error ? e.message : "Failed"); }
+        try { await finalizeShiftReport(report.id, "manager"); setShowFinalizeConfirm(false); router.push("/operations/shifts"); } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
     };
     const handleEditSave = async () => {
         if (!report || editingItemId == null) return;
-        try { const u = await editReportLineItem(report.id, editingItemId, parseFloat(editAmount), editReason || undefined); setReport(u); setEditingItemId(null); setEditAmount(""); setEditReason(""); } catch (e: unknown) { alert(e instanceof Error ? e.message : "Failed"); }
+        try { const u = await editReportLineItem(report.id, editingItemId, parseFloat(editAmount), editReason || undefined); setReport(u); setEditingItemId(null); setEditAmount(""); setEditReason(""); } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
     };
     const handleTransfer = async () => {
         if (!report || transferItemId == null || !targetReportId) return;
-        try { const u = await transferReportEntry(report.id, transferItemId, parseInt(targetReportId), transferReason || undefined); setReport(u); setTransferItemId(null); } catch (e: unknown) { alert(e instanceof Error ? e.message : "Failed"); }
+        try { const u = await transferReportEntry(report.id, transferItemId, parseInt(targetReportId), transferReason || undefined); setReport(u); setTransferItemId(null); } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
     };
     const openTransferModal = async (itemId: number) => {
         setTransferItemId(itemId);
@@ -167,7 +168,7 @@ export default function ShiftReportPage() {
                         <button onClick={() => setShowFinalizeConfirm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-green-500/10 text-green-600 hover:bg-green-500/20"><Lock className="w-4 h-4" />Finalize</button>
                     </>)}
                     <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-muted text-muted-foreground hover:bg-muted/80"><Printer className="w-4 h-4" />Print</button>
-                    <button onClick={async () => { try { await downloadShiftReportPdf(shiftId); } catch { alert("Failed to download PDF"); } }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-primary/10 text-primary hover:bg-primary/20"><Download className="w-4 h-4" />Download PDF</button>
+                    <button onClick={async () => { try { await downloadShiftReportPdf(shiftId); } catch { showToast.error("Failed to download PDF"); } }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-primary/10 text-primary hover:bg-primary/20"><Download className="w-4 h-4" />Download PDF</button>
                 </div>
             </div>
 

@@ -19,13 +19,14 @@ public interface OperationalAdvanceRepository extends ScidRepository<Operational
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT oa FROM OperationalAdvance oa WHERE oa.id = :id")
     Optional<OperationalAdvance> findByIdForUpdate(@Param("id") Long id);
-    List<OperationalAdvance> findByStatusOrderByAdvanceDateDesc(AdvanceStatus status);
-    List<OperationalAdvance> findByShiftIdOrderByAdvanceDateDesc(Long shiftId);
-    List<OperationalAdvance> findAllByOrderByAdvanceDateDesc();
-    List<OperationalAdvance> findByAdvanceTypeOrderByAdvanceDateDesc(AdvanceType advanceType);
-    List<OperationalAdvance> findByEmployeeIdOrderByAdvanceDateDesc(Long employeeId);
-    List<OperationalAdvance> findByStatusInOrderByAdvanceDateDesc(List<AdvanceStatus> statuses);
-    List<OperationalAdvance> findByEmployeeIdAndStatus(Long employeeId, AdvanceStatus status);
+    List<OperationalAdvance> findByStatusAndScidOrderByAdvanceDateDesc(AdvanceStatus status, Long scid);
+    // shiftId is already tenant-scoped via shift creation
+    List<OperationalAdvance> findByShiftIdOrderByIdDesc(Long shiftId);
+    List<OperationalAdvance> findAllByScidOrderByAdvanceDateDesc(Long scid);
+    List<OperationalAdvance> findByAdvanceTypeAndScidOrderByAdvanceDateDesc(AdvanceType advanceType, Long scid);
+    List<OperationalAdvance> findByEmployeeIdAndScidOrderByAdvanceDateDesc(Long employeeId, Long scid);
+    List<OperationalAdvance> findByStatusInAndScidOrderByAdvanceDateDesc(List<AdvanceStatus> statuses, Long scid);
+    List<OperationalAdvance> findByEmployeeIdAndStatusAndScid(Long employeeId, AdvanceStatus status, Long scid);
 
     @Query("SELECT oa FROM OperationalAdvance oa WHERE oa.scid = :scid AND oa.advanceDate BETWEEN :from AND :to ORDER BY oa.advanceDate DESC")
     List<OperationalAdvance> findByDateRange(@Param("scid") Long scid, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

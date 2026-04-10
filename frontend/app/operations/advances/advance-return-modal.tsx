@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass } from "@/components/ui/field-error";
 import { OperationalAdvance, getAdvanceTypeMeta, formatCurrency, returnAdvance } from "./advances-api";
+import { showToast } from "@/components/ui/toast";
 
 interface AdvanceReturnModalProps {
     isOpen: boolean;
@@ -39,7 +40,7 @@ export function AdvanceReturnModal({ isOpen, onClose, onSuccess, advance }: Adva
             handleClose();
             onSuccess();
         } catch (err: any) {
-            alert(err.message || "Failed to record return");
+            showToast.error(err.message || "Failed to record return");
         } finally {
             setIsSubmitting(false);
         }

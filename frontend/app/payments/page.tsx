@@ -21,6 +21,7 @@ import {
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 type PayTarget = "statement" | "bill";
 
@@ -1088,7 +1089,7 @@ export default function PaymentsPage() {
                                             const data = await getPaymentProofUrl(viewPayment.id!);
                                             window.open(data.url, '_blank');
                                         } catch {
-                                            alert("Failed to load proof image");
+                                            showToast.error("Failed to load proof image");
                                         }
                                     }}
                                     className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm text-foreground hover:bg-muted transition-colors"

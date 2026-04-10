@@ -3,6 +3,7 @@ package com.stopforfuel.app.data.repository
 import com.stopforfuel.app.data.remote.ApiService
 import com.stopforfuel.app.data.remote.dto.CreateInvoiceRequest
 import com.stopforfuel.app.data.remote.dto.InvoiceBillDto
+import com.stopforfuel.app.data.remote.dto.PageResponse
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,6 +22,31 @@ class InvoiceRepository @Inject constructor(
     suspend fun getInvoicesByShift(shiftId: Long): Result<List<InvoiceBillDto>> {
         return try {
             Result.success(api.getInvoicesByShift(shiftId))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getInvoiceHistory(
+        page: Int = 0,
+        size: Int = 20,
+        billType: String? = null,
+        paymentStatus: String? = null,
+        fromDate: String? = null,
+        toDate: String? = null,
+        search: String? = null,
+        categoryType: String? = null
+    ): Result<PageResponse<InvoiceBillDto>> {
+        return try {
+            Result.success(api.getInvoiceHistory(page, size, billType, paymentStatus, fromDate, toDate, search, categoryType))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateInvoice(id: Long, body: Map<String, Any?>): Result<InvoiceBillDto> {
+        return try {
+            Result.success(api.updateInvoice(id, body))
         } catch (e: Exception) {
             Result.failure(e)
         }

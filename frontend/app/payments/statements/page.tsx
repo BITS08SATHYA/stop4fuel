@@ -11,10 +11,10 @@ import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
     FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight,
-    CheckCircle2, Zap
+    CheckCircle2, Zap, Pencil, ArrowUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
 import {
-    getStatements, generateStatement, getStatementBills,
+    getStatements, generateStatement, regenerateStatement, getStatementBills,
     getCustomers, deleteStatement, removeBillFromStatement,
     getVehiclesByCustomer, getProducts, previewStatementBills,
     generateStatementPdf, getStatementPdfUrl, getStatementStats,
@@ -24,6 +24,7 @@ import {
     type Product, type PageResponse, type StatementStats
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 export default function StatementsPage() {
     const [statements, setStatements] = useState<Statement[]>([]);
@@ -75,6 +76,14 @@ export default function StatementsPage() {
     const [expandedBillId, setExpandedBillId] = useState<number | null>(null);
     const [pdfError, setPdfError] = useState("");
 
+    // Edit/Regenerate
+    const [editingStatementId, setEditingStatementId] = useState<number | null>(null);
+    const [editingStatementNo, setEditingStatementNo] = useState<string>("");
+
+    // Sort
+    const [sortField, setSortField] = useState("statementDate");
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
     // Set as Limit
     const [setLimitSuccess, setSetLimitSuccess] = useState("");
 
@@ -86,7 +95,7 @@ export default function StatementsPage() {
 
     useEffect(() => {
         loadStatements();
-    }, [page, filterStatus, filterCategory, filterFromDate, filterToDate, tableSearch]);
+    }, [page, filterStatus, filterCategory, filterFromDate, filterToDate, tableSearch, sortField, sortDir]);
 
     // Load vehicles when customer changes in generate modal
     useEffect(() => {
@@ -137,7 +146,8 @@ export default function StatementsPage() {
             const result: PageResponse<Statement> = await getStatements(
                 page, pageSize, undefined, statusParam,
                 filterFromDate || undefined, filterToDate || undefined,
-                tableSearch || undefined, filterCategory || undefined
+                tableSearch || undefined, filterCategory || undefined,
+                `${sortField},${sortDir}`
             );
             setStatements(result.content);
             setTotalPages(result.totalPages);
@@ -202,6 +212,22 @@ export default function StatementsPage() {
         }
     };
 
+    const handleEditStatement = async (stmt: Statement) => {
+        setEditingStatementId(stmt.id!);
+        setEditingStatementNo(stmt.statementNo || "");
+        setSelectedCustomerId(stmt.customer?.id || "");
+        setFromDate(stmt.fromDate || "");
+        setToDate(stmt.toDate || "");
+        setFilterVehicleId("");
+        setFilterProductId("");
+        setShowPreview(false);
+        setPreviewBills([]);
+        setSelectedBillIds(new Set());
+        setUseBillSelection(false);
+        setError("");
+        setShowGenerateModal(true);
+    };
+
     const handleGenerate = async () => {
         if (!selectedCustomerId || !fromDate || !toDate) {
             setError("Please fill all required fields");
@@ -217,15 +243,17 @@ export default function StatementsPage() {
             const filters: { vehicleId?: number; productId?: number; billIds?: number[] } = {};
 
             if (useBillSelection && selectedBillIds.size > 0) {
-                // Bill-wise: user deselected some bills
                 filters.billIds = Array.from(selectedBillIds);
             } else {
-                // Filter-based generation
                 if (filterVehicleId) filters.vehicleId = Number(filterVehicleId);
                 if (filterProductId) filters.productId = Number(filterProductId);
             }
 
-            await generateStatement(Number(selectedCustomerId), fromDate, toDate, filters);
+            if (editingStatementId) {
+                await regenerateStatement(editingStatementId, fromDate, toDate, filters, Number(selectedCustomerId));
+            } else {
+                await generateStatement(Number(selectedCustomerId), fromDate, toDate, filters);
+            }
             resetGenerateModal();
             loadStatements();
             loadStats();
@@ -247,6 +275,8 @@ export default function StatementsPage() {
         setPreviewBills([]);
         setSelectedBillIds(new Set());
         setUseBillSelection(false);
+        setEditingStatementId(null);
+        setEditingStatementNo("");
         setError("");
     };
 
@@ -299,7 +329,7 @@ export default function StatementsPage() {
                 loadStatements();
                 loadStats();
             }
-            alert(`${result.count} draft statement(s) created.`);
+            showToast.error(`${result.count} draft statement(s) created.`);
         } catch (e: any) {
             setPdfError(e.message || "Failed to auto-generate drafts");
             setTimeout(() => setPdfError(""), 4000);
@@ -325,6 +355,32 @@ export default function StatementsPage() {
         setFilterStatus(status);
         setPage(0); // reset to first page on filter change
     };
+
+    const handleSort = (field: string) => {
+        if (sortField === field) {
+            setSortDir(prev => prev === "asc" ? "desc" : "asc");
+        } else {
+            setSortField(field);
+            setSortDir("desc");
+        }
+        setPage(0);
+    };
+
+    const SortHeader = ({ field, label, align = "left" }: { field: string; label: string; align?: string }) => (
+        <th
+            className={`py-3 px-4 cursor-pointer hover:text-foreground transition-colors select-none text-${align}`}
+            onClick={() => handleSort(field)}
+        >
+            <span className="inline-flex items-center gap-1">
+                {label}
+                {sortField === field ? (
+                    sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                ) : (
+                    <ArrowUpDown className="w-3 h-3 opacity-30" />
+                )}
+            </span>
+        </th>
+    );
 
     const previewTotal = previewBills
         .filter(b => selectedBillIds.has(b.id!))
@@ -374,23 +430,30 @@ export default function StatementsPage() {
 
                 {/* Filters */}
                 <div className="flex flex-wrap gap-3 items-center mb-6">
-                    <div className="relative flex-1 min-w-[200px] max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Search by customer name or statement no..."
-                            value={searchInput}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setSearchInput(val);
-                                if (searchTimeout) clearTimeout(searchTimeout);
-                                setSearchTimeout(setTimeout(() => {
-                                    setTableSearch(val);
-                                    setPage(0);
-                                }, 400));
-                            }}
-                            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        />
+                    <div className="relative flex-1 min-w-[200px] max-w-md flex gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Search by customer name or statement no..."
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        if (searchTimeout) clearTimeout(searchTimeout);
+                                        setTableSearch(searchInput);
+                                        setPage(0);
+                                    }
+                                }}
+                                className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                        </div>
+                        <button
+                            onClick={() => { setTableSearch(searchInput); setPage(0); }}
+                            className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
+                        >
+                            Search
+                        </button>
                     </div>
                     <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -443,15 +506,15 @@ export default function StatementsPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-border text-muted-foreground">
-                                    <th className="text-left py-3 px-4">Statement No</th>
-                                    <th className="text-left py-3 px-4">Customer</th>
-                                    <th className="text-left py-3 px-4">Date</th>
-                                    <th className="text-right py-3 px-4">Bills</th>
-                                    <th className="text-right py-3 px-4">Net Amount</th>
-                                    <th className="text-right py-3 px-4">Received</th>
-                                    <th className="text-right py-3 px-4">Balance</th>
-                                    <th className="text-center py-3 px-4">Status</th>
+                                <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wider">
+                                    <SortHeader field="statementNo" label="Statement No" />
+                                    <SortHeader field="customer.name" label="Customer" />
+                                    <SortHeader field="statementDate" label="Date" />
+                                    <SortHeader field="numberOfBills" label="Bills" align="right" />
+                                    <SortHeader field="netAmount" label="Net Amount" align="right" />
+                                    <SortHeader field="receivedAmount" label="Received" align="right" />
+                                    <SortHeader field="balanceAmount" label="Balance" align="right" />
+                                    <SortHeader field="status" label="Status" align="center" />
                                     <th className="text-center py-3 px-4">Actions</th>
                                 </tr>
                             </thead>
@@ -546,6 +609,17 @@ export default function StatementsPage() {
                                                                 ) : (
                                                                     <CheckCircle2 className="w-4 h-4" />
                                                                 )}
+                                                            </button>
+                                                        </PermissionGate>
+                                                    )}
+                                                    {stmt.status !== "PAID" && Number(stmt.receivedAmount || 0) === 0 && (
+                                                        <PermissionGate permission="PAYMENT_UPDATE">
+                                                            <button
+                                                                onClick={() => handleEditStatement(stmt)}
+                                                                className="p-1.5 rounded-md hover:bg-amber-500/20 text-amber-400 transition-colors"
+                                                                title="Edit / Regenerate"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
                                                             </button>
                                                         </PermissionGate>
                                                     )}
@@ -664,7 +738,7 @@ export default function StatementsPage() {
             <Modal
                 isOpen={showGenerateModal}
                 onClose={resetGenerateModal}
-                title="Generate Statement"
+                title={editingStatementId ? `Edit / Regenerate Statement #${editingStatementNo}` : "Generate Statement"}
             >
                 <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
                     {error && (
@@ -784,9 +858,11 @@ export default function StatementsPage() {
                                                         className="rounded border-border"
                                                     />
                                                 </th>
+                                                <th className="py-2 px-3 text-left">Bill No</th>
                                                 <th className="py-2 px-3 text-left">Date</th>
                                                 <th className="py-2 px-3 text-left">Vehicle</th>
                                                 <th className="py-2 px-3 text-left">Products</th>
+                                                <th className="py-2 px-3 text-right">Qty</th>
                                                 <th className="py-2 px-3 text-left">Indent No</th>
                                                 <th className="py-2 px-3 text-right">Amount</th>
                                             </tr>
@@ -805,9 +881,11 @@ export default function StatementsPage() {
                                                             type="checkbox"
                                                             checked={selectedBillIds.has(bill.id!)}
                                                             onChange={() => toggleBillSelection(bill.id!)}
+                                                            onClick={(e) => e.stopPropagation()}
                                                             className="rounded border-border"
                                                         />
                                                     </td>
+                                                    <td className="py-2 px-3 font-medium">{bill.billNo || "-"}</td>
                                                     <td className="py-2 px-3">
                                                         {bill.date ? new Date(bill.date).toLocaleDateString("en-IN") : "-"}
                                                     </td>
@@ -816,6 +894,9 @@ export default function StatementsPage() {
                                                     </td>
                                                     <td className="py-2 px-3 text-muted-foreground">
                                                         {bill.products?.map(p => p.productName).filter(Boolean).join(", ") || "-"}
+                                                    </td>
+                                                    <td className="py-2 px-3 text-right">
+                                                        {bill.products?.reduce((sum, p) => sum + Number(p.quantity || 0), 0).toFixed(2) || "-"}
                                                     </td>
                                                     <td className="py-2 px-3">{bill.indentNo || "-"}</td>
                                                     <td className="py-2 px-3 text-right font-medium">
@@ -843,7 +924,7 @@ export default function StatementsPage() {
                             disabled={generating || (showPreview && selectedBillIds.size === 0)}
                             className="btn-gradient px-6 py-2 rounded-lg font-medium disabled:opacity-50"
                         >
-                            {generating ? "Generating..." : `Generate${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
+                            {generating ? (editingStatementId ? "Regenerating..." : "Generating...") : `${editingStatementId ? "Regenerate" : "Generate"}${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
                         </button>
                     </div>
                 </div>
@@ -932,6 +1013,19 @@ export default function StatementsPage() {
                                         )}
                                         Generate PDF
                                     </button>
+                                )}
+                                {detailStatement.status !== "PAID" && Number(detailStatement.receivedAmount || 0) === 0 && (
+                                    <PermissionGate permission="PAYMENT_UPDATE">
+                                        <button
+                                            onClick={() => {
+                                                setShowDetailModal(false);
+                                                handleEditStatement(detailStatement);
+                                            }}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors flex items-center gap-1.5"
+                                        >
+                                            <Pencil className="w-3.5 h-3.5" /> Edit / Regenerate
+                                        </button>
+                                    </PermissionGate>
                                 )}
                                 {detailStatement.status !== "PAID" && (
                                     <PermissionGate permission="PAYMENT_DELETE">

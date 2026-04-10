@@ -236,6 +236,10 @@ public class StatementAutoGenerationService {
         statement.setBalanceAmount(netAmount);
         statement.setStatus("DRAFT");
 
+        // Compute total quantity from invoice products
+        List<Long> billIds = bills.stream().map(InvoiceBill::getId).toList();
+        statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(billIds));
+
         Statement saved = statementRepository.save(statement);
 
         for (InvoiceBill bill : bills) {

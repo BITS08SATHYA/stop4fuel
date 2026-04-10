@@ -55,10 +55,19 @@ public class IncentivePaymentDTO {
     public static class InvoiceBillSummary {
         private Long id;
         private String billNo;
+        private String signatoryName;
+        private String billDesc;
+        private String customerName;
 
         public static InvoiceBillSummary from(InvoiceBill b) {
             if (b == null) return null;
-            return InvoiceBillSummary.builder().id(b.getId()).billNo(b.getBillNo()).build();
+            return InvoiceBillSummary.builder()
+                    .id(b.getId())
+                    .billNo(b.getBillNo())
+                    .signatoryName(b.getSignatoryName())
+                    .billDesc(b.getBillDesc())
+                    .customerName(b.getCustomer() != null ? b.getCustomer().getName() : null)
+                    .build();
         }
     }
 

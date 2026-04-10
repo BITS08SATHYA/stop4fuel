@@ -43,7 +43,7 @@ public class PaymentController {
         LocalDateTime from = fromDate != null ? fromDate.atStartOfDay() : null;
         LocalDateTime to = toDate != null ? toDate.atTime(23, 59, 59) : null;
         return paymentService.getPayments(categoryType, paidAgainst, from, to,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "paymentDate")))
+                PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "id")))
                 .map(PaymentDTO::from);
     }
 
@@ -104,7 +104,7 @@ public class PaymentController {
             @PathVariable Long customerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return paymentService.getPaymentsByCustomer(customerId, PageRequest.of(page, size))
+        return paymentService.getPaymentsByCustomer(customerId, PageRequest.of(page, Math.min(size, 100)))
                 .map(PaymentDTO::from);
     }
 

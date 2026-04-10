@@ -17,6 +17,7 @@ import { Truck, Plus, Edit2, Trash2, Phone, Mail, User, Search } from "lucide-re
 import { useFormValidation, required, email, phone } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 export default function SuppliersPage() {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -85,7 +86,7 @@ export default function SuppliersPage() {
             loadData();
         } catch (err) {
             console.error("Failed to delete supplier", err);
-            alert("Error deleting supplier");
+            showToast.error("Error deleting supplier");
         }
     };
 

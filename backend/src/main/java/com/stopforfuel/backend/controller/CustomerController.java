@@ -42,8 +42,23 @@ public class CustomerController {
             @RequestParam(required = false) Long groupId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String categoryType) {
-        return customerService.getCustomers(search, groupId, status, categoryType, org.springframework.data.domain.PageRequest.of(page, size))
+        return customerService.getCustomers(search, groupId, status, categoryType, org.springframework.data.domain.PageRequest.of(page, Math.min(size, 1000)))
                 .map(CustomerListDTO::from);
+    }
+
+    /** Lightweight endpoint for autocomplete — returns all customers (id, name, phone only). */
+    @GetMapping("/autocomplete")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
+    public java.util.List<java.util.Map<String, Object>> getCustomersForAutocomplete() {
+        return customerService.getAllCustomers().stream()
+                .map(c -> {
+                    java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", c.getId());
+                    m.put("name", c.getName());
+                    m.put("phoneNumbers", c.getPhoneNumbers());
+                    return m;
+                })
+                .toList();
     }
 
     @GetMapping("/{id}")

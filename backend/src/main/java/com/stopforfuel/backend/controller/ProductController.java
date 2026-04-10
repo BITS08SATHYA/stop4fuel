@@ -9,7 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -58,6 +60,16 @@ public class ProductController {
     @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
     public ProductDTO updateProduct(@PathVariable Long id, @Valid @RequestBody Product product) {
         return ProductDTO.from(productService.updateProduct(id, product));
+    }
+
+    @PatchMapping("/{id}/price")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_UPDATE')")
+    public ProductDTO updatePrice(@PathVariable Long id, @RequestBody Map<String, BigDecimal> body) {
+        BigDecimal price = body.get("price");
+        if (price == null) {
+            throw new IllegalArgumentException("Price is required");
+        }
+        return ProductDTO.from(productService.updatePrice(id, price));
     }
 
     @PatchMapping("/{id}/toggle-status")

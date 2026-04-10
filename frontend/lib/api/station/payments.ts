@@ -84,14 +84,15 @@ export interface IncentivePayment {
     amount: number;
     description?: string;
     customer?: { id: number; name?: string } | null;
-    invoiceBill?: { id: number; billNo?: string; billType?: string; netAmount?: number } | null;
+    invoiceBill?: { id: number; billNo?: string; billType?: string; netAmount?: number; signatoryName?: string; billDesc?: string; customerName?: string } | null;
     statement?: { id: number; statementNo?: string } | null;
 }
 
 // Statements
 export const getStatements = (
     page = 0, size = 10, customerId?: number, status?: string,
-    fromDate?: string, toDate?: string, search?: string, categoryType?: string
+    fromDate?: string, toDate?: string, search?: string, categoryType?: string,
+    sort?: string
 ): Promise<PageResponse<Statement>> => {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (customerId) params.append('customerId', String(customerId));
@@ -100,6 +101,7 @@ export const getStatements = (
     if (toDate) params.append('toDate', toDate);
     if (search) params.append('search', search);
     if (categoryType) params.append('categoryType', categoryType);
+    if (sort) params.append('sort', sort);
     return fetchWithAuth(`${API_BASE_URL}/statements?${params}`).then(handleResponse);
 };
 
@@ -167,6 +169,23 @@ export const getStatementPdfUrl = (id: number): Promise<string> =>
 
 export const approveStatement = (id: number): Promise<Statement> =>
     fetchWithAuth(`${API_BASE_URL}/statements/${id}/approve`, { method: 'POST' }).then(handleResponse);
+
+export const regenerateStatement = (
+    statementId: number, fromDate: string, toDate: string,
+    filters?: { vehicleId?: number; productId?: number; billIds?: number[] },
+    customerId?: number
+): Promise<Statement> => {
+    const params = new URLSearchParams({ fromDate, toDate });
+    if (customerId) params.append('customerId', String(customerId));
+    if (filters?.vehicleId) params.append('vehicleId', String(filters.vehicleId));
+    if (filters?.productId) params.append('productId', String(filters.productId));
+    if (filters?.billIds?.length) {
+        filters.billIds.forEach(id => params.append('billIds', String(id)));
+    }
+    return fetchWithAuth(`${API_BASE_URL}/statements/${statementId}/regenerate?${params}`, {
+        method: 'PUT',
+    }).then(handleResponse);
+};
 
 export const autoGenerateStatementDrafts = (): Promise<{ count: number }> =>
     fetchWithAuth(`${API_BASE_URL}/statements/auto-generate`, { method: 'POST' }).then(handleResponse);
@@ -285,6 +304,13 @@ export const getCustomerLedger = (customerId: number, fromDate: string, toDate: 
 export const getOutstandingBills = (customerId: number): Promise<InvoiceBill[]> =>
     fetchWithAuth(`${API_BASE_URL}/ledger/outstanding/${customerId}`).then(handleResponse);
 
+export const downloadLedgerPdf = (customerId: number, fromDate: string, toDate: string): Promise<Blob> =>
+    fetchWithAuth(`${API_BASE_URL}/ledger/customer/${customerId}/pdf?fromDate=${fromDate}&toDate=${toDate}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Ledger PDF generation failed');
+            return res.blob();
+        });
+
 // Incentive Payments
 export const getIncentivePayments = (): Promise<IncentivePayment[]> =>
     fetchWithAuth(`${API_BASE_URL}/incentive-payments`).then(handleResponse);
@@ -307,3 +333,19 @@ export const deletePayment = (id: number): Promise<void> =>
 
 export const deleteIncentivePayment = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/incentive-payments/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// Statement Reports
+export const exportStatementsExcel = (fromDate: string, toDate: string, status?: string): Promise<Blob> => {
+    const params = new URLSearchParams({ fromDate, toDate });
+    if (status && status !== 'ALL') params.set('status', status);
+    return fetchWithAuth(`${API_BASE_URL}/statements/export/excel?${params}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Excel export failed');
+            return res.blob();
+        });
+};
+
+export const bulkGenerateStatementPdfs = (fromDate: string, toDate: string): Promise<{ generated: number }> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/bulk-generate-pdf?fromDate=${fromDate}&toDate=${toDate}`, {
+        method: 'POST'
+    }).then(handleResponse);

@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/glass-card";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
-// Mock Data (Updated to match schema)
+const PAGE_SIZE = 7;
+
 export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?: number; onDataChange?: () => void }) {
+    const searchParams = useSearchParams();
     const [customers, setCustomers] = useState<any[]>([]);
-    const [page, setPage] = useState(0);
+    const [page, setPage] = useState(() => {
+        const p = searchParams.get("page");
+        return p ? parseInt(p, 10) : 0;
+    });
     const [totalPages, setTotalPages] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
     const [groups, setGroups] = useState<any[]>([]);
@@ -27,6 +32,14 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
     useEffect(() => {
         fetchCustomers();
     }, [page, searchQuery, selectedGroupId, statusFilter, categoryFilter, refreshTrigger]);
+
+    // Sync page to URL so it survives navigation
+    useEffect(() => {
+        const url = new URL(window.location.href);
+        if (page > 0) url.searchParams.set("page", page.toString());
+        else url.searchParams.delete("page");
+        window.history.replaceState({}, "", url.toString());
+    }, [page]);
 
     const fetchGroups = async () => {
         try {
@@ -44,7 +57,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
         try {
             const queryParams = new URLSearchParams({
                 page: page.toString(),
-                size: "5",
+                size: PAGE_SIZE.toString(),
             });
             if (searchQuery) queryParams.set("search", searchQuery);
             if (selectedGroupId) queryParams.set("groupId", selectedGroupId);

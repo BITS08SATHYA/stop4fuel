@@ -27,6 +27,7 @@ public class DashboardService {
     private final PumpRepository pumpRepository;
     private final NozzleRepository nozzleRepository;
     private final TankInventoryRepository tankInventoryRepository;
+    private final NozzleInventoryRepository nozzleInventoryRepository;
     private final ShiftService shiftService;
     private final EAdvanceService eAdvanceService;
     private final ExpenseService expenseService;
@@ -39,6 +40,8 @@ public class DashboardService {
     private final ShiftRepository shiftRepository;
     private final ProductRepository productRepository;
     private final VehicleRepository vehicleRepository;
+    private final StatementRepository statementRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
 
     @Transactional(readOnly = true)
     public DashboardStats getStats() {
@@ -46,13 +49,14 @@ public class DashboardService {
         LocalDate today = LocalDate.now();
         LocalDateTime todayStart = today.atStartOfDay();
         LocalDateTime todayEnd = today.atTime(LocalTime.MAX);
+        Long scid = com.stopforfuel.config.SecurityUtils.getScid();
 
         // --- Today's stats (simple aggregate queries) ---
-        stats.setTodayRevenue(invoiceBillRepository.sumRevenueByDateRange(todayStart, todayEnd));
-        stats.setTodayInvoiceCount((int) invoiceBillRepository.countByDateRange(todayStart, todayEnd));
-        stats.setTodayCashInvoices(invoiceBillRepository.countCashByDateRange(todayStart, todayEnd));
-        stats.setTodayCreditInvoices(invoiceBillRepository.countCreditByDateRange(todayStart, todayEnd));
-        stats.setTodayFuelVolume(invoiceBillRepository.sumFuelVolumeByDateRange(todayStart, todayEnd));
+        stats.setTodayRevenue(invoiceBillRepository.sumRevenueByDateRange(todayStart, todayEnd, scid));
+        stats.setTodayInvoiceCount((int) invoiceBillRepository.countByDateRange(todayStart, todayEnd, scid));
+        stats.setTodayCashInvoices(invoiceBillRepository.countCashByDateRange(todayStart, todayEnd, scid));
+        stats.setTodayCreditInvoices(invoiceBillRepository.countCreditByDateRange(todayStart, todayEnd, scid));
+        stats.setTodayFuelVolume(invoiceBillRepository.sumFuelVolumeByDateRange(todayStart, todayEnd, scid));
 
         // --- Active shift stats ---
         Shift activeShift = shiftService.getActiveShift();
@@ -80,25 +84,25 @@ public class DashboardService {
         }
 
         // --- Station stats (count queries instead of loading all entities) ---
-        stats.setTotalTanks(tankRepository.count());
-        stats.setActiveTanks(tankRepository.countByActive(true));
-        stats.setTotalPumps(pumpRepository.count());
-        stats.setActivePumps(pumpRepository.countByActive(true));
-        stats.setTotalNozzles(nozzleRepository.count());
-        stats.setActiveNozzles(nozzleRepository.countByActive(true));
+        stats.setTotalTanks(tankRepository.countByScid(scid));
+        stats.setActiveTanks(tankRepository.countByActiveAndScid(true, scid));
+        stats.setTotalPumps(pumpRepository.countByScid(scid));
+        stats.setActivePumps(pumpRepository.countByActiveAndScid(true, scid));
+        stats.setTotalNozzles(nozzleRepository.countByScid(scid));
+        stats.setActiveNozzles(nozzleRepository.countByActiveAndScid(true, scid));
 
         // --- Credit stats + aging (aggregate queries, no entity loading) ---
         try {
-            stats.setTotalOutstanding(invoiceBillRepository.sumTotalOutstanding());
-            stats.setTotalCreditCustomers((int) invoiceBillRepository.countCreditCustomersWithOutstanding());
+            stats.setTotalOutstanding(invoiceBillRepository.sumTotalOutstanding(scid));
+            stats.setTotalCreditCustomers((int) invoiceBillRepository.countCreditCustomersWithOutstanding(scid));
 
             LocalDateTime d30 = today.minusDays(30).atStartOfDay();
             LocalDateTime d60 = today.minusDays(60).atStartOfDay();
             LocalDateTime d90 = today.minusDays(90).atStartOfDay();
-            stats.setCreditAging0to30(invoiceBillRepository.sumOutstandingAfter(d30));
-            stats.setCreditAging31to60(invoiceBillRepository.sumOutstandingBetween(d60, d30));
-            stats.setCreditAging61to90(invoiceBillRepository.sumOutstandingBetween(d90, d60));
-            stats.setCreditAging90Plus(invoiceBillRepository.sumOutstandingBefore(d90));
+            stats.setCreditAging0to30(invoiceBillRepository.sumOutstandingAfter(d30, scid));
+            stats.setCreditAging31to60(invoiceBillRepository.sumOutstandingBetween(d60, d30, scid));
+            stats.setCreditAging61to90(invoiceBillRepository.sumOutstandingBetween(d90, d60, scid));
+            stats.setCreditAging90Plus(invoiceBillRepository.sumOutstandingBefore(d90, scid));
         } catch (Exception e) {
             stats.setTotalOutstanding(BigDecimal.ZERO);
             stats.setTotalCreditCustomers(0);
@@ -110,7 +114,7 @@ public class DashboardService {
 
         // --- Daily revenue trend (last 7 days — aggregate query) ---
         LocalDateTime weekStart = today.minusDays(6).atStartOfDay();
-        List<Object[]> dailyData = invoiceBillRepository.getDailyRevenueSummary(weekStart, todayEnd);
+        List<Object[]> dailyData = invoiceBillRepository.getDailyRevenueSummary(weekStart, todayEnd, scid);
         Map<LocalDate, Object[]> dailyMap = new HashMap<>();
         for (Object[] row : dailyData) {
             dailyMap.put((LocalDate) row[0], row);
@@ -135,7 +139,7 @@ public class DashboardService {
         stats.setDailyRevenue(dailyRevenue);
 
         // --- Product-wise sales for today (aggregate query) ---
-        List<Object[]> productData = invoiceBillRepository.getProductSalesToday(todayStart, todayEnd);
+        List<Object[]> productData = invoiceBillRepository.getProductSalesToday(todayStart, todayEnd, scid);
         List<ProductSales> productSales = productData.stream().map(row -> {
             ProductSales ps = new ProductSales();
             ps.setProductName((String) row[0]);
@@ -145,8 +149,59 @@ public class DashboardService {
         }).collect(Collectors.toList());
         stats.setProductSales(productSales);
 
+        // --- Last closed shift product sales ---
+        shiftRepository.findTopByStatusAndScidOrderByIdDesc(
+                com.stopforfuel.backend.enums.ShiftStatus.CLOSED, scid
+        ).ifPresent(lastShift -> {
+            stats.setLastShiftId(lastShift.getId());
+            List<Object[]> lastShiftData = invoiceBillRepository.getProductSalesByShift(lastShift.getId());
+            List<ProductSales> lastShiftSales = lastShiftData.stream().map(row -> {
+                ProductSales ps = new ProductSales();
+                ps.setProductName((String) row[0]);
+                ps.setQuantity(row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO);
+                ps.setAmount(row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO);
+                return ps;
+            }).collect(Collectors.toList());
+            stats.setLastShiftProductSales(lastShiftSales);
+        });
+
+        // --- Statement counts ---
+        stats.setTotalStatements(statementRepository.countAll(scid));
+        stats.setPaidStatements(statementRepository.countPaid(scid));
+        stats.setUnpaidStatements(statementRepository.countUnpaid(scid));
+
+        // --- MTD sales from nozzle inventory (grouped by product) ---
+        LocalDate monthStart = today.withDayOfMonth(1);
+        List<Object[]> nozzleSalesData = nozzleInventoryRepository.sumSalesByProductAndDateRange(scid, monthStart, today);
+        List<ProductSales> mtdSales = nozzleSalesData.stream().map(row -> {
+            ProductSales ps = new ProductSales();
+            ps.setProductName((String) row[0]);
+            ps.setQuantity(row[1] != null ? BigDecimal.valueOf(((Number) row[1]).doubleValue()) : BigDecimal.ZERO);
+            return ps;
+        }).collect(Collectors.toList());
+        stats.setMtdSales(mtdSales);
+
+        // --- MTD purchases from tank inventory (grouped by product) ---
+        List<Object[]> tankIncomeData = tankInventoryRepository.sumIncomeByProductAndDateRange(scid, monthStart, today);
+        List<ProductPurchase> mtdPurchases = tankIncomeData.stream().map(row -> {
+            ProductPurchase pp = new ProductPurchase();
+            pp.setProductName((String) row[0]);
+            pp.setQuantity(row[1] != null ? ((Number) row[1]).doubleValue() : 0.0);
+            return pp;
+        }).collect(Collectors.toList());
+        stats.setMtdPurchases(mtdPurchases);
+
+        // --- MTD credit bills (count + amount) ---
+        LocalDateTime mtdStart = monthStart.atStartOfDay();
+        stats.setMtdCreditCount(invoiceBillRepository.countCreditByDateRange(mtdStart, todayEnd, scid));
+        stats.setMtdCreditAmount(invoiceBillRepository.sumCreditAmountByDateRange(mtdStart, todayEnd, scid));
+
+        // --- MTD payments (count + amount) ---
+        stats.setMtdPaymentCount(paymentRepository.countPaymentsInDateRange(mtdStart, todayEnd, scid));
+        stats.setMtdPaymentAmount(paymentRepository.sumPaymentsInDateRange(mtdStart, todayEnd, scid));
+
         // --- Tank status ---
-        List<Tank> tanks = tankRepository.findAll();
+        List<Tank> tanks = tankRepository.findAllByScid(scid);
         List<TankStatus> tankStatuses = tanks.stream().map(tank -> {
             TankStatus ts = new TankStatus();
             ts.setTankId(tank.getId());
@@ -158,7 +213,7 @@ public class DashboardService {
             ts.setProductPrice(tank.getProduct() != null ? tank.getProduct().getPrice() : null);
             ts.setActive(tank.isActive());
 
-            TankInventory latestInv = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
+            TankInventory latestInv = tankInventoryRepository.findTopByTankIdAndScidOrderByDateDescIdDesc(tank.getId(), scid);
             if (latestInv != null) {
                 ts.setLastReadingDate(latestInv.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE));
             }
@@ -167,7 +222,7 @@ public class DashboardService {
         stats.setTankStatuses(tankStatuses);
 
         // --- Recent invoices (last 10 — lightweight query, no entity graph) ---
-        List<Object[]> recentData = invoiceBillRepository.findRecentInvoicesLight(PageRequest.of(0, 10));
+        List<Object[]> recentData = invoiceBillRepository.findRecentInvoicesLight(scid, PageRequest.of(0, 10));
         List<RecentInvoiceItem> recentInvoices = recentData.stream()
                 .map(row -> {
                     RecentInvoiceItem item = new RecentInvoiceItem();
@@ -192,12 +247,13 @@ public class DashboardService {
         LocalDateTime fromDt = startDate.atStartOfDay();
         LocalDateTime toDt = endDate.atTime(LocalTime.MAX);
 
+        Long scid = com.stopforfuel.config.SecurityUtils.getScid();
         InvoiceAnalytics analytics = new InvoiceAnalytics();
         analytics.setFromDate(startDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
         analytics.setToDate(endDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
 
         // Summary by billType + paymentStatus
-        List<Object[]> summary = invoiceBillRepository.getInvoiceSummary(fromDt, toDt);
+        List<Object[]> summary = invoiceBillRepository.getInvoiceSummary(fromDt, toDt, scid);
         long totalCount = 0;
         BigDecimal totalRevenue = BigDecimal.ZERO;
         long cashCount = 0, creditCount = 0;
@@ -245,7 +301,7 @@ public class DashboardService {
         analytics.setUnpaidAmount(unpaidAmount);
 
         // Daily trend
-        List<Object[]> dailyRaw = invoiceBillRepository.getDailyInvoiceStats(fromDt, toDt);
+        List<Object[]> dailyRaw = invoiceBillRepository.getDailyInvoiceStats(fromDt, toDt, scid);
         Map<LocalDate, InvoiceDailyTrend> dailyMap = new LinkedHashMap<>();
         for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
             InvoiceDailyTrend t = new InvoiceDailyTrend();
@@ -273,7 +329,7 @@ public class DashboardService {
         analytics.setDailyTrend(new ArrayList<>(dailyMap.values()));
 
         // Payment mode distribution
-        List<Object[]> modeRaw = invoiceBillRepository.getPaymentModeDistribution(fromDt, toDt);
+        List<Object[]> modeRaw = invoiceBillRepository.getPaymentModeDistribution(fromDt, toDt, scid);
         List<NameCountAmount> paymentModes = new ArrayList<>();
         for (Object[] row : modeRaw) {
             paymentModes.add(new NameCountAmount((String) row[0], ((Number) row[1]).longValue(), (BigDecimal) row[2]));
@@ -281,7 +337,7 @@ public class DashboardService {
         analytics.setPaymentModeDistribution(paymentModes);
 
         // Top customers
-        List<Object[]> custRaw = invoiceBillRepository.getTopCustomersByRevenue(fromDt, toDt);
+        List<Object[]> custRaw = invoiceBillRepository.getTopCustomersByRevenue(fromDt, toDt, scid);
         List<NameCountAmount> topCustomers = new ArrayList<>();
         for (int i = 0; i < Math.min(10, custRaw.size()); i++) {
             Object[] row = custRaw.get(i);
@@ -290,7 +346,7 @@ public class DashboardService {
         analytics.setTopCustomers(topCustomers);
 
         // Product breakdown
-        var productSummaries = invoiceBillRepository.getProductSalesSummary(null, null, null, fromDt, toDt);
+        var productSummaries = invoiceBillRepository.getProductSalesSummary(null, null, null, fromDt, toDt, scid);
         List<ProductBreakdown> products = new ArrayList<>();
         for (var ps : productSummaries) {
             ProductBreakdown pb = new ProductBreakdown();
@@ -302,7 +358,7 @@ public class DashboardService {
         analytics.setProductBreakdown(products);
 
         // Hourly distribution
-        List<Object[]> hourlyRaw = invoiceBillRepository.getHourlyDistribution(fromDt, toDt);
+        List<Object[]> hourlyRaw = invoiceBillRepository.getHourlyDistribution(fromDt, toDt, scid);
         List<HourlyData> hourlyData = new ArrayList<>();
         Map<Integer, Long> hourMap = new HashMap<>();
         for (Object[] row : hourlyRaw) {
@@ -326,13 +382,14 @@ public class DashboardService {
         LocalDateTime fromDt = startDate.atStartOfDay();
         LocalDateTime toDt = endDate.atTime(LocalTime.MAX);
 
+        Long scid = com.stopforfuel.config.SecurityUtils.getScid();
         PaymentAnalytics analytics = new PaymentAnalytics();
         analytics.setFromDate(startDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
         analytics.setToDate(endDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
 
         // KPIs
-        BigDecimal totalCollected = paymentRepository.sumPaymentsInDateRange(fromDt, toDt);
-        long totalPayments = paymentRepository.countPaymentsInDateRange(fromDt, toDt);
+        BigDecimal totalCollected = paymentRepository.sumPaymentsInDateRange(fromDt, toDt, scid);
+        long totalPayments = paymentRepository.countPaymentsInDateRange(fromDt, toDt, scid);
         analytics.setTotalCollected(totalCollected);
         analytics.setTotalPayments(totalPayments);
         analytics.setAvgPaymentAmount(totalPayments > 0
@@ -341,9 +398,9 @@ public class DashboardService {
 
         // Credit outstanding (lightweight aggregate queries instead of loading all entities)
         try {
-            analytics.setTotalOutstanding(invoiceBillRepository.sumUnpaidCreditAmount());
-            analytics.setCreditCustomers((int) invoiceBillRepository.countCustomersWithUnpaidCredit());
-            Object[] aging = invoiceBillRepository.getUnpaidCreditAgingBuckets();
+            analytics.setTotalOutstanding(invoiceBillRepository.sumUnpaidCreditAmount(scid));
+            analytics.setCreditCustomers((int) invoiceBillRepository.countCustomersWithUnpaidCredit(scid));
+            Object[] aging = invoiceBillRepository.getUnpaidCreditAgingBuckets(scid);
             if (aging != null) {
                 analytics.setAging0to30((BigDecimal) aging[0]);
                 analytics.setAging31to60((BigDecimal) aging[1]);
@@ -365,7 +422,7 @@ public class DashboardService {
                 : BigDecimal.ZERO);
 
         // Daily trend
-        List<Object[]> dailyRaw = paymentRepository.getDailyPaymentStats(fromDt, toDt);
+        List<Object[]> dailyRaw = paymentRepository.getDailyPaymentStats(fromDt, toDt, scid);
         Map<LocalDate, PaymentDailyTrend> dailyMap = new LinkedHashMap<>();
         for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
             PaymentDailyTrend t = new PaymentDailyTrend();
@@ -383,7 +440,7 @@ public class DashboardService {
         analytics.setDailyTrend(new ArrayList<>(dailyMap.values()));
 
         // Payment mode breakdown
-        List<Object[]> modeRaw = paymentRepository.getPaymentModeBreakdown(fromDt, toDt);
+        List<Object[]> modeRaw = paymentRepository.getPaymentModeBreakdown(fromDt, toDt, scid);
         List<NameCountAmount> modes = new ArrayList<>();
         for (Object[] row : modeRaw) {
             modes.add(new NameCountAmount((String) row[0], ((Number) row[1]).longValue(), (BigDecimal) row[2]));
@@ -391,7 +448,7 @@ public class DashboardService {
         analytics.setPaymentModeBreakdown(modes);
 
         // Top paying customers
-        List<Object[]> custRaw = paymentRepository.getTopPayingCustomers(fromDt, toDt);
+        List<Object[]> custRaw = paymentRepository.getTopPayingCustomers(fromDt, toDt, scid);
         List<NameCountAmount> topCustomers = new ArrayList<>();
         for (int i = 0; i < Math.min(10, custRaw.size()); i++) {
             Object[] row = custRaw.get(i);
@@ -446,7 +503,7 @@ public class DashboardService {
         dashboard.setStatementPaymentTotal(stmtPayments != null ? stmtPayments : BigDecimal.ZERO);
 
         // Operational advances
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(sid);
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(sid);
         BigDecimal opAdvanceTotal = opAdvances.stream()
                 .map(oa -> oa.getAmount() != null ? oa.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -454,7 +511,7 @@ public class DashboardService {
         dashboard.setOperationalAdvanceCount(opAdvances.size());
 
         // Incentive payments
-        List<IncentivePayment> incentives = incentivePaymentRepository.findByShiftIdOrderByPaymentDateDesc(sid);
+        List<IncentivePayment> incentives = incentivePaymentRepository.findByShiftIdOrderByIdDesc(sid);
         BigDecimal incentiveTotal = incentives.stream()
                 .map(ip -> ip.getAmount() != null ? ip.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -462,7 +519,7 @@ public class DashboardService {
         dashboard.setIncentiveCount(incentives.size());
 
         // Invoice counts
-        List<InvoiceBill> shiftInvoices = invoiceBillRepository.findByShiftId(sid);
+        List<InvoiceBill> shiftInvoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(sid);
         dashboard.setTotalInvoiceCount(shiftInvoices.size());
         dashboard.setCashInvoiceCount((int) shiftInvoices.stream()
                 .filter(inv -> com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())).count());
@@ -515,6 +572,9 @@ public class DashboardService {
         health.setInactiveCustomers(customerRepository.countByStatus(com.stopforfuel.backend.enums.EntityStatus.INACTIVE));
         health.setTotalVehicles(vehicleRepository.count());
         health.setTotalEmployees(employeeRepository.countByScid(scid));
+        // Count employees with ACTIVE status; fall back to total if status is not set
+        long activeEmp = employeeRepository.countByScidAndStatus(scid, com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
+        health.setActiveEmployees(activeEmp > 0 ? activeEmp : health.getTotalEmployees());
         health.setTotalUsers(userRepository.countByScid(scid));
         health.setTotalProducts(productRepository.countByScid(scid));
 
@@ -523,7 +583,7 @@ public class DashboardService {
 
         // Today's attendance
         LocalDate today = LocalDate.now();
-        health.setTodayAttendanceCount(attendanceRepository.countByDate(today));
+        health.setTodayAttendanceCount(attendanceRepository.countByDateAndScid(today, scid));
 
         return health;
     }

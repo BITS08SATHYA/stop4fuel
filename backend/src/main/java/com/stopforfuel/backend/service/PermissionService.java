@@ -49,6 +49,25 @@ public class PermissionService {
 
     @Transactional
     @CacheEvict(value = {"permissions", "rolePermissions"}, allEntries = true)
+    public void grantPermissionByRoleAndCode(String roleType, String permissionCode) {
+        Roles role = rolesRepository.findByRoleType(roleType)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleType));
+        if (rolePermissionRepository.existsByRoleIdAndPermissionCode(role.getId(), permissionCode)) return;
+        Permission perm = permissionRepository.findByCode(permissionCode).orElse(null);
+        if (perm == null) return;
+        RolePermission rp = new RolePermission();
+        rp.setRole(role);
+        rp.setPermission(perm);
+        rolePermissionRepository.save(rp);
+    }
+
+    @CacheEvict(value = {"permissions", "rolePermissions"}, allEntries = true)
+    public void clearCaches() {
+        // Spring handles cache eviction via annotation
+    }
+
+    @Transactional
+    @CacheEvict(value = {"permissions", "rolePermissions"}, allEntries = true)
     public void grantPermission(Long roleId, Long permissionId) {
         if (rolePermissionRepository.existsByRoleIdAndPermissionCode(
                 roleId,

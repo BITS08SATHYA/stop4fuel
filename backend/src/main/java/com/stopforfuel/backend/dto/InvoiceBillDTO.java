@@ -39,6 +39,7 @@ public class InvoiceBillDTO {
     private CustomerSummary customer;
     private VehicleSummary vehicle;
     private UserSummary raisedBy;
+    private boolean independent;
     private StatementSummary statement;
     private List<InvoiceProductDTO> products;
     private Long scid;
@@ -70,6 +71,7 @@ public class InvoiceBillDTO {
                 .driverName(b.getDriverName())
                 .driverPhone(b.getDriverPhone())
                 .paymentStatus(b.getPaymentStatus() != null ? b.getPaymentStatus().name() : null)
+                .independent(b.isIndependent())
                 .shiftId(b.getShiftId())
                 .customer(CustomerSummary.from(b.getCustomer()))
                 .vehicle(VehicleSummary.from(b.getVehicle()))
@@ -90,10 +92,20 @@ public class InvoiceBillDTO {
         private Long id;
         private String name;
         private String username;
+        private String partyType;
 
         public static CustomerSummary from(Customer c) {
             if (c == null) return null;
-            return CustomerSummary.builder().id(c.getId()).name(c.getName()).username(c.getUsername()).build();
+            String pt = null;
+            try {
+                if (c.getParty() != null) pt = c.getParty().getPartyType();
+            } catch (org.hibernate.LazyInitializationException ignored) {}
+            return CustomerSummary.builder()
+                    .id(c.getId())
+                    .name(c.getName())
+                    .username(c.getUsername())
+                    .partyType(pt)
+                    .build();
         }
     }
 

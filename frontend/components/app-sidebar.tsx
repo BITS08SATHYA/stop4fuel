@@ -50,6 +50,7 @@ import {
     ClipboardList,
     MapPin,
     Search,
+    AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -122,8 +123,10 @@ const invoiceManagementNav = [
 const paymentManagementNav = [
     { name: "Payment Dashboard", href: "/payments/dashboard", icon: PieChart },
     { name: "Credit Overview", href: "/payments/credit", icon: Eye },
+    { name: "Credit Monitoring", href: "/payments/credit-monitoring", icon: AlertTriangle },
     { name: "Watchlist", href: "/payments/credit/watchlist", icon: Shield },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
+    { name: "Statement Reports", href: "/payments/statements/reports", icon: FileText },
     { name: "Explorer", href: "/payments/explorer", icon: Search },
     { name: "Payments", href: "/payments", icon: CreditCard },
     { name: "Customer Ledger", href: "/payments/ledger", icon: BookOpen },
@@ -265,9 +268,9 @@ export function AppSidebar() {
     return (
         <aside className="w-64 border-r border-border bg-card text-card-foreground flex flex-col h-screen sticky top-0 transition-colors duration-300">
             <div className="h-16 flex items-center px-6 border-b border-border">
-                <div className="flex items-center gap-2 text-primary font-bold text-xl">
-                    <Fuel className="w-6 h-6" />
-                    <span>StopForFuel</span>
+                <div className="flex items-center gap-2 font-bold text-xl">
+                    <img src="/logo-icon.svg" alt="StopForFuel" className="w-7 h-7" />
+                    <span className="text-foreground">Stop<span className="text-gradient">ForFuel</span></span>
                 </div>
             </div>
 
@@ -285,8 +288,8 @@ export function AppSidebar() {
                                     className={cn(
                                         "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                         isActive(item.href)
-                                            ? "bg-primary/10 text-primary"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                            ? "bg-orange-500/10 text-orange-500"
+                                            : "text-muted-foreground hover:bg-orange-500/5 hover:text-orange-500"
                                     )}
                                 >
                                     <item.icon className="w-4 h-4" />

@@ -33,6 +33,7 @@ import { TablePagination, useClientPagination } from "@/components/ui/table-pagi
 import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import { StatementAutocomplete } from "@/components/ui/statement-autocomplete";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 // --- Constants ---
 
@@ -350,7 +351,7 @@ export default function EAdvancesPage() {
                 loadData("shift", activeShiftId);
             }
         } catch (err: any) {
-            alert(err.message || "Failed to save e-advance");
+            showToast.error(err.message || "Failed to save e-advance");
         }
     };
 
@@ -364,7 +365,7 @@ export default function EAdvancesPage() {
                 loadData("shift", activeShiftId);
             }
         } catch (err) {
-            alert("Failed to delete");
+            showToast.error("Failed to delete");
         }
     };
 
@@ -381,7 +382,7 @@ export default function EAdvancesPage() {
                             Track electronic advance entries — Card, UPI, Cheque, CCMS, Bank Transfer.
                         </p>
                     </div>
-                    <PermissionGate permission="SHIFT_CREATE">
+                    <PermissionGate permission="FINANCE_CREATE">
                         <button
                             onClick={handleOpenAdd}
                             className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -535,22 +536,24 @@ export default function EAdvancesPage() {
                                                         {entry.shiftId ? `#${entry.shiftId}` : "-"}
                                                     </td>
                                                     <td className="px-5 py-3 text-center">
-                                                        <PermissionGate permission="SHIFT_UPDATE">
-                                                            <div className="flex items-center justify-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all">
+                                                        <div className="flex items-center justify-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all">
+                                                            <PermissionGate permission="SHIFT_UPDATE">
                                                                 <button
                                                                     onClick={() => handleOpenEdit(entry)}
                                                                     className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-all"
                                                                 >
                                                                     <Pencil className="w-3.5 h-3.5" />
                                                                 </button>
+                                                            </PermissionGate>
+                                                            <PermissionGate permission="SHIFT_DELETE">
                                                                 <button
                                                                     onClick={() => entry.id && handleDelete(entry.id)}
                                                                     className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all"
                                                                 >
                                                                     <Trash2 className="w-3.5 h-3.5" />
                                                                 </button>
-                                                            </div>
-                                                        </PermissionGate>
+                                                            </PermissionGate>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );

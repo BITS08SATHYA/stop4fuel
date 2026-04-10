@@ -43,22 +43,22 @@ public class OperationalAdvanceService {
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getByStatus(String status) {
-        return repository.findByStatusOrderByAdvanceDateDesc(com.stopforfuel.backend.enums.AdvanceStatus.valueOf(status));
+        return repository.findByStatusAndScidOrderByAdvanceDateDesc(com.stopforfuel.backend.enums.AdvanceStatus.valueOf(status), SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getByShift(Long shiftId) {
-        return repository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        return repository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getByEmployee(Long employeeId) {
-        return repository.findByEmployeeIdOrderByAdvanceDateDesc(employeeId);
+        return repository.findByEmployeeIdAndScidOrderByAdvanceDateDesc(employeeId, SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getByType(String advanceType) {
-        return repository.findByAdvanceTypeOrderByAdvanceDateDesc(com.stopforfuel.backend.enums.AdvanceType.valueOf(advanceType));
+        return repository.findByAdvanceTypeAndScidOrderByAdvanceDateDesc(com.stopforfuel.backend.enums.AdvanceType.valueOf(advanceType), SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
@@ -70,12 +70,12 @@ public class OperationalAdvanceService {
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getOutstanding() {
-        return repository.findByStatusInOrderByAdvanceDateDesc(List.of(com.stopforfuel.backend.enums.AdvanceStatus.GIVEN, com.stopforfuel.backend.enums.AdvanceStatus.PARTIALLY_RETURNED));
+        return repository.findByStatusInAndScidOrderByAdvanceDateDesc(List.of(com.stopforfuel.backend.enums.AdvanceStatus.GIVEN, com.stopforfuel.backend.enums.AdvanceStatus.PARTIALLY_RETURNED), SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
     public List<OperationalAdvance> getPendingByEmployee(Long employeeId) {
-        return repository.findByEmployeeIdAndStatus(employeeId, com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
+        return repository.findByEmployeeIdAndStatusAndScid(employeeId, com.stopforfuel.backend.enums.AdvanceStatus.PENDING, SecurityUtils.getScid());
     }
 
     @Transactional

@@ -21,6 +21,7 @@ public class StatementDTO {
     private BigDecimal totalAmount;
     private BigDecimal roundingAmount;
     private BigDecimal netAmount;
+    private BigDecimal totalQuantity;
     private BigDecimal receivedAmount;
     private BigDecimal balanceAmount;
     private String status;
@@ -41,6 +42,7 @@ public class StatementDTO {
                 .totalAmount(s.getTotalAmount())
                 .roundingAmount(s.getRoundingAmount())
                 .netAmount(s.getNetAmount())
+                .totalQuantity(s.getTotalQuantity())
                 .receivedAmount(s.getReceivedAmount())
                 .balanceAmount(s.getBalanceAmount())
                 .status(s.getStatus())
@@ -58,10 +60,16 @@ public class StatementDTO {
         private Long id;
         private String name;
         private String username;
+        private String categoryType;
 
         public static CustomerSummary from(Customer c) {
             if (c == null) return null;
-            return CustomerSummary.builder().id(c.getId()).name(c.getName()).username(c.getUsername()).build();
+            return CustomerSummary.builder()
+                    .id(c.getId())
+                    .name(c.getName())
+                    .username(c.getUsername())
+                    .categoryType(c.getCustomerCategory() != null ? c.getCustomerCategory().getCategoryType() : null)
+                    .build();
         }
     }
 }

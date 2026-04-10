@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { showToast } from "@/components/ui/toast";
 import {
     OperationalAdvance,
     Employee,
@@ -162,7 +163,7 @@ export function useAdvances() {
             await reloadCurrentView();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to cancel advance";
-            alert(message);
+            showToast.error(message);
         }
     };
 
@@ -173,7 +174,7 @@ export function useAdvances() {
             await reloadCurrentView();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to delete advance";
-            alert(message);
+            showToast.error(message);
         }
     };
 

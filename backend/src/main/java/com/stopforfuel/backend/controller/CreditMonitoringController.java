@@ -16,6 +16,12 @@ public class CreditMonitoringController {
 
     private final CreditMonitoringService creditMonitoringService;
 
+    @GetMapping("/dashboard")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public CreditMonitoringService.CreditMonitoringDashboard getDashboard() {
+        return creditMonitoringService.getDashboard();
+    }
+
     @GetMapping("/watchlist")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<CreditMonitoringService.CreditHealth> getWatchlist() {

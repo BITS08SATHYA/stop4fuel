@@ -37,12 +37,12 @@ public class EAdvanceService {
 
     @Transactional(readOnly = true)
     public List<EAdvance> getByShift(Long shiftId) {
-        return repository.findByShiftIdOrderByTransactionDateDesc(shiftId);
+        return repository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional(readOnly = true)
     public List<EAdvance> getByType(String advanceType) {
-        return repository.findByAdvanceTypeOrderByTransactionDateDesc(PaymentMode.valueOf(advanceType));
+        return repository.findByAdvanceTypeAndScidOrderByTransactionDateDesc(PaymentMode.valueOf(advanceType), SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)

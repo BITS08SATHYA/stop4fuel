@@ -5,13 +5,16 @@ import com.stopforfuel.backend.dto.StatementDTO;
 import com.stopforfuel.backend.dto.StatementStats;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.backend.service.StatementAutoGenerationService;
+import com.stopforfuel.backend.service.StatementExcelService;
 import com.stopforfuel.backend.service.StatementService;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,8 @@ public class StatementController {
 
     private final StatementService statementService;
     private final StatementAutoGenerationService statementAutoGenerationService;
+    private final StatementExcelService statementExcelService;
+    private final StatementRepository statementRepository;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
@@ -44,9 +49,16 @@ public class StatementController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String categoryType) {
+            @RequestParam(required = false) String categoryType,
+            @RequestParam(required = false, defaultValue = "statementDate,desc") String sort) {
+        String[] parts = sort.split(",");
+        String sortField = parts[0];
+        org.springframework.data.domain.Sort.Direction dir = parts.length > 1 && "asc".equalsIgnoreCase(parts[1])
+                ? org.springframework.data.domain.Sort.Direction.ASC : org.springframework.data.domain.Sort.Direction.DESC;
+        org.springframework.data.domain.Sort sorting = org.springframework.data.domain.Sort.by(dir, sortField)
+                .and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         return statementService.getStatements(customerId, status, categoryType, fromDate, toDate, search,
-                PageRequest.of(page, size, org.springframework.data.domain.Sort.by("statementDate").descending()))
+                PageRequest.of(page, Math.min(size, 100), sorting))
                 .map(StatementDTO::from);
     }
 
@@ -66,6 +78,14 @@ public class StatementController {
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<StatementDTO> getByCustomer(@PathVariable Long customerId) {
         return statementService.getStatementsByCustomer(customerId).stream().map(StatementDTO::from).toList();
+    }
+
+    @GetMapping("/customer/{customerId}/recommended-limits")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public Map<String, java.math.BigDecimal> getRecommendedLimits(
+            @PathVariable Long customerId,
+            @RequestParam(defaultValue = "15") int count) {
+        return statementService.getRecommendedLimits(customerId, count);
     }
 
     @GetMapping("/outstanding")
@@ -112,6 +132,25 @@ public class StatementController {
             @RequestParam(required = false) List<Long> billIds) {
         Statement statement = statementService.generateStatement(
                 customerId, fromDate, toDate, vehicleId, productId, billIds);
+        return ResponseEntity.ok(StatementDTO.from(statement));
+    }
+
+    /**
+     * Regenerate an existing statement with new parameters, keeping the same statement number.
+     * PUT /api/statements/{id}/regenerate?fromDate=2025-06-01&toDate=2025-06-30
+     */
+    @PutMapping("/{id}/regenerate")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    public ResponseEntity<StatementDTO> regenerate(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Long vehicleId,
+            @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) List<Long> billIds,
+            @RequestParam(required = false) Long customerId) {
+        Statement statement = statementService.regenerateStatement(
+                id, fromDate, toDate, vehicleId, productId, billIds, customerId);
         return ResponseEntity.ok(StatementDTO.from(statement));
     }
 
@@ -168,5 +207,39 @@ public class StatementController {
     @PreAuthorize("hasPermission(null, 'PAYMENT_DELETE')")
     public void delete(@PathVariable Long id) {
         statementService.deleteStatement(id);
+    }
+
+    @GetMapping("/export/excel")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public ResponseEntity<byte[]> exportExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String status) {
+        Long scid = SecurityUtils.getScid();
+        List<Statement> statements = (status != null && !status.isBlank())
+                ? statementRepository.findByDateRangeAndStatusAndScid(fromDate, toDate, status, scid)
+                : statementRepository.findByDateRangeAndScid(fromDate, toDate, scid);
+        byte[] bytes = statementExcelService.generateExcel(statements);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=statements_" + fromDate + "_" + toDate + ".xlsx");
+        headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        return ResponseEntity.ok().headers(headers).body(bytes);
+    }
+
+    @PostMapping("/bulk-generate-pdf")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public ResponseEntity<Map<String, Object>> bulkGeneratePdfs(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        Long scid = SecurityUtils.getScid();
+        List<Statement> statements = statementRepository.findByDateRangeAndScid(fromDate, toDate, scid);
+        int generated = 0;
+        for (Statement s : statements) {
+            if (s.getStatementPdfUrl() == null || s.getStatementPdfUrl().isBlank()) {
+                statementService.generateAndStorePdf(s.getId());
+                generated++;
+            }
+        }
+        return ResponseEntity.ok(Map.of("generated", generated));
     }
 }

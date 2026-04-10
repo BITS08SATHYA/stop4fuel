@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { useToast } from "@/components/ui/toast";
 import {
     getInvoices,
     getInvoicesByShift,
@@ -31,6 +32,7 @@ interface CustomerWithCredit extends Customer {
     creditLimitLiters?: number | null;
     consumedLiters?: number;
     ledgerBalance?: number;
+    unbilledCredit?: number;
     status?: string;
     phoneNumbers?: string;
     forceUnblocked?: boolean;
@@ -64,6 +66,7 @@ import Link from "next/link";
 import { PermissionGate } from "@/components/permission-gate";
 
 export default function InvoicesPage() {
+    const toast = useToast();
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [nozzles, setNozzles] = useState<Nozzle[]>([]);
@@ -194,7 +197,7 @@ export default function InvoicesPage() {
         setSelectedVehicle(undefined);
         try {
             const [vehiclesRes, incentivesData, creditInfo] = await Promise.all([
-                fetch(`${API_BASE_URL}/customers/${c.id}/vehicles`),
+                fetchWithAuth(`${API_BASE_URL}/customers/${c.id}/vehicles`),
                 getIncentivesByCustomer(c.id).catch(() => []),
                 getCustomerCreditInfo(c.id).catch(() => null)
             ]);
@@ -232,9 +235,7 @@ export default function InvoicesPage() {
         const timeout = setTimeout(async () => {
             try {
                 const results = await searchVehicles(query);
-                // Exclude vehicles already shown in the customer's list
-                const customerVehicleIds = new Set(customerVehicles.map((v: any) => v.id));
-                setVehicleSearchResults(results.filter(v => !customerVehicleIds.has(v.id)));
+                setVehicleSearchResults(results);
             } catch (err) {
                 console.error("Vehicle search failed", err);
             }
@@ -258,8 +259,11 @@ export default function InvoicesPage() {
 
         const qty = parseFloat(line.quantity) || 0;
         const price = parseFloat(line.unitPrice) || 0;
-        const gross = qty * price;
+        // When user entered amount directly, use that exact value instead of qty * price
+        const gross = line.amountOverride != null ? line.amountOverride : qty * price;
         line.grossAmount = gross;
+        // Clear the override so future qty/rate changes recalculate normally
+        delete line.amountOverride;
 
         // Auto-apply incentive discount (customer-specific takes priority)
         const productId = line.product?.id;
@@ -352,14 +356,14 @@ export default function InvoicesPage() {
 
         // Check customer credit limits (CREDIT invoices only) — skip if force unblocked
         if (billType === "CREDIT" && selectedCustomer && !selectedCustomer.forceUnblocked) {
-            // Amount-based limit
+            // Amount-based limit — check against unbilled credit (current period), not total balance
             if (selectedCustomer.creditLimitAmount && Number(selectedCustomer.creditLimitAmount) > 0) {
-                const ledgerBalance = (selectedCustomer.ledgerBalance ?? 0);
-                const projectedBalance = ledgerBalance + totalInvoiceAmount;
-                if (projectedBalance > Number(selectedCustomer.creditLimitAmount)) {
-                    const remaining = Math.max(0, Number(selectedCustomer.creditLimitAmount) - ledgerBalance);
+                const unbilledCredit = (selectedCustomer.unbilledCredit ?? 0);
+                const projectedUnbilled = unbilledCredit + totalInvoiceAmount;
+                if (projectedUnbilled > Number(selectedCustomer.creditLimitAmount)) {
+                    const remaining = Math.max(0, Number(selectedCustomer.creditLimitAmount) - unbilledCredit);
                     errors.push(
-                        `Customer credit limit (₹) would be exceeded. Limit: ₹${Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")}, Balance: ₹${ledgerBalance.toLocaleString("en-IN")}, This invoice: ₹${totalInvoiceAmount.toLocaleString("en-IN")}, Remaining: ₹${remaining.toLocaleString("en-IN")}.`
+                        `Customer credit limit (₹) would be exceeded. Limit: ₹${Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")}, Unbilled: ₹${unbilledCredit.toLocaleString("en-IN")}, This invoice: ₹${totalInvoiceAmount.toLocaleString("en-IN")}, Remaining: ₹${remaining.toLocaleString("en-IN")}.`
                     );
                 }
             }
@@ -441,10 +445,12 @@ export default function InvoicesPage() {
             const saved = await createInvoice(payload);
             setLastCreatedInvoice(saved);
             setCurrentStep(6);
+            toast.success("Invoice created successfully");
             loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
         } catch (err: any) {
             console.error("Failed to save invoice", err);
             setError(err.message || "Error saving invoice");
+            toast.error(err.message || "Error saving invoice");
         } finally {
             setIsSaving(false);
         }
@@ -649,7 +655,7 @@ export default function InvoicesPage() {
                             {((selectedCustomer.creditLimitAmount ?? 0) > 0 || (selectedCustomer.creditLimitLiters ?? 0) > 0) && (
                                 <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                                     {(selectedCustomer.creditLimitAmount ?? 0) > 0 && (
-                                        <p>Credit: ₹{Number(selectedCustomer.ledgerBalance || 0).toLocaleString("en-IN")} / ₹{Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")} used</p>
+                                        <p>Unbilled: ₹{Number(selectedCustomer.unbilledCredit || 0).toLocaleString("en-IN")} / ₹{Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")} limit</p>
                                     )}
                                     {(selectedCustomer.creditLimitLiters ?? 0) > 0 && (
                                         <p>Liters: {selectedCustomer.consumedLiters || 0} / {Number(selectedCustomer.creditLimitLiters)} L used</p>
@@ -868,14 +874,16 @@ export default function InvoicesPage() {
                                 key={label}
                                 onClick={() => {
                                     const emptyIdx = selectedProducts.findIndex((l: any) => !l.product);
+                                    const isFuel = matched.category?.toLowerCase() === "fuel";
                                     if (emptyIdx >= 0) {
-                                        updateProductLine(emptyIdx, { product: matched, unitPrice: String(matched.price) });
+                                        updateProductLine(emptyIdx, { product: matched, unitPrice: String(matched.price), amountMode: isFuel });
                                     } else {
                                         setSelectedProducts((prev: any[]) => [...prev, {
                                             product: matched,
                                             nozzle: null,
                                             quantity: "",
                                             unitPrice: String(matched.price),
+                                            amountMode: isFuel,
                                             amount: 0
                                         }]);
                                     }
@@ -900,19 +908,57 @@ export default function InvoicesPage() {
                     {selectedProducts.map((line: any, idx: number) => (
                         <div key={idx} className="p-5 bg-background border border-border rounded-2xl space-y-4 relative border-l-4 border-l-primary">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                                <div className="lg:col-span-2">
+                                <div className="lg:col-span-2 relative">
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Product</label>
-                                    <StyledSelect
-                                        value={String(line.product?.id || "")}
-                                        onChange={(val) => {
-                                            const p = products.find(prod => prod.id === parseInt(val));
-                                            if (p) updateProductLine(idx, { product: p, unitPrice: String(p.price) });
+                                    <input
+                                        type="text"
+                                        placeholder="Type to search products..."
+                                        value={line._productSearch ?? (line.product ? `${line.product.name} (${line.product.category})` : "")}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            updateProductLine(idx, { _productSearch: val, _showProductDropdown: true });
+                                            if (!val) updateProductLine(idx, { product: null, unitPrice: "", _productSearch: "", _showProductDropdown: false });
                                         }}
-                                        options={[
-                                            { value: "", label: "Select Product..." },
-                                            ...products.map(p => ({ value: String(p.id), label: `${p.name} (${p.category} - ${p.unit})` })),
-                                        ]}
+                                        onFocus={() => updateProductLine(idx, { _showProductDropdown: true, _productSearch: line._productSearch ?? "" })}
+                                        onBlur={() => setTimeout(() => updateProductLine(idx, { _showProductDropdown: false }), 200)}
+                                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     />
+                                    {line._showProductDropdown && (
+                                        <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            {products
+                                                .filter(p => {
+                                                    const q = (line._productSearch || "").toLowerCase();
+                                                    if (!q) return true;
+                                                    return p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
+                                                })
+                                                .map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        type="button"
+                                                        onMouseDown={(e) => e.preventDefault()}
+                                                        onClick={() => {
+                                                            updateProductLine(idx, {
+                                                                product: p,
+                                                                unitPrice: String(p.price),
+                                                                amountMode: p.category?.toLowerCase() === "fuel",
+                                                                _productSearch: undefined,
+                                                                _showProductDropdown: false,
+                                                            });
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors flex justify-between items-center"
+                                                    >
+                                                        <span className="font-medium">{p.name}</span>
+                                                        <span className="text-xs text-muted-foreground ml-2">{p.category} - {p.unit}</span>
+                                                    </button>
+                                                ))}
+                                            {products.filter(p => {
+                                                const q = (line._productSearch || "").toLowerCase();
+                                                return !q || p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
+                                            }).length === 0 && (
+                                                <div className="px-3 py-2 text-sm text-muted-foreground">No products found</div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {line.product?.category?.toLowerCase() === "fuel" && (
@@ -960,7 +1006,7 @@ export default function InvoicesPage() {
                                                     const amt = parseFloat(e.target.value) || 0;
                                                     const price = parseFloat(line.unitPrice) || 0;
                                                     const qty = price > 0 ? (amt / price).toFixed(3) : "0";
-                                                    updateProductLine(idx, { amountInput: e.target.value, quantity: qty });
+                                                    updateProductLine(idx, { amountInput: e.target.value, quantity: qty, amountOverride: amt });
                                                 }}
                                                 placeholder="₹0"
                                             />
@@ -1502,6 +1548,35 @@ export default function InvoicesPage() {
                     </div>
                 </div>
 
+                {/* Latest bills banner — show last cash AND last credit */}
+                {(() => {
+                    const allInvs = lastCreatedInvoice ? [lastCreatedInvoice, ...invoices.filter(i => i.id !== lastCreatedInvoice.id)] : invoices;
+                    const latestCash = allInvs.find(i => i.billType === 'CASH');
+                    const latestCredit = allInvs.find(i => i.billType === 'CREDIT');
+                    if (!latestCash && !latestCredit) return null;
+
+                    const renderBill = (bill: any, color: string, bgClass: string, borderClass: string) => (
+                        <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${bgClass} ${color} border ${borderClass}`}>{bill.billType}</span>
+                            <span className="font-mono font-bold text-sm text-foreground">{bill.billNo}</span>
+                            <span className="text-xs text-muted-foreground">{bill.customer?.name || "Walk-in"}</span>
+                            <span className="font-bold text-foreground text-sm">₹{bill.netAmount?.toFixed(2)}</span>
+                        </div>
+                    );
+
+                    return (
+                        <div className="mb-4 p-3 bg-card border border-border rounded-xl flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                <span className="text-sm font-bold text-foreground">Latest:</span>
+                            </div>
+                            {latestCash && renderBill(latestCash, "text-green-500", "bg-green-500/10", "border-green-500/20")}
+                            {latestCash && latestCredit && <span className="text-border">|</span>}
+                            {latestCredit && renderBill(latestCredit, "text-blue-500", "bg-blue-500/10", "border-blue-500/20")}
+                        </div>
+                    );
+                })()}
+
                 {activeTab === 'create' ? (
                     renderCreateTab()
                 ) : (
@@ -1593,7 +1668,12 @@ export default function InvoicesPage() {
                             </div>
                         )}
 
-                        {invoices.length === 0 ? (
+                        {isLoading ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+                                <p className="animate-pulse">Loading invoices...</p>
+                            </div>
+                        ) : invoices.length === 0 ? (
                             <div className="text-center text-muted-foreground py-8">
                                 {viewMode === "shift"
                                     ? (activeShiftId ? "No invoices in the current shift yet." : "No active shift found.")
@@ -1609,6 +1689,15 @@ export default function InvoicesPage() {
                                                 inv.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                                             }`}>{inv.billType}</span>
                                             <span className="text-sm text-muted-foreground">{inv.customer?.name || "Walk-in"}</span>
+                                            {inv.products && inv.products.length > 0 && (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {inv.products.length === 1
+                                                        ? inv.products[0].productName
+                                                        : `${inv.products[0].productName} +${inv.products.length - 1}`}
+                                                    {" · "}
+                                                    {inv.products.reduce((s: number, p: any) => s + (p.quantity || 0), 0).toFixed(2)}L
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="text-right">
                                             <span className="font-bold text-foreground">₹{(inv.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>

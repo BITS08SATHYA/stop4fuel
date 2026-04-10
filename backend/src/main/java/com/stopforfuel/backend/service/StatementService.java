@@ -22,6 +22,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -39,10 +42,11 @@ public class StatementService {
     @Transactional(readOnly = true)
     public Page<Statement> getStatements(Long customerId, String status, String categoryType, LocalDate fromDate, LocalDate toDate, String search, Pageable pageable) {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
+        Long scid = SecurityUtils.getScid();
         if (search != null && !search.isBlank()) {
-            return statementRepository.findWithFiltersAndSearch(customerId, status, ct, fromDate, toDate, search.trim(), pageable);
+            return statementRepository.findWithFiltersAndSearch(customerId, status, ct, fromDate, toDate, search.trim(), scid, pageable);
         }
-        return statementRepository.findWithFilters(customerId, status, ct, fromDate, toDate, pageable);
+        return statementRepository.findWithFilters(customerId, status, ct, fromDate, toDate, scid, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +73,7 @@ public class StatementService {
 
     @Transactional(readOnly = true)
     public List<Statement> getOutstandingStatements() {
-        return statementRepository.findByStatus("NOT_PAID");
+        return statementRepository.findByStatusAndScid("NOT_PAID", SecurityUtils.getScid());
     }
 
     @Transactional(readOnly = true)
@@ -91,7 +95,7 @@ public class StatementService {
 
         if (billIds != null && !billIds.isEmpty()) {
             // Bill-wise: user selected specific bills
-            bills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds);
+            bills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds, SecurityUtils.getScid());
             // Validate all bills belong to this customer
             for (InvoiceBill bill : bills) {
                 if (!bill.getCustomer().getId().equals(customerId)) {
@@ -153,6 +157,10 @@ public class StatementService {
         statement.setBalanceAmount(netAmount);
         statement.setStatus("NOT_PAID");
 
+        // Compute total quantity from invoice products
+        List<Long> invoiceBillIds = bills.stream().map(InvoiceBill::getId).toList();
+        statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(invoiceBillIds));
+
         Statement saved = statementRepository.save(statement);
 
         // Link all bills to this statement
@@ -160,6 +168,108 @@ public class StatementService {
             bill.setStatement(saved);
             invoiceBillRepository.save(bill);
         }
+
+        return saved;
+    }
+
+    /**
+     * Regenerate an existing statement in-place, keeping the same statement number.
+     * Unlinks old bills, fetches new bills based on updated filters, recalculates totals.
+     */
+    @Transactional
+    public Statement regenerateStatement(Long statementId, LocalDate fromDate, LocalDate toDate,
+                                         Long vehicleId, Long productId, List<Long> billIds, Long newCustomerId) {
+        Statement statement = statementRepository.findByIdForUpdate(statementId)
+                .orElseThrow(() -> new RuntimeException("Statement not found with id: " + statementId));
+
+        if (statement.getReceivedAmount() != null && statement.getReceivedAmount().compareTo(BigDecimal.ZERO) > 0) {
+            throw new BusinessException("Cannot regenerate a statement that has received payments");
+        }
+
+        // If a new customer is specified, update the statement's customer
+        if (newCustomerId != null && !newCustomerId.equals(statement.getCustomer().getId())) {
+            Customer newCustomer = customerRepository.findById(newCustomerId)
+                    .orElseThrow(() -> new RuntimeException("Customer not found with id: " + newCustomerId));
+            statement.setCustomer(newCustomer);
+        }
+
+        Long customerId = statement.getCustomer().getId();
+
+        // Unlink all currently linked bills
+        List<InvoiceBill> oldBills = invoiceBillRepository.findByStatementId(statementId);
+        for (InvoiceBill bill : oldBills) {
+            bill.setStatement(null);
+            invoiceBillRepository.save(bill);
+        }
+
+        // Fetch new bills based on updated parameters
+        List<InvoiceBill> newBills;
+        if (billIds != null && !billIds.isEmpty()) {
+            newBills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds, SecurityUtils.getScid());
+            for (InvoiceBill bill : newBills) {
+                if (!bill.getCustomer().getId().equals(customerId)) {
+                    throw new BusinessException("Bill " + bill.getId() + " does not belong to customer " + customerId);
+                }
+            }
+        } else {
+            LocalDateTime fromDateTime = fromDate.atStartOfDay();
+            LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
+
+            if (vehicleId != null && productId != null) {
+                newBills = invoiceBillRepository.findUnlinkedCreditBillsByVehicleAndProduct(
+                        customerId, fromDateTime, toDateTime, vehicleId, productId);
+            } else if (vehicleId != null) {
+                newBills = invoiceBillRepository.findUnlinkedCreditBillsByVehicle(
+                        customerId, fromDateTime, toDateTime, vehicleId);
+            } else if (productId != null) {
+                newBills = invoiceBillRepository.findUnlinkedCreditBillsByProduct(
+                        customerId, fromDateTime, toDateTime, productId);
+            } else {
+                newBills = invoiceBillRepository.findUnlinkedCreditBills(
+                        customerId, fromDateTime, toDateTime);
+            }
+        }
+
+        if (newBills.isEmpty()) {
+            throw new BusinessException("No unlinked credit bills found for the selected filters");
+        }
+
+        // Recalculate totals
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (InvoiceBill bill : newBills) {
+            if (bill.getNetAmount() != null) {
+                totalAmount = totalAmount.add(bill.getNetAmount());
+            }
+        }
+        BigDecimal netAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
+        BigDecimal roundingAmount = netAmount.subtract(totalAmount);
+
+        // Update statement in-place (keep statementNo)
+        statement.setFromDate(fromDate);
+        statement.setToDate(toDate);
+        statement.setStatementDate(LocalDate.now());
+        statement.setNumberOfBills(newBills.size());
+        statement.setTotalAmount(totalAmount);
+        statement.setRoundingAmount(roundingAmount);
+        statement.setNetAmount(netAmount);
+        statement.setReceivedAmount(BigDecimal.ZERO);
+        statement.setBalanceAmount(netAmount);
+        statement.setStatus("NOT_PAID");
+
+        // Compute total quantity from invoice products
+        List<Long> newBillIds = newBills.stream().map(InvoiceBill::getId).toList();
+        statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(newBillIds));
+
+        Statement saved = statementRepository.save(statement);
+
+        // Link new bills
+        for (InvoiceBill bill : newBills) {
+            bill.setStatement(saved);
+            invoiceBillRepository.save(bill);
+        }
+
+        // Auto-generate PDF with updated data
+        generateAndStorePdf(saved.getId());
 
         return saved;
     }
@@ -242,6 +352,14 @@ public class StatementService {
         statement.setNetAmount(netAmount);
         statement.setBalanceAmount(balanceAmount);
 
+        // Recalculate total quantity from remaining bills
+        if (!remainingBills.isEmpty()) {
+            List<Long> remainingBillIds = remainingBills.stream().map(InvoiceBill::getId).toList();
+            statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(remainingBillIds));
+        } else {
+            statement.setTotalQuantity(BigDecimal.ZERO);
+        }
+
         // Check if already fully paid after removal
         if (balanceAmount.compareTo(BigDecimal.ZERO) <= 0) {
             statement.setStatus("PAID");
@@ -307,6 +425,7 @@ public class StatementService {
         return s3StorageService.getPresignedUrl(statement.getStatementPdfUrl());
     }
 
+    @Transactional
     public void deleteStatement(Long id) {
         Statement statement = statementRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Statement not found"));
@@ -326,28 +445,57 @@ public class StatementService {
         LocalDate startOfThisMonth = LocalDate.now().withDayOfMonth(1);
         LocalDate startOfLastMonth = startOfThisMonth.minusMonths(1);
 
+        Long scid = SecurityUtils.getScid();
+
         // Last month metrics
-        long statementsLastMonth = statementRepository.countByStatementDateRange(startOfLastMonth, startOfThisMonth);
-        long paidLastMonth = statementRepository.countPaidByStatementDateRange(startOfLastMonth, startOfThisMonth);
-        BigDecimal amountGeneratedLastMonth = statementRepository.sumNetAmountByDateRange(startOfLastMonth, startOfThisMonth);
-        BigDecimal amountCollectedLastMonth = statementRepository.sumReceivedAmountByDateRange(startOfLastMonth, startOfThisMonth);
+        long statementsLastMonth = statementRepository.countByStatementDateRange(startOfLastMonth, startOfThisMonth, scid);
+        long paidLastMonth = statementRepository.countPaidByStatementDateRange(startOfLastMonth, startOfThisMonth, scid);
+        BigDecimal amountGeneratedLastMonth = statementRepository.sumNetAmountByDateRange(startOfLastMonth, startOfThisMonth, scid);
+        BigDecimal amountCollectedLastMonth = statementRepository.sumReceivedAmountByDateRange(startOfLastMonth, startOfThisMonth, scid);
 
         // All-time metrics
-        long totalStatements = statementRepository.count();
-        long totalPaid = statementRepository.countPaid();
+        long totalStatements = statementRepository.countByScid(scid);
+        long totalPaid = statementRepository.countPaid(scid);
         double paidPercentage = totalStatements > 0 ? (totalPaid * 100.0) / totalStatements : 0;
-        BigDecimal totalUnpaidAmount = statementRepository.sumUnpaidBalance();
-        BigDecimal totalNetAmount = statementRepository.sumNetAmount();
-        BigDecimal totalReceivedAmount = statementRepository.sumReceivedAmount();
+        BigDecimal totalUnpaidAmount = statementRepository.sumUnpaidBalance(scid);
+        BigDecimal totalNetAmount = statementRepository.sumNetAmount(scid);
+        BigDecimal totalReceivedAmount = statementRepository.sumReceivedAmount(scid);
         double collectionRate = totalNetAmount.compareTo(BigDecimal.ZERO) > 0
                 ? totalReceivedAmount.multiply(BigDecimal.valueOf(100)).divide(totalNetAmount, 2, RoundingMode.HALF_UP).doubleValue()
                 : 0;
-        BigDecimal avgStatementAmount = statementRepository.avgNetAmount();
+        BigDecimal avgStatementAmount = statementRepository.avgNetAmount(scid);
 
         return new StatementStats(
                 statementsLastMonth, paidLastMonth, amountGeneratedLastMonth, amountCollectedLastMonth,
                 totalStatements, totalPaid, paidPercentage, totalUnpaidAmount,
                 totalNetAmount, totalReceivedAmount, collectionRate, avgStatementAmount
         );
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, BigDecimal> getRecommendedLimits(Long customerId, int count) {
+        List<Statement> recent = statementRepository.findRecentByCustomerId(customerId, PageRequest.of(0, count));
+
+        if (recent.isEmpty()) {
+            return Map.of("recommendedCreditLimit", BigDecimal.ZERO,
+                          "recommendedMonthlyConsumption", BigDecimal.ZERO,
+                          "statementCount", BigDecimal.ZERO);
+        }
+
+        BigDecimal avgNetAmount = recent.stream()
+                .map(Statement::getNetAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(recent.size()), 0, RoundingMode.HALF_UP);
+
+        BigDecimal avgQuantity = recent.stream()
+                .map(Statement::getTotalQuantity)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(recent.size()), 2, RoundingMode.HALF_UP);
+
+        return Map.of("recommendedCreditLimit", avgNetAmount,
+                      "recommendedMonthlyConsumption", avgQuantity,
+                      "statementCount", BigDecimal.valueOf(recent.size()));
     }
 }

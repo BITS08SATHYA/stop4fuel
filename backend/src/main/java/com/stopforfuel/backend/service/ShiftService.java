@@ -43,6 +43,7 @@ public class ShiftService {
     private final S3StorageService s3StorageService;
     private final ShiftClosingReportRepository shiftClosingReportRepository;
     private final StatementAutoGenerationService statementAutoGenerationService;
+    private final com.stopforfuel.backend.repository.UserRepository userRepository;
 
     public ShiftService(ShiftRepository repository,
                         @Lazy ShiftClosingReportService shiftClosingReportService,
@@ -64,7 +65,8 @@ public class ShiftService {
                         ShiftReportPdfGenerator pdfGenerator,
                         S3StorageService s3StorageService,
                         ShiftClosingReportRepository shiftClosingReportRepository,
-                        @Lazy StatementAutoGenerationService statementAutoGenerationService) {
+                        @Lazy StatementAutoGenerationService statementAutoGenerationService,
+                        com.stopforfuel.backend.repository.UserRepository userRepository) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
         this.productInventoryService = productInventoryService;
@@ -86,6 +88,7 @@ public class ShiftService {
         this.s3StorageService = s3StorageService;
         this.shiftClosingReportRepository = shiftClosingReportRepository;
         this.statementAutoGenerationService = statementAutoGenerationService;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
@@ -93,8 +96,9 @@ public class ShiftService {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional
     public Shift openShift(Shift shift) {
-        repository.findByStatusAndScid(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {
+        repository.findTopByStatusAndScidOrderByIdDesc(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {
             throw new BusinessException("A shift is already open. Close it before opening a new one.");
         });
 
@@ -103,12 +107,31 @@ public class ShiftService {
         if (shift.getScid() == null) {
             shift.setScid(SecurityUtils.getScid());
         }
+
+        // Auto-assign current user as attendant if not explicitly set
+        if (shift.getAttendant() == null || shift.getAttendant().getId() == null) {
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            if (currentUserId != null) {
+                userRepository.findById(currentUserId).ifPresent(shift::setAttendant);
+            }
+        }
+
         Shift saved = repository.save(shift);
 
         // Auto-create ProductInventory records for all active products
         productInventoryService.autoCreateForShift(saved);
 
         return saved;
+    }
+
+    @Transactional
+    public Shift changeAttendant(Long shiftId, Long attendantId) {
+        Shift shift = repository.findById(shiftId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
+        User attendant = userRepository.findById(attendantId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        shift.setAttendant(attendant);
+        return repository.save(shift);
     }
 
     public Shift closeShift(Long id) {
@@ -130,7 +153,7 @@ public class ShiftService {
 
     @Transactional(readOnly = true)
     public Shift getActiveShift() {
-        return repository.findByStatusAndScid(ShiftStatus.OPEN, SecurityUtils.getScid()).orElse(null);
+        return repository.findTopByStatusAndScidOrderByIdDesc(ShiftStatus.OPEN, SecurityUtils.getScid()).orElse(null);
     }
 
     // ========== NEW SHIFT CLOSING WORKSPACE METHODS ==========
@@ -173,7 +196,7 @@ public class ShiftService {
                 row.setTestQuantity(currentShiftReading.getTestQuantity());
             } else {
                 // Fallback: get last close reading as the open reading
-                NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdOrderByDateDescIdDesc(nozzle.getId());
+                NozzleInventory lastReading = nozzleInventoryRepository.findTopByNozzleIdAndScidOrderByDateDescIdDesc(nozzle.getId(), com.stopforfuel.config.SecurityUtils.getScid());
                 if (lastReading != null && lastReading.getCloseMeterReading() != null) {
                     row.setOpenMeterReading(lastReading.getCloseMeterReading());
                 } else if (lastReading != null && lastReading.getOpenMeterReading() != null) {
@@ -206,7 +229,7 @@ public class ShiftService {
                 row.setCloseStock(currentShiftReading.getCloseStock());
             } else {
                 // Fallback: get last close reading as the open reading
-                TankInventory lastReading = tankInventoryRepository.findTopByTankIdOrderByDateDescIdDesc(tank.getId());
+                TankInventory lastReading = tankInventoryRepository.findTopByTankIdAndScidOrderByDateDescIdDesc(tank.getId(), com.stopforfuel.config.SecurityUtils.getScid());
                 if (lastReading != null && lastReading.getCloseDip() != null) {
                     row.setOpenDip(lastReading.getCloseDip());
                 } else if (lastReading != null && lastReading.getOpenDip() != null) {
@@ -403,7 +426,7 @@ public class ShiftService {
         dto.setEAdvanceTotals(eAdvTotals);
 
         // Operational advance totals by type
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByAdvanceDateDesc(shiftId);
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(shiftId);
         Map<String, BigDecimal> opAdvTotals = new LinkedHashMap<>();
         for (OperationalAdvance oa : opAdvances) {
             if (oa.getStatus() == AdvanceStatus.CANCELLED) continue;

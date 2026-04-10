@@ -15,6 +15,7 @@ import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { showToast } from "@/components/ui/toast";
 
 const API = API_BASE_URL;
 
@@ -90,6 +91,9 @@ export default function CustomerProfilePage() {
     const [newIncentive, setNewIncentive] = useState({ productId: "", minQuantity: "", discountRate: "" });
     const [incentiveError, setIncentiveError] = useState("");
 
+    // Recommended limits
+    const [recommendedLimits, setRecommendedLimits] = useState<{ recommendedCreditLimit: number; recommendedMonthlyConsumption: number; statementCount: number } | null>(null);
+
     // Add Vehicle State
     const [showAddVehicle, setShowAddVehicle] = useState(false);
     const [newVehicle, setNewVehicle] = useState({
@@ -103,12 +107,14 @@ export default function CustomerProfilePage() {
 
     const fetchData = async () => {
         try {
-            const [customerRes, vehiclesRes] = await Promise.all([
+            const [customerRes, vehiclesRes, limitsRes] = await Promise.all([
                 fetchWithAuth(`${API}/customers/${params.id}`),
-                fetchWithAuth(`${API}/customers/${params.id}/vehicles`)
+                fetchWithAuth(`${API}/customers/${params.id}/vehicles`),
+                fetchWithAuth(`${API}/statements/customer/${params.id}/recommended-limits?count=15`)
             ]);
             if (customerRes.ok) setCustomer(await customerRes.json());
             if (vehiclesRes.ok) setVehicles(await vehiclesRes.json());
+            if (limitsRes.ok) setRecommendedLimits(await limitsRes.json());
         } catch (error) {
             console.error("Failed to fetch data", error);
         } finally {
@@ -159,8 +165,8 @@ export default function CustomerProfilePage() {
         try {
             const updatedCustomer = {
                 ...customer,
-                emails: Array.isArray(customer.emails) ? customer.emails : (customer.emails as string).split(',').map((s: string) => s.trim()),
-                phoneNumbers: Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers : (customer.phoneNumbers as string).split(',').map((s: string) => s.trim()),
+                emails: Array.isArray(customer.emails) ? customer.emails : customer.emails ? (customer.emails as string).split(',').map((s: string) => s.trim()) : [],
+                phoneNumbers: Array.isArray(customer.phoneNumbers) ? customer.phoneNumbers : customer.phoneNumbers ? (customer.phoneNumbers as string).split(',').map((s: string) => s.trim()) : [],
             };
             const res = await fetchWithAuth(`${API}/customers/${params.id}`, {
                 method: "PUT",
@@ -171,11 +177,11 @@ export default function CustomerProfilePage() {
                 setCustomer(await res.json());
                 setIsEditing(false);
             } else {
-                alert("Failed to save changes");
+                showToast.error("Failed to save changes");
             }
         } catch (error) {
             console.error("Failed to save customer", error);
-            alert("Error saving changes");
+            showToast.error("Error saving changes");
         }
     };
 
@@ -267,14 +273,21 @@ export default function CustomerProfilePage() {
             try {
                 const res = await fetchWithAuth(`${API}/vehicles/${vehicleId}`, { method: "DELETE" });
                 if (res.ok) fetchData();
-                else alert("Failed to delete vehicle");
+                else showToast.error("Failed to delete vehicle");
             } catch (error) {
                 console.error("Failed to delete vehicle", error);
             }
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+    if (loading) return (
+        <div className="p-8 flex items-center justify-center min-h-screen">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <p className="text-muted-foreground animate-pulse">Loading customer...</p>
+            </div>
+        </div>
+    );
     if (!customer) return <div className="p-8 text-center text-muted-foreground">Customer not found</div>;
 
     const creditLimit = customer.creditLimitLiters || 0;
@@ -699,6 +712,25 @@ export default function CustomerProfilePage() {
                                     </p>
                                 </div>
                             </div>
+
+                            {recommendedLimits && recommendedLimits.statementCount > 0 && (
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Recommended Credit Limit</p>
+                                        <p className="text-lg font-bold text-accent">
+                                            ₹{recommendedLimits.recommendedCreditLimit.toLocaleString()}
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground">Avg of {recommendedLimits.statementCount} statements</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Recommended Consumption</p>
+                                        <p className="text-lg font-bold text-accent">
+                                            {recommendedLimits.recommendedMonthlyConsumption} L
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground">Avg of {recommendedLimits.statementCount} statements</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </GlassCard>
                 </div>

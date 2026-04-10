@@ -15,6 +15,7 @@ import {
     Download, Loader2, ArrowLeft, Receipt, CreditCard, Clock,
     Banknote, ImageIcon, ExternalLink, Trash2
 } from "lucide-react";
+import { showToast } from "@/components/ui/toast";
 import {
     getStatements, getStatementBills, getPaymentsByStatement,
     getStatementStats, getStatementPdfUrl, getBillPaymentSummary,
@@ -219,7 +220,7 @@ export default function ExplorerPage() {
             const url = await getStatementPdfUrl(statementId);
             window.open(url, "_blank");
         } catch {
-            alert("PDF not available. Generate it first from the Statements page.");
+            showToast.error("PDF not available. Generate it first from the Statements page.");
         } finally {
             setPdfLoading(false);
         }

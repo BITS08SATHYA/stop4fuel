@@ -38,6 +38,7 @@ public class InvoiceBillService {
     private final EAdvanceService eAdvanceService;
     private final IncentivePaymentService incentivePaymentService;
     private final BillSequenceService billSequenceService;
+    private final StatementRepository statementRepository;
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -46,7 +47,7 @@ public class InvoiceBillService {
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getInvoicesByShift(Long shiftId) {
-        return repository.findByShiftId(shiftId);
+        return repository.findByShiftIdOrderByIdDesc(shiftId);
     }
 
     @Transactional
@@ -175,7 +176,7 @@ public class InvoiceBillService {
                             Nozzle nozzle = nozzleRepository.findById(ip.getNozzle().getId()).orElse(null);
                             if (nozzle != null && nozzle.getTank() != null) {
                                 TankInventory tankInv = tankInventoryRepository
-                                        .findTopByTankIdOrderByDateDescIdDesc(nozzle.getTank().getId());
+                                        .findTopByTankIdAndScidOrderByDateDescIdDesc(nozzle.getTank().getId(), SecurityUtils.getScid());
                                 if (tankInv == null) {
                                     throw new BusinessException(
                                             "Cannot create invoice: No inventory record found for tank linked to product '"
@@ -198,7 +199,7 @@ public class InvoiceBillService {
 
                         // Check product inventory
                         ProductInventory productInv = productInventoryRepository
-                                .findTopByProductIdOrderByDateDescIdDesc(prod.getId());
+                                .findTopByProductIdAndScidOrderByDateDescIdDesc(prod.getId(), SecurityUtils.getScid());
                         if (productInv != null) {
                             double available = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
                             if (available <= 0) {
@@ -366,7 +367,11 @@ public class InvoiceBillService {
         }
 
         // Create EAdvance for electronic payment modes (CARD, UPI, CHEQUE, CCMS, BANK_TRANSFER)
-        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : null;
+        Customer resolvedCustomer = null;
+        if (invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+            resolvedCustomer = customerRepository.findById(invoice.getCustomer().getId()).orElse(null);
+        }
+        String customerName = resolvedCustomer != null ? resolvedCustomer.getName() : null;
         String remark = "Auto: Invoice #" + invoice.getId()
                 + (customerName != null ? " - " + customerName : "");
         EAdvance eAdv = new EAdvance();
@@ -400,11 +405,17 @@ public class InvoiceBillService {
             return;
         }
 
-        String customerName = invoice.getCustomer() != null ? invoice.getCustomer().getName() : "Walk-in";
+        Customer customer = null;
+        if (invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+            customer = customerRepository.findById(invoice.getCustomer().getId()).orElse(null);
+        }
+        String customerName = customer != null ? customer.getName()
+                : (invoice.getSignatoryName() != null && !invoice.getSignatoryName().isBlank()
+                        ? invoice.getSignatoryName() : "Walk-in");
         IncentivePayment incentivePayment = new IncentivePayment();
         incentivePayment.setAmount(discount);
         incentivePayment.setDescription("Auto: Discount on Invoice #" + invoice.getBillNo() + " - " + customerName);
-        incentivePayment.setCustomer(invoice.getCustomer());
+        incentivePayment.setCustomer(customer);
         incentivePayment.setInvoiceBill(invoice);
         incentivePayment.setShiftId(activeShift.getId());
         incentivePayment.setScid(invoice.getScid());
@@ -539,25 +550,26 @@ public class InvoiceBillService {
         com.stopforfuel.backend.enums.BillType bt = hasBillType ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
         com.stopforfuel.backend.enums.PaymentStatus ps = hasPaymentStatus ? com.stopforfuel.backend.enums.PaymentStatus.valueOf(paymentStatus) : null;
 
+        Long scid = SecurityUtils.getScid();
         if (hasDateRange) {
             if (hasBillType && hasPaymentStatus) {
-                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, bt, ps, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndDateRange(customerId, bt, ps, fromDate, toDate, scid, pageable);
             } else if (hasBillType) {
-                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, bt, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndBillTypeAndDateRange(customerId, bt, fromDate, toDate, scid, pageable);
             } else if (hasPaymentStatus) {
-                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, ps, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndPaymentStatusAndDateRange(customerId, ps, fromDate, toDate, scid, pageable);
             } else {
-                return repository.findByCustomerIdAndDateRange(customerId, fromDate, toDate, pageable);
+                return repository.findByCustomerIdAndDateRange(customerId, fromDate, toDate, scid, pageable);
             }
         } else {
             if (hasBillType && hasPaymentStatus) {
-                return repository.findByCustomerIdAndBillTypeAndPaymentStatusOrderByDateDesc(customerId, bt, ps, pageable);
+                return repository.findByCustomerIdAndBillTypeAndPaymentStatusAndScidOrderByDateDesc(customerId, bt, ps, scid, pageable);
             } else if (hasBillType) {
-                return repository.findByCustomerIdAndBillTypeOrderByDateDesc(customerId, bt, pageable);
+                return repository.findByCustomerIdAndBillTypeAndScidOrderByDateDesc(customerId, bt, scid, pageable);
             } else if (hasPaymentStatus) {
-                return repository.findByCustomerIdAndPaymentStatusOrderByDateDesc(customerId, ps, pageable);
+                return repository.findByCustomerIdAndPaymentStatusAndScidOrderByDateDesc(customerId, ps, scid, pageable);
             } else {
-                return repository.findByCustomerIdOrderByDateDesc(customerId, pageable);
+                return repository.findByCustomerIdAndScidOrderByDateDesc(customerId, scid, pageable);
             }
         }
     }
@@ -571,7 +583,7 @@ public class InvoiceBillService {
         String s = (search != null && !search.isEmpty()) ? search : "";
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
-        return repository.findAllFiltered(bt, ps, ct, fd, td, s, pageable);
+        return repository.findAllFiltered(bt, ps, ct, fd, td, s, SecurityUtils.getScid(), pageable);
     }
 
     @Transactional(readOnly = true)
@@ -582,7 +594,7 @@ public class InvoiceBillService {
         String ct = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
-        return repository.getProductSalesSummary(bt, ps, ct, fd, td);
+        return repository.getProductSalesSummary(bt, ps, ct, fd, td, SecurityUtils.getScid());
     }
 
     @Transactional
@@ -663,9 +675,7 @@ public class InvoiceBillService {
     // --- File Uploads to S3 ---
 
     public InvoiceBill uploadFile(Long id, String type, MultipartFile file) throws IOException {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
+        com.stopforfuel.backend.util.FileUploadValidator.validateDocument(file);
 
         InvoiceBill invoice = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
@@ -724,5 +734,54 @@ public class InvoiceBillService {
     private String getExtension(String filename) {
         if (filename == null || !filename.contains(".")) return "bin";
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+    }
+
+    /**
+     * Mark an invoice as independent — allows direct payment and excludes from future statements.
+     * If the invoice is linked to a statement, it is unlinked and the statement is recalculated.
+     */
+    @Transactional
+    public InvoiceBill markIndependent(Long invoiceBillId) {
+        InvoiceBill bill = repository.findById(invoiceBillId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
+
+        if (bill.isIndependent()) {
+            throw new BusinessException("Invoice is already marked as independent");
+        }
+
+        // If linked to a statement, unlink and recalculate
+        Statement statement = bill.getStatement();
+        if (statement != null) {
+            bill.setStatement(null);
+
+            // Recalculate statement totals
+            java.util.List<InvoiceBill> remainingBills = repository.findByStatementId(statement.getId());
+            remainingBills.remove(bill); // remove current bill from list
+
+            if (remainingBills.isEmpty()) {
+                // No bills left — delete the statement
+                statementRepository.delete(statement);
+            } else {
+                java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+                for (InvoiceBill rb : remainingBills) {
+                    if (rb.getNetAmount() != null) {
+                        totalAmount = totalAmount.add(rb.getNetAmount());
+                    }
+                }
+                java.math.BigDecimal netAmount = totalAmount.setScale(0, java.math.RoundingMode.HALF_UP);
+                java.math.BigDecimal roundingAmount = netAmount.subtract(totalAmount);
+
+                statement.setTotalAmount(totalAmount);
+                statement.setNetAmount(netAmount);
+                statement.setRoundingAmount(roundingAmount);
+                statement.setNumberOfBills(remainingBills.size());
+                statement.setBalanceAmount(netAmount.subtract(
+                        statement.getReceivedAmount() != null ? statement.getReceivedAmount() : java.math.BigDecimal.ZERO));
+                statementRepository.save(statement);
+            }
+        }
+
+        bill.setIndependent(true);
+        return repository.save(bill);
     }
 }

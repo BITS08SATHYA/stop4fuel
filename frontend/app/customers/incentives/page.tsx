@@ -30,6 +30,7 @@ import {
 } from "@/lib/api/station";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { PermissionGate } from "@/components/permission-gate";
+import { showToast } from "@/components/ui/toast";
 
 function getCustomerName(inc: Incentive): string {
     if ("name" in inc.customer) return inc.customer.name;
@@ -221,7 +222,7 @@ export default function IncentivesPage() {
             resetForm();
             await loadData();
         } catch (err: any) {
-            alert(err.message || "Failed to save incentive");
+            showToast.error(err.message || "Failed to save incentive");
         } finally {
             setIsSubmitting(false);
         }
@@ -233,7 +234,7 @@ export default function IncentivesPage() {
             await updateIncentive(inc.id, { ...inc, active: !inc.active });
             await loadData();
         } catch (err: any) {
-            alert(err.message || "Failed to toggle status");
+            showToast.error(err.message || "Failed to toggle status");
         }
     };
 
@@ -244,7 +245,7 @@ export default function IncentivesPage() {
             await deleteIncentive(inc.id);
             await loadData();
         } catch (err: any) {
-            alert(err.message || "Failed to delete incentive");
+            showToast.error(err.message || "Failed to delete incentive");
         }
     };
 

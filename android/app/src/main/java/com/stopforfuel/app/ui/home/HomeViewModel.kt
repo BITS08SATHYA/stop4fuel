@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -24,6 +26,11 @@ data class HomeUiState(
     val systemHealth: SystemHealthDto? = null,
     val cashierDashboard: CashierDashboardDto? = null,
     val fuelProducts: List<ProductDto> = emptyList(),
+    val backendHealth: BackendHealthDto? = null,
+    val awsBilling: AwsBillingDto? = null,
+    val mtdProductSales: List<ProductBreakdownDto> = emptyList(),
+    val mtdInvoiceAnalytics: InvoiceAnalyticsDto? = null,
+    val mtdPaymentAnalytics: PaymentAnalyticsDto? = null,
     val isLoading: Boolean = true,
     val error: String? = null
 ) {
@@ -74,6 +81,20 @@ class HomeViewModel @Inject constructor(
                     val products = dashboardRepository.getProducts().getOrNull()
                         ?.filter { it.category.equals("FUEL", ignoreCase = true) }
                         ?: emptyList()
+                    val backendHealth = dashboardRepository.getBackendHealth().getOrNull()
+                    val awsBilling = dashboardRepository.getAwsBilling().getOrNull()
+
+                    val today = LocalDate.now()
+                    val monthStart = today.withDayOfMonth(1)
+                    val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+                    val mtdFrom = monthStart.format(fmt)
+                    val mtdTo = today.format(fmt)
+                    val mtdAnalytics = dashboardRepository.getInvoiceAnalytics(mtdFrom, mtdTo).getOrElse {
+                        android.util.Log.w("HomeVM", "Failed to fetch MTD invoice analytics", it); null
+                    }
+                    val mtdPayments = dashboardRepository.getPaymentAnalytics(mtdFrom, mtdTo).getOrElse {
+                        android.util.Log.w("HomeVM", "Failed to fetch MTD payment analytics", it); null
+                    }
 
                     _uiState.value = _uiState.value.copy(
                         activeShift = shift,
@@ -81,6 +102,11 @@ class HomeViewModel @Inject constructor(
                         dashboardStats = stats,
                         systemHealth = health,
                         fuelProducts = products,
+                        backendHealth = backendHealth,
+                        awsBilling = awsBilling,
+                        mtdProductSales = mtdAnalytics?.productBreakdown ?: emptyList(),
+                        mtdInvoiceAnalytics = mtdAnalytics,
+                        mtdPaymentAnalytics = mtdPayments,
                         isLoading = false, error = null
                     )
                 } else {

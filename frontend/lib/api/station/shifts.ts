@@ -178,11 +178,28 @@ export const getShifts = (): Promise<Shift[]> =>
 export const getActiveShift = (): Promise<Shift | null> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/active`).then(handleResponse);
 
+export interface CashierUser {
+    id: number;
+    name: string;
+    role?: string;
+    phone?: string;
+}
+
+export const getShiftCashiers = (): Promise<CashierUser[]> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/cashiers`).then(handleResponse);
+
 export const openShift = (shift: Partial<Shift>): Promise<Shift> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shift),
+    }).then(handleResponse);
+
+export const changeShiftAttendant = (shiftId: number, attendantId: number): Promise<Shift> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/attendant`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendantId }),
     }).then(handleResponse);
 
 export const closeShift = (id: number): Promise<Shift> =>
@@ -248,6 +265,9 @@ export const getShiftReportPrintData = (shiftId: number): Promise<ShiftReportPri
 
 export const getShiftReportPdfUrl = (shiftId: number): Promise<string> =>
     fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
+
+export const regenerateShiftReportPdf = (shiftId: number): Promise<string> =>
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}/regenerate-pdf`, { method: 'POST' }).then(handleResponse).then((data: { url: string }) => data.url);
 
 export const recordCashInflowRepayment = (inflowId: number, repayment: Partial<CashInflowRepayment>): Promise<CashInflowRepayment> =>
     fetchWithAuth(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {

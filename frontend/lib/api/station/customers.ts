@@ -162,6 +162,10 @@ export interface Incentive {
     active: boolean;
 }
 
+/** Lightweight autocomplete endpoint — returns ALL customers (id, name, phone). No pagination cap. */
+export const getCustomersForAutocomplete = (): Promise<any[]> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/autocomplete`).then(handleResponse);
+
 // Customers & Vehicles Search
 export const getCustomers = (search?: string, size?: number): Promise<any> => {
     const params = new URLSearchParams();

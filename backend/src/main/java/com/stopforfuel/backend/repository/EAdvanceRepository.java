@@ -13,10 +13,11 @@ import java.util.Optional;
 
 @Repository
 public interface EAdvanceRepository extends ScidRepository<EAdvance> {
-    List<EAdvance> findByShiftIdOrderByTransactionDateDesc(Long shiftId);
-    List<EAdvance> findByAdvanceTypeOrderByTransactionDateDesc(PaymentMode advanceType);
+    List<EAdvance> findByShiftIdOrderByIdDesc(Long shiftId);
+    List<EAdvance> findByAdvanceTypeAndScidOrderByTransactionDateDesc(PaymentMode advanceType, Long scid);
+    // shiftId is already tenant-scoped via shift creation
     List<EAdvance> findByShiftIdAndAdvanceType(Long shiftId, PaymentMode advanceType);
-    List<EAdvance> findAllByOrderByTransactionDateDesc();
+    List<EAdvance> findAllByScidOrderByTransactionDateDesc(Long scid);
 
     @Query("SELECT e FROM EAdvance e WHERE e.scid = :scid AND e.transactionDate BETWEEN :from AND :to ORDER BY e.transactionDate DESC")
     List<EAdvance> findByDateRange(@Param("scid") Long scid, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

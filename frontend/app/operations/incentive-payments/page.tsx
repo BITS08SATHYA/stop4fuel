@@ -25,6 +25,7 @@ import {
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { PermissionGate } from "@/components/permission-gate";
+import { useToast } from "@/components/ui/toast";
 
 // --- Types ---
 
@@ -52,7 +53,7 @@ function formatCurrency(val?: number) {
 
 async function fetchCustomers(): Promise<Customer[]> {
     try {
-        const res = await fetchWithAuth(`${API_BASE_URL}/customers`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/customers/autocomplete`);
         if (!res.ok) return [];
         return res.json();
     } catch {
@@ -87,6 +88,7 @@ async function fetchIncentivesByDateRange(fromDate: string, toDate: string): Pro
 // --- Page ---
 
 export default function IncentivePaymentsPage() {
+    const toast = useToast();
     const [payments, setPayments] = useState<IncentivePayment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeShiftId, setActiveShiftId] = useState<number | null>(null);
@@ -163,21 +165,25 @@ export default function IncentivePaymentsPage() {
 
     // Summary
     const summary = useMemo(() => {
-        const customerSet = new Set<number>();
+        const customerSet = new Set<string>();
         let total = 0;
         for (const p of payments) {
             total += p.amount || 0;
-            if (p.customer?.id) customerSet.add(p.customer.id);
+            const name = p.customer?.name || p.invoiceBill?.customerName || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc;
+            if (name) customerSet.add(name);
         }
         return { total, count: payments.length, customerCount: customerSet.size };
     }, [payments]);
 
     // Unique customers for filter dropdown
     const uniqueCustomers = useMemo(() => {
-        const map = new Map<number, string>();
+        const map = new Map<string, string>();
         for (const p of payments) {
             if (p.customer?.id && p.customer?.name) {
-                map.set(p.customer.id, p.customer.name);
+                map.set(String(p.customer.id), p.customer.name);
+            } else {
+                const walkInName = p.invoiceBill?.customerName || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc;
+                if (walkInName) map.set("w_" + walkInName, walkInName);
             }
         }
         return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
@@ -186,11 +192,15 @@ export default function IncentivePaymentsPage() {
     // Filter
     const filtered = useMemo(() => {
         return payments.filter((p) => {
-            const matchCustomer = customerFilter === "ALL" || String(p.customer?.id) === customerFilter;
+            const customerKey = p.customer?.id ? String(p.customer.id) : ("w_" + (p.invoiceBill?.customerName || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc || ""));
+            const matchCustomer = customerFilter === "ALL" || customerKey === customerFilter;
             const q = searchQuery.toLowerCase();
             const matchSearch = !searchQuery ||
                 p.description?.toLowerCase().includes(q) ||
                 p.customer?.name?.toLowerCase().includes(q) ||
+                p.invoiceBill?.customerName?.toLowerCase().includes(q) ||
+                p.invoiceBill?.signatoryName?.toLowerCase().includes(q) ||
+                p.invoiceBill?.billDesc?.toLowerCase().includes(q) ||
                 p.invoiceBill?.billNo?.toLowerCase().includes(q) ||
                 p.statement?.statementNo?.toLowerCase().includes(q);
             return matchCustomer && matchSearch;
@@ -228,13 +238,14 @@ export default function IncentivePaymentsPage() {
             }
             await createIncentivePayment(payload);
             setIsModalOpen(false);
+            toast.success("Incentive payment added");
             if (viewMode === "dates" && fromDate && toDate) {
                 loadData("dates", null, fromDate, toDate);
             } else if (activeShiftId) {
                 loadData("shift", activeShiftId);
             }
         } catch (err: any) {
-            alert(err.message || "Failed to create incentive payment");
+            toast.error(err.message || "Failed to create incentive payment");
         }
     };
 
@@ -242,13 +253,14 @@ export default function IncentivePaymentsPage() {
         if (!confirm("Delete this incentive payment?")) return;
         try {
             await deleteIncentivePayment(id);
+            toast.success("Incentive payment deleted");
             if (viewMode === "dates" && fromDate && toDate) {
                 loadData("dates", null, fromDate, toDate);
             } else if (activeShiftId) {
                 loadData("shift", activeShiftId);
             }
         } catch (err) {
-            alert("Failed to delete");
+            toast.error("Failed to delete incentive payment");
         }
     };
 
@@ -410,7 +422,7 @@ export default function IncentivePaymentsPage() {
                                                 <td className="px-5 py-3 text-xs text-muted-foreground">{formatDateTime(p.paymentDate)}</td>
                                                 <td className="px-5 py-3">
                                                     <span className="text-sm font-medium text-foreground">
-                                                        {p.customer?.name || "-"}
+                                                        {p.customer?.name || p.invoiceBill?.customerName || p.invoiceBill?.signatoryName || p.invoiceBill?.billDesc || "Walk-in"}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3 text-right">

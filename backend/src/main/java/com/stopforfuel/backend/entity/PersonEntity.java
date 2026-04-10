@@ -20,14 +20,16 @@ public abstract class PersonEntity extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "person_emails", joinColumns = @JoinColumn(name = "person_id"))
     @Column(name = "email")
+    @org.hibernate.annotations.BatchSize(size = 50)
     private java.util.Set<String> emails = new java.util.HashSet<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "person_phones", joinColumns = @JoinColumn(name = "person_id"))
     @Column(name = "phone_number")
+    @org.hibernate.annotations.BatchSize(size = 50)
     private java.util.Set<String> phoneNumbers = new java.util.HashSet<>();
 
     private String address;

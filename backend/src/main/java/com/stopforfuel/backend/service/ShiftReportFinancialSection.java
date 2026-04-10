@@ -1,7 +1,5 @@
 package com.stopforfuel.backend.service;
 
-import com.lowagie.text.Document;
-import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.Paragraph;
@@ -317,74 +315,33 @@ public class ShiftReportFinancialSection {
         container.addElement(table);
     }
 
-    public void addPageTwoBody(Document doc, ShiftReportPrintData data, ShiftClosingReport report,
-                               ShiftReportInventorySection inventorySection) throws DocumentException {
-        // Two-column layout for page 2 details
-        PdfPTable outer = new PdfPTable(2);
-        outer.setWidthPercentage(100);
-        outer.setWidths(new float[]{50, 50});
+    public void addEAdvanceDetailsCompact(PdfPCell container, ShiftReportPrintData data) {
+        List<String> eTypes = List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER");
+        List<AdvanceEntryDetail> entries = data.getAdvanceEntries().stream()
+                .filter(ae -> eTypes.contains(ae.getType()))
+                .toList();
+        if (entries.isEmpty()) return;
 
-        PdfPCell leftCell = new PdfPCell();
-        leftCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
-        leftCell.setPadding(0);
-        leftCell.setPaddingRight(3);
-
-        PdfPCell rightCell = new PdfPCell();
-        rightCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
-        rightCell.setPadding(0);
-        rightCell.setPaddingLeft(3);
-
-        // Group advance entries by type
-        Map<String, List<AdvanceEntryDetail>> advByType = new LinkedHashMap<>();
-        for (AdvanceEntryDetail ae : data.getAdvanceEntries()) {
-            advByType.computeIfAbsent(ae.getType(), k -> new ArrayList<>()).add(ae);
-        }
-
-        // LEFT: Card, UPI, CCMS, Cash Advance, Home Advance (matching mockup layout)
-        for (String type : List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER", "CASH_ADVANCE", "HOME_ADVANCE")) {
-            List<AdvanceEntryDetail> entries = advByType.get(type);
-            if (entries != null && !entries.isEmpty()) {
-                addAdvanceDetailTable(leftCell, getAdvanceLabel(type), entries);
-            }
-        }
-
-        // RIGHT: Expenses, Salary, Incentive, Repayment + Product Inventory
-        for (String type : List.of("SALARY_ADVANCE", "EXPENSE", "INCENTIVE", "REPAYMENT")) {
-            List<AdvanceEntryDetail> entries = advByType.get(type);
-            if (entries != null && !entries.isEmpty()) {
-                addAdvanceDetailTable(rightCell, getAdvanceLabel(type), entries);
-            }
-        }
-
-        // Product Inventory in the right column
-        if (!data.getStockSummary().isEmpty() || !data.getStockPosition().isEmpty()) {
-            inventorySection.addProductInventory(rightCell, data);
-        }
-
-        outer.addCell(leftCell);
-        outer.addCell(rightCell);
-        doc.add(outer);
-    }
-
-    private void addAdvanceDetailTable(PdfPCell container, String title, List<AdvanceEntryDetail> entries) {
         BigDecimal total = BigDecimal.ZERO;
         for (AdvanceEntryDetail e : entries) {
             total = total.add(e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO);
         }
 
-        container.addElement(sectionHeader(title + " (" + entries.size() + ") — Rs." + fmtComma(total)));
+        container.addElement(sectionHeader("E-ADVANCES (" + entries.size() + ") — Rs." + fmtComma(total)));
 
-        PdfPTable table = new PdfPTable(new float[]{0.5f, 3.5f, 2f});
+        PdfPTable table = new PdfPTable(new float[]{0.4f, 1f, 3f, 1.5f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
 
         addHeaderCell(table, "#");
+        addHeaderCell(table, "TYPE");
         addHeaderCell(table, "DESCRIPTION");
         addHeaderCell(table, "AMOUNT");
 
         int idx = 1;
         for (AdvanceEntryDetail entry : entries) {
             addCellRight(table, String.valueOf(idx++), SMALL_FONT);
+            addCellLeft(table, getAdvanceLabel(entry.getType()), SMALL_FONT);
             String desc = entry.getDescription() != null ? entry.getDescription() : "-";
             if (entry.getReference() != null && !entry.getReference().isBlank()) {
                 desc += " [" + entry.getReference() + "]";
@@ -394,8 +351,193 @@ public class ShiftReportFinancialSection {
         }
 
         addCellRight(table, "", SMALL_BOLD);
+        addCellLeft(table, "", SMALL_BOLD);
         addCellLeft(table, "Total", SMALL_BOLD);
         addCellRight(table, fmtComma(total), SMALL_BOLD);
+
+        container.addElement(table);
+    }
+
+    public void addOperationalAdvanceDetailsCompact(PdfPCell container, ShiftReportPrintData data) {
+        List<String> opTypes = List.of("CASH_ADVANCE", "HOME_ADVANCE", "SALARY_ADVANCE", "EXPENSE", "INCENTIVE", "REPAYMENT");
+        List<AdvanceEntryDetail> entries = data.getAdvanceEntries().stream()
+                .filter(ae -> opTypes.contains(ae.getType()))
+                .toList();
+        if (entries.isEmpty()) return;
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (AdvanceEntryDetail e : entries) {
+            total = total.add(e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO);
+        }
+
+        container.addElement(sectionHeader("OPERATIONAL ADVANCES (" + entries.size() + ") — Rs." + fmtComma(total)));
+
+        PdfPTable table = new PdfPTable(new float[]{0.4f, 1f, 3f, 1.5f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "#");
+        addHeaderCell(table, "TYPE");
+        addHeaderCell(table, "DESCRIPTION");
+        addHeaderCell(table, "AMOUNT");
+
+        int idx = 1;
+        for (AdvanceEntryDetail entry : entries) {
+            addCellRight(table, String.valueOf(idx++), SMALL_FONT);
+            addCellLeft(table, getAdvanceLabel(entry.getType()), SMALL_FONT);
+            String desc = entry.getDescription() != null ? entry.getDescription() : "-";
+            if (entry.getReference() != null && !entry.getReference().isBlank()) {
+                desc += " [" + entry.getReference() + "]";
+            }
+            addCellLeft(table, desc, SMALL_FONT);
+            addCellRight(table, fmtComma(entry.getAmount()), SMALL_FONT);
+        }
+
+        addCellRight(table, "", SMALL_BOLD);
+        addCellLeft(table, "", SMALL_BOLD);
+        addCellLeft(table, "Total", SMALL_BOLD);
+        addCellRight(table, fmtComma(total), SMALL_BOLD);
+
+        container.addElement(table);
+    }
+
+    public void addCashBillsSummary(PdfPCell container, ShiftReportPrintData data) {
+        if (data.getPaymentModeBreakdown().isEmpty() && data.getCashBillDetails().isEmpty()) return;
+
+        // Only count CASH payment mode bills (UPI/CCMS/Card are covered in E-Advances)
+        BigDecimal cashTotal = BigDecimal.ZERO;
+        int cashBills = 0;
+        int totalBills = 0;
+        for (PaymentModeBreakdown pmb : data.getPaymentModeBreakdown()) {
+            totalBills += pmb.getBillCount();
+            if ("CASH".equalsIgnoreCase(pmb.getMode())) {
+                cashTotal = cashTotal.add(pmb.getAmount() != null ? pmb.getAmount() : BigDecimal.ZERO);
+                cashBills = pmb.getBillCount();
+            }
+        }
+
+        container.addElement(sectionHeader("CASH BILLS (" + totalBills + " total, " + cashBills + " cash) — \u20B9" + fmtComma(cashTotal)));
+        PdfPTable table = new PdfPTable(new float[]{2.5f, 1f, 2f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "");
+        addHeaderCell(table, "BILLS");
+        addHeaderCell(table, "AMOUNT");
+
+        addCellLeft(table, "CASH", SMALL_BOLD);
+        addCellRight(table, String.valueOf(cashBills), SMALL_BOLD);
+        addCellRight(table, fmtComma(cashTotal), SMALL_BOLD);
+
+        container.addElement(table);
+    }
+
+    public void addEAdvanceSummary(PdfPCell container, ShiftReportPrintData data) {
+        List<String> eTypes = List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER");
+
+        // Group by type: count + sum
+        Map<String, long[]> typeSummary = new LinkedHashMap<>(); // [count, sum_paise]
+        BigDecimal grandTotal = BigDecimal.ZERO;
+        int totalCount = 0;
+
+        for (AdvanceEntryDetail ae : data.getAdvanceEntries()) {
+            if (!eTypes.contains(ae.getType())) continue;
+            BigDecimal amt = ae.getAmount() != null ? ae.getAmount() : BigDecimal.ZERO;
+            typeSummary.merge(ae.getType(), new long[]{1, amt.movePointRight(2).longValue()},
+                    (old, n) -> new long[]{old[0] + n[0], old[1] + n[1]});
+            grandTotal = grandTotal.add(amt);
+            totalCount++;
+        }
+        if (typeSummary.isEmpty()) return;
+
+        container.addElement(sectionHeader("E-ADVANCES (" + totalCount + ") — Rs." + fmtComma(grandTotal)));
+
+        PdfPTable table = new PdfPTable(new float[]{2.5f, 1f, 2f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "TYPE");
+        addHeaderCell(table, "COUNT");
+        addHeaderCell(table, "AMOUNT");
+
+        for (Map.Entry<String, long[]> entry : typeSummary.entrySet()) {
+            addCellLeft(table, getAdvanceLabel(entry.getKey()), SMALL_FONT);
+            addCellRight(table, String.valueOf(entry.getValue()[0]), SMALL_FONT);
+            addCellRight(table, fmtComma(BigDecimal.valueOf(entry.getValue()[1]).movePointLeft(2)), SMALL_FONT);
+        }
+
+        addCellLeft(table, "TOTAL", SMALL_BOLD);
+        addCellRight(table, String.valueOf(totalCount), SMALL_BOLD);
+        addCellRight(table, fmtComma(grandTotal), SMALL_BOLD);
+
+        container.addElement(table);
+    }
+
+    public void addSalesSummary(PdfPCell container, ShiftReportPrintData data) {
+        // Aggregate product sales from cash + credit bill details
+        Map<String, double[]> productSales = new LinkedHashMap<>(); // [cashQty, creditQty, totalAmount]
+
+        for (CashBillDetail cbd : data.getCashBillDetails()) {
+            if (cbd.getProducts() == null || cbd.getProducts().isBlank()) continue;
+            for (String part : cbd.getProducts().split("\\s+")) {
+                String[] kv = part.split(":");
+                if (kv.length == 2) {
+                    String product = kv[0];
+                    double qty = 0;
+                    try { qty = Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
+                    productSales.merge(product, new double[]{qty, 0, cbd.getAmount() != null ? cbd.getAmount().doubleValue() : 0},
+                            (old, n) -> new double[]{old[0] + n[0], old[1], old[2] + n[2]});
+                }
+            }
+        }
+
+        for (CreditBillDetail cbd : data.getCreditBillDetails()) {
+            if (cbd.getProducts() == null || cbd.getProducts().isBlank()) continue;
+            for (String part : cbd.getProducts().split("\\s+")) {
+                String[] kv = part.split(":");
+                if (kv.length == 2) {
+                    String product = kv[0];
+                    double qty = 0;
+                    try { qty = Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
+                    productSales.merge(product, new double[]{0, qty, cbd.getAmount() != null ? cbd.getAmount().doubleValue() : 0},
+                            (old, n) -> new double[]{old[0], old[1] + n[1], old[2] + n[2]});
+                }
+            }
+        }
+
+        if (productSales.isEmpty()) return;
+
+        container.addElement(sectionHeader("SALES SUMMARY"));
+        PdfPTable table = new PdfPTable(new float[]{1.5f, 1f, 1f, 1f, 1.5f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "PRODUCT");
+        addHeaderCell(table, "CASH");
+        addHeaderCell(table, "CREDIT");
+        addHeaderCell(table, "TOTAL");
+        addHeaderCell(table, "AMOUNT");
+
+        double totalCash = 0, totalCredit = 0, totalAll = 0, totalAmt = 0;
+        for (Map.Entry<String, double[]> entry : productSales.entrySet()) {
+            double[] vals = entry.getValue();
+            double total = vals[0] + vals[1];
+            addCellLeft(table, entry.getKey(), SMALL_FONT);
+            addCellRight(table, fmt0(vals[0]), SMALL_FONT);
+            addCellRight(table, fmt0(vals[1]), SMALL_FONT);
+            addCellRight(table, fmt0(total), SMALL_FONT);
+            addCellRight(table, fmtComma(BigDecimal.valueOf(vals[2]).setScale(2, java.math.RoundingMode.HALF_UP)), SMALL_FONT);
+            totalCash += vals[0];
+            totalCredit += vals[1];
+            totalAll += total;
+            totalAmt += vals[2];
+        }
+
+        addCellLeft(table, "TOTAL", SMALL_BOLD);
+        addCellRight(table, fmt0(totalCash), SMALL_BOLD);
+        addCellRight(table, fmt0(totalCredit), SMALL_BOLD);
+        addCellRight(table, fmt0(totalAll), SMALL_BOLD);
+        addCellRight(table, fmtComma(BigDecimal.valueOf(totalAmt).setScale(2, java.math.RoundingMode.HALF_UP)), SMALL_BOLD);
 
         container.addElement(table);
     }

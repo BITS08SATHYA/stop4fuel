@@ -4,8 +4,13 @@ import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
 import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
 import com.stopforfuel.backend.dto.ShiftDTO;
+import com.stopforfuel.backend.dto.UserListDTO;
 import com.stopforfuel.backend.entity.Shift;
+import com.stopforfuel.backend.entity.User;
+import com.stopforfuel.backend.enums.EntityStatus;
+import com.stopforfuel.backend.repository.UserRepository;
 import com.stopforfuel.backend.service.ShiftService;
+import com.stopforfuel.config.SecurityUtils;
 import com.stopforfuel.backend.service.ShiftTestDataSeeder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,11 +27,14 @@ public class ShiftController {
 
     private final ShiftService service;
     private final ShiftTestDataSeeder testDataSeeder;
+    private final UserRepository userRepository;
 
     public ShiftController(ShiftService service,
-                           @Autowired(required = false) ShiftTestDataSeeder testDataSeeder) {
+                           @Autowired(required = false) ShiftTestDataSeeder testDataSeeder,
+                           UserRepository userRepository) {
         this.service = service;
         this.testDataSeeder = testDataSeeder;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -40,6 +48,25 @@ public class ShiftController {
     public ShiftDTO getActive() {
         Shift active = service.getActiveShift();
         return active != null ? ShiftDTO.from(active) : null;
+    }
+
+    @GetMapping("/cashiers")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public List<UserListDTO> getCashiers() {
+        Long scid = SecurityUtils.getScid();
+        List<User> cashiers = userRepository.findByRoleRoleTypeAndScidAndStatus("CASHIER", scid, EntityStatus.ACTIVE);
+        List<User> admins = userRepository.findByRoleRoleTypeAndScidAndStatus("ADMIN", scid, EntityStatus.ACTIVE);
+        List<User> all = new java.util.ArrayList<>(cashiers);
+        all.addAll(admins);
+        return all.stream().map(UserListDTO::from).toList();
+    }
+
+    @PatchMapping("/{id}/attendant")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
+    public ShiftDTO changeAttendant(@PathVariable Long id, @RequestBody java.util.Map<String, Long> body) {
+        Long attendantId = body.get("attendantId");
+        if (attendantId == null) throw new IllegalArgumentException("attendantId is required");
+        return ShiftDTO.from(service.changeAttendant(id, attendantId));
     }
 
     @PostMapping("/open")

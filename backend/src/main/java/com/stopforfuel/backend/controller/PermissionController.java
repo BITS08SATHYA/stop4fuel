@@ -57,4 +57,29 @@ public class PermissionController {
         permissionService.deleteModulePermissions(module);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/clear-cache")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
+    public ResponseEntity<Map<String, String>> clearCache() {
+        permissionService.clearCaches();
+        return ResponseEntity.ok(Map.of("message", "Permission caches cleared"));
+    }
+
+    @PostMapping("/patch-cashier")
+    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
+    public ResponseEntity<Map<String, Object>> patchCashier() {
+        List<String> added = new java.util.ArrayList<>();
+        var codes = List.of("CUSTOMER_VIEW", "VEHICLE_VIEW", "PRODUCT_VIEW", "STATION_VIEW",
+                "DASHBOARD_VIEW", "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
+                "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
+                "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE", "FINANCE_VIEW");
+        for (String code : codes) {
+            try {
+                permissionService.grantPermissionByRoleAndCode("CASHIER", code);
+                added.add(code);
+            } catch (Exception ignored) {}
+        }
+        permissionService.clearCaches();
+        return ResponseEntity.ok(Map.of("patched", added, "message", "CASHIER permissions patched and cache cleared"));
+    }
 }

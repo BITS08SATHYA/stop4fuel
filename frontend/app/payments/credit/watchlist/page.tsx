@@ -14,6 +14,7 @@ import {
     type CreditHealth, type ReconciliationSummary
 } from "@/lib/api/station/customers";
 import Link from "next/link";
+import { showToast } from "@/components/ui/toast";
 
 type RiskFilter = "all" | "HIGH" | "MEDIUM";
 
@@ -48,9 +49,9 @@ export default function WatchlistPage() {
         setScanning(true);
         try {
             const result = await triggerAutoBlockScan();
-            alert(`Scan complete. ${result.blockedCount} customer(s) blocked.`);
+            showToast.error(`Scan complete. ${result.blockedCount} customer(s) blocked.`);
             loadWatchlist();
-        } catch (e: any) { alert(e.message || "Scan failed"); }
+        } catch (e: any) { showToast.error(e.message || "Scan failed"); }
         finally { setScanning(false); }
     };
 

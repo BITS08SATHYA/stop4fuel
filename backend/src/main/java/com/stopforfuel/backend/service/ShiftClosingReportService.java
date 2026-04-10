@@ -77,10 +77,11 @@ public class ShiftClosingReportService {
 
     @Transactional(readOnly = true)
     public List<ShiftClosingReport> getAllReports(String status) {
+        Long scid = SecurityUtils.getScid();
         if (status != null && !status.isEmpty()) {
-            return reportRepository.findByStatusOrderByReportDateDesc(status);
+            return reportRepository.findByStatusAndScidOrderByReportDateDesc(status, scid);
         }
-        return reportRepository.findAllByScid(SecurityUtils.getScid());
+        return reportRepository.findAllByScid(scid);
     }
 
     @Transactional
@@ -272,6 +273,28 @@ public class ShiftClosingReportService {
         return reportRepository.save(report);
     }
 
+    @Transactional
+    public String regeneratePdf(Long shiftId) {
+        ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
+                .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
+        Shift shift = report.getShift();
+
+        ShiftReportPrintData printData = getPrintData(shiftId);
+        byte[] pdfBytes = pdfGenerator.generate(printData, report);
+
+        LocalDateTime shiftStart = shift.getStartTime() != null ? shift.getStartTime() : LocalDateTime.now();
+        Long scid = report.getScid() != null ? report.getScid() : (shift.getScid() != null ? shift.getScid() : 1L);
+        String key = String.format("reports/shift-closing/%d/%d/%02d/%02d/shift-%d.pdf",
+                scid, shiftStart.getYear(), shiftStart.getMonthValue(), shiftStart.getDayOfMonth(),
+                shift.getId());
+
+        s3StorageService.upload(key, pdfBytes, "application/pdf");
+        report.setReportPdfUrl(key);
+        reportRepository.save(report);
+
+        return s3StorageService.getPresignedUrl(key);
+    }
+
     @Transactional(readOnly = true)
     public String getReportPdfUrl(Long shiftId) {
         ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
@@ -447,7 +470,7 @@ public class ShiftClosingReportService {
         salesCalculationService.populateStockData(data, shiftId);
 
         // Delegate financial print data sections
-        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(shiftId);
         financialCalculationService.populateAdvanceEntries(data, shiftId, invoices);
 
         // Add test quantity as advance entry (fuel expense)

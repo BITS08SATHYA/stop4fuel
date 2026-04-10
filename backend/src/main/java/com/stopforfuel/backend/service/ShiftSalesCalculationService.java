@@ -74,7 +74,7 @@ public class ShiftSalesCalculationService {
         int sortOrder = startSortOrder;
 
         // 1a. Cash/Credit bill totals and oil sales from invoices
-        List<InvoiceBill> allInvoices = invoiceBillRepository.findByShiftId(shiftId);
+        List<InvoiceBill> allInvoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(shiftId);
         BigDecimal cashBillTotal = BigDecimal.ZERO;
         BigDecimal creditBillTotal = BigDecimal.ZERO;
 
@@ -366,7 +366,7 @@ public class ShiftSalesCalculationService {
      */
     @Transactional(readOnly = true)
     public void populateBillDetails(ShiftReportPrintData data, Long shiftId) {
-        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(shiftId);
 
         // Cash Bill Details
         List<InvoiceBill> cashBills = invoices.stream()
@@ -456,7 +456,7 @@ public class ShiftSalesCalculationService {
     @Transactional(readOnly = true)
     public void populateStockData(ShiftReportPrintData data, Long shiftId) {
         List<TankInventory> tankInvs = tankInventoryRepository.findByShiftId(shiftId);
-        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftId(shiftId);
+        List<InvoiceBill> invoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(shiftId);
 
         // Stock Summary — only products with sales > 0
         List<ProductInventory> shiftProductInvs = productInventoryRepository.findByShiftId(shiftId);
@@ -465,7 +465,7 @@ public class ShiftSalesCalculationService {
             productInvMap.put(pi.getProduct().getId(), pi);
         }
 
-        List<Product> allProductEntities = productRepository.findByActive(true);
+        List<Product> allProductEntities = productRepository.findByActiveAndScid(true, com.stopforfuel.config.SecurityUtils.getScid());
         for (Product product : allProductEntities) {
             ShiftReportPrintData.StockSummaryRow row = new ShiftReportPrintData.StockSummaryRow();
             row.setProductName(product.getName());

@@ -64,3 +64,33 @@ data class VehicleTypeDto(
     val id: Long,
     val typeName: String?
 )
+
+// --- Product Management ---
+
+data class PriceUpdateRequest(
+    val price: BigDecimal
+)
+
+data class CreatePriceHistoryRequest(
+    val product: ProductIdRef,
+    val price: BigDecimal,
+    val effectiveDate: String
+)
+
+data class ProductIdRef(val id: Long)
+
+// --- Force Unblock ---
+
+data class ForceUnblockRequest(
+    val enabled: Boolean,
+    val byUser: String = "Mobile App"
+)
+
+// --- Vehicle Creation ---
+
+data class CreateVehicleRequest(
+    val vehicleNumber: String,
+    val customer: IdRef,
+    val vehicleType: IdRef? = null,
+    val maxLitersPerMonth: BigDecimal? = null
+)

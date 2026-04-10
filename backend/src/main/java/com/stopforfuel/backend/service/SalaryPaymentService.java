@@ -42,7 +42,8 @@ public class SalaryPaymentService {
 
     @Transactional
     public List<SalaryPayment> processMonthlyPayroll(Integer month, Integer year) {
-        List<Employee> employees = employeeRepository.findByStatus(com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
+        Long scid = com.stopforfuel.config.SecurityUtils.getScid();
+        List<Employee> employees = employeeRepository.findByStatusAndScid(com.stopforfuel.backend.enums.EntityStatus.ACTIVE, scid);
         List<SalaryPayment> payments = new ArrayList<>();
 
         for (Employee emp : employees) {
@@ -57,7 +58,7 @@ public class SalaryPaymentService {
 
             // Calculate advance deductions
             List<OperationalAdvance> pendingAdvances = operationalAdvanceRepository
-                    .findByEmployeeIdAndStatus(emp.getId(), com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
+                    .findByEmployeeIdAndStatusAndScid(emp.getId(), com.stopforfuel.backend.enums.AdvanceStatus.PENDING, scid);
             double advanceDeduction = pendingAdvances.stream()
                     .map(OperationalAdvance::getAmount)
                     .filter(a -> a != null)
@@ -108,7 +109,7 @@ public class SalaryPaymentService {
 
         // Mark pending advances as DEDUCTED
         List<OperationalAdvance> pendingAdvances = operationalAdvanceRepository
-                .findByEmployeeIdAndStatus(payment.getEmployee().getId(), com.stopforfuel.backend.enums.AdvanceStatus.PENDING);
+                .findByEmployeeIdAndStatusAndScid(payment.getEmployee().getId(), com.stopforfuel.backend.enums.AdvanceStatus.PENDING, com.stopforfuel.config.SecurityUtils.getScid());
         for (OperationalAdvance advance : pendingAdvances) {
             advance.setStatus(com.stopforfuel.backend.enums.AdvanceStatus.DEDUCTED);
             operationalAdvanceRepository.save(advance);
