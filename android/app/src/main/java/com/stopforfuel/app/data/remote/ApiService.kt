@@ -1,6 +1,7 @@
 package com.stopforfuel.app.data.remote
 
 import com.stopforfuel.app.data.remote.dto.*
+import okhttp3.MultipartBody
 import retrofit2.http.*
 
 interface ApiService {
@@ -171,6 +172,20 @@ interface ApiService {
 
     @PUT("api/invoices/{id}")
     suspend fun updateInvoice(@Path("id") id: Long, @Body invoice: Map<String, @JvmSuppressWildcards Any?>): InvoiceBillDto
+
+    @Multipart
+    @POST("api/invoices/{id}/upload/{type}")
+    suspend fun uploadInvoiceFile(
+        @Path("id") id: Long,
+        @Path("type") type: String,
+        @Part file: MultipartBody.Part
+    ): InvoiceBillDto
+
+    @GET("api/invoices/{id}/file-url")
+    suspend fun getInvoiceFileUrl(
+        @Path("id") id: Long,
+        @Query("type") type: String
+    ): Map<String, String>
 
     // Statements
     @GET("api/statements")

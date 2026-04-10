@@ -21,4 +21,5 @@ sealed class Routes(val route: String) {
     data object StatementExplorer : Routes("statement_explorer")
     data object StockTransfer : Routes("stock_transfer")
     data object Attendance : Routes("attendance")
+    data object InvoiceUpload : Routes("invoice_upload")
 }
