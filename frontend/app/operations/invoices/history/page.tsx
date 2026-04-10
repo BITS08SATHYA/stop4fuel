@@ -6,8 +6,9 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import {
     Search, Filter, ChevronDown, ChevronRight,
-    Package, RotateCcw, Pencil, Trash2, Plus, X, Save
+    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Printer
 } from "lucide-react";
+import { printInvoice } from "@/lib/invoice-print";
 import { FormErrorBanner } from "@/components/ui/field-error";
 import { StyledSelect } from "@/components/ui/styled-select";
 import { PermissionGate } from "@/components/permission-gate";
@@ -15,8 +16,10 @@ import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
     type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
-    type Product, type Nozzle, type Vehicle, type Customer
+    type Product, type Nozzle, type Vehicle, type Customer,
+    API_BASE_URL
 } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 interface EditLine {
     id?: number;
@@ -41,6 +44,16 @@ export default function InvoiceHistoryPage() {
     const [summaryLoading, setSummaryLoading] = useState(true);
 
     const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
+    const [companyInfo, setCompanyInfo] = useState<{ name: string; address: string; phone: string; gstNo: string; site?: string } | null>(null);
+
+    useEffect(() => {
+        fetchWithAuth(`${API_BASE_URL}/companies`).then(r => r.ok ? r.json() : []).then(data => {
+            if (data.length > 0) {
+                const c = data[0];
+                setCompanyInfo({ name: c.name, address: c.address, phone: c.phone, gstNo: c.gstNo, site: c.site });
+            }
+        }).catch(() => {});
+    }, []);
 
     // Filters — toDate uses end of day so newly created invoices are always visible
     const now = new Date();
@@ -508,6 +521,15 @@ export default function InvoiceHistoryPage() {
                                                 </td>
                                                 <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                                                     <div className="flex items-center justify-center gap-1">
+                                                        {companyInfo && (
+                                                            <button
+                                                                onClick={() => printInvoice(inv, companyInfo)}
+                                                                className="p-1.5 rounded-md text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"
+                                                                title="Print"
+                                                            >
+                                                                <Printer className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                         <PermissionGate permission="INVOICE_MODIFY">
                                                             <button
                                                                 onClick={() => openEdit(inv)}
