@@ -22,6 +22,12 @@ public class CreditMonitoringController {
         return creditMonitoringService.getDashboard();
     }
 
+    @GetMapping("/bubble-map")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public CreditMonitoringService.BubbleMapData getBubbleMap(@RequestParam(defaultValue = "local") String type) {
+        return creditMonitoringService.getBubbleMapData(type);
+    }
+
     @GetMapping("/watchlist")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<CreditMonitoringService.CreditHealth> getWatchlist() {

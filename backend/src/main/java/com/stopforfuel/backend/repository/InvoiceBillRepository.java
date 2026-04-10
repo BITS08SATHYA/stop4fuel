@@ -156,6 +156,13 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus = 'NOT_PAID' AND ib.statement IS NULL")
     BigDecimal sumUnpaidLocalCreditAmount(@Param("customerId") Long customerId);
 
+    // Detect skipped bills: has customer paid any bill newer than their oldest unpaid bill?
+    @Query("SELECT CASE WHEN COUNT(ib) > 0 THEN true ELSE false END FROM InvoiceBill ib " +
+           "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' AND ib.paymentStatus = 'PAID' " +
+           "AND ib.date > (SELECT MIN(u.date) FROM InvoiceBill u WHERE u.customer.id = :customerId " +
+           "AND u.billType = 'CREDIT' AND u.paymentStatus = 'NOT_PAID')")
+    boolean hasSkippedBills(@Param("customerId") Long customerId);
+
     // Check if customer has any unpaid credit bill older than a given date
     @Query("SELECT CASE WHEN COUNT(ib) > 0 THEN true ELSE false END FROM InvoiceBill ib " +
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +
