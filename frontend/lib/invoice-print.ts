@@ -97,7 +97,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 <title>Invoice ${invoice.billNo || ""}</title>
 <style>
     @page {
-        size: 6in 8in;
+        size: 6in 12in;
         margin: 8mm 6mm;
     }
     @media print {
@@ -107,41 +107,41 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
         font-family: 'Courier New', 'Lucida Console', monospace;
-        font-size: 10pt;
-        line-height: 1.35;
+        font-size: 11pt;
+        line-height: 1.4;
         color: #000;
         background: #fff;
-        width: 5.6in;
+        width: 5.5in;
         margin: 0 auto;
     }
     table { width: 100%; border-collapse: collapse; }
     td { vertical-align: top; }
     .center { text-align: center; }
     .bold { font-weight: bold; }
-    .big { font-size: 14pt; font-weight: 900; }
-    .med { font-size: 11pt; font-weight: bold; }
-    .sm { font-size: 8pt; }
-    .xs { font-size: 7pt; color: #555; }
+    .big { font-size: 16pt; font-weight: 900; }
+    .med { font-size: 12pt; font-weight: bold; }
+    .sm { font-size: 9pt; }
+    .xs { font-size: 8pt; color: #555; }
     hr.solid { border: none; border-top: 2px solid #000; margin: 4px 0; }
     hr.dashed { border: none; border-top: 1px dashed #000; margin: 3px 0; }
     .badge {
         display: inline-block;
         border: 2px solid #000;
-        padding: 1px 10px;
-        font-size: 10pt;
+        padding: 2px 12px;
+        font-size: 11pt;
         font-weight: 900;
         letter-spacing: 1px;
     }
     .grand-total {
-        font-size: 16pt;
+        font-size: 20pt;
         font-weight: 900;
         text-align: center;
-        padding: 4px 0;
+        padding: 6px 0;
     }
-    .row-table td:first-child { color: #555; font-size: 9pt; width: 35%; }
+    .row-table td:first-child { color: #555; font-size: 10pt; width: 35%; }
     .row-table td:last-child { text-align: right; font-weight: bold; }
     .items-table th {
-        font-size: 8pt;
+        font-size: 9pt;
         font-weight: bold;
         color: #555;
         border-bottom: 1px solid #000;
