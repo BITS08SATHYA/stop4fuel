@@ -21,6 +21,7 @@ data class FastCashUiState(
     val selectedProduct: ProductDto? = null,
     val selectedNozzle: NozzleDto? = null,
     val amountInput: String = "",
+    val paymentMode: String = "CASH",
     val shiftId: Long? = null,
     val isLoading: Boolean = false,
     val isCreating: Boolean = false,
@@ -99,6 +100,10 @@ class FastCashInvoiceViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(amountInput = amount.toString())
     }
 
+    fun selectPaymentMode(mode: String) {
+        _uiState.value = _uiState.value.copy(paymentMode = mode)
+    }
+
     fun clearAmount() {
         _uiState.value = _uiState.value.copy(amountInput = "", successBillNo = null, error = null)
     }
@@ -119,7 +124,7 @@ class FastCashInvoiceViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isCreating = true, error = null)
             val request = CreateInvoiceRequest(
                 billType = "CASH",
-                paymentMode = "CASH",
+                paymentMode = state.paymentMode,
                 customer = null,
                 vehicle = null,
                 products = listOf(
