@@ -63,9 +63,13 @@ fun OwnerTabletDashboard(
                     Column(
                         Modifier.weight(0.55f).verticalScroll(rememberScrollState()).padding(16.dp)
                     ) {
-                        StatsSection(uiState)
-                        Spacer(Modifier.height(16.dp))
+                        CashierInfoBar(uiState)
+                        Spacer(Modifier.height(8.dp))
                         FuelPricesSection(uiState)
+                        Spacer(Modifier.height(12.dp))
+                        SystemHealthSection(uiState)
+                        Spacer(Modifier.height(16.dp))
+                        StatsSection(uiState)
                     }
                     VerticalDivider(
                         modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp),
@@ -75,8 +79,6 @@ fun OwnerTabletDashboard(
                         Modifier.weight(0.45f).verticalScroll(rememberScrollState()).padding(16.dp)
                     ) {
                         ProductSalesSection(uiState)
-                        Spacer(Modifier.height(16.dp))
-                        SystemHealthSection(uiState)
                     }
                 }
             } else {
@@ -84,13 +86,15 @@ fun OwnerTabletDashboard(
                 Column(
                     Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)
                 ) {
+                    CashierInfoBar(uiState)
+                    Spacer(Modifier.height(8.dp))
+                    FuelPricesSection(uiState)
+                    Spacer(Modifier.height(8.dp))
+                    SystemHealthSection(uiState)
+                    Spacer(Modifier.height(16.dp))
                     StatsSection(uiState)
                     Spacer(Modifier.height(16.dp))
-                    FuelPricesSection(uiState)
-                    Spacer(Modifier.height(16.dp))
                     ProductSalesSection(uiState)
-                    Spacer(Modifier.height(16.dp))
-                    SystemHealthSection(uiState)
                 }
             }
 
@@ -148,22 +152,129 @@ private fun StatsSection(uiState: HomeUiState) {
     }
 }
 
-// ── Fuel prices section ──
+// ── Fuel prices — compact inline chips ──
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FuelPricesSection(uiState: HomeUiState) {
     if (uiState.fuelProducts.isNotEmpty()) {
-        SectionHeader(Icons.Default.LocalOffer, "FUEL PRICES")
-        Spacer(Modifier.height(8.dp))
-        uiState.fuelProducts.forEach { product -> FuelPriceRow(product) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.LocalGasStation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                uiState.fuelProducts.forEach { product ->
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                (product.name ?: "").uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                "${inrFormat.format(product.price ?: 0)}/L",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF00BFA5)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
-// ── System health section ──
+// ── Cashier info bar ──
+@Composable
+private fun CashierInfoBar(uiState: HomeUiState) {
+    val shift = uiState.activeShift
+    if (shift != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFF00BFA5).copy(alpha = 0.12f)) {
+                Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF00BFA5), modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(shift.attendant?.name ?: "—", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5))
+                }
+            }
+            Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)) {
+                Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Shift #${shift.id}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
+// ── System health — compact inline widgets ──
 @Composable
 private fun SystemHealthSection(uiState: HomeUiState) {
-    SectionHeader(Icons.Default.Monitor, "SYSTEM HEALTH")
-    Spacer(Modifier.height(8.dp))
-    HealthAndBillingSection(uiState.backendHealth, uiState.awsBilling)
+    val health = uiState.backendHealth
+    val billing = uiState.awsBilling
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.Monitor, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+
+        // Backend status dot
+        val backendUp = health?.status == "UP"
+        Surface(shape = RoundedCornerShape(8.dp), color = if (backendUp) Color(0xFF4CAF50).copy(alpha = 0.12f) else Color(0xFFF44336).copy(alpha = 0.12f)) {
+            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Canvas(modifier = Modifier.size(8.dp)) { drawCircle(color = if (backendUp) Color(0xFF4CAF50) else Color(0xFFF44336)) }
+                Spacer(Modifier.width(4.dp))
+                Text("API", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (backendUp) Color(0xFF4CAF50) else Color(0xFFF44336))
+            }
+        }
+
+        // DB status dot
+        val dbUp = health?.database == "UP"
+        Surface(shape = RoundedCornerShape(8.dp), color = if (dbUp) Color(0xFF4CAF50).copy(alpha = 0.12f) else Color(0xFFF44336).copy(alpha = 0.12f)) {
+            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Canvas(modifier = Modifier.size(8.dp)) { drawCircle(color = if (dbUp) Color(0xFF4CAF50) else Color(0xFFF44336)) }
+                Spacer(Modifier.width(4.dp))
+                Text("DB", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (dbUp) Color(0xFF4CAF50) else Color(0xFFF44336))
+            }
+        }
+
+        // Frontend always up if we're here
+        Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF4CAF50).copy(alpha = 0.12f)) {
+            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Canvas(modifier = Modifier.size(8.dp)) { drawCircle(color = Color(0xFF4CAF50)) }
+                Spacer(Modifier.width(4.dp))
+                Text("Web", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        // AWS MTD cost — tiny widget
+        if (billing?.available == true && billing.monthToDateCost != null) {
+            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("AWS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(4.dp))
+                    Text("$${String.format("%.0f", billing.monthToDateCost)}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5))
+                }
+            }
+        }
+    }
 }
 
 // ── Section header with icon ──
@@ -427,46 +538,7 @@ private fun TankStockBar(tank: TankStatusDto) {
     }
 }
 
-// ── Fuel price row (clean card style) ──
-@Composable
-private fun FuelPriceRow(product: ProductDto) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 3.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.LocalGasStation,
-                    contentDescription = null,
-                    tint = Color(0xFF00BFA5),
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    product.name ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Text(
-                "${inrFormat.format(product.price ?: 0)}/L",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF00BFA5)
-            )
-        }
-    }
-}
+// (FuelPriceRow removed — replaced by compact inline chips in FuelPricesSection)
 
 // ── Health + AWS Billing section ──
 @Composable

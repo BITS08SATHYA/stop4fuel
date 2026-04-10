@@ -149,9 +149,9 @@ public class DashboardService {
         }).collect(Collectors.toList());
         stats.setProductSales(productSales);
 
-        // --- Last closed shift product sales ---
-        shiftRepository.findTopByStatusAndScidOrderByIdDesc(
-                com.stopforfuel.backend.enums.ShiftStatus.CLOSED, scid
+        // --- Last closed/reconciled shift product sales ---
+        shiftRepository.findTopByStatusInAndScidOrderByIdDesc(
+                java.util.List.of(com.stopforfuel.backend.enums.ShiftStatus.CLOSED, com.stopforfuel.backend.enums.ShiftStatus.RECONCILED), scid
         ).ifPresent(lastShift -> {
             stats.setLastShiftId(lastShift.getId());
             List<Object[]> lastShiftData = invoiceBillRepository.getProductSalesByShift(lastShift.getId());
