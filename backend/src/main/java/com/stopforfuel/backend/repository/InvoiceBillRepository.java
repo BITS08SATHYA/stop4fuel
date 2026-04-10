@@ -132,6 +132,12 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT'")
     BigDecimal sumAllCreditBillsByCustomer(@Param("customerId") Long customerId);
 
+    // Sum of unbilled credit purchases (not yet added to a statement, still unpaid)
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +
+           "AND ib.statement IS NULL AND ib.paymentStatus = 'NOT_PAID'")
+    BigDecimal sumUnbilledCreditByCustomer(@Param("customerId") Long customerId);
+
     // Check if customer has any unpaid credit bill older than a given date
     @Query("SELECT CASE WHEN COUNT(ib) > 0 THEN true ELSE false END FROM InvoiceBill ib " +
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +

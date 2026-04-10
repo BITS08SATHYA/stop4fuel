@@ -32,6 +32,7 @@ interface CustomerWithCredit extends Customer {
     creditLimitLiters?: number | null;
     consumedLiters?: number;
     ledgerBalance?: number;
+    unbilledCredit?: number;
     status?: string;
     phoneNumbers?: string;
     forceUnblocked?: boolean;
@@ -355,14 +356,14 @@ export default function InvoicesPage() {
 
         // Check customer credit limits (CREDIT invoices only) — skip if force unblocked
         if (billType === "CREDIT" && selectedCustomer && !selectedCustomer.forceUnblocked) {
-            // Amount-based limit
+            // Amount-based limit — check against unbilled credit (current period), not total balance
             if (selectedCustomer.creditLimitAmount && Number(selectedCustomer.creditLimitAmount) > 0) {
-                const ledgerBalance = (selectedCustomer.ledgerBalance ?? 0);
-                const projectedBalance = ledgerBalance + totalInvoiceAmount;
-                if (projectedBalance > Number(selectedCustomer.creditLimitAmount)) {
-                    const remaining = Math.max(0, Number(selectedCustomer.creditLimitAmount) - ledgerBalance);
+                const unbilledCredit = (selectedCustomer.unbilledCredit ?? 0);
+                const projectedUnbilled = unbilledCredit + totalInvoiceAmount;
+                if (projectedUnbilled > Number(selectedCustomer.creditLimitAmount)) {
+                    const remaining = Math.max(0, Number(selectedCustomer.creditLimitAmount) - unbilledCredit);
                     errors.push(
-                        `Customer credit limit (₹) would be exceeded. Limit: ₹${Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")}, Balance: ₹${ledgerBalance.toLocaleString("en-IN")}, This invoice: ₹${totalInvoiceAmount.toLocaleString("en-IN")}, Remaining: ₹${remaining.toLocaleString("en-IN")}.`
+                        `Customer credit limit (₹) would be exceeded. Limit: ₹${Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")}, Unbilled: ₹${unbilledCredit.toLocaleString("en-IN")}, This invoice: ₹${totalInvoiceAmount.toLocaleString("en-IN")}, Remaining: ₹${remaining.toLocaleString("en-IN")}.`
                     );
                 }
             }
@@ -654,7 +655,7 @@ export default function InvoicesPage() {
                             {((selectedCustomer.creditLimitAmount ?? 0) > 0 || (selectedCustomer.creditLimitLiters ?? 0) > 0) && (
                                 <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                                     {(selectedCustomer.creditLimitAmount ?? 0) > 0 && (
-                                        <p>Credit: ₹{Number(selectedCustomer.ledgerBalance || 0).toLocaleString("en-IN")} / ₹{Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")} used</p>
+                                        <p>Unbilled: ₹{Number(selectedCustomer.unbilledCredit || 0).toLocaleString("en-IN")} / ₹{Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")} limit</p>
                                     )}
                                     {(selectedCustomer.creditLimitLiters ?? 0) > 0 && (
                                         <p>Liters: {selectedCustomer.consumedLiters || 0} / {Number(selectedCustomer.creditLimitLiters)} L used</p>
