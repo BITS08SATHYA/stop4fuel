@@ -273,6 +273,28 @@ public class ShiftClosingReportService {
         return reportRepository.save(report);
     }
 
+    @Transactional
+    public String regeneratePdf(Long shiftId) {
+        ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
+                .orElseThrow(() -> new RuntimeException("Report not found for shift: " + shiftId));
+        Shift shift = report.getShift();
+
+        ShiftReportPrintData printData = getPrintData(shiftId);
+        byte[] pdfBytes = pdfGenerator.generate(printData, report);
+
+        LocalDateTime shiftStart = shift.getStartTime() != null ? shift.getStartTime() : LocalDateTime.now();
+        Long scid = report.getScid() != null ? report.getScid() : (shift.getScid() != null ? shift.getScid() : 1L);
+        String key = String.format("reports/shift-closing/%d/%d/%02d/%02d/shift-%d.pdf",
+                scid, shiftStart.getYear(), shiftStart.getMonthValue(), shiftStart.getDayOfMonth(),
+                shift.getId());
+
+        s3StorageService.upload(key, pdfBytes, "application/pdf");
+        report.setReportPdfUrl(key);
+        reportRepository.save(report);
+
+        return s3StorageService.getPresignedUrl(key);
+    }
+
     @Transactional(readOnly = true)
     public String getReportPdfUrl(Long shiftId) {
         ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
