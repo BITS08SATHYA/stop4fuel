@@ -16,15 +16,8 @@ import static com.stopforfuel.backend.service.ShiftReportPdfUtils.*;
 /**
  * Orchestrates shift report PDF generation by delegating to focused section generators.
  *
- * <p>Section generators:
- * <ul>
- *   <li>{@link ShiftReportHeaderSection} — Company header, page headers, footer</li>
- *   <li>{@link ShiftReportSalesSection} — Meterwise, gross/net sales, tankwise, sales diff, cash bills, stock ref</li>
- *   <li>{@link ShiftReportFinancialSection} — Revenue, advances, turnover box, income/credit bills, advance details</li>
- *   <li>{@link ShiftReportInventorySection} — Product inventory and stock position (page 3)</li>
- * </ul>
- *
- * <p>Shared PDF drawing utilities live in {@link ShiftReportPdfUtils}.
+ * <p>Page 1: Operations &amp; Financial Summary (sales left, financials+advances+inventory right)
+ * <p>Page 2: Invoice &amp; Payment Details (cash+credit bills left, income bills right)
  */
 @Component
 public class ShiftReportPdfGenerator {
@@ -42,15 +35,15 @@ public class ShiftReportPdfGenerator {
             com.lowagie.text.pdf.PdfWriter.getInstance(document, baos);
             document.open();
 
-            // ===== PAGE 1: Two-column layout =====
+            // ===== PAGE 1: Operations & Financial Summary =====
             headerSection.addPageOneHeader(document, data);
             addPageOneBody(document, data, report);
             headerSection.addPageOneFooter(document, data);
 
-            // ===== PAGE 2: Advance details (left) + Expenses/Inventory (right) =====
+            // ===== PAGE 2: Invoice & Payment Details =====
             document.newPage();
             headerSection.addPageTwoHeader(document, data);
-            financialSection.addPageTwoBody(document, data, report, inventorySection);
+            addPageTwoInvoiceBody(document, data);
 
             // Page 2 footer
             PdfPTable pg2Footer = new PdfPTable(2);
@@ -76,12 +69,11 @@ public class ShiftReportPdfGenerator {
     }
 
     private void addPageOneBody(Document doc, ShiftReportPrintData data, ShiftClosingReport report) throws DocumentException {
-        // Two-column outer table
         PdfPTable outer = new PdfPTable(2);
         outer.setWidthPercentage(100);
         outer.setWidths(new float[]{50, 50});
 
-        // LEFT COLUMN
+        // LEFT COLUMN — Sales & Stock
         PdfPCell leftCell = new PdfPCell();
         leftCell.setBorder(Rectangle.NO_BORDER);
         leftCell.setPadding(0);
@@ -96,7 +88,7 @@ public class ShiftReportPdfGenerator {
 
         outer.addCell(leftCell);
 
-        // RIGHT COLUMN
+        // RIGHT COLUMN — Financials, Advances, Inventory
         PdfPCell rightCell = new PdfPCell();
         rightCell.setBorder(Rectangle.NO_BORDER);
         rightCell.setPadding(0);
@@ -105,8 +97,38 @@ public class ShiftReportPdfGenerator {
         financialSection.addRevenue(rightCell, data, report);
         financialSection.addAdvances(rightCell, data, report);
         financialSection.addTurnoverBalanceBox(rightCell, report);
+        financialSection.addEAdvanceDetailsCompact(rightCell, data);
+        financialSection.addOperationalAdvanceDetailsCompact(rightCell, data);
+        inventorySection.addProductInventory(rightCell, data);
+
+        outer.addCell(rightCell);
+
+        doc.add(outer);
+    }
+
+    private void addPageTwoInvoiceBody(Document doc, ShiftReportPrintData data) throws DocumentException {
+        PdfPTable outer = new PdfPTable(2);
+        outer.setWidthPercentage(100);
+        outer.setWidths(new float[]{55, 45});
+
+        // LEFT COLUMN — Cash Bills + Credit Bills
+        PdfPCell leftCell = new PdfPCell();
+        leftCell.setBorder(Rectangle.NO_BORDER);
+        leftCell.setPadding(0);
+        leftCell.setPaddingRight(3);
+
+        financialSection.addCashBillsList(leftCell, data);
+        financialSection.addCreditBillsSummary(leftCell, data);
+
+        outer.addCell(leftCell);
+
+        // RIGHT COLUMN — Income Bills (Payments Received)
+        PdfPCell rightCell = new PdfPCell();
+        rightCell.setBorder(Rectangle.NO_BORDER);
+        rightCell.setPadding(0);
+        rightCell.setPaddingLeft(3);
+
         financialSection.addIncomeBills(rightCell, data);
-        financialSection.addCreditBillsSummary(rightCell, data);
 
         outer.addCell(rightCell);
 

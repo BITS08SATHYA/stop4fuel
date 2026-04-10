@@ -110,7 +110,7 @@ public class ShiftReportHeaderSection {
 
     public void addPageTwoHeader(Document doc, ShiftReportPrintData data) throws DocumentException {
         String shiftDate = data.getShiftStart() != null ? data.getShiftStart().format(DATE_FMT) : "-";
-        String text = data.getCompanyName().toUpperCase() + " \u2014 " + shiftDate + " Shift Report (Page 2) \u2014 CASHIER: " + data.getEmployeeName();
+        String text = data.getCompanyName().toUpperCase() + " \u2014 " + shiftDate + " Shift Report — Invoice & Payment Details \u2014 CASHIER: " + data.getEmployeeName();
 
         PdfPTable hdr = new PdfPTable(1);
         hdr.setWidthPercentage(100);
