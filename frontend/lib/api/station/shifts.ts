@@ -266,6 +266,9 @@ export const getShiftReportPrintData = (shiftId: number): Promise<ShiftReportPri
 export const getShiftReportPdfUrl = (shiftId: number): Promise<string> =>
     fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}/pdf-url`).then(handleResponse).then((data: { url: string }) => data.url);
 
+export const regenerateShiftReportPdf = (shiftId: number): Promise<string> =>
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${shiftId}/regenerate-pdf`, { method: 'POST' }).then(handleResponse).then((data: { url: string }) => data.url);
+
 export const recordCashInflowRepayment = (inflowId: number, repayment: Partial<CashInflowRepayment>): Promise<CashInflowRepayment> =>
     fetchWithAuth(`${API_BASE_URL}/cash-inflows/${inflowId}/repay`, {
         method: 'POST',
