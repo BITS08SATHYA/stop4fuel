@@ -24,6 +24,7 @@ import com.stopforfuel.app.ui.explorer.StatementExplorerScreen
 import com.stopforfuel.app.ui.stocktransfer.StockTransferScreen
 import com.stopforfuel.app.ui.attendance.AttendanceScreen
 import com.stopforfuel.app.ui.invoiceupload.InvoiceUploadScreen
+import com.stopforfuel.app.ui.payment.RecordPaymentScreen
 
 @Composable
 fun AppNavGraph() {
@@ -172,13 +173,19 @@ fun AppNavGraph() {
 
         composable(Routes.InvoiceBillExplorer.route) {
             InvoiceBillExplorerScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onRecordPayment = { billId ->
+                    navController.navigate(Routes.RecordPayment.forBill(billId))
+                }
             )
         }
 
         composable(Routes.StatementExplorer.route) {
             StatementExplorerScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onRecordPayment = { statementId ->
+                    navController.navigate(Routes.RecordPayment.forStatement(statementId))
+                }
             )
         }
 
@@ -197,6 +204,19 @@ fun AppNavGraph() {
         composable(Routes.InvoiceUpload.route) {
             InvoiceUploadScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.RecordPayment.route,
+            arguments = listOf(
+                navArgument("paymentTarget") { type = NavType.StringType },
+                navArgument("targetId") { type = NavType.LongType }
+            )
+        ) {
+            RecordPaymentScreen(
+                onBack = { navController.popBackStack() },
+                onPaymentRecorded = { navController.popBackStack() }
             )
         }
     }

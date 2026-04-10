@@ -26,6 +26,7 @@ private val inrFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
 @Composable
 fun StatementExplorerScreen(
     onBack: () -> Unit,
+    onRecordPayment: (Long) -> Unit = {},
     viewModel: StatementExplorerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -116,7 +117,7 @@ fun StatementExplorerScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(uiState.statements, key = { it.id }) { statement ->
-                        StatementCard(statement)
+                        StatementCard(statement, onRecordPayment = onRecordPayment)
                     }
                     if (uiState.isLoadingMore) {
                         item {
@@ -132,7 +133,7 @@ fun StatementExplorerScreen(
 }
 
 @Composable
-private fun StatementCard(statement: StatementDto) {
+private fun StatementCard(statement: StatementDto, onRecordPayment: (Long) -> Unit = {}) {
     val isPaid = statement.status == "PAID"
     val statusColor = when (statement.status) {
         "PAID" -> Color(0xFF4CAF50)
@@ -203,11 +204,28 @@ private fun StatementCard(statement: StatementDto) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Text(
-                    "${statement.fromDate?.take(10) ?: ""} - ${statement.toDate?.take(10) ?: ""}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "${statement.fromDate?.take(10) ?: ""} - ${statement.toDate?.take(10) ?: ""}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (!isPaid) {
+                        FilledTonalIconButton(
+                            onClick = { onRecordPayment(statement.id) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Payment,
+                                contentDescription = "Record Payment",
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
