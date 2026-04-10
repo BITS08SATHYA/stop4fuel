@@ -469,6 +469,94 @@ public class CreditMonitoringService {
         return dashboard;
     }
 
+    // ─── Bubble Map ────────────────────────────────────────────────
+
+    private static final int[][] BAND_RANGES = {{0,7},{8,14},{15,30},{31,60},{61,90},{91,99999}};
+    private static final String[] BAND_LABELS = {"0–7 days","8–14 days","15–30 days","31–60 days","61–90 days","90+ days"};
+    private static final String[] BAND_COLORS = {"#10B981","#F59E0B","#8B5CF6","#EC4899","#EF4444","#DC2626"};
+
+    @Transactional(readOnly = true)
+    public BubbleMapData getBubbleMapData(String type) {
+        Long scid = SecurityUtils.getScid();
+        List<Customer> allCustomers = customerRepository.findAllByScid(scid);
+
+        // Initialize bands
+        List<BubbleMapBand> bands = new ArrayList<>();
+        for (int i = 0; i < BAND_RANGES.length; i++) {
+            BubbleMapBand band = new BubbleMapBand();
+            band.setLabel(BAND_LABELS[i]);
+            band.setMin(BAND_RANGES[i][0]);
+            band.setMax(BAND_RANGES[i][1]);
+            band.setColor(BAND_COLORS[i]);
+            band.setCustomers(new ArrayList<>());
+            bands.add(band);
+        }
+
+        int totalCustomers = 0;
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        for (Customer c : allCustomers) {
+            if (c.getCreditLimitAmount() == null || c.getCreditLimitAmount().compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            boolean isStatement = c.getStatementFrequency() != null && !c.getStatementFrequency().isBlank();
+
+            // Filter by type
+            if ("local".equals(type) && isStatement) continue;
+            if ("statement".equals(type) && !isStatement) continue;
+
+            long daysOverdue;
+            long unpaidCount;
+            BigDecimal unpaidAmount;
+
+            if (isStatement) {
+                java.time.LocalDate oldest = statementRepository.findOldestUnpaidStatementDate(c.getId());
+                if (oldest == null) continue;
+                daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(oldest, java.time.LocalDate.now());
+                unpaidCount = statementRepository.countUnpaidStatements(c.getId());
+                unpaidAmount = statementRepository.sumUnpaidStatementBalance(c.getId());
+            } else {
+                LocalDateTime oldest = invoiceBillRepository.findOldestUnpaidLocalBillDate(c.getId());
+                if (oldest == null) continue;
+                daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(oldest.toLocalDate(), java.time.LocalDate.now());
+                unpaidCount = invoiceBillRepository.countUnpaidLocalCreditBills(c.getId());
+                unpaidAmount = invoiceBillRepository.sumUnpaidLocalCreditAmount(c.getId());
+            }
+
+            if (unpaidCount == 0) continue;
+
+            boolean skipped = false;
+            try { skipped = invoiceBillRepository.hasSkippedBills(c.getId()); } catch (Exception ignored) {}
+
+            BubbleCustomer bc = new BubbleCustomer();
+            bc.setCustomerId(c.getId());
+            bc.setCustomerName(c.getName());
+            bc.setDaysOverdue(daysOverdue);
+            bc.setUnpaidAmount(unpaidAmount);
+            bc.setUnpaidCount(unpaidCount);
+            bc.setRepaymentDays(c.getRepaymentDays());
+            bc.setStatus(c.getStatus() != null ? c.getStatus().name() : "ACTIVE");
+            bc.setHasSkippedBills(skipped);
+            bc.setGroupName(c.getGroup() != null ? c.getGroup().getGroupName() : null);
+
+            // Place into correct band
+            for (BubbleMapBand band : bands) {
+                if (daysOverdue >= band.getMin() && daysOverdue <= band.getMax()) {
+                    band.getCustomers().add(bc);
+                    break;
+                }
+            }
+
+            totalCustomers++;
+            totalAmount = totalAmount.add(unpaidAmount);
+        }
+
+        BubbleMapData data = new BubbleMapData();
+        data.setBands(bands);
+        data.setTotalCustomers(totalCustomers);
+        data.setTotalOverdueAmount(totalAmount);
+        return data;
+    }
+
     // ─── DTOs ─────────────────────────────────────────────────────
 
     @Getter @Setter
@@ -516,6 +604,35 @@ public class CreditMonitoringService {
         private String performedByName;
         private String previousStatus;
         private LocalDateTime createdAt;
+    }
+
+    @Getter @Setter
+    public static class BubbleMapData {
+        private List<BubbleMapBand> bands = new ArrayList<>();
+        private int totalCustomers;
+        private BigDecimal totalOverdueAmount = BigDecimal.ZERO;
+    }
+
+    @Getter @Setter
+    public static class BubbleMapBand {
+        private String label;
+        private int min;
+        private int max;
+        private String color;
+        private List<BubbleCustomer> customers = new ArrayList<>();
+    }
+
+    @Getter @Setter
+    public static class BubbleCustomer {
+        private Long customerId;
+        private String customerName;
+        private long daysOverdue;
+        private BigDecimal unpaidAmount;
+        private long unpaidCount;
+        private Integer repaymentDays;
+        private String status;
+        private boolean hasSkippedBills;
+        private String groupName;
     }
 
     @Getter @Setter
