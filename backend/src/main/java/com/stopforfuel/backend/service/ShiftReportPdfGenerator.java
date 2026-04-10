@@ -97,7 +97,6 @@ public class ShiftReportPdfGenerator {
         financialSection.addRevenue(rightCell, data, report);
         financialSection.addAdvances(rightCell, data, report);
         financialSection.addTurnoverBalanceBox(rightCell, report);
-        financialSection.addEAdvanceDetailsCompact(rightCell, data);
         financialSection.addOperationalAdvanceDetailsCompact(rightCell, data);
         inventorySection.addProductInventory(rightCell, data);
 
@@ -109,26 +108,28 @@ public class ShiftReportPdfGenerator {
     private void addPageTwoInvoiceBody(Document doc, ShiftReportPrintData data) throws DocumentException {
         PdfPTable outer = new PdfPTable(2);
         outer.setWidthPercentage(100);
-        outer.setWidths(new float[]{55, 45});
+        outer.setWidths(new float[]{45, 55});
 
-        // LEFT COLUMN — Cash Bills + Credit Bills
+        // LEFT COLUMN — Summaries + Payments
         PdfPCell leftCell = new PdfPCell();
         leftCell.setBorder(Rectangle.NO_BORDER);
         leftCell.setPadding(0);
         leftCell.setPaddingRight(3);
 
-        financialSection.addCashBillsList(leftCell, data);
-        financialSection.addCreditBillsSummary(leftCell, data);
+        financialSection.addCashBillsSummary(leftCell, data);
+        financialSection.addEAdvanceSummary(leftCell, data);
+        financialSection.addSalesSummary(leftCell, data);
+        financialSection.addIncomeBills(leftCell, data);
 
         outer.addCell(leftCell);
 
-        // RIGHT COLUMN — Income Bills (Payments Received)
+        // RIGHT COLUMN — Credit Bills (dedicated, full list)
         PdfPCell rightCell = new PdfPCell();
         rightCell.setBorder(Rectangle.NO_BORDER);
         rightCell.setPadding(0);
         rightCell.setPaddingLeft(3);
 
-        financialSection.addIncomeBills(rightCell, data);
+        financialSection.addCreditBillsSummary(rightCell, data);
 
         outer.addCell(rightCell);
 
