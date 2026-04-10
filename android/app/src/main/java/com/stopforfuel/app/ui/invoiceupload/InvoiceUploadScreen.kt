@@ -177,7 +177,7 @@ fun InvoiceUploadScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null,
+                            Icons.Default.Receipt, contentDescription = null,
                             modifier = Modifier.size(48.dp),
                             tint = MaterialTheme.colorScheme.outline
                         )
@@ -347,9 +347,11 @@ private fun InvoiceUploadCard(
             ) {
                 // Status chips
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    UploadStatusChip("Bill", hasBillPic)
                     if (isCreditBill) {
-                        UploadStatusChip("Indent", hasIndentPic)
+                        UploadStatusChip("Bill", hasBillPic, mandatory = true)
+                        UploadStatusChip("Indent", hasIndentPic, mandatory = false)
+                    } else {
+                        UploadStatusChip("Bill", hasBillPic, mandatory = false)
                     }
                 }
 
@@ -367,11 +369,13 @@ private fun InvoiceUploadCard(
                                 if (hasBillPic) Icons.Default.CameraAlt else Icons.Default.AddAPhoto,
                                 contentDescription = "Capture Bill Photo",
                                 modifier = Modifier.size(18.dp),
-                                tint = if (hasBillPic) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
+                                tint = if (hasBillPic) Color(0xFF4CAF50)
+                                    else if (isCreditBill) Color(0xFFD32F2F)
+                                    else MaterialTheme.colorScheme.primary
                             )
                         }
 
-                        // Indent photo button (credit only)
+                        // Indent photo button (credit only, optional)
                         if (isCreditBill) {
                             FilledTonalIconButton(
                                 onClick = { onCapturePhoto("indent-pic") },
@@ -393,11 +397,14 @@ private fun InvoiceUploadCard(
 }
 
 @Composable
-private fun UploadStatusChip(label: String, uploaded: Boolean) {
+private fun UploadStatusChip(label: String, uploaded: Boolean, mandatory: Boolean = false) {
+    val pendingColor = if (mandatory) Color(0xFFD32F2F) else MaterialTheme.colorScheme.outline
+    val pendingBg = if (mandatory) Color(0xFFD32F2F).copy(alpha = 0.1f)
+        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (uploaded) Color(0xFF4CAF50).copy(alpha = 0.12f)
-        else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+        color = if (uploaded) Color(0xFF4CAF50).copy(alpha = 0.12f) else pendingBg
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -407,14 +414,16 @@ private fun UploadStatusChip(label: String, uploaded: Boolean) {
                 if (uploaded) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                 contentDescription = null,
                 modifier = Modifier.size(12.dp),
-                tint = if (uploaded) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                tint = if (uploaded) Color(0xFF4CAF50) else pendingColor
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                label,
+                if (uploaded) label
+                else if (mandatory) "$label *"
+                else label,
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 10.sp,
-                color = if (uploaded) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                color = if (uploaded) Color(0xFF4CAF50) else pendingColor
             )
         }
     }

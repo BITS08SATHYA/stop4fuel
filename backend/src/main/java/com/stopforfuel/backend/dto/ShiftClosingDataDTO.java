@@ -31,6 +31,9 @@ public class ShiftClosingDataDTO {
     private BigDecimal incentiveTotal;
     private BigDecimal inflowRepaymentTotal;
 
+    // Credit bill photo upload warnings
+    private long creditBillsMissingPhoto;
+
     @Getter
     @Setter
     public static class NozzleReadingRow {
