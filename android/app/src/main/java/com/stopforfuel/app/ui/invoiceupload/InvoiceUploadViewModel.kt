@@ -15,13 +15,20 @@ import javax.inject.Inject
 
 data class InvoiceUploadUiState(
     val isLoading: Boolean = true,
-    val invoices: List<InvoiceBillDto> = emptyList(),
+    val allInvoices: List<InvoiceBillDto> = emptyList(),
     val selectedInvoice: InvoiceBillDto? = null,
     val isUploading: Boolean = false,
     val uploadSuccess: String? = null,
     val error: String? = null,
-    val shiftId: Long? = null
-)
+    val shiftId: Long? = null,
+    val showCashBills: Boolean = false
+) {
+    val invoices: List<InvoiceBillDto>
+        get() = if (showCashBills) allInvoices else allInvoices.filter { it.billType == "CREDIT" }
+
+    val creditCount: Int get() = allInvoices.count { it.billType == "CREDIT" }
+    val cashCount: Int get() = allInvoices.count { it.billType != "CREDIT" }
+}
 
 @HiltViewModel
 class InvoiceUploadViewModel @Inject constructor(
@@ -52,7 +59,7 @@ class InvoiceUploadViewModel @Inject constructor(
                     compareByDescending<InvoiceBillDto> { it.billType == "CREDIT" }
                         .thenByDescending { it.id }
                 )
-                _uiState.value = _uiState.value.copy(isLoading = false, invoices = sorted)
+                _uiState.value = _uiState.value.copy(isLoading = false, allInvoices = sorted)
             }.onFailure { e ->
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
@@ -74,13 +81,13 @@ class InvoiceUploadViewModel @Inject constructor(
             val result = invoiceRepository.uploadInvoiceFile(invoice.id, type, file)
             result.onSuccess { updated ->
                 // Update the invoice in the list
-                val updatedList = _uiState.value.invoices.map {
+                val updatedList = _uiState.value.allInvoices.map {
                     if (it.id == updated.id) updated else it
                 }
                 _uiState.value = _uiState.value.copy(
                     isUploading = false,
                     uploadSuccess = "Uploaded successfully",
-                    invoices = updatedList,
+                    allInvoices = updatedList,
                     selectedInvoice = updated
                 )
             }.onFailure { e ->
@@ -90,6 +97,10 @@ class InvoiceUploadViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun toggleShowCashBills() {
+        _uiState.value = _uiState.value.copy(showCashBills = !_uiState.value.showCashBills)
     }
 
     fun clearMessages() {

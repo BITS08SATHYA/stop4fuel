@@ -116,7 +116,7 @@ fun InvoiceUploadScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Shift info
+            // Shift info + filter toggle
             if (uiState.shiftId != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -139,9 +139,31 @@ fun InvoiceUploadScreen(
                         )
                         Spacer(Modifier.weight(1f))
                         Text(
-                            "${uiState.invoices.size} bills",
+                            "${uiState.creditCount} credit",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                // Show cash bills toggle
+                if (uiState.cashCount > 0) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Show cash bills (${uiState.cashCount})",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Switch(
+                            checked = uiState.showCashBills,
+                            onCheckedChange = { viewModel.toggleShowCashBills() },
+                            modifier = Modifier.height(24.dp)
                         )
                     }
                 }
@@ -155,12 +177,16 @@ fun InvoiceUploadScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            Icons.Default.ReceiptLong, contentDescription = null,
+                            Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null,
                             modifier = Modifier.size(48.dp),
                             tint = MaterialTheme.colorScheme.outline
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text("No invoices in current shift", color = MaterialTheme.colorScheme.outline)
+                        Text(
+                            if (uiState.showCashBills) "No invoices in current shift"
+                            else "No credit invoices in current shift",
+                            color = MaterialTheme.colorScheme.outline
+                        )
                     }
                 }
             } else {
