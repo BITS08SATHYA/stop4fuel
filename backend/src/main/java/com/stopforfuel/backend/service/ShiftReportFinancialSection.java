@@ -401,68 +401,145 @@ public class ShiftReportFinancialSection {
         container.addElement(table);
     }
 
-    public void addCashBillsList(PdfPCell container, ShiftReportPrintData data) {
-        if (data.getCashBillDetails().isEmpty()) return;
+    public void addCashBillsSummary(PdfPCell container, ShiftReportPrintData data) {
+        if (data.getPaymentModeBreakdown().isEmpty() && data.getCashBillDetails().isEmpty()) return;
 
         BigDecimal cashTotal = BigDecimal.ZERO;
-        for (CashBillDetail cbd : data.getCashBillDetails()) {
-            cashTotal = cashTotal.add(cbd.getAmount() != null ? cbd.getAmount() : BigDecimal.ZERO);
+        int totalBills = 0;
+        for (PaymentModeBreakdown pmb : data.getPaymentModeBreakdown()) {
+            cashTotal = cashTotal.add(pmb.getAmount() != null ? pmb.getAmount() : BigDecimal.ZERO);
+            totalBills += pmb.getBillCount();
         }
 
-        container.addElement(sectionHeader("CASH BILLS (" + data.getCashBillDetails().size() + ") — \u20B9" + fmtComma(cashTotal)));
-        PdfPTable table = new PdfPTable(new float[]{0.4f, 1.8f, 1f, 1f, 0.8f, 0.8f, 1.2f});
+        container.addElement(sectionHeader("CASH BILLS (" + totalBills + ") — \u20B9" + fmtComma(cashTotal)));
+        PdfPTable table = new PdfPTable(new float[]{2.5f, 1f, 2f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
 
-        addHeaderCell(table, "#");
-        addHeaderCell(table, "CUSTOMER / VEHICLE");
-        addHeaderCell(table, "BILL");
         addHeaderCell(table, "MODE");
-        addHeaderCell(table, "PROD");
-        addHeaderCell(table, "QTY");
-        addHeaderCell(table, "AMT");
+        addHeaderCell(table, "BILLS");
+        addHeaderCell(table, "AMOUNT");
 
-        int idx = 1;
-        double totalQty = 0;
-        for (CashBillDetail cbd : data.getCashBillDetails()) {
-            addCellRight(table, String.valueOf(idx++), SMALL_FONT);
-            String customerVehicle = "";
-            if (cbd.getDriverName() != null && !cbd.getDriverName().isBlank()) {
-                customerVehicle = cbd.getDriverName();
-            }
-            if (cbd.getVehicleNo() != null && !cbd.getVehicleNo().isBlank()) {
-                if (!customerVehicle.isEmpty()) customerVehicle += "\n";
-                customerVehicle += cbd.getVehicleNo();
-            }
-            addCellLeft(table, customerVehicle.isEmpty() ? "-" : customerVehicle, SMALL_FONT);
-            addCellLeft(table, cbd.getBillNo(), SMALL_FONT);
-            addCellLeft(table, cbd.getPaymentMode() != null ? cbd.getPaymentMode() : "CASH", SMALL_FONT);
-
-            String prodAbbr = "";
-            double qty = 0;
-            if (cbd.getProducts() != null && !cbd.getProducts().isBlank()) {
-                for (String part : cbd.getProducts().split("\\s+")) {
-                    String[] kv = part.split(":");
-                    if (kv.length == 2) {
-                        if (prodAbbr.isEmpty()) prodAbbr = kv[0]; else prodAbbr += "+" + kv[0];
-                        try { qty += Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
-                    }
-                }
-            }
-            addCellLeft(table, prodAbbr, SMALL_FONT);
-            addCellRight(table, fmt0(qty), SMALL_FONT);
-            addCellRight(table, fmtComma(cbd.getAmount()), SMALL_FONT);
-            totalQty += qty;
+        for (PaymentModeBreakdown pmb : data.getPaymentModeBreakdown()) {
+            addCellLeft(table, pmb.getMode(), SMALL_FONT);
+            addCellRight(table, String.valueOf(pmb.getBillCount()), SMALL_FONT);
+            addCellRight(table, fmtComma(pmb.getAmount()), SMALL_FONT);
         }
 
         // Total row
-        addCellRight(table, "", SMALL_BOLD);
-        addCellLeft(table, data.getCashBillDetails().size() + " bills", SMALL_BOLD);
-        addCellLeft(table, "", SMALL_BOLD);
-        addCellLeft(table, "", SMALL_BOLD);
-        addCellLeft(table, "", SMALL_BOLD);
-        addCellRight(table, fmt0(totalQty), SMALL_BOLD);
+        addCellLeft(table, "TOTAL", SMALL_BOLD);
+        addCellRight(table, String.valueOf(totalBills), SMALL_BOLD);
         addCellRight(table, fmtComma(cashTotal), SMALL_BOLD);
+
+        container.addElement(table);
+    }
+
+    public void addEAdvanceSummary(PdfPCell container, ShiftReportPrintData data) {
+        List<String> eTypes = List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER");
+
+        // Group by type: count + sum
+        Map<String, long[]> typeSummary = new LinkedHashMap<>(); // [count, sum_paise]
+        BigDecimal grandTotal = BigDecimal.ZERO;
+        int totalCount = 0;
+
+        for (AdvanceEntryDetail ae : data.getAdvanceEntries()) {
+            if (!eTypes.contains(ae.getType())) continue;
+            BigDecimal amt = ae.getAmount() != null ? ae.getAmount() : BigDecimal.ZERO;
+            typeSummary.merge(ae.getType(), new long[]{1, amt.movePointRight(2).longValue()},
+                    (old, n) -> new long[]{old[0] + n[0], old[1] + n[1]});
+            grandTotal = grandTotal.add(amt);
+            totalCount++;
+        }
+        if (typeSummary.isEmpty()) return;
+
+        container.addElement(sectionHeader("E-ADVANCES (" + totalCount + ") — Rs." + fmtComma(grandTotal)));
+
+        PdfPTable table = new PdfPTable(new float[]{2.5f, 1f, 2f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "TYPE");
+        addHeaderCell(table, "COUNT");
+        addHeaderCell(table, "AMOUNT");
+
+        for (Map.Entry<String, long[]> entry : typeSummary.entrySet()) {
+            addCellLeft(table, getAdvanceLabel(entry.getKey()), SMALL_FONT);
+            addCellRight(table, String.valueOf(entry.getValue()[0]), SMALL_FONT);
+            addCellRight(table, fmtComma(BigDecimal.valueOf(entry.getValue()[1]).movePointLeft(2)), SMALL_FONT);
+        }
+
+        addCellLeft(table, "TOTAL", SMALL_BOLD);
+        addCellRight(table, String.valueOf(totalCount), SMALL_BOLD);
+        addCellRight(table, fmtComma(grandTotal), SMALL_BOLD);
+
+        container.addElement(table);
+    }
+
+    public void addSalesSummary(PdfPCell container, ShiftReportPrintData data) {
+        // Aggregate product sales from cash + credit bill details
+        Map<String, double[]> productSales = new LinkedHashMap<>(); // [cashQty, creditQty, totalAmount]
+
+        for (CashBillDetail cbd : data.getCashBillDetails()) {
+            if (cbd.getProducts() == null || cbd.getProducts().isBlank()) continue;
+            for (String part : cbd.getProducts().split("\\s+")) {
+                String[] kv = part.split(":");
+                if (kv.length == 2) {
+                    String product = kv[0];
+                    double qty = 0;
+                    try { qty = Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
+                    productSales.merge(product, new double[]{qty, 0, cbd.getAmount() != null ? cbd.getAmount().doubleValue() : 0},
+                            (old, n) -> new double[]{old[0] + n[0], old[1], old[2] + n[2]});
+                }
+            }
+        }
+
+        for (CreditBillDetail cbd : data.getCreditBillDetails()) {
+            if (cbd.getProducts() == null || cbd.getProducts().isBlank()) continue;
+            for (String part : cbd.getProducts().split("\\s+")) {
+                String[] kv = part.split(":");
+                if (kv.length == 2) {
+                    String product = kv[0];
+                    double qty = 0;
+                    try { qty = Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
+                    productSales.merge(product, new double[]{0, qty, cbd.getAmount() != null ? cbd.getAmount().doubleValue() : 0},
+                            (old, n) -> new double[]{old[0], old[1] + n[1], old[2] + n[2]});
+                }
+            }
+        }
+
+        if (productSales.isEmpty()) return;
+
+        container.addElement(sectionHeader("SALES SUMMARY"));
+        PdfPTable table = new PdfPTable(new float[]{1.5f, 1f, 1f, 1f, 1.5f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "PRODUCT");
+        addHeaderCell(table, "CASH");
+        addHeaderCell(table, "CREDIT");
+        addHeaderCell(table, "TOTAL");
+        addHeaderCell(table, "AMOUNT");
+
+        double totalCash = 0, totalCredit = 0, totalAll = 0, totalAmt = 0;
+        for (Map.Entry<String, double[]> entry : productSales.entrySet()) {
+            double[] vals = entry.getValue();
+            double total = vals[0] + vals[1];
+            addCellLeft(table, entry.getKey(), SMALL_FONT);
+            addCellRight(table, fmt0(vals[0]), SMALL_FONT);
+            addCellRight(table, fmt0(vals[1]), SMALL_FONT);
+            addCellRight(table, fmt0(total), SMALL_FONT);
+            addCellRight(table, fmtComma(BigDecimal.valueOf(vals[2]).setScale(2, java.math.RoundingMode.HALF_UP)), SMALL_FONT);
+            totalCash += vals[0];
+            totalCredit += vals[1];
+            totalAll += total;
+            totalAmt += vals[2];
+        }
+
+        addCellLeft(table, "TOTAL", SMALL_BOLD);
+        addCellRight(table, fmt0(totalCash), SMALL_BOLD);
+        addCellRight(table, fmt0(totalCredit), SMALL_BOLD);
+        addCellRight(table, fmt0(totalAll), SMALL_BOLD);
+        addCellRight(table, fmtComma(BigDecimal.valueOf(totalAmt).setScale(2, java.math.RoundingMode.HALF_UP)), SMALL_BOLD);
 
         container.addElement(table);
     }
