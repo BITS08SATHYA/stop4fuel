@@ -368,6 +368,102 @@ private fun OwnerDashboard(uiState: HomeUiState) {
 private fun CashierDashboard(uiState: HomeUiState) {
     val cd = uiState.cashierDashboard ?: return
 
+    // Fuel Prices
+    if (uiState.fuelProducts.isNotEmpty()) {
+        Text("Fuel Prices", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            uiState.fuelProducts.forEach { product ->
+                Card(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            product.name ?: "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "${inrFormat.format(product.price ?: 0)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            "per ${product.unit ?: "L"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+
+    // System Status
+    uiState.backendHealth?.let { health ->
+        val statusColor = when (health.status) {
+            "UP" -> Color(0xFF4CAF50)
+            "DEGRADED" -> Color(0xFFFF9800)
+            else -> Color(0xFFD32F2F)
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        modifier = Modifier.size(10.dp),
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = statusColor
+                    ) {}
+                    Spacer(Modifier.width(8.dp))
+                    Text("System", style = MaterialTheme.typography.labelMedium)
+                }
+                Text(
+                    health.status ?: "UNKNOWN",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+    }
+
+    uiState.systemHealth?.let { sys ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Card(modifier = Modifier.weight(1f)) {
+                Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${sys.totalProducts ?: 0}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Products", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Card(modifier = Modifier.weight(1f)) {
+                Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${sys.activeEmployees ?: 0}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Staff", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Card(modifier = Modifier.weight(1f)) {
+                Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${sys.activeCustomers ?: 0}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Customers", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+
+    HorizontalDivider()
+    Spacer(Modifier.height(12.dp))
+    Text("Shift Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(8.dp))
+
     // Sales breakdown
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard("Cash Sales", inrFormat.format(cd.cashBillTotal ?: 0), subtitle = "${cd.cashInvoiceCount ?: 0} bills", color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
