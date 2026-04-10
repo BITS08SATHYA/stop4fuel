@@ -250,6 +250,9 @@ public class ShiftService {
         // Pre-compute shift totals
         computeShiftTotals(dto, shiftId);
 
+        // Credit bill photo upload check
+        dto.setCreditBillsMissingPhoto(invoiceBillRepository.countCreditBillsWithoutPhoto(shiftId));
+
         return dto;
     }
 

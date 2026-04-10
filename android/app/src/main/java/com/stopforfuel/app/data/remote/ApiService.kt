@@ -1,6 +1,7 @@
 package com.stopforfuel.app.data.remote
 
 import com.stopforfuel.app.data.remote.dto.*
+import okhttp3.MultipartBody
 import retrofit2.http.*
 
 interface ApiService {
@@ -172,6 +173,20 @@ interface ApiService {
     @PUT("api/invoices/{id}")
     suspend fun updateInvoice(@Path("id") id: Long, @Body invoice: Map<String, @JvmSuppressWildcards Any?>): InvoiceBillDto
 
+    @Multipart
+    @POST("api/invoices/{id}/upload/{type}")
+    suspend fun uploadInvoiceFile(
+        @Path("id") id: Long,
+        @Path("type") type: String,
+        @Part file: MultipartBody.Part
+    ): InvoiceBillDto
+
+    @GET("api/invoices/{id}/file-url")
+    suspend fun getInvoiceFileUrl(
+        @Path("id") id: Long,
+        @Query("type") type: String
+    ): Map<String, String>
+
     // Statements
     @GET("api/statements")
     suspend fun getStatements(
@@ -219,6 +234,25 @@ interface ApiService {
 
     @GET("api/pump-sessions/{id}")
     suspend fun getPumpSession(@Path("id") id: Long): PumpSessionDto
+
+    // Payments
+    @POST("api/payments/bill/{invoiceBillId}")
+    suspend fun recordBillPayment(
+        @Path("invoiceBillId") invoiceBillId: Long,
+        @Body payment: RecordPaymentRequest
+    ): PaymentDto
+
+    @POST("api/payments/statement/{statementId}")
+    suspend fun recordStatementPayment(
+        @Path("statementId") statementId: Long,
+        @Body payment: RecordPaymentRequest
+    ): PaymentDto
+
+    @GET("api/payments/summary/bill/{invoiceBillId}")
+    suspend fun getBillPaymentSummary(@Path("invoiceBillId") invoiceBillId: Long): PaymentSummaryDto
+
+    @GET("api/payments/summary/statement/{statementId}")
+    suspend fun getStatementPaymentSummary(@Path("statementId") statementId: Long): PaymentSummaryDto
 
     @GET("api/pump-sessions/shift/{shiftId}")
     suspend fun getPumpSessionsByShift(@Path("shiftId") shiftId: Long): List<PumpSessionDto>

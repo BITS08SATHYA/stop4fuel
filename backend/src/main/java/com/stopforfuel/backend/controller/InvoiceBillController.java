@@ -128,4 +128,19 @@ public class InvoiceBillController {
         String url = service.getFilePresignedUrl(id, type);
         return ResponseEntity.ok(Map.of("url", url));
     }
+
+    @GetMapping("/{id}/photos")
+    @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
+    public List<InvoiceBillDTO.PhotoDTO> getPhotos(@PathVariable Long id,
+                                                    @RequestParam(required = false) String type) {
+        var photos = type != null ? service.getPhotosByType(id, type) : service.getPhotos(id);
+        return photos.stream().map(InvoiceBillDTO.PhotoDTO::from).toList();
+    }
+
+    @DeleteMapping("/{id}/photos/{photoId}")
+    @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
+    public ResponseEntity<Void> deletePhoto(@PathVariable Long id, @PathVariable Long photoId) {
+        service.deletePhoto(id, photoId);
+        return ResponseEntity.noContent().build();
+    }
 }
