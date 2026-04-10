@@ -112,11 +112,19 @@ class HomeViewModel @Inject constructor(
                 } else {
                     // Cashier/Employee: shift-focused dashboard
                     val cashier = dashboardRepository.getCashierDashboard().getOrNull()
+                    val products = dashboardRepository.getProducts().getOrNull()
+                        ?.filter { it.category.equals("FUEL", ignoreCase = true) }
+                        ?: emptyList()
+                    val health = dashboardRepository.getSystemHealth().getOrNull()
+                    val backendHealth = dashboardRepository.getBackendHealth().getOrNull()
 
                     _uiState.value = _uiState.value.copy(
                         activeShift = shift,
                         activePumpSession = pumpSession,
                         cashierDashboard = cashier,
+                        fuelProducts = products,
+                        systemHealth = health,
+                        backendHealth = backendHealth,
                         isLoading = false, error = null
                     )
                 }
