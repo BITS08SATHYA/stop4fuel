@@ -23,6 +23,7 @@ import com.stopforfuel.app.ui.explorer.InvoiceBillExplorerScreen
 import com.stopforfuel.app.ui.explorer.StatementExplorerScreen
 import com.stopforfuel.app.ui.stocktransfer.StockTransferScreen
 import com.stopforfuel.app.ui.attendance.AttendanceScreen
+import com.stopforfuel.app.ui.invoiceupload.InvoiceUploadScreen
 
 @Composable
 fun AppNavGraph() {
@@ -82,6 +83,9 @@ fun AppNavGraph() {
                 },
                 onNavigateToAttendance = {
                     navController.navigate(Routes.Attendance.route)
+                },
+                onNavigateToInvoiceUpload = {
+                    navController.navigate(Routes.InvoiceUpload.route)
                 },
                 onLogout = {
                     navController.navigate(Routes.Login.route) {
@@ -186,6 +190,12 @@ fun AppNavGraph() {
 
         composable(Routes.Attendance.route) {
             AttendanceScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.InvoiceUpload.route) {
+            InvoiceUploadScreen(
                 onBack = { navController.popBackStack() }
             )
         }
