@@ -213,6 +213,15 @@ export default function ShiftHistoryPage() {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        {shift.status === "OPEN" && (
+                                                            <button
+                                                                onClick={() => router.push(`/operations/shifts/close/${shift.id}`)}
+                                                                className="p-2 rounded-lg hover:bg-emerald-500/10 text-emerald-500 transition-colors"
+                                                                title="Go to Shift Closing"
+                                                            >
+                                                                <Eye className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                         {shift.status === "REVIEW" && (
                                                             <button
                                                                 onClick={async () => {

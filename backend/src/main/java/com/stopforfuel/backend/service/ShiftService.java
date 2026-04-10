@@ -96,8 +96,9 @@ public class ShiftService {
         return repository.findAllByScid(SecurityUtils.getScid());
     }
 
+    @Transactional
     public Shift openShift(Shift shift) {
-        repository.findByStatusAndScid(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {
+        repository.findTopByStatusAndScidOrderByIdDesc(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {
             throw new BusinessException("A shift is already open. Close it before opening a new one.");
         });
 
@@ -152,7 +153,7 @@ public class ShiftService {
 
     @Transactional(readOnly = true)
     public Shift getActiveShift() {
-        return repository.findByStatusAndScid(ShiftStatus.OPEN, SecurityUtils.getScid()).orElse(null);
+        return repository.findTopByStatusAndScidOrderByIdDesc(ShiftStatus.OPEN, SecurityUtils.getScid()).orElse(null);
     }
 
     // ========== NEW SHIFT CLOSING WORKSPACE METHODS ==========
