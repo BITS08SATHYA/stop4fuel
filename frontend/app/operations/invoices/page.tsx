@@ -1688,6 +1688,15 @@ export default function InvoicesPage() {
                                                 inv.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                                             }`}>{inv.billType}</span>
                                             <span className="text-sm text-muted-foreground">{inv.customer?.name || "Walk-in"}</span>
+                                            {inv.products && inv.products.length > 0 && (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {inv.products.length === 1
+                                                        ? inv.products[0].productName
+                                                        : `${inv.products[0].productName} +${inv.products.length - 1}`}
+                                                    {" · "}
+                                                    {inv.products.reduce((s: number, p: any) => s + (p.quantity || 0), 0).toFixed(2)}L
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="text-right">
                                             <span className="font-bold text-foreground">₹{(inv.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
