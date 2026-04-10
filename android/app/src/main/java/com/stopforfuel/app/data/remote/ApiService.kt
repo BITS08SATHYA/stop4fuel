@@ -235,6 +235,25 @@ interface ApiService {
     @GET("api/pump-sessions/{id}")
     suspend fun getPumpSession(@Path("id") id: Long): PumpSessionDto
 
+    // Payments
+    @POST("api/payments/bill/{invoiceBillId}")
+    suspend fun recordBillPayment(
+        @Path("invoiceBillId") invoiceBillId: Long,
+        @Body payment: RecordPaymentRequest
+    ): PaymentDto
+
+    @POST("api/payments/statement/{statementId}")
+    suspend fun recordStatementPayment(
+        @Path("statementId") statementId: Long,
+        @Body payment: RecordPaymentRequest
+    ): PaymentDto
+
+    @GET("api/payments/summary/bill/{invoiceBillId}")
+    suspend fun getBillPaymentSummary(@Path("invoiceBillId") invoiceBillId: Long): PaymentSummaryDto
+
+    @GET("api/payments/summary/statement/{statementId}")
+    suspend fun getStatementPaymentSummary(@Path("statementId") statementId: Long): PaymentSummaryDto
+
     @GET("api/pump-sessions/shift/{shiftId}")
     suspend fun getPumpSessionsByShift(@Path("shiftId") shiftId: Long): List<PumpSessionDto>
 }
