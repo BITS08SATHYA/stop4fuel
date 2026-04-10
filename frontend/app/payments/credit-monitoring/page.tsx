@@ -61,15 +61,50 @@ interface CustomerUnpaidDetail {
 const fmt = (n: number) =>
     n.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
-function scatterY(customerId: number): number {
-    const hash = ((customerId * 2654435761) >>> 0) % 100;
-    return 15 + (hash / 100) * 70;
-}
-
 function dotSize(amount: number, maxAmount: number): number {
     if (maxAmount <= 0) return 14;
     const ratio = Math.sqrt(amount / maxAmount);
     return Math.max(10, Math.min(36, 10 + ratio * 26));
+}
+
+// Place dots in a grid-like pattern to avoid overlap
+function layoutDots(customers: BubbleCustomer[], bandMin: number, bandMax: number, maxAmount: number): { c: BubbleCustomer; x: number; y: number; size: number }[] {
+    if (customers.length === 0) return [];
+    const effectiveMax = bandMax > 9000 ? Math.max(180, ...customers.map(c => c.daysOverdue)) : bandMax;
+    const range = effectiveMax - bandMin || 1;
+
+    // Sort by daysOverdue so dots flow left to right
+    const sorted = [...customers].sort((a, b) => a.daysOverdue - b.daysOverdue);
+    const placed: { c: BubbleCustomer; x: number; y: number; size: number }[] = [];
+
+    for (const customer of sorted) {
+        const size = dotSize(customer.unpaidAmount, maxAmount);
+        const xBase = ((Math.min(customer.daysOverdue, effectiveMax) - bandMin) / range) * 85 + 5;
+
+        // Try to find a Y position that doesn't overlap with existing dots
+        let bestY = 50; // center
+        let minOverlap = Infinity;
+
+        for (let yCandidate = 20; yCandidate <= 80; yCandidate += 8) {
+            let overlap = 0;
+            for (const p of placed) {
+                const dx = (xBase - p.x) * 10; // scale x distance (% to approx px ratio)
+                const dy = (yCandidate - p.y) * 1.2;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const minDist = (size + p.size) / 2 + 3; // 3px gap
+                if (dist < minDist) overlap += minDist - dist;
+            }
+            if (overlap < minOverlap) {
+                minOverlap = overlap;
+                bestY = yCandidate;
+                if (overlap === 0) break;
+            }
+        }
+
+        placed.push({ c: customer, x: xBase, y: bestY, size });
+    }
+
+    return placed;
 }
 
 export default function CreditMonitoringPage() {
@@ -411,8 +446,8 @@ function BandRow({
     onLeave: () => void;
     onClick: (c: BubbleCustomer) => void;
 }) {
-    const bandWidth = band.max - band.min || 1;
     const isEmpty = band.customers.length === 0;
+    const dots = layoutDots(band.customers, band.min, band.max, maxAmount);
 
     return (
         <div className="flex items-stretch gap-0">
@@ -425,17 +460,11 @@ function BandRow({
                 style={{
                     backgroundColor: band.color + "18",
                     borderLeft: `4px solid ${band.color}`,
-                    minHeight: isEmpty ? 48 : Math.max(80, Math.min(120, band.customers.length * 12 + 60)),
+                    minHeight: isEmpty ? 48 : Math.max(80, Math.min(140, band.customers.length * 14 + 60)),
                 }}
             >
                 {isEmpty && <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground/50">No customers</div>}
-                {band.customers.map((customer) => {
-                    const effectiveMax = band.max > 9000 ? Math.max(180, ...band.customers.map(c => c.daysOverdue)) : band.max;
-                    const xPercent = bandWidth > 0
-                        ? ((Math.min(customer.daysOverdue, effectiveMax) - band.min) / (effectiveMax - band.min)) * 85 + 5
-                        : 50;
-                    const yPercent = scatterY(customer.customerId);
-                    const size = dotSize(customer.unpaidAmount, maxAmount);
+                {dots.map(({ c: customer, x: xPercent, y: yPercent, size }) => {
                     const isHighlighted = highlightedId === customer.customerId;
 
                     return (

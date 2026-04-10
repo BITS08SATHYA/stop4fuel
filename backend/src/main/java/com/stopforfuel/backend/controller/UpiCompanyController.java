@@ -18,13 +18,13 @@ public class UpiCompanyController {
     private final UpiCompanyRepository repository;
 
     @GetMapping
-    @PreAuthorize("hasPermission(null, 'SETTINGS_VIEW')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_VIEW')")
     public List<UpiCompany> getAll() {
         return repository.findAll();
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SETTINGS_CREATE')")
+    @PreAuthorize("hasPermission(null, 'FINANCE_CREATE')")
     public UpiCompany create(@Valid @RequestBody UpiCompany upiCompany) {
         return repository.save(upiCompany);
     }
