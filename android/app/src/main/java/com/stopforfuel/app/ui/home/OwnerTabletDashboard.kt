@@ -57,18 +57,15 @@ fun OwnerTabletDashboard(
         val isTablet = maxWidth >= 600.dp
 
         Column(Modifier.fillMaxSize()) {
+            // ─── TOP INFO BAR (shared, above panels) ───
+            TopInfoBar(uiState)
+
             if (isTablet) {
                 // ─── TABLET: Two-panel layout ───
                 Row(Modifier.weight(1f).fillMaxWidth()) {
                     Column(
                         Modifier.weight(0.55f).verticalScroll(rememberScrollState()).padding(16.dp)
                     ) {
-                        CashierInfoBar(uiState)
-                        Spacer(Modifier.height(8.dp))
-                        FuelPricesSection(uiState)
-                        Spacer(Modifier.height(12.dp))
-                        SystemHealthSection(uiState)
-                        Spacer(Modifier.height(16.dp))
                         StatsSection(uiState)
                     }
                     VerticalDivider(
@@ -86,15 +83,7 @@ fun OwnerTabletDashboard(
                 Column(
                     Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)
                 ) {
-                    CashierInfoBar(uiState)
-                    Spacer(Modifier.height(8.dp))
-                    FuelPricesSection(uiState)
-                    Spacer(Modifier.height(8.dp))
-                    SystemHealthSection(uiState)
-                    Spacer(Modifier.height(16.dp))
                     StatsSection(uiState)
-                    Spacer(Modifier.height(16.dp))
-                    ProductSalesSection(uiState)
                 }
             }
 
@@ -152,128 +141,97 @@ private fun StatsSection(uiState: HomeUiState) {
     }
 }
 
-// ── Fuel prices — compact inline chips ──
+// ── Unified top info bar: Cashier + Shift + Health + Prices + AWS ──
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FuelPricesSection(uiState: HomeUiState) {
-    if (uiState.fuelProducts.isNotEmpty()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.LocalGasStation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                uiState.fuelProducts.forEach { product ->
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                (product.name ?: "").uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                letterSpacing = 0.5.sp
-                            )
-                            Text(
-                                "${inrFormat.format(product.price ?: 0)}/L",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF00BFA5)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── Cashier info bar ──
-@Composable
-private fun CashierInfoBar(uiState: HomeUiState) {
+private fun TopInfoBar(uiState: HomeUiState) {
     val shift = uiState.activeShift
-    if (shift != null) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFF00BFA5).copy(alpha = 0.12f)) {
-                Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF00BFA5), modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(shift.attendant?.name ?: "—", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5))
-                }
-            }
-            Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)) {
-                Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Shift #${shift.id}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                }
-            }
-        }
-    }
-}
-
-// ── System health — compact inline widgets ──
-@Composable
-private fun SystemHealthSection(uiState: HomeUiState) {
     val health = uiState.backendHealth
     val billing = uiState.awsBilling
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Icon(Icons.Default.Monitor, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+        FlowRow(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Cashier name
+            if (shift != null) {
+                InfoChip(
+                    icon = { Icon(Icons.Default.Person, null, Modifier.size(12.dp), tint = Color(0xFF00BFA5)) },
+                    text = shift.attendant?.name ?: "—",
+                    color = Color(0xFF00BFA5)
+                )
+                InfoChip(
+                    icon = { Icon(Icons.Default.Schedule, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary) },
+                    text = "#${shift.id}",
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
-        // Backend status dot
-        val backendUp = health?.status == "UP"
-        Surface(shape = RoundedCornerShape(8.dp), color = if (backendUp) Color(0xFF4CAF50).copy(alpha = 0.12f) else Color(0xFFF44336).copy(alpha = 0.12f)) {
-            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Canvas(modifier = Modifier.size(8.dp)) { drawCircle(color = if (backendUp) Color(0xFF4CAF50) else Color(0xFFF44336)) }
-                Spacer(Modifier.width(4.dp))
-                Text("API", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (backendUp) Color(0xFF4CAF50) else Color(0xFFF44336))
+            // Health dots
+            val apiUp = health?.status == "UP"
+            val dbUp = health?.database == "UP"
+            StatusDot(up = apiUp, label = "API")
+            StatusDot(up = dbUp, label = "DB")
+            StatusDot(up = true, label = "Web")
+
+            // Fuel prices — shorthand
+            uiState.fuelProducts.forEach { product ->
+                val abbr = abbreviateFuel(product.name ?: "")
+                Text(
+                    "$abbr ₹${String.format("%.0f", product.price ?: 0)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 2.dp)
+                )
+            }
+
+            // AWS cost
+            if (billing?.available == true && billing.monthToDateCost != null) {
+                Text(
+                    "AWS $${String.format("%.0f", billing.monthToDateCost)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF00BFA5),
+                    modifier = Modifier.padding(horizontal = 2.dp)
+                )
             }
         }
+    }
+}
 
-        // DB status dot
-        val dbUp = health?.database == "UP"
-        Surface(shape = RoundedCornerShape(8.dp), color = if (dbUp) Color(0xFF4CAF50).copy(alpha = 0.12f) else Color(0xFFF44336).copy(alpha = 0.12f)) {
-            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Canvas(modifier = Modifier.size(8.dp)) { drawCircle(color = if (dbUp) Color(0xFF4CAF50) else Color(0xFFF44336)) }
-                Spacer(Modifier.width(4.dp))
-                Text("DB", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = if (dbUp) Color(0xFF4CAF50) else Color(0xFFF44336))
-            }
+@Composable
+private fun InfoChip(icon: @Composable () -> Unit, text: String, color: Color) {
+    Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.1f)) {
+        Row(modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+            icon()
+            Spacer(Modifier.width(3.dp))
+            Text(text, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = color)
         }
+    }
+}
 
-        // Frontend always up if we're here
-        Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF4CAF50).copy(alpha = 0.12f)) {
-            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Canvas(modifier = Modifier.size(8.dp)) { drawCircle(color = Color(0xFF4CAF50)) }
-                Spacer(Modifier.width(4.dp))
-                Text("Web", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
-            }
-        }
+@Composable
+private fun StatusDot(up: Boolean, label: String) {
+    val c = if (up) Color(0xFF4CAF50) else Color(0xFFF44336)
+    Row(modifier = Modifier.padding(horizontal = 1.dp), verticalAlignment = Alignment.CenterVertically) {
+        Canvas(modifier = Modifier.size(6.dp)) { drawCircle(color = c) }
+        Spacer(Modifier.width(2.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, fontSize = 9.sp, color = c)
+    }
+}
 
-        Spacer(Modifier.weight(1f))
-
-        // AWS MTD cost — tiny widget
-        if (billing?.available == true && billing.monthToDateCost != null) {
-            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("AWS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(4.dp))
-                    Text("$${String.format("%.0f", billing.monthToDateCost)}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5))
-                }
-            }
-        }
+private fun abbreviateFuel(name: String): String {
+    val upper = name.uppercase()
+    return when {
+        upper.contains("PETROL") || upper == "MS" -> "MS"
+        upper.contains("XTRA") || upper.contains("XP") || upper.contains("PREMIUM") -> "XP"
+        upper.contains("DIESEL") || upper == "HSD" -> "HSD"
+        else -> name.take(3).uppercase()
     }
 }
 
