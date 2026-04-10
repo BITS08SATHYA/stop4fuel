@@ -1,7 +1,5 @@
 package com.stopforfuel.backend.service;
 
-import com.lowagie.text.Document;
-import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.Paragraph;
@@ -317,74 +315,33 @@ public class ShiftReportFinancialSection {
         container.addElement(table);
     }
 
-    public void addPageTwoBody(Document doc, ShiftReportPrintData data, ShiftClosingReport report,
-                               ShiftReportInventorySection inventorySection) throws DocumentException {
-        // Two-column layout for page 2 details
-        PdfPTable outer = new PdfPTable(2);
-        outer.setWidthPercentage(100);
-        outer.setWidths(new float[]{50, 50});
+    public void addEAdvanceDetailsCompact(PdfPCell container, ShiftReportPrintData data) {
+        List<String> eTypes = List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER");
+        List<AdvanceEntryDetail> entries = data.getAdvanceEntries().stream()
+                .filter(ae -> eTypes.contains(ae.getType()))
+                .toList();
+        if (entries.isEmpty()) return;
 
-        PdfPCell leftCell = new PdfPCell();
-        leftCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
-        leftCell.setPadding(0);
-        leftCell.setPaddingRight(3);
-
-        PdfPCell rightCell = new PdfPCell();
-        rightCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
-        rightCell.setPadding(0);
-        rightCell.setPaddingLeft(3);
-
-        // Group advance entries by type
-        Map<String, List<AdvanceEntryDetail>> advByType = new LinkedHashMap<>();
-        for (AdvanceEntryDetail ae : data.getAdvanceEntries()) {
-            advByType.computeIfAbsent(ae.getType(), k -> new ArrayList<>()).add(ae);
-        }
-
-        // LEFT: Card, UPI, CCMS, Cash Advance, Home Advance (matching mockup layout)
-        for (String type : List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER", "CASH_ADVANCE", "HOME_ADVANCE")) {
-            List<AdvanceEntryDetail> entries = advByType.get(type);
-            if (entries != null && !entries.isEmpty()) {
-                addAdvanceDetailTable(leftCell, getAdvanceLabel(type), entries);
-            }
-        }
-
-        // RIGHT: Expenses, Salary, Incentive, Repayment + Product Inventory
-        for (String type : List.of("SALARY_ADVANCE", "EXPENSE", "INCENTIVE", "REPAYMENT")) {
-            List<AdvanceEntryDetail> entries = advByType.get(type);
-            if (entries != null && !entries.isEmpty()) {
-                addAdvanceDetailTable(rightCell, getAdvanceLabel(type), entries);
-            }
-        }
-
-        // Product Inventory in the right column
-        if (!data.getStockSummary().isEmpty() || !data.getStockPosition().isEmpty()) {
-            inventorySection.addProductInventory(rightCell, data);
-        }
-
-        outer.addCell(leftCell);
-        outer.addCell(rightCell);
-        doc.add(outer);
-    }
-
-    private void addAdvanceDetailTable(PdfPCell container, String title, List<AdvanceEntryDetail> entries) {
         BigDecimal total = BigDecimal.ZERO;
         for (AdvanceEntryDetail e : entries) {
             total = total.add(e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO);
         }
 
-        container.addElement(sectionHeader(title + " (" + entries.size() + ") — Rs." + fmtComma(total)));
+        container.addElement(sectionHeader("E-ADVANCES (" + entries.size() + ") — Rs." + fmtComma(total)));
 
-        PdfPTable table = new PdfPTable(new float[]{0.5f, 3.5f, 2f});
+        PdfPTable table = new PdfPTable(new float[]{0.4f, 1f, 3f, 1.5f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
 
         addHeaderCell(table, "#");
+        addHeaderCell(table, "TYPE");
         addHeaderCell(table, "DESCRIPTION");
         addHeaderCell(table, "AMOUNT");
 
         int idx = 1;
         for (AdvanceEntryDetail entry : entries) {
             addCellRight(table, String.valueOf(idx++), SMALL_FONT);
+            addCellLeft(table, getAdvanceLabel(entry.getType()), SMALL_FONT);
             String desc = entry.getDescription() != null ? entry.getDescription() : "-";
             if (entry.getReference() != null && !entry.getReference().isBlank()) {
                 desc += " [" + entry.getReference() + "]";
@@ -394,8 +351,118 @@ public class ShiftReportFinancialSection {
         }
 
         addCellRight(table, "", SMALL_BOLD);
+        addCellLeft(table, "", SMALL_BOLD);
         addCellLeft(table, "Total", SMALL_BOLD);
         addCellRight(table, fmtComma(total), SMALL_BOLD);
+
+        container.addElement(table);
+    }
+
+    public void addOperationalAdvanceDetailsCompact(PdfPCell container, ShiftReportPrintData data) {
+        List<String> opTypes = List.of("CASH_ADVANCE", "HOME_ADVANCE", "SALARY_ADVANCE", "EXPENSE", "INCENTIVE", "REPAYMENT");
+        List<AdvanceEntryDetail> entries = data.getAdvanceEntries().stream()
+                .filter(ae -> opTypes.contains(ae.getType()))
+                .toList();
+        if (entries.isEmpty()) return;
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (AdvanceEntryDetail e : entries) {
+            total = total.add(e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO);
+        }
+
+        container.addElement(sectionHeader("OPERATIONAL ADVANCES (" + entries.size() + ") — Rs." + fmtComma(total)));
+
+        PdfPTable table = new PdfPTable(new float[]{0.4f, 1f, 3f, 1.5f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "#");
+        addHeaderCell(table, "TYPE");
+        addHeaderCell(table, "DESCRIPTION");
+        addHeaderCell(table, "AMOUNT");
+
+        int idx = 1;
+        for (AdvanceEntryDetail entry : entries) {
+            addCellRight(table, String.valueOf(idx++), SMALL_FONT);
+            addCellLeft(table, getAdvanceLabel(entry.getType()), SMALL_FONT);
+            String desc = entry.getDescription() != null ? entry.getDescription() : "-";
+            if (entry.getReference() != null && !entry.getReference().isBlank()) {
+                desc += " [" + entry.getReference() + "]";
+            }
+            addCellLeft(table, desc, SMALL_FONT);
+            addCellRight(table, fmtComma(entry.getAmount()), SMALL_FONT);
+        }
+
+        addCellRight(table, "", SMALL_BOLD);
+        addCellLeft(table, "", SMALL_BOLD);
+        addCellLeft(table, "Total", SMALL_BOLD);
+        addCellRight(table, fmtComma(total), SMALL_BOLD);
+
+        container.addElement(table);
+    }
+
+    public void addCashBillsList(PdfPCell container, ShiftReportPrintData data) {
+        if (data.getCashBillDetails().isEmpty()) return;
+
+        BigDecimal cashTotal = BigDecimal.ZERO;
+        for (CashBillDetail cbd : data.getCashBillDetails()) {
+            cashTotal = cashTotal.add(cbd.getAmount() != null ? cbd.getAmount() : BigDecimal.ZERO);
+        }
+
+        container.addElement(sectionHeader("CASH BILLS (" + data.getCashBillDetails().size() + ") — \u20B9" + fmtComma(cashTotal)));
+        PdfPTable table = new PdfPTable(new float[]{0.4f, 1.8f, 1f, 1f, 0.8f, 0.8f, 1.2f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "#");
+        addHeaderCell(table, "CUSTOMER / VEHICLE");
+        addHeaderCell(table, "BILL");
+        addHeaderCell(table, "MODE");
+        addHeaderCell(table, "PROD");
+        addHeaderCell(table, "QTY");
+        addHeaderCell(table, "AMT");
+
+        int idx = 1;
+        double totalQty = 0;
+        for (CashBillDetail cbd : data.getCashBillDetails()) {
+            addCellRight(table, String.valueOf(idx++), SMALL_FONT);
+            String customerVehicle = "";
+            if (cbd.getDriverName() != null && !cbd.getDriverName().isBlank()) {
+                customerVehicle = cbd.getDriverName();
+            }
+            if (cbd.getVehicleNo() != null && !cbd.getVehicleNo().isBlank()) {
+                if (!customerVehicle.isEmpty()) customerVehicle += "\n";
+                customerVehicle += cbd.getVehicleNo();
+            }
+            addCellLeft(table, customerVehicle.isEmpty() ? "-" : customerVehicle, SMALL_FONT);
+            addCellLeft(table, cbd.getBillNo(), SMALL_FONT);
+            addCellLeft(table, cbd.getPaymentMode() != null ? cbd.getPaymentMode() : "CASH", SMALL_FONT);
+
+            String prodAbbr = "";
+            double qty = 0;
+            if (cbd.getProducts() != null && !cbd.getProducts().isBlank()) {
+                for (String part : cbd.getProducts().split("\\s+")) {
+                    String[] kv = part.split(":");
+                    if (kv.length == 2) {
+                        if (prodAbbr.isEmpty()) prodAbbr = kv[0]; else prodAbbr += "+" + kv[0];
+                        try { qty += Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+            addCellLeft(table, prodAbbr, SMALL_FONT);
+            addCellRight(table, fmt0(qty), SMALL_FONT);
+            addCellRight(table, fmtComma(cbd.getAmount()), SMALL_FONT);
+            totalQty += qty;
+        }
+
+        // Total row
+        addCellRight(table, "", SMALL_BOLD);
+        addCellLeft(table, data.getCashBillDetails().size() + " bills", SMALL_BOLD);
+        addCellLeft(table, "", SMALL_BOLD);
+        addCellLeft(table, "", SMALL_BOLD);
+        addCellLeft(table, "", SMALL_BOLD);
+        addCellRight(table, fmt0(totalQty), SMALL_BOLD);
+        addCellRight(table, fmtComma(cashTotal), SMALL_BOLD);
 
         container.addElement(table);
     }
