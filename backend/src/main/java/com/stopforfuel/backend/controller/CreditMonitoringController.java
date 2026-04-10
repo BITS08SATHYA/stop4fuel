@@ -28,6 +28,12 @@ public class CreditMonitoringController {
         return creditMonitoringService.getBubbleMapData(type);
     }
 
+    @GetMapping("/customer/{id}/unpaid")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public CreditMonitoringService.CustomerUnpaidDetail getCustomerUnpaid(@PathVariable Long id) {
+        return creditMonitoringService.getCustomerUnpaidDetail(id);
+    }
+
     @GetMapping("/watchlist")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<CreditMonitoringService.CreditHealth> getWatchlist() {

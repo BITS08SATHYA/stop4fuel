@@ -397,7 +397,7 @@ public class CreditMonitoringService {
             // Skip customers with no credit limit
             if (c.getCreditLimitAmount() == null || c.getCreditLimitAmount().compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            boolean isStatement = c.getStatementFrequency() != null && !c.getStatementFrequency().isBlank();
+            boolean isStatement = c.getParty() != null && "Statement".equalsIgnoreCase(c.getParty().getPartyType());
 
             CreditCustomerRow row = new CreditCustomerRow();
             row.setCustomerId(c.getId());
@@ -469,6 +469,66 @@ public class CreditMonitoringService {
         return dashboard;
     }
 
+    // ─── Customer Unpaid Bills (Side Panel) ────────────────────────
+
+    @Transactional(readOnly = true)
+    public CustomerUnpaidDetail getCustomerUnpaidDetail(Long customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new com.stopforfuel.backend.exception.ResourceNotFoundException("Customer not found"));
+
+        CustomerUnpaidDetail detail = new CustomerUnpaidDetail();
+        detail.setCustomerId(customer.getId());
+        detail.setCustomerName(customer.getName());
+        detail.setGroupName(customer.getGroup() != null ? customer.getGroup().getGroupName() : null);
+        detail.setStatus(customer.getStatus() != null ? customer.getStatus().name() : "ACTIVE");
+        detail.setPartyType(customer.getParty() != null ? customer.getParty().getPartyType() : "Local");
+        detail.setRepaymentDays(customer.getRepaymentDays());
+        detail.setCreditLimit(customer.getCreditLimitAmount());
+
+        boolean isStatement = customer.getParty() != null && "Statement".equalsIgnoreCase(customer.getParty().getPartyType());
+
+        if (isStatement) {
+            // Get unpaid statements
+            List<com.stopforfuel.backend.entity.Statement> statements = statementRepository.findByCustomerIdAndStatus(customerId, "NOT_PAID");
+            List<UnpaidItem> items = new ArrayList<>();
+            for (var s : statements) {
+                UnpaidItem item = new UnpaidItem();
+                item.setId(s.getId());
+                item.setReference(s.getStatementNo());
+                item.setDate(s.getStatementDate() != null ? s.getStatementDate().toString() : null);
+                item.setAmount(s.getBalanceAmount());
+                item.setBillCount(s.getNumberOfBills());
+                long days = s.getStatementDate() != null ? java.time.temporal.ChronoUnit.DAYS.between(s.getStatementDate(), java.time.LocalDate.now()) : 0;
+                item.setDaysOld(days);
+                items.add(item);
+            }
+            items.sort((a, b) -> Long.compare(b.getDaysOld(), a.getDaysOld()));
+            detail.setUnpaidItems(items);
+            detail.setTotalUnpaid(items.stream().map(i -> i.getAmount() != null ? i.getAmount() : java.math.BigDecimal.ZERO).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
+        } else {
+            // Get unpaid local credit bills
+            var bills = invoiceBillRepository.findByCustomerIdAndBillTypeAndPaymentStatusAndScidOrderByDateDesc(
+                    customerId, com.stopforfuel.backend.enums.BillType.CREDIT, com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID,
+                    SecurityUtils.getScid(), org.springframework.data.domain.PageRequest.of(0, 500));
+            List<UnpaidItem> items = new ArrayList<>();
+            for (var b : bills.getContent()) {
+                UnpaidItem item = new UnpaidItem();
+                item.setId(b.getId());
+                item.setReference(b.getBillNo());
+                item.setDate(b.getDate() != null ? b.getDate().toLocalDate().toString() : null);
+                item.setAmount(b.getNetAmount());
+                item.setVehicleNo(b.getVehicle() != null ? b.getVehicle().getVehicleNumber() : b.getBillDesc());
+                long days = b.getDate() != null ? java.time.temporal.ChronoUnit.DAYS.between(b.getDate().toLocalDate(), java.time.LocalDate.now()) : 0;
+                item.setDaysOld(days);
+                items.add(item);
+            }
+            detail.setUnpaidItems(items);
+            detail.setTotalUnpaid(items.stream().map(i -> i.getAmount() != null ? i.getAmount() : java.math.BigDecimal.ZERO).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
+        }
+
+        return detail;
+    }
+
     // ─── Bubble Map ────────────────────────────────────────────────
 
     private static final int[][] BAND_RANGES = {{0,7},{8,14},{15,30},{31,60},{61,90},{91,99999}};
@@ -498,7 +558,7 @@ public class CreditMonitoringService {
         for (Customer c : allCustomers) {
             if (c.getCreditLimitAmount() == null || c.getCreditLimitAmount().compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            boolean isStatement = c.getStatementFrequency() != null && !c.getStatementFrequency().isBlank();
+            boolean isStatement = c.getParty() != null && "Statement".equalsIgnoreCase(c.getParty().getPartyType());
 
             // Filter by type
             if ("local".equals(type) && isStatement) continue;
@@ -537,6 +597,7 @@ public class CreditMonitoringService {
             bc.setStatus(c.getStatus() != null ? c.getStatus().name() : "ACTIVE");
             bc.setHasSkippedBills(skipped);
             bc.setGroupName(c.getGroup() != null ? c.getGroup().getGroupName() : null);
+            bc.setPartyType(c.getParty() != null ? c.getParty().getPartyType() : "Local");
 
             // Place into correct band
             for (BubbleMapBand band : bands) {
@@ -607,6 +668,30 @@ public class CreditMonitoringService {
     }
 
     @Getter @Setter
+    public static class CustomerUnpaidDetail {
+        private Long customerId;
+        private String customerName;
+        private String groupName;
+        private String status;
+        private String partyType;
+        private Integer repaymentDays;
+        private BigDecimal creditLimit;
+        private BigDecimal totalUnpaid;
+        private List<UnpaidItem> unpaidItems = new ArrayList<>();
+    }
+
+    @Getter @Setter
+    public static class UnpaidItem {
+        private Long id;
+        private String reference; // billNo or statementNo
+        private String date;
+        private BigDecimal amount;
+        private String vehicleNo;
+        private Integer billCount; // for statements
+        private long daysOld;
+    }
+
+    @Getter @Setter
     public static class BubbleMapData {
         private List<BubbleMapBand> bands = new ArrayList<>();
         private int totalCustomers;
@@ -633,6 +718,7 @@ public class CreditMonitoringService {
         private String status;
         private boolean hasSkippedBills;
         private String groupName;
+        private String partyType;
     }
 
     @Getter @Setter
