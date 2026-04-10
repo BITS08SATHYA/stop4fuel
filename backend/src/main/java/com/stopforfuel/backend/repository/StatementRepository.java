@@ -111,6 +111,18 @@ public interface StatementRepository extends ScidRepository<Statement> {
     @Query("SELECT COALESCE(AVG(s.netAmount), 0) FROM Statement s WHERE s.scid = :scid")
     BigDecimal avgNetAmount(@org.springframework.data.repository.query.Param("scid") Long scid);
 
+    // Oldest unpaid statement date for a customer
+    @Query("SELECT MIN(s.statementDate) FROM Statement s WHERE s.customer.id = :customerId AND s.status = 'NOT_PAID'")
+    LocalDate findOldestUnpaidStatementDate(@Param("customerId") Long customerId);
+
+    // Count unpaid statements for a customer
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.customer.id = :customerId AND s.status = 'NOT_PAID'")
+    long countUnpaidStatements(@Param("customerId") Long customerId);
+
+    // Sum unpaid statement balance for a customer
+    @Query("SELECT COALESCE(SUM(s.balanceAmount), 0) FROM Statement s WHERE s.customer.id = :customerId AND s.status = 'NOT_PAID'")
+    BigDecimal sumUnpaidStatementBalance(@Param("customerId") Long customerId);
+
     @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.scid = :scid")
     long countByStatementDateRange(
             @org.springframework.data.repository.query.Param("start") LocalDate start,

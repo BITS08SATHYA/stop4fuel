@@ -52,6 +52,10 @@ public class Customer extends User {
     @Column(name = "longitude", precision = 10, scale = 7)
     private BigDecimal longitude;
 
+    /** Repayment window in days — auto-block if oldest unpaid exceeds this */
+    @Column(name = "repayment_days")
+    private Integer repaymentDays;
+
     /** Credit monitoring fields */
     @Column(name = "last_blocked_at")
     private java.time.LocalDateTime lastBlockedAt;
