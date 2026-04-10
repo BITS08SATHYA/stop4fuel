@@ -26,6 +26,7 @@ import {
     getCustomerCreditInfo
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
+import { printInvoice } from "@/lib/invoice-print";
 
 interface CustomerWithCredit extends Customer {
     creditLimitAmount?: number | null;
@@ -111,6 +112,7 @@ export default function InvoicesPage() {
     const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
     const [lastCreatedInvoice, setLastCreatedInvoice] = useState<InvoiceBill | null>(null);
     const [manualDiscount, setManualDiscount] = useState("");
+    const [companyInfo, setCompanyInfo] = useState<{ name: string; address: string; phone: string; gstNo: string; site?: string } | null>(null);
 
     const loadInvoices = async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);
@@ -141,12 +143,17 @@ export default function InvoicesPage() {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const [prodData, nozData] = await Promise.all([
+            const [prodData, nozData, compRes] = await Promise.all([
                 getActiveProducts(),
-                getNozzles()
+                getNozzles(),
+                fetchWithAuth(`${API_BASE_URL}/companies`).then(r => r.ok ? r.json() : [])
             ]);
             setProducts(prodData);
             setNozzles(nozData.filter((n: Nozzle) => n.active));
+            if (compRes.length > 0) {
+                const c = compRes[0];
+                setCompanyInfo({ name: c.name, address: c.address, phone: c.phone, gstNo: c.gstNo, site: c.site });
+            }
 
             // Fetch active shift and load shift invoices
             const shiftRes = await fetchWithAuth(`${API_BASE_URL}/shifts/active`);
@@ -446,6 +453,11 @@ export default function InvoicesPage() {
             setLastCreatedInvoice(saved);
             setCurrentStep(6);
             toast.success("Invoice created successfully");
+
+            // Auto-print to dot matrix printer
+            if (companyInfo) {
+                printInvoice(saved, companyInfo);
+            }
             loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
         } catch (err: any) {
             console.error("Failed to save invoice", err);
@@ -1496,7 +1508,15 @@ export default function InvoicesPage() {
                                 />
                             </div>
                         </GlassCard>
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-3">
+                            {companyInfo && (
+                                <button
+                                    onClick={() => printInvoice(lastCreatedInvoice, companyInfo)}
+                                    className="px-8 py-4 border border-border text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 hover:bg-muted/50"
+                                >
+                                    <Receipt size={20} /> Reprint
+                                </button>
+                            )}
                             <button
                                 onClick={() => {
                                     resetForm();
