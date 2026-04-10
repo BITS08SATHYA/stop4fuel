@@ -404,31 +404,29 @@ public class ShiftReportFinancialSection {
     public void addCashBillsSummary(PdfPCell container, ShiftReportPrintData data) {
         if (data.getPaymentModeBreakdown().isEmpty() && data.getCashBillDetails().isEmpty()) return;
 
+        // Only count CASH payment mode bills (UPI/CCMS/Card are covered in E-Advances)
         BigDecimal cashTotal = BigDecimal.ZERO;
+        int cashBills = 0;
         int totalBills = 0;
         for (PaymentModeBreakdown pmb : data.getPaymentModeBreakdown()) {
-            cashTotal = cashTotal.add(pmb.getAmount() != null ? pmb.getAmount() : BigDecimal.ZERO);
             totalBills += pmb.getBillCount();
+            if ("CASH".equalsIgnoreCase(pmb.getMode())) {
+                cashTotal = cashTotal.add(pmb.getAmount() != null ? pmb.getAmount() : BigDecimal.ZERO);
+                cashBills = pmb.getBillCount();
+            }
         }
 
-        container.addElement(sectionHeader("CASH BILLS (" + totalBills + ") — \u20B9" + fmtComma(cashTotal)));
+        container.addElement(sectionHeader("CASH BILLS (" + totalBills + " total, " + cashBills + " cash) — \u20B9" + fmtComma(cashTotal)));
         PdfPTable table = new PdfPTable(new float[]{2.5f, 1f, 2f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
 
-        addHeaderCell(table, "MODE");
+        addHeaderCell(table, "");
         addHeaderCell(table, "BILLS");
         addHeaderCell(table, "AMOUNT");
 
-        for (PaymentModeBreakdown pmb : data.getPaymentModeBreakdown()) {
-            addCellLeft(table, pmb.getMode(), SMALL_FONT);
-            addCellRight(table, String.valueOf(pmb.getBillCount()), SMALL_FONT);
-            addCellRight(table, fmtComma(pmb.getAmount()), SMALL_FONT);
-        }
-
-        // Total row
-        addCellLeft(table, "TOTAL", SMALL_BOLD);
-        addCellRight(table, String.valueOf(totalBills), SMALL_BOLD);
+        addCellLeft(table, "CASH", SMALL_BOLD);
+        addCellRight(table, String.valueOf(cashBills), SMALL_BOLD);
         addCellRight(table, fmtComma(cashTotal), SMALL_BOLD);
 
         container.addElement(table);
