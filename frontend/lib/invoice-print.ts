@@ -64,23 +64,16 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     const totalDiscount = invoice.totalDiscount || 0;
     const rounding = (invoice.netAmount || 0) - (grossAmount - totalDiscount);
 
-    // Items HTML
-    const itemsHtml = products.map((p, i) => {
-        const isLast = i === products.length - 1;
-        const discHtml = (p.discountAmount && p.discountAmount > 0)
-            ? `<tr><td colspan="4" style="text-align:right;font-size:8pt;color:#555;">Disc @${p.discountRate?.toFixed(2) || "0"}/L = -${formatCurrency(p.discountAmount)}</td></tr>`
-            : "";
-        return `
-            <tr>
-                <td style="font-weight:bold;padding:2px 0 0;">${p.productName || "Product"}</td>
-                <td style="text-align:center;padding:2px 0 0;">${p.quantity?.toFixed(2) || "0"}</td>
-                <td style="text-align:center;padding:2px 0 0;">${p.unitPrice?.toFixed(2) || "0"}</td>
-                <td style="text-align:right;font-weight:bold;padding:2px 0 0;">${formatCurrency(p.amount)}</td>
-            </tr>
-            <tr><td colspan="4" style="font-size:7pt;color:#555;padding:0 0 2px;">${p.nozzleName ? `Nozzle: ${p.nozzleName}` : ""}</td></tr>
-            ${discHtml}
-            ${!isLast ? '<tr><td colspan="4"><hr style="border:none;border-top:1px dashed #000;margin:2px 0;"></td></tr>' : ""}
-        `;
+    // Items HTML — compact, no nozzle line, discount inline
+    const itemsHtml = products.map((p) => {
+        const disc = (p.discountAmount && p.discountAmount > 0)
+            ? ` (-${formatCurrency(p.discountAmount)})` : "";
+        return `<tr>
+            <td style="padding:1px 0;">${p.productName || "Product"}${disc}</td>
+            <td style="text-align:center;padding:1px 0;">${p.quantity?.toFixed(2) || "0"}</td>
+            <td style="text-align:center;padding:1px 0;">${p.unitPrice?.toFixed(2) || "0"}</td>
+            <td style="text-align:right;font-weight:bold;padding:1px 0;">${formatCurrency(p.amount)}</td>
+        </tr>`;
     }).join("");
 
     // Credit-specific fields
@@ -96,64 +89,25 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 <meta charset="UTF-8">
 <title>Invoice ${invoice.billNo || ""}</title>
 <style>
-    @page {
-        size: 6in 12in;
-        margin: 8mm 6mm;
-    }
-    @media print {
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .no-print { display: none !important; }
-    }
+    @page { size: 6in 4.5in; margin: 2mm 4mm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-        font-family: 'Courier New', 'Lucida Console', monospace;
-        font-size: 11pt;
-        line-height: 1.4;
-        color: #000;
-        background: #fff;
-        width: 5.5in;
-        margin: 0 auto;
-    }
+    body { font-family: 'Courier New', monospace; font-size: 8pt; line-height: 1.2; color: #000; background: #fff; width: 5.5in; margin: 0 auto; }
     table { width: 100%; border-collapse: collapse; }
-    td { vertical-align: top; }
+    td { vertical-align: top; font-size: 8pt; }
     .center { text-align: center; }
     .bold { font-weight: bold; }
-    .big { font-size: 16pt; font-weight: 900; }
-    .med { font-size: 12pt; font-weight: bold; }
-    .sm { font-size: 9pt; }
-    .xs { font-size: 8pt; color: #555; }
-    hr.solid { border: none; border-top: 2px solid #000; margin: 4px 0; }
-    hr.dashed { border: none; border-top: 1px dashed #000; margin: 3px 0; }
-    .badge {
-        display: inline-block;
-        border: 2px solid #000;
-        padding: 2px 12px;
-        font-size: 11pt;
-        font-weight: 900;
-        letter-spacing: 1px;
-    }
-    .grand-total {
-        font-size: 20pt;
-        font-weight: 900;
-        text-align: center;
-        padding: 6px 0;
-    }
-    .row-table td:first-child { color: #555; font-size: 10pt; width: 35%; }
-    .row-table td:last-child { text-align: right; font-weight: bold; }
-    .items-table th {
-        font-size: 9pt;
-        font-weight: bold;
-        color: #555;
-        border-bottom: 1px solid #000;
-        padding: 2px 0;
-        text-transform: uppercase;
-    }
-    .sign-line {
-        margin-top: 30px;
-        border-top: 1px solid #000;
-        text-align: center;
-        padding-top: 2px;
-    }
+    .big { font-size: 10pt; font-weight: 900; }
+    .sm { font-size: 7pt; }
+    .xs { font-size: 6pt; color: #555; }
+    hr { border: none; border-top: 1px dashed #000; margin: 2px 0; }
+    hr.solid { border-top: 1px solid #000; }
+    .badge { display: inline-block; border: 1.5px solid #000; padding: 0px 6px; font-size: 8pt; font-weight: 900; letter-spacing: 0.5px; }
+    .grand-total { font-size: 12pt; font-weight: 900; text-align: right; padding: 2px 0; }
+    .info td:first-child { color: #555; font-size: 7pt; width: 22%; }
+    .info td:last-child { text-align: right; font-weight: bold; }
+    .items th { font-size: 7pt; font-weight: bold; border-bottom: 1px solid #000; padding: 1px 0; text-transform: uppercase; }
+    .sign-line { margin-top: 15px; border-top: 1px solid #000; text-align: center; }
 </style>
 </head>
 <body>
@@ -161,112 +115,59 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 <!-- Header -->
 <div class="center">
     <div class="big">${company.name}</div>
-    <div class="sm">${company.site ? company.site + " — " : ""}Indian Oil Corporation Retail Outlet</div>
-    <div class="sm">${company.address}</div>
-    <div class="sm">Ph: ${company.phone}</div>
+    <div class="xs">${company.address} | Ph: ${company.phone}</div>
     <div class="xs">GSTIN: ${company.gstNo}</div>
 </div>
-
 <hr class="solid">
+<div class="center"><span style="font-size:8pt;font-weight:bold;">TAX INVOICE</span> <span class="badge">${billBadge}</span></div>
+<hr>
 
-<div class="center">
-    <div class="med">TAX INVOICE</div>
-    <span class="badge">${billBadge}</span>
-</div>
-
-<hr class="dashed">
-
-<!-- Bill info -->
-<table class="row-table">
-    <tr><td>Bill No:</td><td>${invoice.billNo || "—"}</td></tr>
-    <tr><td>Date:</td><td>${invoice.date ? formatDate(invoice.date) : "—"}</td></tr>
-    <tr><td>Shift:</td><td>#${invoice.shiftId || "—"}</td></tr>
-    <tr><td>Cashier:</td><td>${invoice.raisedBy?.name || "—"}</td></tr>
-</table>
-
-<hr class="dashed">
-
-<!-- Customer -->
-<table class="row-table">
-    <tr><td colspan="2" style="font-weight:bold;font-size:10pt;color:#000;">${customerName}</td></tr>
-    ${customerPhone ? `<tr><td colspan="2" class="sm" style="color:#000;">Ph: ${customerPhone}</td></tr>` : ""}
-    ${customerGST ? `<tr><td colspan="2" class="sm" style="color:#000;">GSTIN: ${customerGST}</td></tr>` : ""}
-</table>
-
-<hr class="dashed">
-
-<!-- Vehicle -->
-<table class="row-table">
-    ${vehicleNo ? `<tr><td>Vehicle:</td><td>${vehicleNo}</td></tr>` : ""}
-    ${invoice.vehicleKM ? `<tr><td>KM:</td><td>${invoice.vehicleKM.toLocaleString("en-IN")}</td></tr>` : ""}
-    ${creditFields}
-</table>
-
+<!-- Bill + Customer info (two columns) -->
+<table><tr>
+<td style="width:50%;">
+    <table class="info">
+        <tr><td>Bill:</td><td>${invoice.billNo || "—"}</td></tr>
+        <tr><td>Date:</td><td>${invoice.date ? formatDate(invoice.date) : "—"}</td></tr>
+        <tr><td>Shift:</td><td>#${invoice.shiftId || "—"}</td></tr>
+    </table>
+</td>
+<td style="width:50%;">
+    <table class="info">
+        <tr><td>Customer:</td><td>${customerName}</td></tr>
+        ${vehicleNo ? `<tr><td>Vehicle:</td><td>${vehicleNo}</td></tr>` : ""}
+        ${invoice.driverName ? `<tr><td>Driver:</td><td>${invoice.driverName}</td></tr>` : `<tr><td>Cashier:</td><td>${invoice.raisedBy?.name || "—"}</td></tr>`}
+    </table>
+</td>
+</tr></table>
+${invoice.vehicleKM ? `<div class="xs" style="text-align:right;">KM: ${invoice.vehicleKM.toLocaleString("en-IN")}${invoice.indentNo ? ` | Indent: ${invoice.indentNo}` : ""}${customerGST ? ` | GST: ${customerGST}` : ""}</div>` : ""}
 <hr class="solid">
 
 <!-- Items -->
-<div class="center bold sm" style="margin-bottom:2px;">ITEMS</div>
-<table class="items-table">
-    <thead>
-        <tr>
-            <th style="text-align:left;">Product</th>
-            <th style="text-align:center;">Qty</th>
-            <th style="text-align:center;">Rate</th>
-            <th style="text-align:right;">Amount</th>
-        </tr>
-    </thead>
-    <tbody>
-        ${itemsHtml}
-    </tbody>
+<table class="items">
+    <thead><tr>
+        <th style="text-align:left;">Product</th>
+        <th style="text-align:center;">Qty</th>
+        <th style="text-align:center;">Rate</th>
+        <th style="text-align:right;">Amount</th>
+    </tr></thead>
+    <tbody>${itemsHtml}</tbody>
 </table>
-
 <hr class="solid">
 
 <!-- Totals -->
-<table class="row-table">
-    <tr><td style="color:#000;">Gross Amount</td><td>${formatCurrency(grossAmount)}</td></tr>
-    ${totalDiscount > 0 ? `<tr><td style="color:#000;">Discount</td><td>-${formatCurrency(totalDiscount)}</td></tr>` : ""}
-    ${Math.abs(rounding) >= 0.01 ? `<tr><td style="color:#000;">Rounding</td><td>${rounding > 0 ? "+" : ""}${rounding.toFixed(2)}</td></tr>` : ""}
+<table style="font-size:8pt;">
+    <tr><td>Gross</td><td style="text-align:right;font-weight:bold;">${formatCurrency(grossAmount)}</td>
+        <td style="width:10px;"></td>
+        <td>Payment</td><td style="text-align:right;font-weight:bold;">${isCash ? (invoice.paymentMode || "CASH") : "CREDIT"}</td></tr>
+    ${totalDiscount > 0 ? `<tr><td>Discount</td><td style="text-align:right;">-${formatCurrency(totalDiscount)}</td><td></td><td>Status</td><td style="text-align:right;font-weight:bold;">${paymentStatus}</td></tr>` : ""}
 </table>
-
-<hr class="solid">
 
 <div class="grand-total">&#8377; ${formatCurrency(invoice.netAmount)}</div>
-<div class="center xs" style="margin-top:-2px;">NET AMOUNT</div>
 
-<hr class="solid">
+<hr>
+<div class="xs center">Fuel prices include all applicable taxes. Goods once sold will not be taken back. Computer-generated invoice.</div>
 
-<!-- Payment -->
-<table class="row-table">
-    <tr><td>Payment:</td><td>${isCash ? (invoice.paymentMode || "CASH") : "CREDIT"}</td></tr>
-    <tr><td>Status:</td><td>${paymentStatus}</td></tr>
-</table>
-
-<hr class="dashed">
-
-<!-- Footer text -->
-<div class="center xs" style="margin-top:4px;">
-    Fuel prices include all applicable taxes.<br>
-    Goods once sold will not be taken back.<br>
-    ${!isCash ? "Credit bills settled as per agreement terms.<br>" : ""}
-    Subject to Chennai jurisdiction.<br>
-    Computer-generated invoice.
-</div>
-
-<hr class="dashed">
-
-<div class="center xs">
-    ${numberToWords(invoice.netAmount || 0)}
-</div>
-
-${!isCash ? `
-<div class="sign-line">
-    <span class="xs">Authorized Signatory</span>
-</div>
-` : ""}
-
-<div style="margin-top:8px;"></div>
-<div class="center sm bold">*** Thank You ${isCash ? "| Visit Again" : ""} ***</div>
+${!isCash ? `<div class="sign-line"><span class="xs">Party Signature</span></div>` : ""}
 
 </body>
 </html>`;
