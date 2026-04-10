@@ -179,6 +179,13 @@ const cashierSections: NavSection[] = [
             { name: "Shift Closing", href: "/operations/shifts", icon: Clock },
         ],
     },
+    {
+        label: "Credit",
+        permission: "PAYMENT_VIEW",
+        items: [
+            { name: "Credit Monitoring", href: "/payments/credit-monitoring", icon: AlertTriangle },
+        ],
+    },
 ];
 
 // Customer-specific portal navigation
