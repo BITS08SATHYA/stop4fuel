@@ -39,6 +39,7 @@ public class InvoiceBillService {
     private final IncentivePaymentService incentivePaymentService;
     private final BillSequenceService billSequenceService;
     private final StatementRepository statementRepository;
+    private final InvoiceBillPhotoRepository invoiceBillPhotoRepository;
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -680,32 +681,41 @@ public class InvoiceBillService {
         InvoiceBill invoice = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
 
-        // Build S3 key: invoices/sales/{scid}/{year}/{month}/{day}/shift-{shiftId}/{billNo}/{type}.{ext}
+        if (!List.of("bill-pic", "pump-bill-pic", "indent-pic").contains(type)) {
+            throw new IllegalArgumentException("Invalid file type: " + type);
+        }
+
+        // Build S3 key with sequence number for multi-photo support
         LocalDateTime invoiceDate = invoice.getDate() != null ? invoice.getDate() : LocalDateTime.now();
         Long scid = invoice.getScid() != null ? invoice.getScid() : SecurityUtils.getScid();
         Long shiftId = invoice.getShiftId() != null ? invoice.getShiftId() : 0L;
         String safeBillNo = invoice.getBillNo() != null
                 ? invoice.getBillNo().replace("/", "-") : String.valueOf(id);
         String ext = getExtension(file.getOriginalFilename());
-        String key = String.format("invoices/sales/%d/%d/%02d/%02d/shift-%d/%s/%s.%s",
+
+        long existingCount = invoiceBillPhotoRepository.countByInvoiceBillIdAndPhotoType(id, type);
+        String key = String.format("invoices/sales/%d/%d/%02d/%02d/shift-%d/%s/%s-%d.%s",
                 scid, invoiceDate.getYear(), invoiceDate.getMonthValue(), invoiceDate.getDayOfMonth(),
-                shiftId, safeBillNo, type, ext);
+                shiftId, safeBillNo, type, existingCount + 1, ext);
 
-        // Delete old file if exists
-        String oldKey = getFileKey(invoice, type);
-        if (oldKey != null && !oldKey.isEmpty()) {
-            try { s3StorageService.delete(oldKey); } catch (Exception ignored) {}
-        }
-
-        // Upload new file
+        // Upload to S3
         s3StorageService.upload(key, file);
 
-        // Save key to entity
-        switch (type) {
-            case "bill-pic": invoice.setBillPic(key); break;
-            case "pump-bill-pic": invoice.setPumpBillPic(key); break;
-            case "indent-pic": invoice.setIndentPic(key); break;
-            default: throw new IllegalArgumentException("Invalid file type: " + type);
+        // Save photo record
+        InvoiceBillPhoto photo = new InvoiceBillPhoto();
+        photo.setInvoiceBill(invoice);
+        photo.setPhotoType(type);
+        photo.setS3Key(key);
+        photo.setOriginalFilename(file.getOriginalFilename());
+        invoiceBillPhotoRepository.save(photo);
+
+        // Also update legacy single-field (first photo of this type becomes the primary)
+        if (existingCount == 0) {
+            switch (type) {
+                case "bill-pic": invoice.setBillPic(key); break;
+                case "pump-bill-pic": invoice.setPumpBillPic(key); break;
+                case "indent-pic": invoice.setIndentPic(key); break;
+            }
         }
 
         return repository.save(invoice);
@@ -720,6 +730,27 @@ public class InvoiceBillService {
             throw new ResourceNotFoundException("No file uploaded for type: " + type);
         }
         return s3StorageService.getPresignedUrl(key);
+    }
+
+    @Transactional(readOnly = true)
+    public List<InvoiceBillPhoto> getPhotos(Long invoiceId) {
+        return invoiceBillPhotoRepository.findByInvoiceBillIdOrderByCreatedAtAsc(invoiceId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<InvoiceBillPhoto> getPhotosByType(Long invoiceId, String type) {
+        return invoiceBillPhotoRepository.findByInvoiceBillIdAndPhotoTypeOrderByCreatedAtAsc(invoiceId, type);
+    }
+
+    @Transactional
+    public void deletePhoto(Long invoiceId, Long photoId) {
+        InvoiceBillPhoto photo = invoiceBillPhotoRepository.findById(photoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Photo not found"));
+        if (!photo.getInvoiceBill().getId().equals(invoiceId)) {
+            throw new BusinessException("Photo does not belong to this invoice");
+        }
+        try { s3StorageService.delete(photo.getS3Key()); } catch (Exception ignored) {}
+        invoiceBillPhotoRepository.delete(photo);
     }
 
     private String getFileKey(InvoiceBill invoice, String type) {

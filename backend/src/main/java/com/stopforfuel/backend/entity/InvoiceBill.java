@@ -129,6 +129,10 @@ public class InvoiceBill extends BaseEntity {
     @OneToMany(mappedBy = "invoiceBill", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceProduct> products = new ArrayList<>();
 
+    @OneToMany(mappedBy = "invoiceBill", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    private List<InvoiceBillPhoto> photos = new ArrayList<>();
+
     @PrePersist
     @Override
     protected void onCreate() {

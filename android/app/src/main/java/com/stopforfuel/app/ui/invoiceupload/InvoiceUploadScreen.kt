@@ -250,8 +250,10 @@ private fun InvoiceUploadCard(
 ) {
     val isCreditBill = invoice.billType == "CREDIT"
     val borderColor = if (isCreditBill) Color(0xFFFF6B00) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    val hasBillPic = !invoice.billPic.isNullOrEmpty()
-    val hasIndentPic = !invoice.indentPic.isNullOrEmpty()
+    val billPicCount = invoice.photos?.count { it.photoType == "bill-pic" } ?: if (!invoice.billPic.isNullOrEmpty()) 1 else 0
+    val indentPicCount = invoice.photos?.count { it.photoType == "indent-pic" } ?: if (!invoice.indentPic.isNullOrEmpty()) 1 else 0
+    val hasBillPic = billPicCount > 0
+    val hasIndentPic = indentPicCount > 0
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -348,10 +350,10 @@ private fun InvoiceUploadCard(
                 // Status chips
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (isCreditBill) {
-                        UploadStatusChip("Bill", hasBillPic, mandatory = true)
-                        UploadStatusChip("Indent", hasIndentPic, mandatory = false)
+                        UploadStatusChip("Bill", hasBillPic, mandatory = true, count = billPicCount)
+                        UploadStatusChip("Indent", hasIndentPic, mandatory = false, count = indentPicCount)
                     } else {
-                        UploadStatusChip("Bill", hasBillPic, mandatory = false)
+                        UploadStatusChip("Bill", hasBillPic, mandatory = false, count = billPicCount)
                     }
                 }
 
@@ -397,7 +399,7 @@ private fun InvoiceUploadCard(
 }
 
 @Composable
-private fun UploadStatusChip(label: String, uploaded: Boolean, mandatory: Boolean = false) {
+private fun UploadStatusChip(label: String, uploaded: Boolean, mandatory: Boolean = false, count: Int = 0) {
     val pendingColor = if (mandatory) Color(0xFFD32F2F) else MaterialTheme.colorScheme.outline
     val pendingBg = if (mandatory) Color(0xFFD32F2F).copy(alpha = 0.1f)
         else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
@@ -418,9 +420,12 @@ private fun UploadStatusChip(label: String, uploaded: Boolean, mandatory: Boolea
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                if (uploaded) label
-                else if (mandatory) "$label *"
-                else label,
+                when {
+                    uploaded && count > 1 -> "$label ($count)"
+                    uploaded -> label
+                    mandatory -> "$label *"
+                    else -> label
+                },
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 10.sp,
                 color = if (uploaded) Color(0xFF4CAF50) else pendingColor
