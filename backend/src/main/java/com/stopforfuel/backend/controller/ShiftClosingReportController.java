@@ -96,6 +96,13 @@ public class ShiftClosingReportController {
         return ResponseEntity.ok(Map.of("url", url));
     }
 
+    @PostMapping("/{shiftId}/regenerate-pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<Map<String, String>> regeneratePdf(@PathVariable Long shiftId) {
+        String url = reportService.regeneratePdf(shiftId);
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
     @GetMapping("/{shiftId}/download-pdf")
     @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable Long shiftId) {
