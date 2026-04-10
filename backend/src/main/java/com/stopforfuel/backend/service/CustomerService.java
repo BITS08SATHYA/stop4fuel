@@ -353,7 +353,7 @@ public class CustomerService {
 
         // 3. Repayment window exceeded
         if (blockReason == null && customer.getRepaymentDays() != null && customer.getRepaymentDays() > 0) {
-            boolean isStatementCustomer = customer.getStatementFrequency() != null && !customer.getStatementFrequency().isBlank();
+            boolean isStatementCustomer = customer.getParty() != null && "Statement".equalsIgnoreCase(customer.getParty().getPartyType());
             long daysOverdue = 0;
 
             if (isStatementCustomer) {
