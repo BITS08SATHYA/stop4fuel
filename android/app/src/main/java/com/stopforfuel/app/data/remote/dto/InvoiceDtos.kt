@@ -38,7 +38,19 @@ data class InvoiceBillDto(
     val products: List<InvoiceProductDto>?,
     val shiftId: Long?,
     val driverName: String?,
-    val driverPhone: String?
+    val driverPhone: String?,
+    val billPic: String? = null,
+    val pumpBillPic: String? = null,
+    val indentPic: String? = null,
+    val photos: List<InvoicePhotoDto>? = null
+)
+
+data class InvoicePhotoDto(
+    val id: Long,
+    val photoType: String,
+    val s3Key: String?,
+    val originalFilename: String?,
+    val createdAt: String?
 )
 
 data class CustomerSummaryDto(

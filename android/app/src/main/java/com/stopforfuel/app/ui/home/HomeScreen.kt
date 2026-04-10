@@ -40,6 +40,7 @@ fun HomeScreen(
     onNavigateToStatementExplorer: () -> Unit = {},
     onNavigateToStockTransfer: () -> Unit = {},
     onNavigateToAttendance: () -> Unit = {},
+    onNavigateToInvoiceUpload: () -> Unit = {},
     onLogout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -93,6 +94,9 @@ fun HomeScreen(
                             scope.launch { drawerState.close() }
                             if (uiState.activePumpSession != null) onNavigateToEndSession(uiState.activePumpSession!!.id)
                             else onNavigateToStartSession()
+                        }
+                        DrawerItem(Icons.Default.CameraAlt, "Invoice Upload") {
+                            scope.launch { drawerState.close() }; onNavigateToInvoiceUpload()
                         }
                         DrawerItem(Icons.Default.FlashOn, "Fast Cash Invoice") {
                             scope.launch { drawerState.close() }; onNavigateToFastCashInvoice()

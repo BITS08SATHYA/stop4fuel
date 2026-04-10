@@ -42,6 +42,7 @@ public class InvoiceBillDTO {
     private boolean independent;
     private StatementSummary statement;
     private List<InvoiceProductDTO> products;
+    private List<PhotoDTO> photos;
     private Long scid;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -79,6 +80,9 @@ public class InvoiceBillDTO {
                 .statement(StatementSummary.from(b.getStatement()))
                 .products(b.getProducts() != null
                         ? b.getProducts().stream().map(InvoiceProductDTO::from).collect(Collectors.toList())
+                        : null)
+                .photos(b.getPhotos() != null
+                        ? b.getPhotos().stream().map(PhotoDTO::from).collect(Collectors.toList())
                         : null)
                 .scid(b.getScid())
                 .createdAt(b.getCreatedAt())
@@ -143,6 +147,27 @@ public class InvoiceBillDTO {
         public static StatementSummary from(Statement s) {
             if (s == null) return null;
             return StatementSummary.builder().id(s.getId()).statementNo(s.getStatementNo()).build();
+        }
+    }
+
+    @Getter
+    @Builder
+    public static class PhotoDTO {
+        private Long id;
+        private String photoType;
+        private String s3Key;
+        private String originalFilename;
+        private LocalDateTime createdAt;
+
+        public static PhotoDTO from(InvoiceBillPhoto p) {
+            if (p == null) return null;
+            return PhotoDTO.builder()
+                    .id(p.getId())
+                    .photoType(p.getPhotoType())
+                    .s3Key(p.getS3Key())
+                    .originalFilename(p.getOriginalFilename())
+                    .createdAt(p.getCreatedAt())
+                    .build();
         }
     }
 

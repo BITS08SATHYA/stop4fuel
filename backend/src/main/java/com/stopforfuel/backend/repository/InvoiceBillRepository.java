@@ -29,6 +29,9 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     List<InvoiceBill> findByShiftIdOrderByIdDesc(Long shiftId);
     List<InvoiceBill> findByBillTypeAndScid(BillType billType, Long scid);
 
+    @Query("SELECT COUNT(i) FROM InvoiceBill i WHERE i.shiftId = :shiftId AND i.billType = 'CREDIT' AND NOT EXISTS (SELECT 1 FROM InvoiceBillPhoto p WHERE p.invoiceBill = i AND p.photoType = 'bill-pic')")
+    long countCreditBillsWithoutPhoto(@Param("shiftId") Long shiftId);
+
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CASH'")
     BigDecimal sumCashBillsByShift(@Param("shiftId") Long shiftId);
 

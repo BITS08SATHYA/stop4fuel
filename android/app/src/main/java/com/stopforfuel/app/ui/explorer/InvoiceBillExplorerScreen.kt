@@ -26,6 +26,7 @@ private val inrFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
 @Composable
 fun InvoiceBillExplorerScreen(
     onBack: () -> Unit,
+    onRecordPayment: (Long) -> Unit = {},
     viewModel: InvoiceBillExplorerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -133,7 +134,7 @@ fun InvoiceBillExplorerScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(uiState.invoices, key = { it.id }) { invoice ->
-                        InvoiceCard(invoice)
+                        InvoiceCard(invoice, onRecordPayment = onRecordPayment)
                     }
                     if (uiState.isLoadingMore) {
                         item {
@@ -149,7 +150,9 @@ fun InvoiceBillExplorerScreen(
 }
 
 @Composable
-private fun InvoiceCard(invoice: InvoiceBillDto) {
+private fun InvoiceCard(invoice: InvoiceBillDto, onRecordPayment: (Long) -> Unit = {}) {
+    val isUnpaidCredit = invoice.billType == "CREDIT" && invoice.paymentStatus == "NOT_PAID"
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp)
@@ -185,7 +188,6 @@ private fun InvoiceCard(invoice: InvoiceBillDto) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // Bill type badge
                     val isCash = invoice.billType == "CASH"
                     Surface(
                         color = if (isCash) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
@@ -199,13 +201,20 @@ private fun InvoiceCard(invoice: InvoiceBillDto) {
                             color = if (isCash) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
-                    // Payment mode
-                    Text(
-                        invoice.paymentMode ?: "",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    // Vehicle
+                    if (isUnpaidCredit) {
+                        Surface(
+                            color = Color(0xFFEF5350).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                "UNPAID",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFEF5350)
+                            )
+                        }
+                    }
                     invoice.vehicle?.vehicleNumber?.let {
                         Text(
                             it,
@@ -215,11 +224,28 @@ private fun InvoiceCard(invoice: InvoiceBillDto) {
                         )
                     }
                 }
-                Text(
-                    invoice.date?.take(10) ?: "",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        invoice.date?.take(10) ?: "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (isUnpaidCredit) {
+                        FilledTonalIconButton(
+                            onClick = { onRecordPayment(invoice.id) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Payment,
+                                contentDescription = "Record Payment",
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
