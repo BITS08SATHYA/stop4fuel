@@ -176,6 +176,23 @@ fun FastCashInvoiceScreen(
 
             Spacer(Modifier.height(12.dp))
 
+            // Payment mode selector
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("CASH", "UPI", "CARD").forEach { mode ->
+                    FilterChip(
+                        selected = uiState.paymentMode == mode,
+                        onClick = { viewModel.selectPaymentMode(mode) },
+                        label = { Text(mode, fontSize = 12.sp) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             // Number pad
             val buttons = listOf(
                 listOf("1", "2", "3"),
