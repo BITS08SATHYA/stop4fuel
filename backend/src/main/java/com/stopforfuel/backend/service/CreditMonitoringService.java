@@ -30,6 +30,7 @@ public class CreditMonitoringService {
     private final CustomerRepository customerRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final PaymentRepository paymentRepository;
+    private final StatementRepository statementRepository;
     private final CustomerBlockEventRepository blockEventRepository;
     private final CreditPolicyService creditPolicyService;
 
@@ -380,6 +381,94 @@ public class CreditMonitoringService {
         blockEventRepository.save(event);
     }
 
+    // ─── Credit Monitoring Dashboard ──────────────────────────────
+
+    @Transactional(readOnly = true)
+    public CreditMonitoringDashboard getDashboard() {
+        Long scid = SecurityUtils.getScid();
+        List<Customer> allCustomers = customerRepository.findAllByScid(scid);
+
+        List<CreditCustomerRow> localRows = new ArrayList<>();
+        List<CreditCustomerRow> statementRows = new ArrayList<>();
+        int totalLocalOverdue = 0, totalStatementOverdue = 0;
+        BigDecimal totalLocalAmount = BigDecimal.ZERO, totalStatementAmount = BigDecimal.ZERO;
+
+        for (Customer c : allCustomers) {
+            // Skip customers with no credit limit
+            if (c.getCreditLimitAmount() == null || c.getCreditLimitAmount().compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            boolean isStatement = c.getStatementFrequency() != null && !c.getStatementFrequency().isBlank();
+
+            CreditCustomerRow row = new CreditCustomerRow();
+            row.setCustomerId(c.getId());
+            row.setCustomerName(c.getName());
+            row.setStatus(c.getStatus() != null ? c.getStatus().name() : "ACTIVE");
+            row.setRepaymentDays(c.getRepaymentDays());
+            row.setCreditLimit(c.getCreditLimitAmount());
+            row.setGroupName(c.getGroup() != null ? c.getGroup().getGroupName() : null);
+            row.setForceUnblocked(c.isForceUnblocked());
+
+            if (isStatement) {
+                long unpaidCount = statementRepository.countUnpaidStatements(c.getId());
+                BigDecimal unpaidAmount = statementRepository.sumUnpaidStatementBalance(c.getId());
+                java.time.LocalDate oldest = statementRepository.findOldestUnpaidStatementDate(c.getId());
+
+                if (unpaidCount == 0) continue; // Skip customers with no unpaid statements
+
+                long daysOverdue = oldest != null ? ChronoUnit.DAYS.between(oldest, java.time.LocalDate.now()) : 0;
+                boolean overdue = c.getRepaymentDays() != null && daysOverdue > c.getRepaymentDays();
+
+                row.setUnpaidCount(unpaidCount);
+                row.setUnpaidAmount(unpaidAmount);
+                row.setOldestUnpaidDate(oldest != null ? oldest.toString() : null);
+                row.setDaysOverdue(daysOverdue);
+                row.setOverdue(overdue);
+
+                statementRows.add(row);
+                totalStatementAmount = totalStatementAmount.add(unpaidAmount);
+                if (overdue) totalStatementOverdue++;
+            } else {
+                long unpaidCount = invoiceBillRepository.countUnpaidLocalCreditBills(c.getId());
+                BigDecimal unpaidAmount = invoiceBillRepository.sumUnpaidLocalCreditAmount(c.getId());
+                LocalDateTime oldest = invoiceBillRepository.findOldestUnpaidLocalBillDate(c.getId());
+
+                if (unpaidCount == 0) continue; // Skip customers with no unpaid bills
+
+                long daysOverdue = oldest != null ? ChronoUnit.DAYS.between(oldest.toLocalDate(), java.time.LocalDate.now()) : 0;
+                boolean overdue = c.getRepaymentDays() != null && daysOverdue > c.getRepaymentDays();
+
+                row.setUnpaidCount(unpaidCount);
+                row.setUnpaidAmount(unpaidAmount);
+                row.setOldestUnpaidDate(oldest != null ? oldest.toLocalDate().toString() : null);
+                row.setDaysOverdue(daysOverdue);
+                row.setOverdue(overdue);
+
+                localRows.add(row);
+                totalLocalAmount = totalLocalAmount.add(unpaidAmount);
+                if (overdue) totalLocalOverdue++;
+            }
+        }
+
+        // Sort: overdue first, then by daysOverdue descending
+        localRows.sort((a, b) -> {
+            if (a.isOverdue() != b.isOverdue()) return a.isOverdue() ? -1 : 1;
+            return Long.compare(b.getDaysOverdue(), a.getDaysOverdue());
+        });
+        statementRows.sort((a, b) -> {
+            if (a.isOverdue() != b.isOverdue()) return a.isOverdue() ? -1 : 1;
+            return Long.compare(b.getDaysOverdue(), a.getDaysOverdue());
+        });
+
+        CreditMonitoringDashboard dashboard = new CreditMonitoringDashboard();
+        dashboard.setLocalCustomers(localRows);
+        dashboard.setStatementCustomers(statementRows);
+        dashboard.setTotalLocalOverdue(totalLocalOverdue);
+        dashboard.setTotalStatementOverdue(totalStatementOverdue);
+        dashboard.setTotalLocalAmount(totalLocalAmount);
+        dashboard.setTotalStatementAmount(totalStatementAmount);
+        return dashboard;
+    }
+
     // ─── DTOs ─────────────────────────────────────────────────────
 
     @Getter @Setter
@@ -427,5 +516,31 @@ public class CreditMonitoringService {
         private String performedByName;
         private String previousStatus;
         private LocalDateTime createdAt;
+    }
+
+    @Getter @Setter
+    public static class CreditMonitoringDashboard {
+        private List<CreditCustomerRow> localCustomers = new ArrayList<>();
+        private List<CreditCustomerRow> statementCustomers = new ArrayList<>();
+        private int totalLocalOverdue;
+        private int totalStatementOverdue;
+        private BigDecimal totalLocalAmount = BigDecimal.ZERO;
+        private BigDecimal totalStatementAmount = BigDecimal.ZERO;
+    }
+
+    @Getter @Setter
+    public static class CreditCustomerRow {
+        private Long customerId;
+        private String customerName;
+        private String status;
+        private Integer repaymentDays;
+        private BigDecimal creditLimit;
+        private String groupName;
+        private boolean forceUnblocked;
+        private long unpaidCount;
+        private BigDecimal unpaidAmount;
+        private String oldestUnpaidDate;
+        private long daysOverdue;
+        private boolean overdue;
     }
 }

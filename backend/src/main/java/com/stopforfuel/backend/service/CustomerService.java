@@ -8,6 +8,7 @@ import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
+import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class CustomerService {
     private final com.stopforfuel.backend.repository.RolesRepository rolesRepository;
 
     private final com.stopforfuel.backend.repository.CustomerBlockEventRepository blockEventRepository;
+    private final StatementRepository statementRepository;
 
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String categoryType, org.springframework.data.domain.Pageable pageable) {
@@ -349,8 +351,30 @@ public class CustomerService {
                     + " L, Limit: " + customer.getCreditLimitLiters().toPlainString() + " L";
         }
 
-        // 3. Aging 90+ days
-        if (blockReason == null) {
+        // 3. Repayment window exceeded
+        if (blockReason == null && customer.getRepaymentDays() != null && customer.getRepaymentDays() > 0) {
+            boolean isStatementCustomer = customer.getStatementFrequency() != null && !customer.getStatementFrequency().isBlank();
+            long daysOverdue = 0;
+
+            if (isStatementCustomer) {
+                java.time.LocalDate oldest = statementRepository.findOldestUnpaidStatementDate(customerId);
+                if (oldest != null) {
+                    daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(oldest, java.time.LocalDate.now());
+                }
+            } else {
+                LocalDateTime oldest = invoiceBillRepository.findOldestUnpaidLocalBillDate(customerId);
+                if (oldest != null) {
+                    daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(oldest.toLocalDate(), java.time.LocalDate.now());
+                }
+            }
+
+            if (daysOverdue > customer.getRepaymentDays()) {
+                blockReason = "Repayment window exceeded. " + daysOverdue + " days overdue (window: " + customer.getRepaymentDays() + " days)";
+            }
+        }
+
+        // 4. Aging 90+ days (fallback for customers without repaymentDays)
+        if (blockReason == null && (customer.getRepaymentDays() == null || customer.getRepaymentDays() <= 0)) {
             LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
             if (invoiceBillRepository.existsUnpaidCreditBillBefore(customerId, ninetyDaysAgo)) {
                 blockReason = "Unpaid credit bill older than 90 days";

@@ -50,6 +50,7 @@ import {
     ClipboardList,
     MapPin,
     Search,
+    AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -122,6 +123,7 @@ const invoiceManagementNav = [
 const paymentManagementNav = [
     { name: "Payment Dashboard", href: "/payments/dashboard", icon: PieChart },
     { name: "Credit Overview", href: "/payments/credit", icon: Eye },
+    { name: "Credit Monitoring", href: "/payments/credit-monitoring", icon: AlertTriangle },
     { name: "Watchlist", href: "/payments/credit/watchlist", icon: Shield },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
     { name: "Statement Reports", href: "/payments/statements/reports", icon: FileText },
