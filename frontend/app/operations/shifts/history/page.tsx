@@ -7,11 +7,12 @@ import { StyledSelect } from "@/components/ui/styled-select";
 import { Badge } from "@/components/ui/badge";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import {
-    Clock, Search, FileText, Download, Eye, Loader2, RotateCcw, Pencil, User
+    Clock, Search, FileText, Download, Eye, Loader2, RotateCcw, Pencil, User, RefreshCw
 } from "lucide-react";
 import {
     getShifts, getShiftReportPdfUrl, reopenShiftToEdit, Shift,
     getShiftCashiers, changeShiftAttendant, CashierUser,
+    regenerateShiftReportPdf,
 } from "@/lib/api/station";
 import { Modal } from "@/components/ui/modal";
 import { showToast } from "@/components/ui/toast";
@@ -45,6 +46,7 @@ export default function ShiftHistoryPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [downloadingId, setDownloadingId] = useState<number | null>(null);
+    const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
 
     // Cashier assignment
     const [showCashierModal, setShowCashierModal] = useState(false);
@@ -105,6 +107,19 @@ export default function ShiftHistoryPage() {
             console.error("Failed to get PDF", err);
         } finally {
             setDownloadingId(null);
+        }
+    };
+
+    const handleRegeneratePdf = async (shiftId: number) => {
+        setRegeneratingId(shiftId);
+        try {
+            const url = await regenerateShiftReportPdf(shiftId);
+            showToast.success("PDF regenerated successfully");
+            window.open(url, "_blank");
+        } catch (err: any) {
+            showToast.error(err.message || "Failed to regenerate PDF");
+        } finally {
+            setRegeneratingId(null);
         }
     };
 
@@ -256,6 +271,17 @@ export default function ShiftHistoryPage() {
                                                                     {downloadingId === shift.id
                                                                         ? <Loader2 className="w-4 h-4 animate-spin" />
                                                                         : <Download className="w-4 h-4" />
+                                                                    }
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleRegeneratePdf(shift.id)}
+                                                                    disabled={regeneratingId === shift.id}
+                                                                    className="p-2 rounded-lg hover:bg-orange-500/10 text-orange-500 transition-colors disabled:opacity-50"
+                                                                    title="Regenerate PDF"
+                                                                >
+                                                                    {regeneratingId === shift.id
+                                                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                        : <RefreshCw className="w-4 h-4" />
                                                                     }
                                                                 </button>
                                                             </>
