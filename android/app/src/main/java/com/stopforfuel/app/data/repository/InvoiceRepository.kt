@@ -62,6 +62,16 @@ class InvoiceRepository @Inject constructor(
             val requestBody = file.asRequestBody(mediaType)
             val part = MultipartBody.Part.createFormData("file", file.name, requestBody)
             Result.success(api.uploadInvoiceFile(invoiceId, type, part))
+        } catch (e: retrofit2.HttpException) {
+            val errorBody = e.response()?.errorBody()?.string()
+            val message = if (e.code() == 400 && errorBody != null) {
+                try {
+                    org.json.JSONObject(errorBody).optString("message", e.message())
+                } catch (_: Exception) { errorBody }
+            } else {
+                e.message()
+            }
+            Result.failure(Exception(message ?: "Upload failed"))
         } catch (e: Exception) {
             Result.failure(e)
         }
