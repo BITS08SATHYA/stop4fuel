@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- StopForFuel PWA Icon 512x512 -->
+  <rect width="512" height="512" rx="108" fill="#0D1117"/>
+  <defs>
+    <linearGradient id="s" x1="256" y1="52" x2="256" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFCA28"/>
+      <stop offset="1" stop-color="#FFB300"/>
+    </linearGradient>
+  </defs>
+  <path d="M256 52 L90 126 L90 272 C90 374 164 418 256 462 C348 418 422 374 422 272 L422 126 Z" fill="url(#s)"/>
+  <path d="M256 164 C256 164 192 250 192 282 C192 318 220 346 256 346 C292 346 320 318 320 282 C320 250 256 164 256 164Z" fill="#0D1117"/>
+  <path d="M256 266 C256 266 238 294 238 302 C238 312 246 320 256 320 C266 320 274 312 274 302 C274 294 256 266 256 266Z" fill="url(#s)" opacity="0.4"/>
+</svg>

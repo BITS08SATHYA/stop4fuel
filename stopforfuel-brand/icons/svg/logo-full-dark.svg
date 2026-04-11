@@ -1,0 +1,18 @@
+<svg width="260" height="72" viewBox="0 0 260 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- StopForFuel Logo - Full Lockup - For Dark Backgrounds -->
+  <defs>
+    <linearGradient id="shield" x1="24" y1="4" x2="24" y2="68" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFCA28"/>
+      <stop offset="1" stop-color="#FFB300"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield -->
+  <path d="M24 4 L4 16 L4 40 C4 54 12.5 62 24 68 C35.5 62 44 54 44 40 L44 16 Z" fill="url(#shield)"/>
+  <!-- Drop cutout -->
+  <path d="M24 22 C24 22 16 33.5 16 38.5 C16 43 19.6 47 24 47 C28.4 47 32 43 32 38.5 C32 33.5 24 22 24 22Z" fill="#0D1117"/>
+  <!-- Inner flame -->
+  <path d="M24 37 C24 37 22 40 22 41 C22 42.1 22.9 43 24 43 C25.1 43 26 42.1 26 41 C26 40 24 37 24 37Z" fill="url(#shield)" opacity="0.5"/>
+  <!-- Wordmark -->
+  <text x="58" y="33" font-family="Outfit, sans-serif" font-weight="800" font-size="26" letter-spacing="-0.5" fill="#FFFFFF">Stop</text>
+  <text x="58" y="57" font-family="Outfit, sans-serif" font-weight="800" font-size="26" letter-spacing="-0.5" fill="#FFCA28">ForFuel</text>
+</svg>

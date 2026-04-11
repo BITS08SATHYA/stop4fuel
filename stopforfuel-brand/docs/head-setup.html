@@ -1,0 +1,71 @@
+<!--
+  ═══════════════════════════════════════════════════════════
+  StopForFuel — Favicon & PWA Setup
+  ═══════════════════════════════════════════════════════════
+
+  Add these lines inside your <head> tag.
+  Place the icon files in your /public folder (Next.js)
+  or /static folder (other frameworks).
+-->
+
+<!-- Favicon (all modern browsers) -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+<!-- Fallback PNG favicon (older browsers) -->
+<!-- Generate from favicon.svg using: https://realfavicongenerator.net -->
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png" />
+<link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png" />
+
+<!-- Apple Touch Icon (iOS Safari bookmarks & home screen) -->
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="/site.webmanifest" />
+
+<!-- Theme Color (browser chrome tint) -->
+<meta name="theme-color" content="#0D1117" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#FFB300" media="(prefers-color-scheme: light)" />
+
+<!-- MS Tile -->
+<meta name="msapplication-TileColor" content="#0D1117" />
+
+
+<!--
+  ═══════════════════════════════════════════════════════════
+  site.webmanifest — save as /public/site.webmanifest
+  ═══════════════════════════════════════════════════════════
+
+  {
+    "name": "StopForFuel",
+    "short_name": "StopForFuel",
+    "description": "Fuel station management platform",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0D1117",
+    "theme_color": "#FFB300",
+    "icons": [
+      {
+        "src": "/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+      }
+    ]
+  }
+-->
+
+
+<!--
+  ═══════════════════════════════════════════════════════════
+  Google Fonts — add to <head>
+  ═══════════════════════════════════════════════════════════
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />

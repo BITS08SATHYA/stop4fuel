@@ -1,0 +1,107 @@
+/*
+ * ═══════════════════════════════════════════════════════════
+ *  StopForFuel — Tailwind CSS v4 Theme Extension
+ * ═══════════════════════════════════════════════════════════
+ *
+ *  HOW TO USE WITH TAILWIND v4 (CSS-first config):
+ *  Paste this into your main CSS file (e.g., globals.css)
+ *  alongside your @import "tailwindcss" statement.
+ *
+ *  Then use classes like:
+ *    bg-sff-amber-600
+ *    text-sff-deep-900
+ *    font-display
+ *    shadow-sff-amber
+ *
+ *  FOR TAILWIND v3 (JS config):
+ *  See the module.exports block at the bottom of this file.
+ * ═══════════════════════════════════════════════════════════
+ */
+
+/* ── Tailwind v4 — CSS Theme ───────────────────────────── */
+@theme {
+  /* Colors */
+  --color-sff-amber-50:  #FFF8E1;
+  --color-sff-amber-100: #FFECB3;
+  --color-sff-amber-200: #FFD54F;
+  --color-sff-amber-400: #FFCA28;
+  --color-sff-amber-500: #FFC107;
+  --color-sff-amber-600: #FFB300;
+  --color-sff-amber-700: #FF8F00;
+  --color-sff-amber-800: #E65100;
+
+  --color-sff-deep-950: #080B12;
+  --color-sff-deep-900: #0D1117;
+  --color-sff-deep-800: #161B22;
+  --color-sff-deep-700: #1C2333;
+  --color-sff-deep-600: #21283B;
+  --color-sff-deep-500: #30394A;
+
+  --color-sff-teal-400: #2DD4BF;
+  --color-sff-teal-500: #14B8A6;
+  --color-sff-teal-600: #0D9488;
+
+  --color-sff-success: #22C55E;
+  --color-sff-danger:  #EF4444;
+  --color-sff-warning: #F59E0B;
+  --color-sff-info:    #3B82F6;
+
+  /* Fonts */
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* Shadows */
+  --shadow-sff-amber: 0 4px 16px rgba(255, 179, 0, 0.2);
+}
+
+
+/*
+ * ── Tailwind v3 — JS Config (tailwind.config.js) ─────────
+ *
+ * If you're still on Tailwind v3, add this to your config:
+ *
+ *   module.exports = {
+ *     theme: {
+ *       extend: {
+ *         colors: {
+ *           'sff-amber': {
+ *             50:  '#FFF8E1',
+ *             100: '#FFECB3',
+ *             200: '#FFD54F',
+ *             400: '#FFCA28',
+ *             500: '#FFC107',
+ *             600: '#FFB300',
+ *             700: '#FF8F00',
+ *             800: '#E65100',
+ *           },
+ *           'sff-deep': {
+ *             950: '#080B12',
+ *             900: '#0D1117',
+ *             800: '#161B22',
+ *             700: '#1C2333',
+ *             600: '#21283B',
+ *             500: '#30394A',
+ *           },
+ *           'sff-teal': {
+ *             400: '#2DD4BF',
+ *             500: '#14B8A6',
+ *             600: '#0D9488',
+ *           },
+ *           'sff-success': '#22C55E',
+ *           'sff-danger':  '#EF4444',
+ *           'sff-warning': '#F59E0B',
+ *           'sff-info':    '#3B82F6',
+ *         },
+ *         fontFamily: {
+ *           display: ['Outfit', 'system-ui', 'sans-serif'],
+ *           body:    ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+ *           mono:    ['JetBrains Mono', 'ui-monospace', 'monospace'],
+ *         },
+ *         boxShadow: {
+ *           'sff-amber': '0 4px 16px rgba(255, 179, 0, 0.2)',
+ *         },
+ *       },
+ *     },
+ *   }
+ */

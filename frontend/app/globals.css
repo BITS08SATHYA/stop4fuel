@@ -23,55 +23,66 @@
 }
 
 :root {
-  /* Light Mode (Default) */
+  /* Light Mode — Brand: StopForFuel v1.0 */
   --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  /* Navy */
-  --card: 210 40% 96.1%;
-  --card-foreground: 222.2 84% 4.9%;
+  --foreground: 222 47% 11%;
+  /* Gray 900: #0F172A */
+  --card: 210 40% 98%;
+  /* Gray 50: #F8FAFC */
+  --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 222.2 84% 4.9%;
-  /* Navy */
+  --popover-foreground: 222 47% 11%;
+  --primary: 222 47% 11%;
   --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 30 100% 50%;
-  /* Orange */
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
+  --secondary: 210 40% 98%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 213 27% 94%;
+  /* Gray 100: #F1F5F9 */
+  --muted-foreground: 215 16% 47%;
+  /* Gray 500: #64748B */
+  --accent: 42 100% 50%;
+  /* Amber 600: #FFB300 */
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%;
+  /* Danger: #EF4444 */
   --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
+  --border: 214 32% 91%;
+  /* Gray 200: #E2E8F0 */
+  --input: 214 32% 91%;
+  --ring: 42 100% 50%;
+  /* Amber 600 */
   --radius: 0.5rem;
 }
 
 .dark {
-  /* Dark Mode */
-  --background: 222.2 84% 4.9%;
-  /* Navy */
+  /* Dark Mode — Petroleum Deep palette */
+  --background: 216 28% 7%;
+  /* Deep 900: #0D1117 */
   --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
+  /* Gray 50: #F1F5F9 */
+  --card: 215 21% 11%;
+  /* Deep 800: #161B22 */
   --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
+  --popover: 216 28% 7%;
   --popover-foreground: 210 40% 98%;
   --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 222 29% 15%;
+  /* Deep 700: #1C2333 */
   --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 30 100% 50%;
-  /* Orange */
+  --muted: 222 29% 15%;
+  --muted-foreground: 215 16% 47%;
+  /* Gray 500: #64748B */
+  --accent: 42 100% 50%;
+  /* Amber 600: #FFB300 */
   --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 63% 31%;
   --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
+  --border: 224 28% 18%;
+  /* Deep 600: #21283B */
+  --input: 224 28% 18%;
+  --ring: 45 100% 58%;
+  /* Amber 400: #FFCA28 */
 }
 
 @layer base {
@@ -94,11 +105,11 @@
   }
 
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-amber-500;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-amber-600;
   }
 
   .btn-gradient {
-    @apply bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white shadow-lg shadow-orange-500/20 transition-all duration-300;
+    @apply bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-400 hover:to-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all duration-300;
   }
 }
 

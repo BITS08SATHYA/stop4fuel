@@ -4,47 +4,27 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- StopForFuel logo - stylized F fuel pump -->
+    <!-- StopForFuel Shield Logo — Brand v1.0 -->
+    <!-- Shield scaled to 72dp safe zone, centered at 54,54 -->
     <group
-        android:translateX="18"
-        android:translateY="14"
-        android:scaleX="0.38"
-        android:scaleY="0.38">
-        <!-- Top curve of F -->
+        android:translateX="30"
+        android:translateY="16">
+        <!-- Shield body — Amber gradient simulated with two layers -->
         <path
-            android:fillColor="#2DD4BF"
-            android:pathData="M80,0 Q140,-5 160,20 Q180,45 150,65 Q130,80 90,80" />
-        <!-- Bottom curve -->
+            android:fillColor="#FFCA28"
+            android:pathData="M24,4 L4,16 L4,40 C4,54 12.5,62 24,68 C35.5,62 44,54 44,40 L44,16 Z" />
         <path
-            android:fillColor="#2DD4BF"
-            android:pathData="M90,80 Q40,80 20,105 Q0,130 30,155 Q50,170 90,170" />
-        <!-- F body connection -->
+            android:fillColor="#FFB300"
+            android:pathData="M24,36 L4,36 L4,40 C4,54 12.5,62 24,68 C35.5,62 44,54 44,40 L44,36 Z"
+            android:alpha="0.7" />
+        <!-- Inner fuel drop -->
         <path
-            android:fillColor="#14B8A6"
-            android:pathData="M60,60 L60,170 L90,170 L90,80 Q130,80 150,65 Q170,50 155,30 L130,30 Q140,45 125,58 Q110,68 90,68 L90,60 Z"
-            android:alpha="0.9" />
-        <!-- Vertical bar -->
+            android:fillColor="#0D1117"
+            android:pathData="M24,22 C24,22 16,33.5 16,38.5 C16,43 19.6,47 24,47 C28.4,47 32,43 32,38.5 C32,33.5 24,22 24,22Z" />
+        <!-- Flame detail inside drop -->
         <path
-            android:fillColor="#14B8A6"
-            android:pathData="M90,55 L118,55 L118,205 L90,205 Z" />
-        <!-- Top horizontal bar -->
-        <path
-            android:fillColor="#2DD4BF"
-            android:pathData="M90,55 L200,55 L200,78 L118,78 L118,55 Z" />
-        <!-- Middle horizontal bar -->
-        <path
-            android:fillColor="#14B8A6"
-            android:pathData="M118,110 L180,110 L180,130 L118,130 Z"
-            android:alpha="0.95" />
-        <!-- Fuel drop (orange accent) -->
-        <path
-            android:fillColor="#F59E0B"
-            android:pathData="M35,140 m-8,0 a8,8 0,1 1,16 0 a8,8 0,1 1,-16 0"
-            android:alpha="0.9" />
-        <!-- Drop highlight -->
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M35,137 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"
+            android:fillColor="#FFB300"
+            android:pathData="M24,37 C24,37 22,40 22,41 C22,42.1 22.9,43 24,43 C25.1,43 26,42.1 26,41 C26,40 24,37 24,37Z"
             android:alpha="0.5" />
     </group>
 </vector>
