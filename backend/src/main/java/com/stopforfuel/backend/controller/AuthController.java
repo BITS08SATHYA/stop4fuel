@@ -19,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.AdminUserGlobalSignOutRequest;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -34,16 +36,22 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuditLogService auditLogService;
     private final PasscodeResetRequestRepository resetRequestRepository;
+    private final CognitoIdentityProviderClient cognitoClient;
+
+    @Value("${app.cognito.user-pool-id:}")
+    private String userPoolId;
 
     public AuthController(UserRepository userRepository, PermissionService permissionService,
                           @Autowired(required = false) JwtTokenProvider jwtTokenProvider,
                           AuditLogService auditLogService,
-                          PasscodeResetRequestRepository resetRequestRepository) {
+                          PasscodeResetRequestRepository resetRequestRepository,
+                          @Autowired(required = false) CognitoIdentityProviderClient cognitoClient) {
         this.userRepository = userRepository;
         this.permissionService = permissionService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.auditLogService = auditLogService;
         this.resetRequestRepository = resetRequestRepository;
+        this.cognitoClient = cognitoClient;
     }
 
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -216,6 +224,49 @@ public class AuthController {
                 .build();
         httpResponse.addHeader("Set-Cookie", cookie.toString());
         return ResponseEntity.ok(Map.of("message", "Logged out"));
+    }
+
+    @PostMapping("/logout-all")
+    public ResponseEntity<Map<String, String>> logoutAllDevices(Authentication authentication,
+                                                                 HttpServletResponse httpResponse) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
+        }
+
+        // Sign out from Cognito (invalidates all tokens)
+        if (cognitoClient != null && userPoolId != null && !userPoolId.isBlank()) {
+            String cognitoId = extractCognitoId(authentication);
+            User user = userRepository.findByCognitoId(cognitoId).orElse(null);
+            if (user == null) {
+                try {
+                    Long userId = Long.parseLong(cognitoId);
+                    user = userRepository.findById(userId).orElse(null);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+
+            if (user != null && user.getCognitoId() != null && !user.getCognitoId().isBlank()) {
+                try {
+                    cognitoClient.adminUserGlobalSignOut(AdminUserGlobalSignOutRequest.builder()
+                            .userPoolId(userPoolId)
+                            .username(user.getCognitoId())
+                            .build());
+                } catch (Exception e) {
+                    return ResponseEntity.status(500).body(Map.of("error", "Failed to sign out from all devices"));
+                }
+            }
+        }
+
+        // Clear current device cookie
+        ResponseCookie cookie = ResponseCookie.from(AUTH_COOKIE_NAME, "")
+                .httpOnly(true)
+                .secure(authEnabled)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(0)
+                .build();
+        httpResponse.addHeader("Set-Cookie", cookie.toString());
+        return ResponseEntity.ok(Map.of("message", "Signed out from all devices"));
     }
 
     private Map<String, Object> buildUserResponse(User user, List<String> permissions, String designation) {
