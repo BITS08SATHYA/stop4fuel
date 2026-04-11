@@ -18,6 +18,7 @@ configurations {
 }
 
 ext['spring-security.version'] = '6.5.9'
+ext['tomcat.version'] = '10.1.53'
 
 repositories {
 	mavenCentral()
