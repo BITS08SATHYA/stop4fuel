@@ -38,6 +38,7 @@ dependencies {
 	implementation 'org.apache.poi:poi:5.2.5'
 	implementation 'org.apache.poi:poi-ooxml:5.2.5'
 	implementation 'software.amazon.awssdk:s3:2.25.16'
+	implementation 'software.amazon.awssdk:textract:2.25.16'
 	implementation 'software.amazon.awssdk:secretsmanager:2.25.16'
 	implementation 'software.amazon.awssdk:costexplorer:2.25.16'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate6'

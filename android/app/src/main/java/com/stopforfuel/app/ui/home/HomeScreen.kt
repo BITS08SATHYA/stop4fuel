@@ -1,8 +1,11 @@
 package com.stopforfuel.app.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -12,8 +15,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -216,16 +222,16 @@ fun HomeScreen(
                     Button(
                         onClick = onNavigateToInvoice,
                         enabled = uiState.activeShift != null,
-                        modifier = Modifier.fillMaxWidth().height(64.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2962FF)),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().height(60.dp)
                     ) {
-                        Icon(Icons.Default.Receipt, contentDescription = null)
+                        Icon(Icons.Default.Receipt, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("New Invoice", style = MaterialTheme.typography.titleMedium)
+                        Text("New Invoice", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     CashierDashboard(uiState)
                 }
@@ -259,24 +265,78 @@ private fun DrawerItem(icon: ImageVector, label: String, onClick: () -> Unit) {
 
 @Composable
 private fun ShiftStatusCard(state: HomeUiState) {
+    val activeGradient = Brush.linearGradient(listOf(Color(0xFF00E676), Color(0xFF00BFA5)))
+    val inactiveGradient = Brush.linearGradient(listOf(Color(0xFFEF5350), Color(0xFFC62828)))
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (state.activeShift != null)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.errorContainer
-        )
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Box(
+            Modifier
+                .background(if (state.activeShift != null) activeGradient else inactiveGradient)
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
             if (state.activeShift != null) {
                 val shift = state.activeShift
-                Text("Shift #${shift.id} - ACTIVE", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Attendant: ${shift.attendant?.name ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
-                Text("Started: ${shift.startTime?.take(16)?.replace("T", " ") ?: ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.FlashOn, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Shift #${shift.id} - ACTIVE",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                        Text(
+                            "Attendant: ${shift.attendant?.name ?: "N/A"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                        Text(
+                            "Started: ${shift.startTime?.take(16)?.replace("T", " ") ?: ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
             } else {
-                Text("No Active Shift", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
-                Text("Invoices cannot be created without an open shift", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Block, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "No Active Shift",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                        Text(
+                            "Invoices cannot be created without an open shift",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                }
             }
         }
     }
@@ -287,23 +347,58 @@ private fun PumpSessionCard(
     session: com.stopforfuel.app.data.remote.dto.PumpSessionDto,
     onEndSession: () -> Unit
 ) {
+    val sessionGradient = Brush.linearGradient(listOf(Color(0xFFFF9100), Color(0xFFFF6D00)))
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            Modifier
+                .background(sessionGradient)
+                .fillMaxWidth()
+                .padding(14.dp)
         ) {
-            Column {
-                Text("${session.pump?.name ?: "Pump"} - Session Active", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Since: ${session.startTime?.take(16)?.replace("T", " ") ?: ""}", style = MaterialTheme.typography.bodySmall)
-            }
-            FilledTonalButton(onClick = onEndSession) {
-                Icon(Icons.Default.Stop, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("End")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.LocalGasStation, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            "${session.pump?.name ?: "Pump"} - Session Active",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                        Text(
+                            "Since: ${session.startTime?.take(16)?.replace("T", " ") ?: ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+                Button(
+                    onClick = onEndSession,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.25f)),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Default.Stop, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("End", color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
@@ -364,117 +459,188 @@ private fun OwnerDashboard(uiState: HomeUiState) {
     Spacer(Modifier.height(16.dp))
 }
 
-@Composable
-private fun CashierDashboard(uiState: HomeUiState) {
-    val cd = uiState.cashierDashboard ?: return
+// Vibrant gradient color pairs for cashier dashboard
+private val CashierGradientGreen = Brush.linearGradient(listOf(Color(0xFF00E676), Color(0xFF00C853)))
+private val CashierGradientBlue = Brush.linearGradient(listOf(Color(0xFF448AFF), Color(0xFF2962FF)))
+private val CashierGradientOrange = Brush.linearGradient(listOf(Color(0xFFFF9100), Color(0xFFFF6D00)))
+private val CashierGradientPurple = Brush.linearGradient(listOf(Color(0xFFE040FB), Color(0xFFAA00FF)))
+private val CashierGradientTeal = Brush.linearGradient(listOf(Color(0xFF1DE9B6), Color(0xFF00BFA5)))
+private val CashierGradientPink = Brush.linearGradient(listOf(Color(0xFFFF4081), Color(0xFFC51162)))
+private val CashierGradientCyan = Brush.linearGradient(listOf(Color(0xFF18FFFF), Color(0xFF00B8D4)))
+private val CashierGradientAmber = Brush.linearGradient(listOf(Color(0xFFFFD740), Color(0xFFFFC400)))
 
-    // Fuel Prices
-    if (uiState.fuelProducts.isNotEmpty()) {
-        Text("Fuel Prices", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            uiState.fuelProducts.forEach { product ->
-                Card(modifier = Modifier.weight(1f)) {
-                    Column(
-                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+@Composable
+private fun CashierGradientStatCard(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    gradient: Brush,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Box(
+            Modifier
+                .background(gradient)
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.25f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        title.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.85f),
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        value,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (subtitle != null) {
                         Text(
-                            product.name ?: "",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "${inrFormat.format(product.price ?: 0)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            "per ${product.unit ?: "L"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            subtitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.75f)
                         )
                     }
                 }
             }
         }
-        Spacer(Modifier.height(16.dp))
     }
+}
 
-    // System Status
-    uiState.backendHealth?.let { health ->
-        val statusColor = when (health.status) {
-            "UP" -> Color(0xFF4CAF50)
-            "DEGRADED" -> Color(0xFFFF9800)
-            else -> Color(0xFFD32F2F)
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        modifier = Modifier.size(10.dp),
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        color = statusColor
-                    ) {}
-                    Spacer(Modifier.width(8.dp))
-                    Text("System", style = MaterialTheme.typography.labelMedium)
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CashierInfoBar(uiState: HomeUiState) {
+    val shift = uiState.activeShift
+    val health = uiState.backendHealth
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        FlowRow(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Cashier name
+            if (shift != null) {
+                Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF00BFA5).copy(alpha = 0.15f)) {
+                    Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Person, null, Modifier.size(12.dp), tint = Color(0xFF00BFA5))
+                        Spacer(Modifier.width(4.dp))
+                        Text(shift.attendant?.name ?: "—", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF00BFA5))
+                    }
+                }
+            }
+
+            // Health dots
+            val apiUp = health?.status == "UP"
+            val dbUp = health?.database == "UP"
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val apiColor = if (apiUp) Color(0xFF4CAF50) else Color(0xFFF44336)
+                val dbColor = if (dbUp) Color(0xFF4CAF50) else Color(0xFFF44336)
+                androidx.compose.foundation.Canvas(Modifier.size(6.dp)) { drawCircle(apiColor) }
+                Spacer(Modifier.width(2.dp))
+                Text("API", style = MaterialTheme.typography.labelSmall, fontSize = 9.sp, color = apiColor)
+                Spacer(Modifier.width(6.dp))
+                androidx.compose.foundation.Canvas(Modifier.size(6.dp)) { drawCircle(dbColor) }
+                Spacer(Modifier.width(2.dp))
+                Text("DB", style = MaterialTheme.typography.labelSmall, fontSize = 9.sp, color = dbColor)
+            }
+
+            // Fuel prices inline
+            uiState.fuelProducts.forEach { product ->
+                val upper = (product.name ?: "").uppercase()
+                val abbr = when {
+                    upper.contains("PETROL") || upper == "MS" -> "MS"
+                    upper.contains("XTRA") || upper.contains("XP") || upper.contains("PREMIUM") -> "XP"
+                    upper.contains("DIESEL") || upper == "HSD" -> "HSD"
+                    else -> (product.name ?: "").take(3).uppercase()
                 }
                 Text(
-                    health.status ?: "UNKNOWN",
-                    style = MaterialTheme.typography.labelMedium,
+                    "$abbr ₹${String.format("%.0f", product.price ?: 0)}",
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = statusColor
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        Spacer(Modifier.height(4.dp))
     }
+}
 
-    uiState.systemHealth?.let { sys ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Card(modifier = Modifier.weight(1f)) {
-                Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${sys.totalProducts ?: 0}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("Products", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Card(modifier = Modifier.weight(1f)) {
-                Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${sys.activeEmployees ?: 0}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("Staff", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Card(modifier = Modifier.weight(1f)) {
-                Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${sys.activeCustomers ?: 0}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("Customers", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-    }
+@Composable
+private fun CashierDashboard(uiState: HomeUiState) {
+    val cd = uiState.cashierDashboard ?: return
 
-    HorizontalDivider()
-    Spacer(Modifier.height(12.dp))
-    Text("Shift Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-    Spacer(Modifier.height(8.dp))
+    // Compact info bar with fuel prices + health
+    CashierInfoBar(uiState)
+    Spacer(Modifier.height(16.dp))
 
-    // Sales breakdown
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatCard("Cash Sales", inrFormat.format(cd.cashBillTotal ?: 0), subtitle = "${cd.cashInvoiceCount ?: 0} bills", color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
-        StatCard("Credit Sales", inrFormat.format(cd.creditBillTotal ?: 0), subtitle = "${cd.creditInvoiceCount ?: 0} bills", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
-    }
+    // Shift Summary header
+    Text(
+        "SHIFT SUMMARY",
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        letterSpacing = 1.5.sp
+    )
     Spacer(Modifier.height(12.dp))
 
-    // Cash in hand + invoices
+    // Sales breakdown — vibrant gradients
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatCard("Total Invoices", "${cd.totalInvoiceCount ?: 0}", color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f))
-        StatCard("Cash in Hand", inrFormat.format(cd.cashInHand ?: 0), color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        CashierGradientStatCard(
+            Icons.Default.AccountBalance, "Cash Sales",
+            inrFormat.format(cd.cashBillTotal ?: 0),
+            subtitle = "${cd.cashInvoiceCount ?: 0} bills",
+            gradient = CashierGradientGreen,
+            modifier = Modifier.weight(1f)
+        )
+        CashierGradientStatCard(
+            Icons.Default.CreditCard, "Credit Sales",
+            inrFormat.format(cd.creditBillTotal ?: 0),
+            subtitle = "${cd.creditInvoiceCount ?: 0} bills",
+            gradient = CashierGradientBlue,
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Spacer(Modifier.height(12.dp))
+
+    // Total invoices + cash in hand
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        CashierGradientStatCard(
+            Icons.Default.Receipt, "Total Invoices",
+            "${cd.totalInvoiceCount ?: 0}",
+            gradient = CashierGradientPurple,
+            modifier = Modifier.weight(1f)
+        )
+        CashierGradientStatCard(
+            Icons.Default.Wallet, "Cash in Hand",
+            inrFormat.format(cd.cashInHand ?: 0),
+            gradient = CashierGradientTeal,
+            modifier = Modifier.weight(1f)
+        )
     }
     Spacer(Modifier.height(12.dp))
 
@@ -482,34 +648,88 @@ private fun CashierDashboard(uiState: HomeUiState) {
     val upi = cd.eAdvanceTotals?.get("UPI") ?: java.math.BigDecimal.ZERO
     val card = cd.eAdvanceTotals?.get("CARD") ?: java.math.BigDecimal.ZERO
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatCard("UPI Advances", inrFormat.format(upi), color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
-        StatCard("Card Advances", inrFormat.format(card), color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
+        CashierGradientStatCard(
+            Icons.Default.PhoneAndroid, "UPI Advances",
+            inrFormat.format(upi),
+            gradient = CashierGradientCyan,
+            modifier = Modifier.weight(1f)
+        )
+        CashierGradientStatCard(
+            Icons.Default.CreditScore, "Card Advances",
+            inrFormat.format(card),
+            gradient = CashierGradientAmber,
+            modifier = Modifier.weight(1f)
+        )
     }
     Spacer(Modifier.height(12.dp))
 
     // Expenses + payments
     val paymentsTotal = (cd.billPaymentTotal ?: java.math.BigDecimal.ZERO).add(cd.statementPaymentTotal ?: java.math.BigDecimal.ZERO)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatCard("Expenses", inrFormat.format(cd.expenseTotal ?: 0), color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
-        StatCard("Payments", inrFormat.format(paymentsTotal), color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        CashierGradientStatCard(
+            Icons.Default.MoneyOff, "Expenses",
+            inrFormat.format(cd.expenseTotal ?: 0),
+            gradient = CashierGradientPink,
+            modifier = Modifier.weight(1f)
+        )
+        CashierGradientStatCard(
+            Icons.Default.Payments, "Payments",
+            inrFormat.format(paymentsTotal),
+            gradient = CashierGradientOrange,
+            modifier = Modifier.weight(1f)
+        )
     }
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(16.dp))
 
-    // Recent invoices
+    // Recent invoices with colored accent
     if (!cd.recentInvoices.isNullOrEmpty()) {
-        Text("Recent Invoices", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(
+            "RECENT INVOICES",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            letterSpacing = 1.5.sp
+        )
         Spacer(Modifier.height(8.dp))
         cd.recentInvoices.forEach { inv ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            val accentColor = when (inv.billType?.uppercase()) {
+                "CREDIT" -> Color(0xFF448AFF)
+                else -> Color(0xFF00C853)
+            }
+            Card(
+                Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+            ) {
+                Row(
+                    Modifier.padding(12.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Accent bar
+                    Box(
+                        Modifier
+                            .width(4.dp)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(accentColor)
+                    )
+                    Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(inv.billNo ?: "", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        Text("${inv.billType ?: ""} · ${inv.paymentMode ?: ""} · ${inv.customerName ?: "Walk-in"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "${inv.billType ?: ""} · ${inv.paymentMode ?: ""} · ${inv.customerName ?: "Walk-in"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    Text(inrFormat.format(inv.netAmount ?: 0), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        inrFormat.format(inv.netAmount ?: 0),
+                        fontWeight = FontWeight.ExtraBold,
+                        color = accentColor
+                    )
                 }
             }
-            Spacer(Modifier.height(4.dp))
         }
     }
     Spacer(Modifier.height(16.dp))
