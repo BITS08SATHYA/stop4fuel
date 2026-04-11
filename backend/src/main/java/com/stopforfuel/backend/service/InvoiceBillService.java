@@ -199,21 +199,24 @@ public class InvoiceBillService {
                             }
                         }
 
-                        // Check product inventory
-                        ProductInventory productInv = productInventoryRepository
-                                .findTopByProductIdAndScidOrderByDateDescIdDesc(prod.getId(), SecurityUtils.getScid());
-                        if (productInv != null) {
-                            double available = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
-                            if (available <= 0) {
-                                throw new BusinessException(
-                                        "Cannot create invoice: Product '" + prod.getName()
-                                        + "' is out of stock (0 available).");
-                            }
-                            if (available < requiredQty.doubleValue()) {
-                                throw new BusinessException(
-                                        "Cannot create invoice: Insufficient stock for product '"
-                                        + prod.getName() + "'. Available: " + String.format("%.2f", available)
-                                        + ", Required: " + requiredQty + ".");
+                        // Check product inventory (non-fuel only — fuel stock is tracked via tank dip readings)
+                        boolean isFuelWithNozzle = ip.getNozzle() != null && ip.getNozzle().getId() != null;
+                        if (!isFuelWithNozzle) {
+                            ProductInventory productInv = productInventoryRepository
+                                    .findTopByProductIdAndScidOrderByDateDescIdDesc(prod.getId(), SecurityUtils.getScid());
+                            if (productInv != null) {
+                                double available = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
+                                if (available <= 0) {
+                                    throw new BusinessException(
+                                            "Cannot create invoice: Product '" + prod.getName()
+                                            + "' is out of stock (0 available).");
+                                }
+                                if (available < requiredQty.doubleValue()) {
+                                    throw new BusinessException(
+                                            "Cannot create invoice: Insufficient stock for product '"
+                                            + prod.getName() + "'. Available: " + String.format("%.2f", available)
+                                            + ", Required: " + requiredQty + ".");
+                                }
                             }
                         }
                     }
@@ -507,8 +510,10 @@ public class InvoiceBillService {
             }
         }
 
-        // --- 2. Product inventory deduction ---
-        if (invoiceProduct.getProduct() != null && invoiceProduct.getProduct().getId() != null) {
+        // --- 2. Product inventory & cashier stock deduction (non-fuel only) ---
+        // Fuel stock is tracked via tank dip readings, not ProductInventory
+        boolean isFuel = invoiceProduct.getNozzle() != null && invoiceProduct.getNozzle().getId() != null;
+        if (!isFuel && invoiceProduct.getProduct() != null && invoiceProduct.getProduct().getId() != null) {
             Long productId = invoiceProduct.getProduct().getId();
             Long shiftId = invoiceProduct.getInvoiceBill() != null ? invoiceProduct.getInvoiceBill().getShiftId() : null;
             ProductInventory productInv = null;
@@ -528,15 +533,13 @@ public class InvoiceBillService {
             }
 
             // --- 4. CashierStock deduction (non-fuel products) ---
-            if (invoiceProduct.getNozzle() == null || invoiceProduct.getNozzle().getId() == null) {
-                Long scid = invoiceProduct.getInvoiceBill() != null && invoiceProduct.getInvoiceBill().getScid() != null
-                        ? invoiceProduct.getInvoiceBill().getScid() : SecurityUtils.getScid();
-                cashierStockRepository.findByProductIdAndScidForUpdate(productId, scid).ifPresent(cashierStock -> {
-                    double current = cashierStock.getCurrentStock() != null ? cashierStock.getCurrentStock() : 0.0;
-                    cashierStock.setCurrentStock(Math.max(0, current - qty));
-                    cashierStockRepository.save(cashierStock);
-                });
-            }
+            Long scid = invoiceProduct.getInvoiceBill() != null && invoiceProduct.getInvoiceBill().getScid() != null
+                    ? invoiceProduct.getInvoiceBill().getScid() : SecurityUtils.getScid();
+            cashierStockRepository.findByProductIdAndScidForUpdate(productId, scid).ifPresent(cashierStock -> {
+                double current = cashierStock.getCurrentStock() != null ? cashierStock.getCurrentStock() : 0.0;
+                cashierStock.setCurrentStock(Math.max(0, current - qty));
+                cashierStockRepository.save(cashierStock);
+            });
         }
     }
 
