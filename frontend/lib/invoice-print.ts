@@ -78,9 +78,9 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 
     // Credit-specific fields
     const creditFields = !isCash ? `
-        ${invoice.driverName ? `<tr><td style="color:#555;font-size:8pt;">Driver:</td><td colspan="3" style="text-align:right;">${invoice.driverName}</td></tr>` : ""}
-        ${invoice.indentNo ? `<tr><td style="color:#555;font-size:8pt;">Indent:</td><td colspan="3" style="text-align:right;">${invoice.indentNo}</td></tr>` : ""}
-        ${invoice.signatoryName ? `<tr><td style="color:#555;font-size:8pt;">Signatory:</td><td colspan="3" style="text-align:right;">${invoice.signatoryName}</td></tr>` : ""}
+        ${invoice.driverName ? `<tr><td style="font-size:10pt;">Driver:</td><td colspan="3" style="text-align:right;">${invoice.driverName}</td></tr>` : ""}
+        ${invoice.indentNo ? `<tr><td style="font-size:10pt;">Indent:</td><td colspan="3" style="text-align:right;">${invoice.indentNo}</td></tr>` : ""}
+        ${invoice.signatoryName ? `<tr><td style="font-size:10pt;">Signatory:</td><td colspan="3" style="text-align:right;">${invoice.signatoryName}</td></tr>` : ""}
     ` : "";
 
     return `<!DOCTYPE html>
@@ -89,25 +89,25 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 <meta charset="UTF-8">
 <title>Invoice ${invoice.billNo || ""}</title>
 <style>
-    @page { size: 6in 4.5in; margin: 2mm 4mm; }
+    @page { size: 8in 6in; margin: 3mm 6mm; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', monospace; font-size: 8pt; line-height: 1.2; color: #000; background: #fff; width: 5.5in; margin: 0 auto; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 11pt; font-weight: bold; line-height: 1.3; color: #000; background: #fff; width: 7.4in; margin: 0 auto; }
     table { width: 100%; border-collapse: collapse; }
-    td { vertical-align: top; font-size: 8pt; }
+    td { vertical-align: top; font-size: 11pt; font-weight: bold; }
     .center { text-align: center; }
     .bold { font-weight: bold; }
-    .big { font-size: 10pt; font-weight: 900; }
-    .sm { font-size: 7pt; }
-    .xs { font-size: 6pt; color: #555; }
-    hr { border: none; border-top: 1px dashed #000; margin: 2px 0; }
-    hr.solid { border-top: 1px solid #000; }
-    .badge { display: inline-block; border: 1.5px solid #000; padding: 0px 6px; font-size: 8pt; font-weight: 900; letter-spacing: 0.5px; }
-    .grand-total { font-size: 12pt; font-weight: 900; text-align: right; padding: 2px 0; }
-    .info td:first-child { color: #555; font-size: 7pt; width: 22%; }
+    .big { font-size: 14pt; font-weight: 900; }
+    .sm { font-size: 10pt; }
+    .xs { font-size: 9pt; color: #000; }
+    hr { border: none; border-top: 1px solid #000; margin: 3px 0; }
+    hr.solid { border-top: 2px solid #000; }
+    .badge { display: inline-block; border: 2px solid #000; padding: 1px 8px; font-size: 11pt; font-weight: 900; letter-spacing: 1px; }
+    .grand-total { font-size: 16pt; font-weight: 900; text-align: right; padding: 3px 0; }
+    .info td:first-child { color: #000; font-size: 10pt; width: 22%; }
     .info td:last-child { text-align: right; font-weight: bold; }
-    .items th { font-size: 7pt; font-weight: bold; border-bottom: 1px solid #000; padding: 1px 0; text-transform: uppercase; }
-    .sign-line { margin-top: 15px; border-top: 1px solid #000; text-align: center; }
+    .items th { font-size: 10pt; font-weight: bold; border-bottom: 2px solid #000; padding: 2px 0; text-transform: uppercase; }
+    .sign-line { margin-top: 20px; border-top: 1px solid #000; text-align: center; }
 </style>
 </head>
 <body>
@@ -119,7 +119,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     <div class="xs">GSTIN: ${company.gstNo}</div>
 </div>
 <hr class="solid">
-<div class="center"><span style="font-size:8pt;font-weight:bold;">TAX INVOICE</span> <span class="badge">${billBadge}</span></div>
+<div class="center"><span style="font-size:12pt;font-weight:900;">TAX INVOICE</span> <span class="badge">${billBadge}</span></div>
 <hr>
 
 <!-- Bill + Customer info (two columns) -->
@@ -139,7 +139,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     </table>
 </td>
 </tr></table>
-${invoice.vehicleKM ? `<div class="xs" style="text-align:right;">KM: ${invoice.vehicleKM.toLocaleString("en-IN")}${invoice.indentNo ? ` | Indent: ${invoice.indentNo}` : ""}${customerGST ? ` | GST: ${customerGST}` : ""}</div>` : ""}
+${invoice.vehicleKM ? `<div style="font-size:10pt;font-weight:bold;text-align:right;">KM: ${invoice.vehicleKM.toLocaleString("en-IN")}${invoice.indentNo ? ` | Indent: ${invoice.indentNo}` : ""}${customerGST ? ` | GST: ${customerGST}` : ""}</div>` : ""}
 <hr class="solid">
 
 <!-- Items -->
@@ -155,7 +155,7 @@ ${invoice.vehicleKM ? `<div class="xs" style="text-align:right;">KM: ${invoice.v
 <hr class="solid">
 
 <!-- Totals -->
-<table style="font-size:8pt;">
+<table style="font-size:11pt;">
     <tr><td>Gross</td><td style="text-align:right;font-weight:bold;">${formatCurrency(grossAmount)}</td>
         <td style="width:10px;"></td>
         <td>Payment</td><td style="text-align:right;font-weight:bold;">${isCash ? (invoice.paymentMode || "CASH") : "CREDIT"}</td></tr>
