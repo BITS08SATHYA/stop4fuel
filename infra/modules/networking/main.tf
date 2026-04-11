@@ -108,6 +108,20 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private[0].id
 }
 
+# S3 Gateway VPC Endpoint (free — keeps S3 traffic off NAT/IGW)
+resource "aws_vpc_endpoint" "s3" {
+  count        = var.enable_private_subnets ? 1 : 0
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.aws_region}.s3"
+
+  route_table_ids = var.enable_nat_gateway ? [aws_route_table.private[0].id] : []
+
+  tags = {
+    Name        = "${var.project_name}-s3-endpoint"
+    Environment = var.environment
+  }
+}
+
 # Security Groups
 resource "aws_security_group" "ec2" {
   name_prefix = "${var.project_name}-ec2-"

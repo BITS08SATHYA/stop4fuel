@@ -18,6 +18,7 @@ module "networking" {
   availability_zones     = local.azs
   enable_nat_gateway     = true
   enable_private_subnets = true
+  aws_region             = var.aws_region
 }
 
 # ============================================================
@@ -102,6 +103,59 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
 }
 
 # ============================================================
+# ECS Task Role — for app-level AWS API calls (S3, Textract)
+# ============================================================
+resource "aws_iam_role" "ecs_task" {
+  name = "${var.project_name}-ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Environment = var.environment
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_task_permissions" {
+  name = "${var.project_name}-ecs-task-permissions"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.project_name}",
+          "arn:aws:s3:::${var.project_name}/*"
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = "textract:DetectDocumentText"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# ============================================================
 # Secrets Manager — DB credentials (import existing)
 # ============================================================
 resource "aws_secretsmanager_secret" "db_credentials" {
@@ -132,6 +186,7 @@ module "ecs" {
   frontend_target_group_arn = module.alb.frontend_target_group_arn
   ecr_registry              = local.ecr_registry
   execution_role_arn        = aws_iam_role.ecs_execution.arn
+  task_role_arn             = aws_iam_role.ecs_task.arn
   db_secret_arn             = aws_secretsmanager_secret.db_credentials.arn
 
   backend_cpu    = 512

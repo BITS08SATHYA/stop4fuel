@@ -34,6 +34,9 @@ public class InvoiceBillPhoto {
     @Column(name = "original_filename")
     private String originalFilename;
 
+    @Column(name = "ocr_verified")
+    private Boolean ocrVerified;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
