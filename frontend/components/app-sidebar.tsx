@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -46,6 +47,7 @@ import {
     Tag,
     Layers,
     LogOut,
+    MonitorSmartphone,
     Bell,
     ClipboardList,
     MapPin,
@@ -259,7 +261,8 @@ const sections: NavSection[] = [
 
 export function AppSidebar() {
     const pathname = usePathname();
-    const { user, hasPermission, logout } = useAuth();
+    const { user, hasPermission, logout, logoutAllDevices } = useAuth();
+    const [showLogoutMenu, setShowLogoutMenu] = useState(false);
 
     const isActive = (href: string) => {
         if (href === "/dashboard") return pathname === "/dashboard";
@@ -320,13 +323,41 @@ export function AppSidebar() {
                 </div>
                 <div className="flex items-center gap-1">
                     <ThemeToggle />
-                    <button
-                        onClick={logout}
-                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                        title="Sign out"
-                    >
-                        <LogOut className="w-4 h-4" />
-                    </button>
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowLogoutMenu(!showLogoutMenu)}
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            title="Sign out"
+                        >
+                            <LogOut className="w-4 h-4" />
+                        </button>
+                        {showLogoutMenu && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowLogoutMenu(false)} />
+                                <div className="absolute bottom-full right-0 mb-2 w-52 bg-popover border border-border rounded-lg shadow-lg z-50 py-1">
+                                    <button
+                                        onClick={() => { setShowLogoutMenu(false); logout(); }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        Sign Out
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm("This will sign you out from all devices. Continue?")) {
+                                                setShowLogoutMenu(false);
+                                                logoutAllDevices();
+                                            }
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-destructive"
+                                    >
+                                        <MonitorSmartphone className="w-4 h-4" />
+                                        Sign Out All Devices
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </aside>
