@@ -1,0 +1,13 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- StopForFuel Apple Touch Icon 180x180 -->
+  <rect width="180" height="180" rx="40" fill="#0D1117"/>
+  <defs>
+    <linearGradient id="s" x1="90" y1="18" x2="90" y2="162" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFCA28"/>
+      <stop offset="1" stop-color="#FFB300"/>
+    </linearGradient>
+  </defs>
+  <path d="M90 18 L32 44 L32 96 C32 132 58 148 90 164 C122 148 148 132 148 96 L148 44 Z" fill="url(#s)"/>
+  <path d="M90 58 C90 58 68 88 68 100 C68 113 78 122 90 122 C102 122 112 113 112 100 C112 88 90 58 90 58Z" fill="#0D1117"/>
+  <path d="M90 94 C90 94 84 104 84 107 C84 110 86.7 112 90 112 C93.3 112 96 110 96 107 C96 104 90 94 90 94Z" fill="url(#s)" opacity="0.4"/>
+</svg>

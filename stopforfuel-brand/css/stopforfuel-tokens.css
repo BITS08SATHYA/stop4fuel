@@ -1,0 +1,197 @@
+/*
+ * ═══════════════════════════════════════════════════════════
+ *  StopForFuel — Design Tokens
+ *  Brand Identity v1.0
+ * ═══════════════════════════════════════════════════════════
+ *
+ *  HOW TO USE:
+ *  1. Import this file at the top of your global CSS:
+ *       @import './stopforfuel-tokens.css';
+ *
+ *  2. Or paste the :root block into your tailwind.config or
+ *     globals.css file.
+ *
+ *  3. Use variables anywhere:
+ *       background: var(--sff-deep-900);
+ *       color: var(--sff-amber-500);
+ *
+ *  All variables are prefixed with --sff- to avoid conflicts.
+ * ═══════════════════════════════════════════════════════════
+ */
+
+:root {
+
+  /* ── PRIMARY: Fuel Amber ────────────────────────────────
+   * The "look here" color. Brand marks, primary CTAs, 
+   * revenue numbers, active navigation. Use sparingly (10-15%).
+   */
+  --sff-amber-50:  #FFF8E1;
+  --sff-amber-100: #FFECB3;
+  --sff-amber-200: #FFD54F;
+  --sff-amber-400: #FFCA28;
+  --sff-amber-500: #FFC107;
+  --sff-amber-600: #FFB300;  /* ← Primary brand color */
+  --sff-amber-700: #FF8F00;
+  --sff-amber-800: #E65100;
+
+  /* ── SECONDARY: Petroleum Deep ──────────────────────────
+   * The canvas. Dark mode backgrounds, sidebars, card surfaces.
+   * Should cover 60-70% of dark UI.
+   */
+  --sff-deep-950: #080B12;
+  --sff-deep-900: #0D1117;  /* ← Primary dark background */
+  --sff-deep-800: #161B22;
+  --sff-deep-700: #1C2333;
+  --sff-deep-600: #21283B;
+  --sff-deep-500: #30394A;
+
+  /* ── ACCENT: Ignition Teal ──────────────────────────────
+   * Secondary actions, success states, toggles, links, 
+   * chart accents. "Something good happened" or "tap here next."
+   */
+  --sff-teal-400: #2DD4BF;
+  --sff-teal-500: #14B8A6;
+  --sff-teal-600: #0D9488;
+
+  /* ── SEMANTIC: Status Colors ────────────────────────────
+   * Use consistently. Red = alarm (discrepancies, overdue, delete).
+   * Green = success (shift closed, payment cleared).
+   * Warning = attention needed. Info = neutral information.
+   */
+  --sff-success:  #22C55E;
+  --sff-danger:   #EF4444;
+  --sff-warning:  #F59E0B;
+  --sff-info:     #3B82F6;
+
+  /* ── NEUTRALS ───────────────────────────────────────────
+   * Text, borders, surfaces for light theme.
+   */
+  --sff-gray-50:  #F8FAFC;
+  --sff-gray-100: #F1F5F9;
+  --sff-gray-200: #E2E8F0;
+  --sff-gray-300: #CBD5E1;
+  --sff-gray-400: #94A3B8;
+  --sff-gray-500: #64748B;
+  --sff-gray-600: #475569;
+  --sff-gray-700: #334155;
+  --sff-gray-800: #1E293B;
+  --sff-gray-900: #0F172A;
+
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────
+   *
+   * FONTS TO LOAD (Google Fonts):
+   * https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap
+   */
+  --sff-font-display: 'Outfit', system-ui, sans-serif;
+  --sff-font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --sff-font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── TYPE SCALE ─────────────────────────────────────────
+   * Use Outfit for display sizes (h1-h3, KPI numbers).
+   * Use Plus Jakarta Sans for body, labels, captions.
+   * Use JetBrains Mono for IDs, codes, invoice numbers.
+   */
+  --sff-text-h1:      1.75rem;   /* 28px — page titles */
+  --sff-text-h2:      1.375rem;  /* 22px — section headers */
+  --sff-text-h3:      1.125rem;  /* 18px — card titles */
+  --sff-text-body:    0.875rem;  /* 14px — body text, labels */
+  --sff-text-caption: 0.75rem;   /* 12px — captions, timestamps */
+  --sff-text-kpi:     2rem;      /* 32px — dashboard numbers */
+
+  --sff-weight-regular:  400;
+  --sff-weight-medium:   500;
+  --sff-weight-semibold: 600;
+  --sff-weight-bold:     700;
+  --sff-weight-heavy:    800;
+
+  --sff-leading-tight:   1.25;
+  --sff-leading-normal:  1.5;
+  --sff-leading-relaxed: 1.65;
+
+
+  /* ── SPACING ────────────────────────────────────────────
+   */
+  --sff-space-1:  4px;
+  --sff-space-2:  8px;
+  --sff-space-3:  12px;
+  --sff-space-4:  16px;
+  --sff-space-5:  20px;
+  --sff-space-6:  24px;
+  --sff-space-8:  32px;
+  --sff-space-10: 40px;
+  --sff-space-12: 48px;
+  --sff-space-16: 64px;
+
+
+  /* ── RADII ──────────────────────────────────────────────
+   */
+  --sff-radius-sm:   6px;
+  --sff-radius-md:   10px;
+  --sff-radius-lg:   14px;
+  --sff-radius-xl:   20px;
+  --sff-radius-full: 9999px;
+
+
+  /* ── SHADOWS ────────────────────────────────────────────
+   */
+  --sff-shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.05);
+  --sff-shadow-md:  0 4px 12px rgba(0, 0, 0, 0.08);
+  --sff-shadow-lg:  0 12px 32px rgba(0, 0, 0, 0.12);
+  --sff-shadow-amber: 0 4px 16px rgba(255, 179, 0, 0.2);
+
+
+  /* ── GRADIENTS ──────────────────────────────────────────
+   */
+  --sff-gradient-shield:  linear-gradient(180deg, #FFB300 0%, #E65100 100%);
+  --sff-gradient-shield-dark: linear-gradient(180deg, #FFCA28 0%, #FFB300 100%);
+  --sff-gradient-amber:   linear-gradient(135deg, #FFC107 0%, #FF8F00 100%);
+  --sff-gradient-deep:    linear-gradient(135deg, #0D1117 0%, #1C2333 100%);
+
+
+  /* ── TRANSITIONS ────────────────────────────────────────
+   */
+  --sff-ease-default:  200ms ease;
+  --sff-ease-smooth:   300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --sff-ease-bounce:   400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+
+/*
+ * ── DARK MODE OVERRIDES ──────────────────────────────────
+ * Apply via class="dark" on <html> or via media query.
+ */
+.dark,
+[data-theme="dark"] {
+  --sff-bg-primary:    var(--sff-deep-900);
+  --sff-bg-secondary:  var(--sff-deep-800);
+  --sff-bg-tertiary:   var(--sff-deep-700);
+  --sff-bg-surface:    var(--sff-deep-600);
+
+  --sff-text-primary:   #F1F5F9;
+  --sff-text-secondary: #94A3B8;
+  --sff-text-muted:     #64748B;
+  --sff-text-accent:    var(--sff-amber-400);
+
+  --sff-border:         rgba(255, 255, 255, 0.06);
+}
+
+
+/*
+ * ── LIGHT MODE ───────────────────────────────────────────
+ */
+.light,
+[data-theme="light"],
+:root {
+  --sff-bg-primary:    #FFFFFF;
+  --sff-bg-secondary:  var(--sff-gray-50);
+  --sff-bg-tertiary:   var(--sff-gray-100);
+  --sff-bg-surface:    #FFFFFF;
+
+  --sff-text-primary:   var(--sff-gray-900);
+  --sff-text-secondary: var(--sff-gray-600);
+  --sff-text-muted:     var(--sff-gray-400);
+  --sff-text-accent:    var(--sff-amber-700);
+
+  --sff-border:         var(--sff-gray-200);
+}

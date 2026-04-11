@@ -1,0 +1,15 @@
+<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    StopForFuel - Android Adaptive Icon FOREGROUND Layer (Light variant)
+    Use with a white background layer for Material You light themes
+  -->
+  <defs>
+    <linearGradient id="shield" x1="54" y1="20" x2="54" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB300"/>
+      <stop offset="1" stop-color="#E65100"/>
+    </linearGradient>
+  </defs>
+  <path d="M54 20 L24 34 L24 58 C24 74 37 82 54 90 C71 82 84 74 84 58 L84 34 Z" fill="url(#shield)"/>
+  <path d="M54 40 C54 40 44 54 44 60 C44 66 48.5 70 54 70 C59.5 70 64 66 64 60 C64 54 54 40 54 40Z" fill="white"/>
+  <path d="M54 56 C54 56 51 61 51 62.5 C51 64 52.3 65 54 65 C55.7 65 57 64 57 62.5 C57 61 54 56 54 56Z" fill="url(#shield)" opacity="0.5"/>
+</svg>

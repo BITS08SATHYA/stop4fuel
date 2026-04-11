@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StopForFuel — Premium Fuel Station</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon-32x32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="favicon-16x16.png" sizes="16x16" type="image/png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png" />
+    <meta name="theme-color" content="#0D1117" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FFB300" media="(prefers-color-scheme: light)" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#FFF8E1', 100: '#FFECB3', 200: '#FFD54F', 400: '#FFCA28', 500: '#FFC107', 600: '#FFB300', 700: '#FF8F00', 800: '#E65100' },
+                        deep: { 950: '#080B12', 900: '#0D1117', 800: '#161B22', 700: '#1C2333', 600: '#21283B', 500: '#30394A' },
+                        teal: { 400: '#2DD4BF', 500: '#14B8A6', 600: '#0D9488' },
+                    },
+                    fontFamily: {
+                        display: ['Outfit', 'system-ui', 'sans-serif'],
+                        body: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 2s infinite',
+                        'float-slow': 'float 8s ease-in-out 1s infinite',
+                        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+                        'spin-slow': 'spin 20s linear infinite',
+                        'gradient-shift': 'gradient-shift 8s ease infinite',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-12px)' } },
+                        'pulse-glow': { '0%, 100%': { opacity: '1', transform: 'scale(1)' }, '50%': { opacity: '0.5', transform: 'scale(1.5)' } },
+                        'gradient-shift': { '0%, 100%': { backgroundPosition: '0% 50%' }, '50%': { backgroundPosition: '100% 50%' } },
+                    },
+                },
+            },
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- AOS - Animate on Scroll -->
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+        .font-display { font-family: 'Outfit', system-ui, sans-serif; }
+
+        /* Custom gradient text */
+        .text-gradient {
+            background: linear-gradient(135deg, #FFB300, #E65100);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Glass morphism */
+        .glass {
+            background: rgba(13, 17, 23, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .glass-light {
+            background: rgba(18, 36, 61, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        /* Animated grid background */
+        .bg-grid-pattern {
+            background-image:
+                linear-gradient(rgba(255, 179, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 179, 0, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Glow effects */
+        .glow-orange { box-shadow: 0 0 40px rgba(255, 179, 0, 0.15); }
+        .glow-orange-strong { box-shadow: 0 4px 20px rgba(255, 179, 0, 0.35); }
+
+        /* Hero background — Indian gas station illuminated at night */
+        .hero-bg {
+            background-image:
+                linear-gradient(to bottom, rgba(13, 17, 23, 0.50), rgba(13, 17, 23, 0.80) 55%, rgba(13, 17, 23, 1)),
+                url('https://images.unsplash.com/photo-1762639594165-d654603d9087?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1920&h=1080');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* Fuel types — Indian petrol station at night */
+        .fuel-section-bg {
+            background-image:
+                linear-gradient(to bottom, rgba(13, 17, 23, 0.90), rgba(13, 17, 23, 0.95)),
+                url('https://images.unsplash.com/photo-1678954393405-bf16ef3e77ba?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1920&h=1080');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Anniversary — Indian petrol station night scene */
+        .anniversary-bg {
+            background-image:
+                linear-gradient(to bottom, rgba(13, 17, 23, 0.75), rgba(13, 17, 23, 0.85)),
+                url('https://images.unsplash.com/photo-1762680585321-4b7a07dbad33?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1920&h=800');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* CTA — Indian gas station lit at night */
+        .cta-bg {
+            background-image:
+                linear-gradient(to bottom, rgba(13, 17, 23, 0.82), rgba(13, 17, 23, 0.90)),
+                url('https://images.unsplash.com/photo-1738574137469-57dc03c294b8?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1920&h=800');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Hover card lift */
+        .card-hover { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-8px); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); }
+
+        /* Tank fill bars */
+        .tank-fill { transition: height 1.5s ease; }
+
+        /* Fuel row slide */
+        .fuel-row-hover { transition: all 0.3s ease; }
+        .fuel-row-hover:hover { transform: translateX(4px); background: rgba(255, 179, 0, 0.05); border-color: rgba(255, 179, 0, 0.15); }
+
+        /* Nav transition */
+        /* Anniversary banner ticker */
+        .anniversary-banner {
+            background: linear-gradient(90deg, #FFB300, #E65100, #FFB300, #E65100, #FFB300);
+            background-size: 200% 100%;
+            animation: gradient-shift 4s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .sparkle { animation: sparkle 1.5s ease-in-out infinite; }
+        .sparkle-delay { animation: sparkle 1.5s ease-in-out 0.5s infinite; }
+        .sparkle-delay-2 { animation: sparkle 1.5s ease-in-out 1s infinite; }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.3); }
+        }
+
+        .nav-blur { transition: all 0.4s ease; }
+        .nav-blur.scrolled {
+            background: rgba(13, 17, 23, 0.92);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 179, 0, 0.1);
+        }
+
+        /* Smooth underline links */
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px; left: 0;
+            width: 0; height: 2px;
+            background: #FFB300;
+            transition: width 0.3s;
+        }
+        .nav-link:hover::after { width: 100%; }
+
+        /* Counter animation */
+        .counter { font-variant-numeric: tabular-nums; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0D1117; }
+        ::-webkit-scrollbar-thumb { background: #21283B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #FFB300; }
+    </style>
+</head>
+<body class="bg-deep-900 text-white overflow-x-hidden">
+
+<!-- Background Effects -->
+<div class="fixed inset-0 bg-grid-pattern pointer-events-none z-0"></div>
+<div class="fixed -top-48 -right-48 w-[600px] h-[600px] bg-brand-600 rounded-full opacity-10 blur-[120px] pointer-events-none z-0"></div>
+<div class="fixed -bottom-36 -left-36 w-[500px] h-[500px] bg-blue-500 rounded-full opacity-10 blur-[120px] pointer-events-none z-0"></div>
+<div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-brand-600 rounded-full opacity-[0.04] blur-[120px] pointer-events-none z-0" id="mouseOrb"></div>
+
+<!-- ============ ANNIVERSARY BANNER ============ -->
+<div class="anniversary-banner fixed top-0 left-0 right-0 z-[60] py-2 px-4 text-center">
+    <div class="max-w-7xl mx-auto flex items-center justify-center gap-3 text-sm font-bold text-white">
+        <span class="sparkle">&#10024;</span>
+        <span class="hidden sm:inline">Celebrating</span>
+        <span class="font-display text-lg md:text-xl font-extrabold tracking-tight">61 Years</span>
+        <span class="hidden sm:inline">of Fueling Chennai's Journeys</span>
+        <span class="sm:hidden">of Trust</span>
+        <span class="text-xs font-medium opacity-80 hidden md:inline">| Est. May 1965</span>
+        <span class="sparkle-delay">&#10024;</span>
+    </div>
+</div>
+
+<!-- ============ NAVIGATION ============ -->
+<nav class="nav-blur fixed top-[36px] left-0 right-0 z-50 px-6 py-4" id="nav">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <!-- Logo — Brand Shield Lockup -->
+        <a href="#" class="flex items-center group">
+            <svg width="160" height="44" viewBox="0 0 260 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="navShield" x1="24" y1="4" x2="24" y2="68" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FFCA28"/>
+                        <stop offset="1" stop-color="#FFB300"/>
+                    </linearGradient>
+                </defs>
+                <path d="M24 4 L4 16 L4 40 C4 54 12.5 62 24 68 C35.5 62 44 54 44 40 L44 16 Z" fill="url(#navShield)"/>
+                <path d="M24 22 C24 22 16 33.5 16 38.5 C16 43 19.6 47 24 47 C28.4 47 32 43 32 38.5 C32 33.5 24 22 24 22Z" fill="#0D1117"/>
+                <path d="M24 37 C24 37 22 40 22 41 C22 42.1 22.9 43 24 43 C25.1 43 26 42.1 26 41 C26 40 24 37 24 37Z" fill="url(#navShield)" opacity="0.5"/>
+                <text x="58" y="33" font-family="Outfit, sans-serif" font-weight="800" font-size="26" letter-spacing="-0.5" fill="#FFFFFF">Stop</text>
+                <text x="58" y="57" font-family="Outfit, sans-serif" font-weight="800" font-size="26" letter-spacing="-0.5" fill="#FFCA28">ForFuel</text>
+            </svg>
+        </a>
+
+        <!-- Desktop Links -->
+        <ul class="hidden md:flex items-center gap-8" id="navLinks">
+            <li><a href="#services" class="nav-link relative text-sm font-medium text-gray-400 hover:text-white transition-colors">Services</a></li>
+            <li><a href="#fuel-types" class="nav-link relative text-sm font-medium text-gray-400 hover:text-white transition-colors">Fuel Prices</a></li>
+            <li><a href="#why-us" class="nav-link relative text-sm font-medium text-gray-400 hover:text-white transition-colors">Why Us</a></li>
+            <li><a href="#reviews" class="nav-link relative text-sm font-medium text-gray-400 hover:text-white transition-colors">Reviews</a></li>
+            <li>
+                <a href="http://localhost:3000/login" id="loginLink"
+                   class="border border-brand-600/40 text-brand-500 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-brand-600/10 hover:border-brand-600/60 transition-all">
+                    Login
+                </a>
+            </li>
+            <li>
+                <a href="#contact" class="bg-gradient-to-r from-brand-600 to-brand-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-brand-600/30 hover:shadow-brand-600/50 hover:-translate-y-0.5 transition-all">
+                    Get Directions
+                </a>
+            </li>
+        </ul>
+
+        <!-- Mobile Hamburger -->
+        <button class="md:hidden flex flex-col gap-1.5 p-1" id="hamburger" aria-label="Menu">
+            <span class="w-6 h-0.5 bg-white rounded transition-all origin-center" id="bar1"></span>
+            <span class="w-6 h-0.5 bg-white rounded transition-all" id="bar2"></span>
+            <span class="w-6 h-0.5 bg-white rounded transition-all origin-center" id="bar3"></span>
+        </button>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div class="hidden md:hidden absolute top-full left-0 right-0 glass border-b border-brand-600/10 py-4 px-6 space-y-4" id="mobileMenu">
+        <a href="#services" class="block text-gray-300 hover:text-brand-500 font-medium transition-colors">Services</a>
+        <a href="#fuel-types" class="block text-gray-300 hover:text-brand-500 font-medium transition-colors">Fuel Prices</a>
+        <a href="#why-us" class="block text-gray-300 hover:text-brand-500 font-medium transition-colors">Why Us</a>
+        <a href="#reviews" class="block text-gray-300 hover:text-brand-500 font-medium transition-colors">Reviews</a>
+        <a href="http://localhost:3000/login" class="block text-brand-500 hover:text-brand-400 font-medium transition-colors">Login</a>
+        <a href="#contact" class="block bg-gradient-to-r from-brand-600 to-brand-700 text-white text-center py-3 rounded-xl font-semibold">Get Directions</a>
+    </div>
+</nav>
+
+<!-- ============ HERO SECTION ============ -->
+<section class="relative z-10 min-h-screen flex items-center pt-36 pb-16 px-6 hero-bg">
+    <div class="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <!-- Left Content -->
+        <div class="lg:text-left text-center">
+            <div class="inline-flex items-center gap-2 bg-brand-600/10 border border-brand-600/25 px-4 py-1.5 rounded-full text-sm font-semibold text-brand-500 mb-6" data-aos="fade-up">
+                <span class="sparkle-delay-2 text-base">&#127881;</span>
+                61st Anniversary — Est. May 1965
+            </div>
+
+            <h1 class="font-display text-5xl md:text-6xl lg:text-[4.25rem] font-extrabold leading-[1.05] tracking-tight mb-6" data-aos="fade-up" data-aos-delay="100">
+                <span class="text-gradient">61 Years</span> of<br>
+                Fueling Your<br>
+                Every Journey
+            </h1>
+
+            <p class="text-lg text-gray-400 max-w-lg mx-auto lg:mx-0 mb-8" data-aos="fade-up" data-aos-delay="200">
+                Since 1965, we've been Chennai's most trusted fuel station.
+                Six decades of premium quality fuel, transparent pricing, and unwavering commitment to every customer.
+            </p>
+
+            <div class="flex flex-wrap gap-4 justify-center lg:justify-start" data-aos="fade-up" data-aos-delay="300">
+                <a href="#contact" class="inline-flex items-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 text-white px-7 py-3.5 rounded-xl font-semibold text-base shadow-lg shadow-brand-600/30 hover:shadow-brand-600/50 hover:-translate-y-1 transition-all">
+                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                    Visit Us Today
+                </a>
+                <a href="#fuel-types" class="inline-flex items-center gap-2 border border-gray-600 text-white px-7 py-3.5 rounded-xl font-semibold text-base hover:border-brand-600 hover:text-brand-500 hover:-translate-y-1 transition-all">
+                    View Fuel Prices
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Right — Live Fuel Card -->
+        <div class="relative flex justify-center" data-aos="fade-up" data-aos-delay="400">
+            <div class="w-full max-w-[480px] bg-gradient-to-br from-deep-700 to-deep-600 border border-brand-600/15 rounded-3xl p-7 relative overflow-hidden">
+                <!-- Top gradient line -->
+                <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-brand-600 via-brand-600 to-brand-600"></div>
+
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-display text-gray-300 text-lg font-medium">Today's Fuel Prices</h3>
+                    <div class="flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full">
+                        <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse-glow"></span>
+                        LIVE
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- Petrol -->
+                    <div class="fuel-row-hover flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full bg-brand-600 shadow-[0_0_10px_rgba(255,179,0,0.5)]"></div>
+                            <span class="font-semibold">Petrol</span>
+                        </div>
+                        <div class="font-display text-2xl font-bold">₹102.63 <span class="text-xs text-gray-500 font-normal">/litre</span></div>
+                    </div>
+                    <!-- Diesel -->
+                    <div class="fuel-row-hover flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                            <span class="font-semibold">Diesel</span>
+                        </div>
+                        <div class="font-display text-2xl font-bold">₹94.24 <span class="text-xs text-gray-500 font-normal">/litre</span></div>
+                    </div>
+                    <!-- Power Petrol -->
+                    <div class="fuel-row-hover flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full bg-brand-600 shadow-[0_0_10px_rgba(255,179,0,0.5)]"></div>
+                            <span class="font-semibold">Power Petrol</span>
+                        </div>
+                        <div class="font-display text-2xl font-bold">₹112.47 <span class="text-xs text-gray-500 font-normal">/litre</span></div>
+                    </div>
+                    <!-- Power Diesel -->
+                    <div class="fuel-row-hover flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                            <span class="font-semibold">Power Diesel</span>
+                        </div>
+                        <div class="font-display text-2xl font-bold">₹100.18 <span class="text-xs text-gray-500 font-normal">/litre</span></div>
+                    </div>
+                </div>
+
+                <!-- Tank levels footer -->
+                <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between">
+                    <span class="text-sm text-gray-500">Tank Levels</span>
+                    <div class="flex gap-2">
+                        <div class="w-8 h-12 bg-white/5 rounded-md relative overflow-hidden">
+                            <div class="tank-fill absolute bottom-0 left-0 right-0 rounded-md bg-gradient-to-t from-brand-600 to-brand-500" style="height:85%"></div>
+                        </div>
+                        <div class="w-8 h-12 bg-white/5 rounded-md relative overflow-hidden">
+                            <div class="tank-fill absolute bottom-0 left-0 right-0 rounded-md bg-gradient-to-t from-emerald-500 to-emerald-400" style="height:62%"></div>
+                        </div>
+                        <div class="w-8 h-12 bg-white/5 rounded-md relative overflow-hidden">
+                            <div class="tank-fill absolute bottom-0 left-0 right-0 rounded-md bg-gradient-to-t from-brand-600 to-brand-500" style="height:91%"></div>
+                        </div>
+                        <div class="w-8 h-12 bg-white/5 rounded-md relative overflow-hidden">
+                            <div class="tank-fill absolute bottom-0 left-0 right-0 rounded-md bg-gradient-to-t from-blue-500 to-blue-400" style="height:45%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating stat cards -->
+            <div class="hidden lg:flex absolute -top-2 -right-8 glass border border-brand-600/15 rounded-2xl px-4 py-3 items-center gap-3 shadow-xl animate-float">
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Accuracy</p>
+                    <p class="font-display text-sm font-bold text-emerald-400">100% Verified</p>
+                </div>
+            </div>
+
+            <div class="hidden lg:flex absolute bottom-20 -left-12 glass border border-brand-600/15 rounded-2xl px-4 py-3 items-center gap-3 shadow-xl animate-float-delayed">
+                <div class="w-9 h-9 rounded-xl bg-brand-600/15 flex items-center justify-center">
+                    <i data-lucide="car" class="w-4 h-4 text-brand-500"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Vehicles Today</p>
+                    <p class="font-display text-sm font-bold">1,247</p>
+                </div>
+            </div>
+
+            <div class="hidden lg:flex absolute -bottom-4 right-16 glass border border-brand-600/15 rounded-2xl px-4 py-3 items-center gap-3 shadow-xl animate-float-slow">
+                <div class="w-9 h-9 rounded-xl bg-brand-600/15 flex items-center justify-center">
+                    <i data-lucide="star" class="w-4 h-4 text-brand-500"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Rating</p>
+                    <p class="font-display text-sm font-bold text-brand-500">4.8 / 5.0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ STATS BAR ============ -->
+<div class="relative z-10 px-6 -mt-8" data-aos="fade-up">
+    <div class="max-w-7xl mx-auto bg-gradient-to-br from-deep-700 to-deep-600 border border-brand-600/10 rounded-3xl p-8 md:p-10 grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="text-center relative">
+            <div class="font-display text-4xl md:text-5xl font-extrabold text-brand-600 counter" data-target="61">0</div>
+            <div class="text-sm text-gray-400 mt-1 font-medium">Years of Legacy</div>
+            <div class="hidden lg:block absolute right-0 top-[15%] h-[70%] w-px bg-white/5"></div>
+        </div>
+        <div class="text-center relative">
+            <div class="font-display text-4xl md:text-5xl font-extrabold text-brand-600 counter" data-target="50000" data-suffix="+">0</div>
+            <div class="text-sm text-gray-400 mt-1 font-medium">Happy Customers</div>
+            <div class="hidden lg:block absolute right-0 top-[15%] h-[70%] w-px bg-white/5"></div>
+        </div>
+        <div class="text-center relative">
+            <div class="font-display text-4xl md:text-5xl font-extrabold text-brand-600 counter" data-target="8" data-suffix="M+">0</div>
+            <div class="text-sm text-gray-400 mt-1 font-medium">Litres Dispensed</div>
+            <div class="hidden lg:block absolute right-0 top-[15%] h-[70%] w-px bg-white/5"></div>
+        </div>
+        <div class="text-center">
+            <div class="font-display text-4xl md:text-5xl font-extrabold text-brand-600 counter" data-target="24" data-suffix="/7">0</div>
+            <div class="text-sm text-gray-400 mt-1 font-medium">Always Open</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ SERVICES SECTION ============ -->
+<section id="services" class="relative z-10 py-24 md:py-32 px-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16" data-aos="fade-up">
+            <p class="text-xs font-bold uppercase tracking-[3px] text-brand-600 mb-3">What We Offer</p>
+            <h2 class="font-display text-4xl md:text-5xl font-extrabold tracking-tight mb-4">More Than Just Fuel</h2>
+            <p class="text-gray-400 text-lg max-w-xl mx-auto">From premium fuels to value-added services, we're your one-stop destination on the road.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Card 1 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 group" data-aos="fade-up" data-aos-delay="0">
+                <div class="w-14 h-14 rounded-2xl bg-brand-600/12 flex items-center justify-center mb-5 group-hover:bg-brand-600/20 transition-colors">
+                    <i data-lucide="fuel" class="w-6 h-6 text-brand-500"></i>
+                </div>
+                <h3 class="font-display text-xl font-bold mb-2">Premium Fuels</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">BS-VI compliant petrol, diesel, and high-octane power fuels for every engine. Precision-calibrated dispensers ensure every drop counts.</p>
+            </div>
+            <!-- Card 2 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 group" data-aos="fade-up" data-aos-delay="100">
+                <div class="w-14 h-14 rounded-2xl bg-blue-500/12 flex items-center justify-center mb-5 group-hover:bg-blue-500/20 transition-colors">
+                    <i data-lucide="credit-card" class="w-6 h-6 text-blue-400"></i>
+                </div>
+                <h3 class="font-display text-xl font-bold mb-2">Digital Payments</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Pay seamlessly via UPI, cards, fleet cards, or CCMS accounts. Instant digital receipts sent to your phone.</p>
+            </div>
+            <!-- Card 3 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 group" data-aos="fade-up" data-aos-delay="200">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-500/12 flex items-center justify-center mb-5 group-hover:bg-emerald-500/20 transition-colors">
+                    <i data-lucide="building-2" class="w-6 h-6 text-emerald-400"></i>
+                </div>
+                <h3 class="font-display text-xl font-bold mb-2">Fleet Management</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Dedicated credit accounts for businesses with monthly statements, vehicle-wise tracking, and volume-based incentives.</p>
+            </div>
+            <!-- Card 4 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 group" data-aos="fade-up" data-aos-delay="0">
+                <div class="w-14 h-14 rounded-2xl bg-brand-600/12 flex items-center justify-center mb-5 group-hover:bg-brand-600/20 transition-colors">
+                    <i data-lucide="gauge" class="w-6 h-6 text-brand-500"></i>
+                </div>
+                <h3 class="font-display text-xl font-bold mb-2">Air & Water</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Free tyre air pressure check and radiator water top-up. Drive in, fuel up, and leave with your vehicle in peak condition.</p>
+            </div>
+            <!-- Card 5 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 group" data-aos="fade-up" data-aos-delay="100">
+                <div class="w-14 h-14 rounded-2xl bg-violet-500/12 flex items-center justify-center mb-5 group-hover:bg-violet-500/20 transition-colors">
+                    <i data-lucide="activity" class="w-6 h-6 text-violet-400"></i>
+                </div>
+                <h3 class="font-display text-xl font-bold mb-2">Transparent Meters</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">All dispensing units are regularly calibrated and certified. Watch the meter — what you see is what you get, guaranteed.</p>
+            </div>
+            <!-- Card 6 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 group" data-aos="fade-up" data-aos-delay="200">
+                <div class="w-14 h-14 rounded-2xl bg-pink-500/12 flex items-center justify-center mb-5 group-hover:bg-pink-500/20 transition-colors">
+                    <i data-lucide="store" class="w-6 h-6 text-pink-400"></i>
+                </div>
+                <h3 class="font-display text-xl font-bold mb-2">Convenience Store</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Quick-grab essentials, engine oils, coolants, and snacks. Everything you need without leaving the station.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ ANNIVERSARY MILESTONE SECTION ============ -->
+<section class="relative z-10 py-20 px-6 overflow-hidden anniversary-bg">
+    <div class="max-w-7xl mx-auto">
+        <div class="relative bg-gradient-to-br from-brand-600/10 via-brand-600/5 to-brand-600/10 border border-brand-600/20 rounded-[2rem] p-10 md:p-16 text-center overflow-hidden" data-aos="zoom-in">
+            <!-- Decorative corner sparkles -->
+            <div class="absolute top-6 left-8 text-2xl sparkle opacity-60">&#10024;</div>
+            <div class="absolute top-8 right-10 text-xl sparkle-delay opacity-50">&#10024;</div>
+            <div class="absolute bottom-6 left-12 text-lg sparkle-delay-2 opacity-40">&#10024;</div>
+            <div class="absolute bottom-8 right-8 text-2xl sparkle opacity-50">&#10024;</div>
+
+            <div class="inline-flex items-center gap-2 bg-brand-600/15 border border-brand-600/25 px-4 py-1.5 rounded-full text-sm font-bold text-brand-500 mb-6">
+                <i data-lucide="award" class="w-4 h-4"></i>
+                A Legacy of Trust
+            </div>
+
+            <h2 class="font-display text-4xl md:text-6xl font-extrabold tracking-tight mb-3">
+                <span class="text-gradient">1965</span> — <span class="text-gradient">2026</span>
+            </h2>
+            <p class="font-display text-2xl md:text-3xl font-bold text-white mb-4">61 Years of Fueling Dreams</p>
+            <p class="text-gray-400 text-lg max-w-2xl mx-auto mb-10">
+                What started as a humble fuel station in May 1965 has grown into Chennai's most trusted energy partner.
+                Three generations of customers. Millions of journeys powered. One unwavering promise — quality you can trust.
+            </p>
+
+            <!-- Timeline milestones -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+                <div class="bg-deep-900/50 border border-white/5 rounded-2xl p-4" data-aos="fade-up" data-aos-delay="0">
+                    <div class="font-display text-2xl font-extrabold text-brand-500">1965</div>
+                    <div class="text-xs text-gray-500 mt-1">Founded</div>
+                </div>
+                <div class="bg-deep-900/50 border border-white/5 rounded-2xl p-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="font-display text-2xl font-extrabold text-brand-500">3</div>
+                    <div class="text-xs text-gray-500 mt-1">Generations Served</div>
+                </div>
+                <div class="bg-deep-900/50 border border-white/5 rounded-2xl p-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="font-display text-2xl font-extrabold text-emerald-400">50K+</div>
+                    <div class="text-xs text-gray-500 mt-1">Loyal Customers</div>
+                </div>
+                <div class="bg-deep-900/50 border border-white/5 rounded-2xl p-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="font-display text-2xl font-extrabold text-blue-400">&#8734;</div>
+                    <div class="text-xs text-gray-500 mt-1">Journeys Fueled</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ FUEL TYPES SECTION ============ -->
+<section id="fuel-types" class="relative z-10 py-24 md:py-32 px-6 fuel-section-bg">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16" data-aos="fade-up">
+            <p class="text-xs font-bold uppercase tracking-[3px] text-brand-600 mb-3">Fuel Menu</p>
+            <h2 class="font-display text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Choose Your Fuel</h2>
+            <p class="text-gray-400 text-lg max-w-xl mx-auto">Premium quality fuels for every need — from daily commutes to high-performance engines.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- Petrol -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 text-center group" data-aos="fade-up" data-aos-delay="0">
+                <div class="w-20 h-20 mx-auto rounded-full bg-brand-600/12 flex items-center justify-center mb-5 relative">
+                    <i data-lucide="droplets" class="w-8 h-8 text-brand-500"></i>
+                    <div class="absolute -inset-1 border-2 border-dashed border-brand-600/20 rounded-full animate-spin-slow"></div>
+                </div>
+                <h3 class="font-display text-xl font-bold text-brand-500 mb-1">Petrol</h3>
+                <p class="text-xs text-gray-500 mb-4">Regular unleaded BS-VI</p>
+                <div class="font-display text-3xl font-extrabold text-brand-500">₹102.63 <span class="text-xs text-gray-500 font-normal">/L</span></div>
+            </div>
+            <!-- Diesel -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 text-center group" data-aos="fade-up" data-aos-delay="100">
+                <div class="w-20 h-20 mx-auto rounded-full bg-emerald-500/12 flex items-center justify-center mb-5 relative">
+                    <i data-lucide="droplets" class="w-8 h-8 text-emerald-400"></i>
+                    <div class="absolute -inset-1 border-2 border-dashed border-emerald-500/20 rounded-full animate-spin-slow"></div>
+                </div>
+                <h3 class="font-display text-xl font-bold text-emerald-400 mb-1">Diesel</h3>
+                <p class="text-xs text-gray-500 mb-4">High-speed diesel BS-VI</p>
+                <div class="font-display text-3xl font-extrabold text-emerald-400">₹94.24 <span class="text-xs text-gray-500 font-normal">/L</span></div>
+            </div>
+            <!-- Power Petrol -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 text-center group" data-aos="fade-up" data-aos-delay="200">
+                <div class="w-20 h-20 mx-auto rounded-full bg-brand-600/12 flex items-center justify-center mb-5 relative">
+                    <i data-lucide="flame" class="w-8 h-8 text-brand-500"></i>
+                    <div class="absolute -inset-1 border-2 border-dashed border-brand-600/20 rounded-full animate-spin-slow"></div>
+                </div>
+                <h3 class="font-display text-xl font-bold text-brand-500 mb-1">Power Petrol</h3>
+                <p class="text-xs text-gray-500 mb-4">High-octane premium fuel</p>
+                <div class="font-display text-3xl font-extrabold text-brand-500">₹112.47 <span class="text-xs text-gray-500 font-normal">/L</span></div>
+            </div>
+            <!-- Power Diesel -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-8 text-center group" data-aos="fade-up" data-aos-delay="300">
+                <div class="w-20 h-20 mx-auto rounded-full bg-blue-500/12 flex items-center justify-center mb-5 relative">
+                    <i data-lucide="zap" class="w-8 h-8 text-blue-400"></i>
+                    <div class="absolute -inset-1 border-2 border-dashed border-blue-500/20 rounded-full animate-spin-slow"></div>
+                </div>
+                <h3 class="font-display text-xl font-bold text-blue-400 mb-1">Power Diesel</h3>
+                <p class="text-xs text-gray-500 mb-4">Premium high-cetane diesel</p>
+                <div class="font-display text-3xl font-extrabold text-blue-400">₹100.18 <span class="text-xs text-gray-500 font-normal">/L</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ WHY US SECTION ============ -->
+<section id="why-us" class="relative z-10 py-24 md:py-32 px-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16" data-aos="fade-up">
+            <p class="text-xs font-bold uppercase tracking-[3px] text-brand-600 mb-3">Why Choose Us</p>
+            <h2 class="font-display text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Built on Trust, Driven by Quality</h2>
+            <p class="text-gray-400 text-lg max-w-xl mx-auto">Every litre, every transaction, every interaction — we go the extra mile for you.</p>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <!-- Feature list -->
+            <div class="space-y-4" data-aos="fade-right">
+                <div class="flex gap-4 p-5 rounded-2xl border border-transparent hover:bg-brand-600/5 hover:border-brand-600/10 transition-all">
+                    <div class="w-12 h-12 min-w-[3rem] rounded-xl bg-brand-600/12 flex items-center justify-center">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-brand-500"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-display font-bold text-lg mb-1">Zero Adulteration Guarantee</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">Direct supply from oil company terminals. Sealed tanks with tamper-proof locks. Regular quality audits ensure pure fuel every time.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4 p-5 rounded-2xl border border-transparent hover:bg-brand-600/5 hover:border-brand-600/10 transition-all">
+                    <div class="w-12 h-12 min-w-[3rem] rounded-xl bg-emerald-500/12 flex items-center justify-center">
+                        <i data-lucide="zap" class="w-5 h-5 text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-display font-bold text-lg mb-1">Fast Fill Technology</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">High-flow dispensers mean shorter wait times. Our multi-nozzle setup ensures you're back on the road in under 3 minutes.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4 p-5 rounded-2xl border border-transparent hover:bg-brand-600/5 hover:border-brand-600/10 transition-all">
+                    <div class="w-12 h-12 min-w-[3rem] rounded-xl bg-blue-500/12 flex items-center justify-center">
+                        <i data-lucide="smartphone" class="w-5 h-5 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-display font-bold text-lg mb-1">Digital-First Experience</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">UPI, card payments, and digital invoices. Track your fuel purchases, manage fleet accounts, and get instant SMS receipts.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4 p-5 rounded-2xl border border-transparent hover:bg-brand-600/5 hover:border-brand-600/10 transition-all">
+                    <div class="w-12 h-12 min-w-[3rem] rounded-xl bg-brand-600/12 flex items-center justify-center">
+                        <i data-lucide="handshake" class="w-5 h-5 text-brand-500"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-display font-bold text-lg mb-1">Customer Loyalty Program</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">Earn points on every fill. Dedicated credit accounts for regular customers with monthly billing and special incentive rates.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual — Gauge + Stats -->
+            <div class="flex justify-center" data-aos="fade-left">
+                <div class="w-full max-w-[420px] border border-brand-600/10 rounded-3xl p-8 flex flex-col items-center gap-6 relative overflow-hidden" style="background: linear-gradient(to bottom, rgba(18,36,61,0.88), rgba(26,51,82,0.93)), url('https://images.unsplash.com/photo-1743809482038-41d9f8b9d8c3?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=500&h=600'); background-size: cover; background-position: center;">
+                    <!-- SVG Gauge -->
+                    <div class="relative w-44 h-44">
+                        <svg viewBox="0 0 160 160" class="w-full h-full -rotate-90">
+                            <defs>
+                                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#FFB300" />
+                                    <stop offset="100%" stop-color="#E65100" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="10" />
+                            <circle cx="80" cy="80" r="70" fill="none" stroke="url(#gaugeGrad)" stroke-width="10" stroke-linecap="round" stroke-dasharray="440" stroke-dashoffset="110" />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="font-display text-4xl font-extrabold text-brand-600">98%</span>
+                            <span class="text-xs text-gray-500 uppercase tracking-wider">Satisfaction</span>
+                        </div>
+                    </div>
+
+                    <!-- Mini stats grid -->
+                    <div class="grid grid-cols-2 gap-3 w-full">
+                        <div class="bg-white/[0.03] border border-white/5 rounded-xl p-4 text-center">
+                            <div class="font-display text-2xl font-bold text-brand-500">6</div>
+                            <div class="text-xs text-gray-500 mt-0.5">Fuel Pumps</div>
+                        </div>
+                        <div class="bg-white/[0.03] border border-white/5 rounded-xl p-4 text-center">
+                            <div class="font-display text-2xl font-bold text-emerald-400">12</div>
+                            <div class="text-xs text-gray-500 mt-0.5">Nozzles</div>
+                        </div>
+                        <div class="bg-white/[0.03] border border-white/5 rounded-xl p-4 text-center">
+                            <div class="font-display text-2xl font-bold text-brand-500">4</div>
+                            <div class="text-xs text-gray-500 mt-0.5">Fuel Types</div>
+                        </div>
+                        <div class="bg-white/[0.03] border border-white/5 rounded-xl p-4 text-center">
+                            <div class="font-display text-2xl font-bold text-blue-400">3</div>
+                            <div class="text-xs text-gray-500 mt-0.5">Shifts / Day</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ TESTIMONIALS SECTION ============ -->
+<section id="reviews" class="relative z-10 py-24 md:py-32 px-6 bg-gradient-to-b from-transparent to-brand-600/[0.02]">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16" data-aos="fade-up">
+            <p class="text-xs font-bold uppercase tracking-[3px] text-brand-600 mb-3">Testimonials</p>
+            <h2 class="font-display text-4xl md:text-5xl font-extrabold tracking-tight mb-4">What Our Customers Say</h2>
+            <p class="text-gray-400 text-lg max-w-xl mx-auto">Don't take our word for it — hear from the people who fuel up with us every day.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Testimonial 1 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-7" data-aos="fade-up" data-aos-delay="0">
+                <div class="flex gap-1 text-brand-500 mb-4">
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                </div>
+                <p class="text-gray-300 text-sm leading-relaxed italic mb-6">"Been coming here for 5 years. The meter is always accurate, the staff is courteous, and they never try to upsell unnecessary things. Most honest bunk in the area."</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-brand-600/15 flex items-center justify-center text-sm font-bold text-brand-500">RK</div>
+                    <div>
+                        <h4 class="text-sm font-semibold">Rajesh Kumar</h4>
+                        <p class="text-xs text-gray-500">Regular Customer</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Testimonial 2 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-7" data-aos="fade-up" data-aos-delay="100">
+                <div class="flex gap-1 text-brand-500 mb-4">
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                </div>
+                <p class="text-gray-300 text-sm leading-relaxed italic mb-6">"Our entire fleet of 40 trucks fuels here. The credit account management is excellent — we get detailed monthly statements with vehicle-wise breakdown. Saves us hours."</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-500/15 flex items-center justify-center text-sm font-bold text-blue-400">PS</div>
+                    <div>
+                        <h4 class="text-sm font-semibold">Priya Subramanian</h4>
+                        <p class="text-xs text-gray-500">Fleet Manager, SLS Logistics</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Testimonial 3 -->
+            <div class="card-hover bg-gradient-to-br from-deep-700 to-deep-600 border border-white/5 rounded-3xl p-7" data-aos="fade-up" data-aos-delay="200">
+                <div class="flex gap-1 text-brand-500 mb-4">
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                    <i data-lucide="star" class="w-4 h-4 fill-brand-500"></i>
+                </div>
+                <p class="text-gray-300 text-sm leading-relaxed italic mb-6">"What I love is the UPI payments and instant digital receipts. No more fumbling for cash or waiting for change. The whole experience is modern and fast. Best bunk near OMR!"</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center text-sm font-bold text-emerald-400">AM</div>
+                    <div>
+                        <h4 class="text-sm font-semibold">Arun Murugan</h4>
+                        <p class="text-xs text-gray-500">Software Engineer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ CTA / CONTACT SECTION ============ -->
+<section id="contact" class="relative z-10 py-24 md:py-32 px-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="cta-bg border border-brand-600/15 rounded-[2rem] p-10 md:p-16 text-center relative overflow-hidden" data-aos="fade-up">
+            <!-- Top accent line -->
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-brand-600 to-transparent"></div>
+
+            <p class="text-xs font-bold uppercase tracking-[3px] text-brand-600 mb-3">Visit Us</p>
+            <h2 class="font-display text-3xl md:text-5xl font-extrabold tracking-tight mb-4">Ready to <span class="text-brand-600">Fuel Up?</span></h2>
+            <p class="text-gray-400 text-lg max-w-lg mx-auto mb-8">We're conveniently located and open 24 hours. Drop by anytime — your fuel, your way.</p>
+
+            <div class="flex flex-wrap justify-center gap-4 mb-10">
+                <a href="https://maps.google.com" target="_blank" class="inline-flex items-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 text-white px-7 py-3.5 rounded-xl font-semibold shadow-lg shadow-brand-600/30 hover:shadow-brand-600/50 hover:-translate-y-1 transition-all">
+                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                    Get Directions
+                </a>
+                <a href="tel:+919876543210" class="inline-flex items-center gap-2 border border-gray-600 text-white px-7 py-3.5 rounded-xl font-semibold hover:border-brand-600 hover:text-brand-500 hover:-translate-y-1 transition-all">
+                    <i data-lucide="phone" class="w-4 h-4"></i>
+                    Call Us
+                </a>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-8 md:gap-12">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-brand-600/10 flex items-center justify-center">
+                        <i data-lucide="map-pin" class="w-4 h-4 text-brand-500"></i>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-xs text-gray-500 font-medium">Location</p>
+                        <p class="text-sm font-semibold">NH-45, Chennai, TN</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-brand-600/10 flex items-center justify-center">
+                        <i data-lucide="clock" class="w-4 h-4 text-brand-500"></i>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-xs text-gray-500 font-medium">Hours</p>
+                        <p class="text-sm font-semibold">Open 24/7</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-brand-600/10 flex items-center justify-center">
+                        <i data-lucide="phone" class="w-4 h-4 text-brand-500"></i>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-xs text-gray-500 font-medium">Phone</p>
+                        <p class="text-sm font-semibold">+91 98765 43210</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="relative z-10 border-t border-white/5 pt-12 pb-6 px-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
+            <!-- Brand -->
+            <div>
+                <a href="#" class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 bg-gradient-to-br from-brand-600 to-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-600/20">
+                        <i data-lucide="fuel" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <span class="font-display text-lg font-bold">Stop<span class="text-brand-600">For</span>Fuel</span>
+                </a>
+                <p class="text-sm text-gray-500 leading-relaxed">Premium fuel station committed to quality, accuracy, and customer satisfaction. Proudly serving Chennai since 1965 — celebrating 61 glorious years.</p>
+            </div>
+            <!-- Quick links -->
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-5">Quick Links</h4>
+                <ul class="space-y-3">
+                    <li><a href="#services" class="text-sm text-gray-500 hover:text-brand-500 transition-colors">Services</a></li>
+                    <li><a href="#fuel-types" class="text-sm text-gray-500 hover:text-brand-500 transition-colors">Fuel Prices</a></li>
+                    <li><a href="#why-us" class="text-sm text-gray-500 hover:text-brand-500 transition-colors">Why Us</a></li>
+                    <li><a href="#reviews" class="text-sm text-gray-500 hover:text-brand-500 transition-colors">Reviews</a></li>
+                </ul>
+            </div>
+            <!-- Services -->
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-5">Services</h4>
+                <ul class="space-y-3">
+                    <li><a href="#" class="text-sm text-gray-500 hover:text-brand-500 transition-colors">Petrol & Diesel</a></li>
+                    <li><a href="#" class="text-sm text-gray-500 hover:text-brand-500 transition-colors">Fleet Accounts</a></li>
+                    <li><a href="#" class="text-sm text-gray-500 hover:text-brand-500 transition-colors">Digital Payments</a></li>
+                    <li><a href="#" class="text-sm text-gray-500 hover:text-brand-500 transition-colors">Air & Water</a></li>
+                </ul>
+            </div>
+            <!-- Contact -->
+            <div>
+                <h4 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-5">Contact</h4>
+                <ul class="space-y-3">
+                    <li><a href="tel:+919876543210" class="text-sm text-gray-500 hover:text-brand-500 transition-colors flex items-center gap-2"><i data-lucide="phone" class="w-3.5 h-3.5"></i> +91 98765 43210</a></li>
+                    <li><a href="mailto:info@stopforfuel.com" class="text-sm text-gray-500 hover:text-brand-500 transition-colors flex items-center gap-2"><i data-lucide="mail" class="w-3.5 h-3.5"></i> info@stopforfuel.com</a></li>
+                    <li><a href="#" class="text-sm text-gray-500 hover:text-brand-500 transition-colors flex items-center gap-2"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> NH-45, Chennai</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-xs text-gray-500">&copy; 2026 StopForFuel. All rights reserved.</p>
+            <div class="flex gap-3">
+                <a href="#" class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:bg-brand-600/15 hover:text-brand-500 transition-all" title="Facebook">
+                    <i data-lucide="facebook" class="w-4 h-4"></i>
+                </a>
+                <a href="#" class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:bg-brand-600/15 hover:text-brand-500 transition-all" title="Instagram">
+                    <i data-lucide="instagram" class="w-4 h-4"></i>
+                </a>
+                <a href="#" class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:bg-brand-600/15 hover:text-brand-500 transition-all" title="Twitter">
+                    <i data-lucide="twitter" class="w-4 h-4"></i>
+                </a>
+                <a href="#" class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:bg-brand-600/15 hover:text-brand-500 transition-all" title="Google">
+                    <i data-lucide="globe" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- ============ SCRIPTS ============ -->
+<!-- AOS -->
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>
+    // Initialize AOS
+    AOS.init({
+        duration: 800,
+        easing: 'ease-out-cubic',
+        once: true,
+        offset: 60,
+    });
+
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // ===== NAV SCROLL =====
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // ===== MOBILE MENU =====
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const bar1 = document.getElementById('bar1');
+    const bar2 = document.getElementById('bar2');
+    const bar3 = document.getElementById('bar3');
+    let menuOpen = false;
+
+    hamburger.addEventListener('click', () => {
+        menuOpen = !menuOpen;
+        mobileMenu.classList.toggle('hidden');
+        // Animate hamburger to X
+        if (menuOpen) {
+            bar1.style.transform = 'rotate(45deg) translate(3px, 3px)';
+            bar2.style.opacity = '0';
+            bar3.style.transform = 'rotate(-45deg) translate(3px, -3px)';
+        } else {
+            bar1.style.transform = '';
+            bar2.style.opacity = '1';
+            bar3.style.transform = '';
+        }
+    });
+
+    // Close menu on link click
+    mobileMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            mobileMenu.classList.add('hidden');
+            menuOpen = false;
+            bar1.style.transform = '';
+            bar2.style.opacity = '1';
+            bar3.style.transform = '';
+        });
+    });
+
+    // ===== COUNT-UP ANIMATION =====
+    const counters = document.querySelectorAll('.counter[data-target]');
+    const countObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const el = entry.target;
+                const target = parseInt(el.dataset.target);
+                const suffix = el.dataset.suffix || '';
+                let current = 0;
+                const increment = target / 60;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    el.textContent = Math.floor(current).toLocaleString('en-IN') + suffix;
+                }, 25);
+                countObserver.unobserve(el);
+            }
+        });
+    }, { threshold: 0.5 });
+
+    counters.forEach(el => countObserver.observe(el));
+
+    // ===== PARALLAX MOUSE ORB =====
+    const mouseOrb = document.getElementById('mouseOrb');
+    window.addEventListener('mousemove', (e) => {
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        mouseOrb.style.transform = `translate(calc(-50% + ${(x - 0.5) * 50}px), calc(-50% + ${(y - 0.5) * 50}px))`;
+    });
+
+    // ===== SMOOTH SCROLL =====
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                const offset = 80;
+                const top = target.getBoundingClientRect().top + window.scrollY - offset;
+                window.scrollTo({ top, behavior: 'smooth' });
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
