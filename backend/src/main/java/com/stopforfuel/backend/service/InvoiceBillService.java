@@ -200,8 +200,9 @@ public class InvoiceBillService {
                         }
 
                         // Check product inventory (non-fuel only — fuel stock is tracked via tank dip readings)
-                        boolean isFuelWithNozzle = ip.getNozzle() != null && ip.getNozzle().getId() != null;
-                        if (!isFuelWithNozzle) {
+                        boolean isFuelProduct = "FUEL".equalsIgnoreCase(prod.getCategory())
+                                || (ip.getNozzle() != null && ip.getNozzle().getId() != null);
+                        if (!isFuelProduct) {
                             ProductInventory productInv = productInventoryRepository
                                     .findTopByProductIdAndScidOrderByDateDescIdDesc(prod.getId(), SecurityUtils.getScid());
                             if (productInv != null) {
