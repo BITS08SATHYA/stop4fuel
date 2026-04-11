@@ -140,7 +140,8 @@ resource "aws_ecs_service" "backend" {
     container_port   = 8080
   }
 
-  health_check_grace_period_seconds = 120
+  enable_execute_command             = true
+  health_check_grace_period_seconds = 180
 
   lifecycle {
     ignore_changes = [task_definition, desired_count]

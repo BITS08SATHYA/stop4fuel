@@ -262,6 +262,17 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.ecs[0].id]
   }
 
+  dynamic "ingress" {
+    for_each = length(var.allowed_db_cidrs) > 0 ? [1] : []
+    content {
+      description = "Direct DB access"
+      from_port   = 0
+      to_port     = 0
+      protocol    = "tcp"
+      cidr_blocks = var.allowed_db_cidrs
+    }
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

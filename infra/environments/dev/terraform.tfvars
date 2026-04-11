@@ -1,6 +1,6 @@
 aws_region     = "us-east-1"
-aws_profile    = "your-aws-profile"
-aws_account_id = "YOUR_AWS_ACCOUNT_ID"
+aws_profile    = "stopforfuel-prod"
+aws_account_id = "607856468014"
 project_name   = "stopforfuel"
 environment    = "dev"
 vpc_cidr       = "10.1.0.0/16"

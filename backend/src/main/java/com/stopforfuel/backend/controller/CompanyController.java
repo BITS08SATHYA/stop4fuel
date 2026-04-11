@@ -35,6 +35,11 @@ public class CompanyController {
         return companyService.getAllCompanies().stream().map(CompanyDTO::from).toList();
     }
 
+    @GetMapping("/print-info")
+    public CompanyDTO getCompanyPrintInfo() {
+        return companyService.getAllCompanies().stream().findFirst().map(CompanyDTO::from).orElse(null);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'SETTINGS_VIEW')")
     public CompanyDTO getCompanyById(@PathVariable Long id) {

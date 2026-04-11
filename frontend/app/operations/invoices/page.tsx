@@ -146,12 +146,12 @@ export default function InvoicesPage() {
             const [prodData, nozData, compRes] = await Promise.all([
                 getActiveProducts(),
                 getNozzles(),
-                fetchWithAuth(`${API_BASE_URL}/companies`).then(r => r.ok ? r.json() : [])
+                fetchWithAuth(`${API_BASE_URL}/companies/print-info`).then(r => r.ok ? r.json() : null)
             ]);
             setProducts(prodData);
             setNozzles(nozData.filter((n: Nozzle) => n.active));
-            if (compRes.length > 0) {
-                const c = compRes[0];
+            if (compRes) {
+                const c = compRes;
                 setCompanyInfo({ name: c.name, address: c.address, phone: c.phone, gstNo: c.gstNo, site: c.site });
             }
 
