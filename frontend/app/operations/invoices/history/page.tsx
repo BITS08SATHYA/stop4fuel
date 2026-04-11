@@ -47,9 +47,8 @@ export default function InvoiceHistoryPage() {
     const [companyInfo, setCompanyInfo] = useState<{ name: string; address: string; phone: string; gstNo: string; site?: string } | null>(null);
 
     useEffect(() => {
-        fetchWithAuth(`${API_BASE_URL}/companies`).then(r => r.ok ? r.json() : []).then(data => {
-            if (data.length > 0) {
-                const c = data[0];
+        fetchWithAuth(`${API_BASE_URL}/companies/print-info`).then(r => r.ok ? r.json() : null).then(c => {
+            if (c) {
                 setCompanyInfo({ name: c.name, address: c.address, phone: c.phone, gstNo: c.gstNo, site: c.site });
             }
         }).catch(() => {});

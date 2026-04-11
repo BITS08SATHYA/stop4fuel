@@ -19,6 +19,7 @@ module "networking" {
   enable_nat_gateway     = true
   enable_private_subnets = true
   aws_region             = var.aws_region
+  allowed_db_cidrs       = ["108.35.55.67/32"]
 }
 
 # ============================================================

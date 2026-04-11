@@ -44,3 +44,9 @@ variable "aws_region" {
   type    = string
   default = "ap-south-1"
 }
+
+variable "allowed_db_cidrs" {
+  type        = list(string)
+  default     = []
+  description = "CIDRs allowed direct PostgreSQL access to RDS"
+}
