@@ -454,10 +454,7 @@ export default function InvoicesPage() {
             setCurrentStep(6);
             toast.success("Invoice created successfully");
 
-            // Auto-print to dot matrix printer
-            if (companyInfo) {
-                printInvoice(saved, companyInfo);
-            }
+            // Print manually from success page via Print button
             loadInvoices(viewMode, activeShiftId, historyFromDate, historyToDate);
         } catch (err: any) {
             console.error("Failed to save invoice", err);
@@ -1514,7 +1511,7 @@ export default function InvoicesPage() {
                                     onClick={() => printInvoice(lastCreatedInvoice, companyInfo)}
                                     className="px-8 py-4 border border-border text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 hover:bg-muted/50"
                                 >
-                                    <Receipt size={20} /> Reprint
+                                    <Receipt size={20} /> Print
                                 </button>
                             )}
                             <button
