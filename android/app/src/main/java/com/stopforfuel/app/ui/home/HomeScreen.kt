@@ -644,34 +644,27 @@ private fun CashierDashboard(uiState: HomeUiState) {
     }
     Spacer(Modifier.height(12.dp))
 
-    // E-advances
-    val upi = cd.eAdvanceTotals?.get("UPI") ?: java.math.BigDecimal.ZERO
-    val card = cd.eAdvanceTotals?.get("CARD") ?: java.math.BigDecimal.ZERO
+    // E-advances + Expenses
+    val eAdvanceTotal = cd.eAdvanceTotals?.get("total") ?: java.math.BigDecimal.ZERO
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         CashierGradientStatCard(
-            Icons.Default.PhoneAndroid, "UPI Advances",
-            inrFormat.format(upi),
+            Icons.Default.CreditScore, "E-Advances",
+            inrFormat.format(eAdvanceTotal),
             gradient = CashierGradientCyan,
             modifier = Modifier.weight(1f)
         )
         CashierGradientStatCard(
-            Icons.Default.CreditScore, "Card Advances",
-            inrFormat.format(card),
-            gradient = CashierGradientAmber,
+            Icons.Default.MoneyOff, "Expenses",
+            inrFormat.format(cd.expenseTotal ?: java.math.BigDecimal.ZERO),
+            gradient = CashierGradientPink,
             modifier = Modifier.weight(1f)
         )
     }
     Spacer(Modifier.height(12.dp))
 
-    // Expenses + payments
+    // Payments
     val paymentsTotal = (cd.billPaymentTotal ?: java.math.BigDecimal.ZERO).add(cd.statementPaymentTotal ?: java.math.BigDecimal.ZERO)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        CashierGradientStatCard(
-            Icons.Default.MoneyOff, "Expenses",
-            inrFormat.format(cd.expenseTotal ?: 0),
-            gradient = CashierGradientPink,
-            modifier = Modifier.weight(1f)
-        )
         CashierGradientStatCard(
             Icons.Default.Payments, "Payments",
             inrFormat.format(paymentsTotal),
