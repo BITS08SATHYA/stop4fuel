@@ -40,6 +40,7 @@ public class InvoiceBillService {
     private final BillSequenceService billSequenceService;
     private final StatementRepository statementRepository;
     private final InvoiceBillPhotoRepository invoiceBillPhotoRepository;
+    private final TextractValidationService textractValidationService;
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -685,6 +686,18 @@ public class InvoiceBillService {
             throw new IllegalArgumentException("Invalid file type: " + type);
         }
 
+        // OCR validation for bill-pic: verify the photo contains the correct bill number
+        boolean ocrVerified = false;
+        if ("bill-pic".equals(type) && invoice.getBillNo() != null && !invoice.getBillNo().isEmpty()) {
+            ocrVerified = textractValidationService.validateBillNumber(
+                    file.getBytes(), invoice.getBillNo());
+            if (!ocrVerified) {
+                throw new BusinessException(
+                        "Bill number '" + invoice.getBillNo() + "' not found in the uploaded photo. " +
+                        "Please ensure you are photographing the correct invoice.");
+            }
+        }
+
         // Build S3 key with sequence number for multi-photo support
         LocalDateTime invoiceDate = invoice.getDate() != null ? invoice.getDate() : LocalDateTime.now();
         Long scid = invoice.getScid() != null ? invoice.getScid() : SecurityUtils.getScid();
@@ -707,6 +720,7 @@ public class InvoiceBillService {
         photo.setPhotoType(type);
         photo.setS3Key(key);
         photo.setOriginalFilename(file.getOriginalFilename());
+        photo.setOcrVerified("bill-pic".equals(type) ? ocrVerified : null);
         invoiceBillPhotoRepository.save(photo);
 
         // Also update legacy single-field (first photo of this type becomes the primary)
