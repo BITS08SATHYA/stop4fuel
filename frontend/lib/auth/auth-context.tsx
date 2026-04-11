@@ -43,6 +43,7 @@ interface AuthContextType {
         error?: string;
     }>;
     logout: () => Promise<void>;
+    logoutAllDevices: () => Promise<void>;
     hasPermission: (code: string) => boolean;
 }
 
@@ -54,6 +55,7 @@ const AuthContext = createContext<AuthContextType>({
     login: async () => ({ success: false }),
     loginWithPasscode: async () => ({ success: false }),
     logout: async () => {},
+    logoutAllDevices: async () => {},
     hasPermission: () => false,
 });
 
@@ -304,6 +306,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
+    const logoutAllDevices = useCallback(async () => {
+        try {
+            if (!DEV_MODE) {
+                await signOut({ global: true });
+            }
+            await fetch(`${getApiBaseUrl()}/auth/logout-all`, {
+                method: "POST",
+                credentials: "include",
+            });
+            document.cookie = "sff-auth-session=; path=/; max-age=0";
+            setUser(null);
+            setAccessToken(null);
+            window.location.href = "/login";
+        } catch {
+            window.location.href = "/login";
+        }
+    }, []);
+
     const hasPermission = useCallback(
         (code: string) => {
             if (!user) return false;
@@ -323,6 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 login,
                 loginWithPasscode,
                 logout,
+                logoutAllDevices,
                 hasPermission,
             }}
         >
