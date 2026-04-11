@@ -689,8 +689,13 @@ public class InvoiceBillService {
         // OCR validation for bill-pic: verify the photo contains the correct bill number
         boolean ocrVerified = false;
         if ("bill-pic".equals(type) && invoice.getBillNo() != null && !invoice.getBillNo().isEmpty()) {
-            ocrVerified = textractValidationService.validateBillNumber(
-                    file.getBytes(), invoice.getBillNo());
+            try {
+                ocrVerified = textractValidationService.validateBillNumber(
+                        file.getBytes(), invoice.getBillNo());
+            } catch (Exception e) {
+                throw new BusinessException(
+                        "Unable to verify bill photo. Please try again or contact admin. (" + e.getMessage() + ")");
+            }
             if (!ocrVerified) {
                 throw new BusinessException(
                         "Bill number '" + invoice.getBillNo() + "' not found in the uploaded photo. " +

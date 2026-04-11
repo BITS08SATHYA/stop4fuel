@@ -18,30 +18,30 @@ public class TextractValidationService {
 
     /**
      * Validates that the given image contains the expected bill number.
-     * Returns true if the bill number is found in the OCR text, or if Textract is unavailable (fail open).
+     * Fails closed — rejects upload if Textract is unavailable or bill number not found.
      */
     public boolean validateBillNumber(byte[] imageBytes, String expectedBillNo) {
-        try {
-            DetectDocumentTextRequest request = DetectDocumentTextRequest.builder()
-                    .document(Document.builder()
-                            .bytes(SdkBytes.fromByteArray(imageBytes))
-                            .build())
-                    .build();
+        DetectDocumentTextRequest request = DetectDocumentTextRequest.builder()
+                .document(Document.builder()
+                        .bytes(SdkBytes.fromByteArray(imageBytes))
+                        .build())
+                .build();
 
-            DetectDocumentTextResponse response = textractClient.detectDocumentText(request);
+        DetectDocumentTextResponse response = textractClient.detectDocumentText(request);
 
-            String ocrText = response.blocks().stream()
-                    .filter(b -> b.blockType() == BlockType.LINE || b.blockType() == BlockType.WORD)
-                    .map(Block::text)
-                    .collect(Collectors.joining(" "));
+        String ocrText = response.blocks().stream()
+                .filter(b -> b.blockType() == BlockType.LINE || b.blockType() == BlockType.WORD)
+                .map(Block::text)
+                .collect(Collectors.joining(" "));
 
-            log.info("OCR extracted text for bill {}: {}", expectedBillNo, ocrText);
+        log.info("OCR extracted text for bill {}: {}", expectedBillNo, ocrText);
 
-            return matchesBillNumber(ocrText, expectedBillNo);
-        } catch (Exception e) {
-            log.warn("Textract validation failed, allowing upload (fail open): {}", e.getMessage());
-            return true;
+        if (ocrText.isBlank()) {
+            log.warn("OCR returned no text for bill {} — rejecting upload", expectedBillNo);
+            return false;
         }
+
+        return matchesBillNumber(ocrText, expectedBillNo);
     }
 
     private boolean matchesBillNumber(String ocrText, String expectedBillNo) {
