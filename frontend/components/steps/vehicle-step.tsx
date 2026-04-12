@@ -99,7 +99,7 @@ export function VehicleStep({ data, updateData, errors = {} }: VehicleStepProps)
                         className={`w-full bg-white/5 border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${errors.fuelType ? "border-red-500" : "border-white/10"}`}
                     >
                         <option value="" className="bg-background text-foreground">Select Fuel</option>
-                        {products.map(p => (
+                        {products.filter(p => p.category === "FUEL").map(p => (
                             <option key={p.id} value={p.id} className="bg-background text-foreground">{p.name}</option>
                         ))}
                     </select>

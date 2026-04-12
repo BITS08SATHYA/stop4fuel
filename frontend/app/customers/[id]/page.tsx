@@ -1170,7 +1170,7 @@ export default function CustomerProfilePage() {
                                     onChange={(val) => setNewVehicle({ ...newVehicle, vehicleTypeId: val })}
                                     options={[
                                         { value: "", label: "Select Type" },
-                                        ...vehicleTypes.map(vt => ({ value: String(vt.id), label: vt.name || "" })),
+                                        ...vehicleTypes.map((vt: any) => ({ value: String(vt.id), label: vt.typeName || vt.name || "" })),
                                     ]}
                                     placeholder="Select Type"
                                     className="w-full"
@@ -1183,7 +1183,7 @@ export default function CustomerProfilePage() {
                                     onChange={(val) => setNewVehicle({ ...newVehicle, fuelType: val })}
                                     options={[
                                         { value: "", label: "Select Fuel" },
-                                        ...products.map(p => ({ value: String(p.id), label: p.name })),
+                                        ...products.filter((p: any) => p.category === "FUEL").map(p => ({ value: String(p.id), label: p.name })),
                                     ]}
                                     placeholder="Select Fuel"
                                     className="w-full"
