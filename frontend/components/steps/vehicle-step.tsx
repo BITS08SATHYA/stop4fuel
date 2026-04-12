@@ -75,11 +75,11 @@ export function VehicleStep({ data, updateData, errors = {} }: VehicleStepProps)
                     <select
                         value={data.vehicleType || ""}
                         onChange={(e) => updateData({ ...data, vehicleType: e.target.value })}
-                        className={inputClass("vehicleType")}
+                        className={`w-full bg-white/5 border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${errors.vehicleType ? "border-red-500" : "border-white/10"}`}
                     >
-                        <option value="" className="bg-slate-900">Select Type</option>
+                        <option value="" className="bg-background text-foreground">Select Type</option>
                         {vehicleTypes.map(vt => (
-                            <option key={vt.id} value={vt.id} className="bg-slate-900">{vt.name}</option>
+                            <option key={vt.id} value={vt.id} className="bg-background text-foreground">{vt.name}</option>
                         ))}
                     </select>
                     {errors.vehicleType && (
@@ -96,11 +96,11 @@ export function VehicleStep({ data, updateData, errors = {} }: VehicleStepProps)
                     <select
                         value={data.fuelType || ""}
                         onChange={(e) => updateData({ ...data, fuelType: e.target.value })}
-                        className={inputClass("fuelType")}
+                        className={`w-full bg-white/5 border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${errors.fuelType ? "border-red-500" : "border-white/10"}`}
                     >
-                        <option value="" className="bg-slate-900">Select Fuel</option>
+                        <option value="" className="bg-background text-foreground">Select Fuel</option>
                         {products.map(p => (
-                            <option key={p.id} value={p.id} className="bg-slate-900">{p.name}</option>
+                            <option key={p.id} value={p.id} className="bg-background text-foreground">{p.name}</option>
                         ))}
                     </select>
                     {errors.fuelType && (
