@@ -218,11 +218,11 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                                 if (govCat) handleChange("customerCategory", govCat);
                             }
                         }}
-                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.customerCategory)}`}
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.customerCategory)}`}
                     >
-                        <option value="" className="bg-slate-900">Select Type</option>
-                        <option value="GOVERNMENT" className="bg-slate-900">Government</option>
-                        <option value="NON_GOVERNMENT" className="bg-slate-900">Non-Government</option>
+                        <option value="" className="bg-background text-foreground">Select Type</option>
+                        <option value="GOVERNMENT" className="bg-background text-foreground">Government</option>
+                        <option value="NON_GOVERNMENT" className="bg-background text-foreground">Non-Government</option>
                     </select>
                     {!customerType && <FieldError error={errors.customerCategory} />}
                 </div>
@@ -237,11 +237,11 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                                 const selected = categories.find(c => c.id === Number(e.target.value));
                                 handleChange("customerCategory", selected || null);
                             }}
-                            className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.customerCategory)}`}
+                            className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.customerCategory)}`}
                         >
-                            <option value="" className="bg-slate-900">Select Category</option>
+                            <option value="" className="bg-background text-foreground">Select Category</option>
                             {categories.filter(c => c.categoryType === "NON_GOVERNMENT").map(c => (
-                                <option key={c.id} value={c.id} className="bg-slate-900">{c.categoryName}</option>
+                                <option key={c.id} value={c.id} className="bg-background text-foreground">{c.categoryName}</option>
                             ))}
                         </select>
                         <FieldError error={errors.customerCategory} />
@@ -258,11 +258,11 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                             updateData({ ...data, party: selectedParty });
                             clearError?.("party");
                         }}
-                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.party)}`}
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.party)}`}
                     >
-                        <option value="" className="bg-slate-900">Select Party</option>
+                        <option value="" className="bg-background text-foreground">Select Party</option>
                         {parties.map(party => (
-                            <option key={party.id} value={party.id} className="bg-slate-900">{party.partyType}</option>
+                            <option key={party.id} value={party.id} className="bg-background text-foreground">{party.partyType}</option>
                         ))}
                     </select>
                     <FieldError error={errors.party} />
@@ -278,11 +278,11 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                             updateData({ ...data, group: selectedGroup });
                             clearError?.("group");
                         }}
-                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.group)}`}
+                        className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${inputErrorClass(errors.group)}`}
                     >
-                        <option value="" className="bg-slate-900">Select Group</option>
+                        <option value="" className="bg-background text-foreground">Select Group</option>
                         {groups.map(group => (
-                            <option key={group.id} value={group.id} className="bg-slate-900">{group.groupName}</option>
+                            <option key={group.id} value={group.id} className="bg-background text-foreground">{group.groupName}</option>
                         ))}
                     </select>
                     <FieldError error={errors.group} />
@@ -311,10 +311,10 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                     <select
                         value={ceilingType}
                         onChange={(e) => setCeilingType(e.target.value as "amount" | "liters")}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                     >
-                        <option value="amount" className="bg-slate-900">Amount ($)</option>
-                        <option value="liters" className="bg-slate-900">Liters (L)</option>
+                        <option value="amount" className="bg-background text-foreground">Amount ($)</option>
+                        <option value="liters" className="bg-background text-foreground">Liters (L)</option>
                     </select>
                 </div>
                 <div>
@@ -400,13 +400,13 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                     <select
                         value={data.statementFrequency || ""}
                         onChange={(e) => handleChange("statementFrequency", e.target.value || null)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                     >
-                        <option value="" className="bg-slate-900">Select Frequency</option>
-                        <option value="MONTHLY" className="bg-slate-900">Monthly</option>
-                        <option value="BIWEEKLY" className="bg-slate-900">Biweekly</option>
-                        <option value="WEEKLY" className="bg-slate-900">Weekly</option>
-                        <option value="CUSTOM" className="bg-slate-900">Custom</option>
+                        <option value="" className="bg-background text-foreground">Select Frequency</option>
+                        <option value="MONTHLY" className="bg-background text-foreground">Monthly</option>
+                        <option value="BIWEEKLY" className="bg-background text-foreground">Biweekly</option>
+                        <option value="WEEKLY" className="bg-background text-foreground">Weekly</option>
+                        <option value="CUSTOM" className="bg-background text-foreground">Custom</option>
                     </select>
                 </div>
                 <div>
@@ -416,12 +416,12 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                     <select
                         value={data.statementGrouping || ""}
                         onChange={(e) => handleChange("statementGrouping", e.target.value || null)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                     >
-                        <option value="" className="bg-slate-900">Select Grouping</option>
-                        <option value="CUSTOMER_WISE" className="bg-slate-900">Customer Wise</option>
-                        <option value="VEHICLE_WISE" className="bg-slate-900">Vehicle Wise</option>
-                        <option value="BILL_WISE" className="bg-slate-900">Bill Wise</option>
+                        <option value="" className="bg-background text-foreground">Select Grouping</option>
+                        <option value="CUSTOMER_WISE" className="bg-background text-foreground">Customer Wise</option>
+                        <option value="VEHICLE_WISE" className="bg-background text-foreground">Vehicle Wise</option>
+                        <option value="BILL_WISE" className="bg-background text-foreground">Bill Wise</option>
                     </select>
                 </div>
             </div>
