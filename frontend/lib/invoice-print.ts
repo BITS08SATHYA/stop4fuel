@@ -89,10 +89,10 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 <meta charset="UTF-8">
 <title>Invoice ${invoice.billNo || ""}</title>
 <style>
-    @page { size: 8in 6in; margin: 2mm 5mm; }
+    @page { size: 6in 4.5in; margin: 2mm 3mm; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', Courier, monospace; font-size: 14pt; font-weight: 900; line-height: 1.4; color: #000; background: #fff; width: 7.5in; margin: 0 auto; -webkit-text-stroke: 0.5px #000; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 14pt; font-weight: 900; line-height: 1.4; color: #000; background: #fff; width: 5.5in; margin: 0 auto; -webkit-text-stroke: 0.5px #000; }
     table { width: 100%; border-collapse: collapse; }
     td { vertical-align: top; font-size: 14pt; font-weight: 900; }
     .center { text-align: center; }
