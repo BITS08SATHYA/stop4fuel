@@ -127,7 +127,7 @@ function CustomerAutocomplete({
                                 className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
                                     i === highlightIndex
                                         ? "bg-primary/20 text-foreground"
-                                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                        : "text-foreground hover:bg-muted/50"
                                 }`}
                             >
                                 {c.name}
