@@ -37,4 +37,6 @@ public interface IncentivePaymentRepository extends ScidRepository<IncentivePaym
 
     @Query("SELECT COALESCE(SUM(ip.amount), 0) FROM IncentivePayment ip WHERE ip.shiftId = :shiftId")
     BigDecimal sumByShift(@Param("shiftId") Long shiftId);
+
+    List<IncentivePayment> findByInvoiceBillId(Long invoiceBillId);
 }
