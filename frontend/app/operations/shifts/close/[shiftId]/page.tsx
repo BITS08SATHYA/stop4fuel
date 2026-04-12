@@ -428,7 +428,7 @@ export default function ShiftClosingWorkspace() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {/* Fuel Sales */}
                     <div className="p-3 rounded-lg bg-accent/50">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                             <Fuel className="h-3.5 w-3.5" /> Fuel Sales
                         </div>
                         <p className="text-lg font-bold tabular-nums">{fmtCur(totalFuelSales)}</p>
@@ -436,7 +436,7 @@ export default function ShiftClosingWorkspace() {
 
                     {/* Credit Bills */}
                     <div className="p-3 rounded-lg bg-accent/50">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                             <FileText className="h-3.5 w-3.5" /> Credit Bills
                         </div>
                         <p className="text-lg font-bold tabular-nums">{fmtCur(data.creditBillTotal)}</p>
@@ -444,7 +444,7 @@ export default function ShiftClosingWorkspace() {
 
                     {/* Bill Payments */}
                     <div className="p-3 rounded-lg bg-accent/50">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                             <Banknote className="h-3.5 w-3.5" /> Bill Payments
                         </div>
                         <p className="text-lg font-bold tabular-nums">{fmtCur(data.billPaymentTotal)}</p>
@@ -452,7 +452,7 @@ export default function ShiftClosingWorkspace() {
 
                     {/* Statement Payments */}
                     <div className="p-3 rounded-lg bg-accent/50">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                             <Receipt className="h-3.5 w-3.5" /> Statement Payments
                         </div>
                         <p className="text-lg font-bold tabular-nums">{fmtCur(data.statementPaymentTotal)}</p>
@@ -476,7 +476,7 @@ export default function ShiftClosingWorkspace() {
                     {/* Op-Advances */}
                     {opAdvTotal > 0 && (
                         <div className="p-3 rounded-lg bg-accent/50">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                            <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                                 <Wallet className="h-3.5 w-3.5" /> Op. Advances
                             </div>
                             <p className="text-lg font-bold tabular-nums">{fmtCur(opAdvTotal)}</p>
@@ -485,7 +485,7 @@ export default function ShiftClosingWorkspace() {
 
                     {/* Expenses */}
                     <div className="p-3 rounded-lg bg-accent/50">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                             <Wallet className="h-3.5 w-3.5 text-red-500" /> Expenses
                         </div>
                         <p className="text-lg font-bold tabular-nums">{fmtCur(data.expenseTotal)}</p>
@@ -494,7 +494,7 @@ export default function ShiftClosingWorkspace() {
                     {/* Incentives */}
                     {(data.incentiveTotal ?? 0) > 0 && (
                         <div className="p-3 rounded-lg bg-accent/50">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                            <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                                 <FlaskConical className="h-3.5 w-3.5" /> Incentives
                             </div>
                             <p className="text-lg font-bold tabular-nums">{fmtCur(data.incentiveTotal)}</p>
@@ -504,7 +504,7 @@ export default function ShiftClosingWorkspace() {
                     {/* External Inflows */}
                     {(data.externalInflowTotal ?? 0) > 0 && (
                         <div className="p-3 rounded-lg bg-accent/50">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                            <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                                 <Building2 className="h-3.5 w-3.5 text-green-500" /> Cash Inflows
                             </div>
                             <p className="text-lg font-bold tabular-nums">{fmtCur(data.externalInflowTotal)}</p>
@@ -514,7 +514,7 @@ export default function ShiftClosingWorkspace() {
                     {/* Inflow Repayments */}
                     {(data.inflowRepaymentTotal ?? 0) > 0 && (
                         <div className="p-3 rounded-lg bg-accent/50">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                            <div className="flex items-center gap-2 text-xs text-foreground/80 mb-1">
                                 <Building2 className="h-3.5 w-3.5 text-orange-500" /> Inflow Repayments
                             </div>
                             <p className="text-lg font-bold tabular-nums">{fmtCur(data.inflowRepaymentTotal)}</p>
