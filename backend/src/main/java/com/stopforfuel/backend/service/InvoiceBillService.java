@@ -37,6 +37,8 @@ public class InvoiceBillService {
     private final ShiftService shiftService;
     private final EAdvanceService eAdvanceService;
     private final IncentivePaymentService incentivePaymentService;
+    private final IncentivePaymentRepository incentivePaymentRepository;
+    private final PaymentRepository paymentRepository;
     private final BillSequenceService billSequenceService;
     private final StatementRepository statementRepository;
 
@@ -668,7 +670,15 @@ public class InvoiceBillService {
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
     }
 
+    @Transactional
     public void deleteInvoice(Long id) {
+        List<Payment> payments = paymentRepository.findByInvoiceBillId(id);
+        if (!payments.isEmpty()) {
+            throw new BusinessException(
+                    "Cannot delete invoice: " + payments.size() + " payment(s) already recorded against it. " +
+                    "Delete the payments first.");
+        }
+        incentivePaymentRepository.deleteAll(incentivePaymentRepository.findByInvoiceBillId(id));
         repository.deleteById(id);
     }
 
