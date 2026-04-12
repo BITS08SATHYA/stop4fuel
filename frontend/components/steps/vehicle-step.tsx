@@ -79,7 +79,7 @@ export function VehicleStep({ data, updateData, errors = {} }: VehicleStepProps)
                     >
                         <option value="" className="bg-background text-foreground">Select Type</option>
                         {vehicleTypes.map(vt => (
-                            <option key={vt.id} value={vt.id} className="bg-background text-foreground">{vt.name}</option>
+                            <option key={vt.id} value={vt.id} className="bg-background text-foreground">{vt.typeName}</option>
                         ))}
                     </select>
                     {errors.vehicleType && (
