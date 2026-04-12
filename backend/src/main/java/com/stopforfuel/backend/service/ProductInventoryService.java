@@ -156,8 +156,9 @@ public class ProductInventoryService {
             record.setAmount(rate != null ? rate.multiply(BigDecimal.valueOf(sales)) : BigDecimal.ZERO);
             repository.save(record);
 
-            // Sync closeStock back to CashierStock
+            // Sync closeStock back to CashierStock (clamp at 0 — CashierStock.currentStock is @PositiveOrZero)
             double closeStock = record.getCloseStock() != null ? record.getCloseStock() : 0.0;
+            if (closeStock < 0) closeStock = 0.0;
             Long productId = record.getProduct().getId();
             CashierStock cashier = cashierStockRepository.findByProductIdAndScid(productId, SecurityUtils.getScid())
                     .orElseGet(() -> {
