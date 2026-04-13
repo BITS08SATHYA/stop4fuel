@@ -39,11 +39,8 @@ import {
     CalendarCheck,
     IndianRupee,
     Zap,
-    TrendingUp,
-    ShoppingCart,
     Brain,
     Shield,
-    UserCheck,
     Tag,
     Layers,
     LogOut,
@@ -144,11 +141,7 @@ const reportsNav = [
 ];
 
 const analyticsNav = [
-    { name: "Sales Forecast", href: "/analytics/sales", icon: TrendingUp },
-    { name: "Purchase Planner", href: "/analytics/purchases", icon: ShoppingCart },
-    { name: "Profitability", href: "/analytics/profitability", icon: Brain },
-    { name: "Credit Intelligence", href: "/analytics/credit", icon: Shield },
-    { name: "Employee Insights", href: "/analytics/employees", icon: UserCheck },
+    { name: "AI Analytics", href: "/analytics", icon: Brain },
 ];
 
 const systemNav = [

@@ -22,6 +22,13 @@ ext['tomcat.version'] = '10.1.53'
 
 repositories {
 	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
+}
+
+dependencyManagement {
+	imports {
+		mavenBom 'org.springframework.ai:spring-ai-bom:1.0.0'
+	}
 }
 
 dependencies {
@@ -43,6 +50,7 @@ dependencies {
 	implementation 'software.amazon.awssdk:secretsmanager:2.25.16'
 	implementation 'software.amazon.awssdk:costexplorer:2.25.16'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate6'
+	implementation 'org.springframework.ai:spring-ai-starter-model-anthropic'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.postgresql:postgresql'

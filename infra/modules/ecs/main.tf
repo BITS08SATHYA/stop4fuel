@@ -50,16 +50,24 @@ resource "aws_ecs_task_definition" "backend" {
         { name = "AUTH_ENABLED", value = "true" },
         { name = "SERVER_PORT", value = "8080" }
       ]
-      secrets = [
-        {
-          name      = "DATABASE_PASSWORD"
-          valueFrom = "${var.db_secret_arn}:password::"
-        },
-        {
-          name      = "DATABASE_USER"
-          valueFrom = "${var.db_secret_arn}:username::"
-        }
-      ]
+      secrets = concat(
+        [
+          {
+            name      = "DATABASE_PASSWORD"
+            valueFrom = "${var.db_secret_arn}:password::"
+          },
+          {
+            name      = "DATABASE_USER"
+            valueFrom = "${var.db_secret_arn}:username::"
+          }
+        ],
+        var.anthropic_api_key_secret_arn != "" ? [
+          {
+            name      = "ANTHROPIC_API_KEY"
+            valueFrom = var.anthropic_api_key_secret_arn
+          }
+        ] : []
+      )
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -140,7 +148,7 @@ resource "aws_ecs_service" "backend" {
     container_port   = 8080
   }
 
-  enable_execute_command             = true
+  enable_execute_command            = true
   health_check_grace_period_seconds = 180
 
   lifecycle {

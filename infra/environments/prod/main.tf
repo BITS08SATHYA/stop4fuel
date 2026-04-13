@@ -171,28 +171,41 @@ resource "aws_secretsmanager_secret" "db_credentials" {
   }
 }
 
+resource "aws_secretsmanager_secret" "anthropic_api_key" {
+  name = "${var.project_name}/anthropic-api-key"
+
+  tags = {
+    Environment = var.environment
+  }
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
 # ============================================================
 # ECS — Cluster + services
 # ============================================================
 module "ecs" {
   source = "../../modules/ecs"
 
-  project_name              = var.project_name
-  environment               = var.environment
-  aws_region                = var.aws_region
-  vpc_id                    = module.networking.vpc_id
-  subnet_ids                = module.networking.private_subnet_ids
-  security_group_id         = module.networking.ecs_security_group_id
-  backend_target_group_arn  = module.alb.backend_target_group_arn
-  frontend_target_group_arn = module.alb.frontend_target_group_arn
-  ecr_registry              = local.ecr_registry
-  execution_role_arn        = aws_iam_role.ecs_execution.arn
-  task_role_arn             = aws_iam_role.ecs_task.arn
-  db_secret_arn             = aws_secretsmanager_secret.db_credentials.arn
+  project_name                 = var.project_name
+  environment                  = var.environment
+  aws_region                   = var.aws_region
+  vpc_id                       = module.networking.vpc_id
+  subnet_ids                   = module.networking.private_subnet_ids
+  security_group_id            = module.networking.ecs_security_group_id
+  backend_target_group_arn     = module.alb.backend_target_group_arn
+  frontend_target_group_arn    = module.alb.frontend_target_group_arn
+  ecr_registry                 = local.ecr_registry
+  execution_role_arn           = aws_iam_role.ecs_execution.arn
+  task_role_arn                = aws_iam_role.ecs_task.arn
+  db_secret_arn                = aws_secretsmanager_secret.db_credentials.arn
+  anthropic_api_key_secret_arn = aws_secretsmanager_secret.anthropic_api_key.arn
 
-  backend_cpu    = 512
-  backend_memory = 1024
-  frontend_cpu   = 256
+  backend_cpu     = 512
+  backend_memory  = 1024
+  frontend_cpu    = 256
   frontend_memory = 512
 }
 

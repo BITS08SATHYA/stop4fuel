@@ -66,3 +66,9 @@ variable "task_role_arn" {
 variable "db_secret_arn" {
   type = string
 }
+
+variable "anthropic_api_key_secret_arn" {
+  description = "Secrets Manager ARN for ANTHROPIC_API_KEY (plain string secret)"
+  type        = string
+  default     = ""
+}

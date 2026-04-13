@@ -7,6 +7,9 @@ app:
     enabled: true
 
 spring:
+  ai:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
   datasource:
     password: ${DATABASE_PASSWORD}
   autoconfigure:
