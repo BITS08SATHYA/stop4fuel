@@ -443,7 +443,8 @@ public class DashboardService {
         List<Object[]> modeRaw = paymentRepository.getPaymentModeBreakdown(fromDt, toDt, scid);
         List<NameCountAmount> modes = new ArrayList<>();
         for (Object[] row : modeRaw) {
-            modes.add(new NameCountAmount((String) row[0], ((Number) row[1]).longValue(), (BigDecimal) row[2]));
+            String modeName = row[0] != null ? row[0].toString() : null;
+            modes.add(new NameCountAmount(modeName, ((Number) row[1]).longValue(), (BigDecimal) row[2]));
         }
         analytics.setPaymentModeBreakdown(modes);
 
