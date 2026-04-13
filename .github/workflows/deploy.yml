@@ -119,6 +119,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2
 
       - name: Build & Push Docker Image
+        id: build-backend
         working-directory: backend
         run: |
           TAG=${GITHUB_SHA::8}
@@ -128,22 +129,51 @@ jobs:
             -t $ECR/stopforfuel-backend:latest .
           docker push $ECR/stopforfuel-backend:$TAG
           docker push $ECR/stopforfuel-backend:latest
+          DIGEST=$(aws ecr describe-images \
+            --repository-name stopforfuel-backend \
+            --image-ids imageTag=$TAG \
+            --query 'imageDetails[0].imageDigest' --output text)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "image_uri=$ECR/stopforfuel-backend@$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Pushed digest-pinned image: $ECR/stopforfuel-backend@$DIGEST"
 
       - name: Scan Backend Image (Trivy)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
-          image-ref: "${{ needs.setup.outputs.ecr_registry }}/stopforfuel-backend:latest"
+          image-ref: "${{ steps.build-backend.outputs.image_uri }}"
           format: "table"
           exit-code: "1"
           severity: "CRITICAL"
           ignore-unfixed: true
 
-      - name: Deploy to ECS
+      - name: Deploy to ECS (digest-pinned)
         if: needs.setup.outputs.deploy_target == 'ecs'
+        env:
+          CLUSTER: ${{ needs.setup.outputs.ecs_cluster }}
+          SERVICE: ${{ needs.setup.outputs.ecs_backend_service }}
+          IMAGE_URI: ${{ steps.build-backend.outputs.image_uri }}
         run: |
+          set -euo pipefail
+          # Fetch current task def, swap image to digest-pinned URI, register new revision
+          aws ecs describe-task-definition \
+            --task-definition stopforfuel-backend \
+            --query 'taskDefinition' \
+            | jq --arg img "$IMAGE_URI" '
+                .containerDefinitions[0].image = $img
+                | {family, networkMode, containerDefinitions, executionRoleArn, taskRoleArn,
+                   requiresCompatibilities, cpu, memory, volumes, placementConstraints,
+                   runtimePlatform, ephemeralStorage, proxyConfiguration, inferenceAccelerators}
+                | with_entries(select(.value != null))' \
+            > /tmp/backend-taskdef.json
+          REVISION_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file:///tmp/backend-taskdef.json \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "Registered $REVISION_ARN"
           aws ecs update-service \
-            --cluster ${{ needs.setup.outputs.ecs_cluster }} \
-            --service ${{ needs.setup.outputs.ecs_backend_service }} \
+            --cluster "$CLUSTER" \
+            --service "$SERVICE" \
+            --task-definition "$REVISION_ARN" \
             --force-new-deployment
 
   # ============================================================
@@ -177,6 +207,7 @@ jobs:
 
       - name: Build & Push Docker Image
         working-directory: frontend
+        id: build-frontend
         run: |
           TAG=${GITHUB_SHA::8}
           ECR=${{ needs.setup.outputs.ecr_registry }}
@@ -191,22 +222,50 @@ jobs:
             -t $ECR/stopforfuel-frontend:latest .
           docker push $ECR/stopforfuel-frontend:$TAG
           docker push $ECR/stopforfuel-frontend:latest
+          DIGEST=$(aws ecr describe-images \
+            --repository-name stopforfuel-frontend \
+            --image-ids imageTag=$TAG \
+            --query 'imageDetails[0].imageDigest' --output text)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "image_uri=$ECR/stopforfuel-frontend@$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Pushed digest-pinned image: $ECR/stopforfuel-frontend@$DIGEST"
 
       - name: Scan Frontend Image (Trivy)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
-          image-ref: "${{ needs.setup.outputs.ecr_registry }}/stopforfuel-frontend:latest"
+          image-ref: "${{ steps.build-frontend.outputs.image_uri }}"
           format: "table"
           exit-code: "1"
           severity: "CRITICAL"
           ignore-unfixed: true
 
-      - name: Deploy to ECS
+      - name: Deploy to ECS (digest-pinned)
         if: needs.setup.outputs.deploy_target == 'ecs'
+        env:
+          CLUSTER: ${{ needs.setup.outputs.ecs_cluster }}
+          SERVICE: ${{ needs.setup.outputs.ecs_frontend_service }}
+          IMAGE_URI: ${{ steps.build-frontend.outputs.image_uri }}
         run: |
+          set -euo pipefail
+          aws ecs describe-task-definition \
+            --task-definition stopforfuel-frontend \
+            --query 'taskDefinition' \
+            | jq --arg img "$IMAGE_URI" '
+                .containerDefinitions[0].image = $img
+                | {family, networkMode, containerDefinitions, executionRoleArn, taskRoleArn,
+                   requiresCompatibilities, cpu, memory, volumes, placementConstraints,
+                   runtimePlatform, ephemeralStorage, proxyConfiguration, inferenceAccelerators}
+                | with_entries(select(.value != null))' \
+            > /tmp/frontend-taskdef.json
+          REVISION_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file:///tmp/frontend-taskdef.json \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "Registered $REVISION_ARN"
           aws ecs update-service \
-            --cluster ${{ needs.setup.outputs.ecs_cluster }} \
-            --service ${{ needs.setup.outputs.ecs_frontend_service }} \
+            --cluster "$CLUSTER" \
+            --service "$SERVICE" \
+            --task-definition "$REVISION_ARN" \
             --force-new-deployment
 
   # ============================================================
