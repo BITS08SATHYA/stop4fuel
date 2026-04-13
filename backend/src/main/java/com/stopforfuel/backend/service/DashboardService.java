@@ -71,12 +71,16 @@ public class DashboardService {
             Long sid = activeShift.getId();
             BigDecimal shiftCash = invoiceBillRepository.sumCashBillsByShift(sid);
             Map<String, BigDecimal> eAdvSummary = eAdvanceService.getShiftSummary(sid);
-            BigDecimal shiftUpi = invoiceBillRepository
-                    .sumByShiftAndPaymentMode(sid, com.stopforfuel.backend.enums.PaymentMode.UPI)
-                    .add(eAdvSummary.getOrDefault("upi", BigDecimal.ZERO));
-            BigDecimal shiftCard = invoiceBillRepository
-                    .sumByShiftAndPaymentMode(sid, com.stopforfuel.backend.enums.PaymentMode.CARD)
-                    .add(eAdvSummary.getOrDefault("card", BigDecimal.ZERO));
+            BigDecimal invUpi = invoiceBillRepository
+                    .sumByShiftAndPaymentMode(sid, com.stopforfuel.backend.enums.PaymentMode.UPI);
+            BigDecimal invCard = invoiceBillRepository
+                    .sumByShiftAndPaymentMode(sid, com.stopforfuel.backend.enums.PaymentMode.CARD);
+            BigDecimal shiftUpi = invUpi.add(eAdvSummary.getOrDefault("upi", BigDecimal.ZERO));
+            BigDecimal shiftCard = invCard.add(eAdvSummary.getOrDefault("card", BigDecimal.ZERO));
+            log.info("Shift #{} tile breakdown: cash={} invUpi={} eAdvUpi={} invCard={} eAdvCard={} eAdvCheque={} eAdvCcms={} eAdvBank={} eAdvTotal={}",
+                    sid, shiftCash, invUpi, eAdvSummary.get("upi"), invCard, eAdvSummary.get("card"),
+                    eAdvSummary.get("cheque"), eAdvSummary.get("ccms"), eAdvSummary.get("bank_transfer"),
+                    eAdvSummary.get("total"));
             BigDecimal shiftExpense = expenseService.sumByShift(sid);
             BigDecimal shiftTotal = shiftCash.add(eAdvSummary.getOrDefault("total", BigDecimal.ZERO));
             BigDecimal shiftNet = shiftTotal.subtract(shiftExpense);
