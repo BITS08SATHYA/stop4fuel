@@ -4,6 +4,7 @@ import com.stopforfuel.backend.controller.DashboardController.*;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DashboardService {
 
     private final InvoiceBillRepository invoiceBillRepository;
@@ -104,6 +106,7 @@ public class DashboardService {
             stats.setCreditAging61to90(invoiceBillRepository.sumOutstandingBetween(d90, d60, scid));
             stats.setCreditAging90Plus(invoiceBillRepository.sumOutstandingBefore(d90, scid));
         } catch (Exception e) {
+            log.warn("getStats credit-aging aggregate failed, returning zeros", e);
             stats.setTotalOutstanding(BigDecimal.ZERO);
             stats.setTotalCreditCustomers(0);
             stats.setCreditAging0to30(BigDecimal.ZERO);
@@ -408,6 +411,7 @@ public class DashboardService {
                 analytics.setAging90Plus((BigDecimal) aging[3]);
             }
         } catch (Exception e) {
+            log.warn("getPaymentAnalytics credit-aging aggregate failed, returning zeros", e);
             analytics.setTotalOutstanding(BigDecimal.ZERO);
             analytics.setAging0to30(BigDecimal.ZERO);
             analytics.setAging31to60(BigDecimal.ZERO);
