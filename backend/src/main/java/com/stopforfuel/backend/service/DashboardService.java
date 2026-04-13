@@ -71,8 +71,12 @@ public class DashboardService {
             Long sid = activeShift.getId();
             BigDecimal shiftCash = invoiceBillRepository.sumCashBillsByShift(sid);
             Map<String, BigDecimal> eAdvSummary = eAdvanceService.getShiftSummary(sid);
-            BigDecimal shiftUpi = eAdvSummary.getOrDefault("upi", BigDecimal.ZERO);
-            BigDecimal shiftCard = eAdvSummary.getOrDefault("card", BigDecimal.ZERO);
+            BigDecimal shiftUpi = invoiceBillRepository
+                    .sumByShiftAndPaymentMode(sid, com.stopforfuel.backend.enums.PaymentMode.UPI)
+                    .add(eAdvSummary.getOrDefault("upi", BigDecimal.ZERO));
+            BigDecimal shiftCard = invoiceBillRepository
+                    .sumByShiftAndPaymentMode(sid, com.stopforfuel.backend.enums.PaymentMode.CARD)
+                    .add(eAdvSummary.getOrDefault("card", BigDecimal.ZERO));
             BigDecimal shiftExpense = expenseService.sumByShift(sid);
             BigDecimal shiftTotal = shiftCash.add(eAdvSummary.getOrDefault("total", BigDecimal.ZERO));
             BigDecimal shiftNet = shiftTotal.subtract(shiftExpense);
@@ -115,28 +119,32 @@ public class DashboardService {
             stats.setCreditAging90Plus(BigDecimal.ZERO);
         }
 
-        // --- Daily revenue trend (last 7 days — aggregate query) ---
-        LocalDateTime weekStart = today.minusDays(6).atStartOfDay();
-        List<Object[]> dailyData = invoiceBillRepository.getDailyRevenueSummary(weekStart, todayEnd, scid);
+        // --- Daily revenue + fuel-volume trend (month-to-date) ---
+        LocalDate trendStart = today.withDayOfMonth(1);
+        LocalDateTime trendFromDt = trendStart.atStartOfDay();
+        List<Object[]> dailyData = invoiceBillRepository.getDailyRevenueSummary(trendFromDt, todayEnd, scid);
         Map<LocalDate, Object[]> dailyMap = new HashMap<>();
         for (Object[] row : dailyData) {
             dailyMap.put((LocalDate) row[0], row);
         }
+        List<Object[]> dailyVolumeData = invoiceBillRepository.getDailyFuelVolumeSummary(trendFromDt, todayEnd, scid);
+        Map<LocalDate, BigDecimal> dailyVolumeMap = new HashMap<>();
+        for (Object[] row : dailyVolumeData) {
+            dailyVolumeMap.put((LocalDate) row[0], row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO);
+        }
         List<DailyRevenue> dailyRevenue = new ArrayList<>();
-        for (int i = 6; i >= 0; i--) {
-            LocalDate date = today.minusDays(i);
+        for (LocalDate date = trendStart; !date.isAfter(today); date = date.plusDays(1)) {
             DailyRevenue dr = new DailyRevenue();
             dr.setDate(date.format(DateTimeFormatter.ISO_LOCAL_DATE));
             Object[] row = dailyMap.get(date);
             if (row != null) {
                 dr.setRevenue(row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO);
                 dr.setInvoiceCount(row[2] != null ? ((Number) row[2]).intValue() : 0);
-                dr.setFuelVolume(BigDecimal.ZERO);
             } else {
                 dr.setRevenue(BigDecimal.ZERO);
                 dr.setInvoiceCount(0);
-                dr.setFuelVolume(BigDecimal.ZERO);
             }
+            dr.setFuelVolume(dailyVolumeMap.getOrDefault(date, BigDecimal.ZERO));
             dailyRevenue.add(dr);
         }
         stats.setDailyRevenue(dailyRevenue);
@@ -157,14 +165,36 @@ public class DashboardService {
                 java.util.List.of(com.stopforfuel.backend.enums.ShiftStatus.CLOSED, com.stopforfuel.backend.enums.ShiftStatus.RECONCILED), scid
         ).ifPresent(lastShift -> {
             stats.setLastShiftId(lastShift.getId());
-            List<Object[]> lastShiftData = invoiceBillRepository.getProductSalesByShift(lastShift.getId());
-            List<ProductSales> lastShiftSales = lastShiftData.stream().map(row -> {
+            List<ProductSales> lastShiftSales = new ArrayList<>();
+            Set<String> fuelProductNames = new HashSet<>();
+
+            // Fuel products: meter-based (close - open) so Xtra Premium etc. appear even with no invoice lines
+            List<Object[]> fuelRows = nozzleInventoryRepository.sumFuelSalesByShift(lastShift.getId());
+            for (Object[] row : fuelRows) {
+                String name = (String) row[1];
+                BigDecimal price = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
+                BigDecimal qty = row[3] != null
+                        ? BigDecimal.valueOf(((Number) row[3]).doubleValue())
+                        : BigDecimal.ZERO;
                 ProductSales ps = new ProductSales();
-                ps.setProductName((String) row[0]);
+                ps.setProductName(name);
+                ps.setQuantity(qty);
+                ps.setAmount(qty.multiply(price));
+                lastShiftSales.add(ps);
+                if (name != null) fuelProductNames.add(name);
+            }
+
+            // Non-fuel products (oils, water, etc.): invoice-based, skip anything already covered by nozzle data
+            List<Object[]> invoiceRows = invoiceBillRepository.getProductSalesByShift(lastShift.getId());
+            for (Object[] row : invoiceRows) {
+                String name = (String) row[0];
+                if (name != null && fuelProductNames.contains(name)) continue;
+                ProductSales ps = new ProductSales();
+                ps.setProductName(name);
                 ps.setQuantity(row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO);
                 ps.setAmount(row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO);
-                return ps;
-            }).collect(Collectors.toList());
+                lastShiftSales.add(ps);
+            }
             stats.setLastShiftProductSales(lastShiftSales);
         });
 
@@ -335,7 +365,8 @@ public class DashboardService {
         List<Object[]> modeRaw = invoiceBillRepository.getPaymentModeDistribution(fromDt, toDt, scid);
         List<NameCountAmount> paymentModes = new ArrayList<>();
         for (Object[] row : modeRaw) {
-            paymentModes.add(new NameCountAmount((String) row[0], ((Number) row[1]).longValue(), (BigDecimal) row[2]));
+            String modeName = row[0] != null ? row[0].toString() : null;
+            paymentModes.add(new NameCountAmount(modeName, ((Number) row[1]).longValue(), (BigDecimal) row[2]));
         }
         analytics.setPaymentModeDistribution(paymentModes);
 

@@ -214,7 +214,7 @@ public class DailySalesReportService {
                 Color rowBg = (rowNum % 2 == 0) ? new Color(250, 250, 250) : Color.WHITE;
                 Color border = new Color(238, 238, 238);
 
-                String mode = (String) row[0];
+                String mode = row[0] != null ? row[0].toString() : "-";
                 long count = ((Number) row[1]).longValue();
                 BigDecimal amount = (BigDecimal) row[2];
 
@@ -442,7 +442,7 @@ public class DailySalesReportService {
                 XSSFRow r = summarySheet.createRow(rowIdx++);
                 r.createCell(0).setCellValue(num);
                 r.getCell(0).setCellStyle(cellStyle);
-                r.createCell(1).setCellValue((String) row[0]);
+                r.createCell(1).setCellValue(row[0] != null ? row[0].toString() : "-");
                 r.getCell(1).setCellStyle(cellStyle);
                 r.createCell(2).setCellValue(((Number) row[1]).longValue());
                 r.getCell(2).setCellStyle(cellStyle);

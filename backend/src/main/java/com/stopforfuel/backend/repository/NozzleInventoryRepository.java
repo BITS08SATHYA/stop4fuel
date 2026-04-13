@@ -36,4 +36,11 @@ public interface NozzleInventoryRepository extends ScidRepository<NozzleInventor
 
     @Query("SELECT t.product.name, COALESCE(SUM(ni.sales), 0) FROM NozzleInventory ni JOIN ni.nozzle n JOIN n.tank t WHERE ni.scid = :scid AND ni.date BETWEEN :fromDate AND :toDate GROUP BY t.product.name")
     List<Object[]> sumSalesByProductAndDateRange(@Param("scid") Long scid, @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
+    // Per-product fuel sales for a shift — meter-based (close - open), includes products even if no invoice line
+    @Query("SELECT t.product.id, t.product.name, t.product.price, COALESCE(SUM(ni.sales), 0) " +
+           "FROM NozzleInventory ni JOIN ni.nozzle n JOIN n.tank t " +
+           "WHERE ni.shiftId = :shiftId " +
+           "GROUP BY t.product.id, t.product.name, t.product.price")
+    List<Object[]> sumFuelSalesByShift(@Param("shiftId") Long shiftId);
 }

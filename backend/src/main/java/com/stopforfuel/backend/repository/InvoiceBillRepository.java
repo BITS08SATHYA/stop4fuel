@@ -3,6 +3,7 @@ package com.stopforfuel.backend.repository;
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.enums.BillType;
+import com.stopforfuel.backend.enums.PaymentMode;
 import com.stopforfuel.backend.enums.PaymentStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
@@ -37,6 +38,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
 
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CREDIT'")
     BigDecimal sumCreditBillsByShift(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.shiftId = :shiftId AND ib.paymentMode = :mode")
+    BigDecimal sumByShiftAndPaymentMode(@Param("shiftId") Long shiftId,
+                                        @Param("mode") PaymentMode mode);
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.statement.id = :statementId ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findByStatementId(@Param("statementId") Long statementId);
@@ -403,6 +409,16 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "FROM InvoiceBill ib WHERE ib.date >= :fromDate AND ib.date <= :toDate AND ib.scid = :scid " +
            "GROUP BY CAST(ib.date AS LocalDate) ORDER BY CAST(ib.date AS LocalDate)")
     List<Object[]> getDailyRevenueSummary(
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
+
+    // Dashboard aggregate: daily fuel (product) volume — same filter as sumFuelVolumeByDateRange
+    @Query("SELECT CAST(ib.date AS LocalDate), COALESCE(SUM(ip.quantity), 0) " +
+           "FROM InvoiceProduct ip JOIN ip.invoiceBill ib " +
+           "WHERE ib.date >= :fromDate AND ib.date <= :toDate AND ib.scid = :scid " +
+           "GROUP BY CAST(ib.date AS LocalDate) ORDER BY CAST(ib.date AS LocalDate)")
+    List<Object[]> getDailyFuelVolumeSummary(
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,
             @Param("scid") Long scid);

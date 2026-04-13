@@ -382,13 +382,13 @@ function OwnerDashboard() {
                                     <TrendingUp className="w-5 h-5 text-muted-foreground" />
                                     Revenue Trend
                                 </h3>
-                                <p className="text-xs text-muted-foreground">Last 7 days</p>
+                                <p className="text-xs text-muted-foreground">Month-to-Date</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-sm font-medium text-foreground">
                                     &#8377;{formatCompact(chartData.reduce((s, d) => s + d.revenue, 0))}
                                 </p>
-                                <p className="text-[10px] text-muted-foreground">Total 7-day</p>
+                                <p className="text-[10px] text-muted-foreground">MTD Total</p>
                             </div>
                         </div>
                         <div className="h-64">
@@ -629,7 +629,7 @@ function OwnerDashboard() {
                                 <Fuel className="w-5 h-5 text-muted-foreground" />
                                 Fuel Volume Trend
                             </h3>
-                            <p className="text-xs text-muted-foreground">Liters dispensed per day (last 7 days)</p>
+                            <p className="text-xs text-muted-foreground">Liters dispensed per day (month-to-date)</p>
                         </div>
                     </div>
                     <div className="h-52">
