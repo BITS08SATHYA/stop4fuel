@@ -102,6 +102,22 @@ export const uploadInvoiceFile = (id: number, type: string, file: File): Promise
 export const getInvoiceFileUrl = (id: number, type: string): Promise<string> =>
     fetchWithAuth(`${API_BASE_URL}/invoices/${id}/file-url?type=${type}`).then(handleResponse).then((data: { url: string }) => data.url);
 
+export interface InvoicePhoto {
+    id: number;
+    photoType: string;
+    s3Key: string;
+    originalFilename?: string;
+    createdAt?: string;
+}
+
+export const getInvoicePhotos = (id: number, type?: string): Promise<InvoicePhoto[]> => {
+    const qs = type ? `?type=${encodeURIComponent(type)}` : '';
+    return fetchWithAuth(`${API_BASE_URL}/invoices/${id}/photos${qs}`).then(handleResponse);
+};
+
+export const deleteInvoicePhoto = (id: number, photoId: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}/photos/${photoId}`, { method: 'DELETE' }).then(handleResponse);
+
 // Paginated Customer Invoices
 export const getCustomerInvoices = (
     customerId: number,

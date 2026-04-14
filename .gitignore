@@ -37,6 +37,7 @@ infra/environments/*/terraform.tfvars
 
 # === Uploads ===
 uploads/
+!frontend/app/operations/invoices/uploads/
 
 # === Deploy ===
 deploy.sh

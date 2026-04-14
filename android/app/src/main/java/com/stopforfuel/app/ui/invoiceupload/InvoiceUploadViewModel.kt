@@ -1,5 +1,6 @@
 package com.stopforfuel.app.ui.invoiceupload
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stopforfuel.app.data.remote.dto.InvoiceBillDto
@@ -33,7 +34,8 @@ data class InvoiceUploadUiState(
 @HiltViewModel
 class InvoiceUploadViewModel @Inject constructor(
     private val invoiceRepository: InvoiceRepository,
-    private val shiftRepository: ShiftRepository
+    private val shiftRepository: ShiftRepository,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InvoiceUploadUiState())
@@ -41,6 +43,31 @@ class InvoiceUploadViewModel @Inject constructor(
 
     init {
         loadShiftInvoices()
+    }
+
+    // --- Camera capture session state (survives process death via SavedStateHandle) ---
+    fun beginCapture(invoiceId: Long, type: String, filePath: String) {
+        savedStateHandle[KEY_PENDING_INVOICE_ID] = invoiceId
+        savedStateHandle[KEY_PENDING_TYPE] = type
+        savedStateHandle[KEY_PENDING_PATH] = filePath
+    }
+
+    /** Returns (invoiceId, type, file) or null if nothing pending. Clears state. */
+    fun consumePending(): Triple<Long, String, File>? {
+        val invoiceId = savedStateHandle.get<Long>(KEY_PENDING_INVOICE_ID)
+        val type = savedStateHandle.get<String>(KEY_PENDING_TYPE)
+        val path = savedStateHandle.get<String>(KEY_PENDING_PATH)
+        savedStateHandle.remove<Long>(KEY_PENDING_INVOICE_ID)
+        savedStateHandle.remove<String>(KEY_PENDING_TYPE)
+        savedStateHandle.remove<String>(KEY_PENDING_PATH)
+        if (invoiceId == null || type == null || path == null) return null
+        return Triple(invoiceId, type, File(path))
+    }
+
+    companion object {
+        private const val KEY_PENDING_INVOICE_ID = "pending_invoice_id"
+        private const val KEY_PENDING_TYPE = "pending_upload_type"
+        private const val KEY_PENDING_PATH = "pending_photo_path"
     }
 
     fun loadShiftInvoices() {
@@ -74,13 +101,11 @@ class InvoiceUploadViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selectedInvoice = null, uploadSuccess = null)
     }
 
-    fun uploadPhoto(file: File, type: String) {
-        val invoice = _uiState.value.selectedInvoice ?: return
+    fun uploadPhoto(file: File, type: String, invoiceId: Long) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isUploading = true, error = null, uploadSuccess = null)
-            val result = invoiceRepository.uploadInvoiceFile(invoice.id, type, file)
+            val result = invoiceRepository.uploadInvoiceFile(invoiceId, type, file)
             result.onSuccess { updated ->
-                // Update the invoice in the list
                 val updatedList = _uiState.value.allInvoices.map {
                     if (it.id == updated.id) updated else it
                 }

@@ -50,6 +50,7 @@ import {
     MapPin,
     Search,
     AlertTriangle,
+    Paperclip,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -118,6 +119,7 @@ const invoiceManagementNav = [
     { name: "Invoices", href: "/operations/invoices", icon: FileText },
     { name: "Invoice History", href: "/operations/invoices/history", icon: History },
     { name: "Invoice Explorer", href: "/operations/invoices/explorer", icon: Search },
+    { name: "Invoice Uploads", href: "/operations/invoices/uploads", icon: Paperclip },
 ];
 
 const paymentManagementNav = [

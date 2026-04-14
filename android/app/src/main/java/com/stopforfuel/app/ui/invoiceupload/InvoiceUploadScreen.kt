@@ -1,9 +1,12 @@
 package com.stopforfuel.app.ui.invoiceupload
 
 import android.Manifest
-import android.net.Uri
+import android.content.pm.PackageManager
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -43,42 +46,71 @@ fun InvoiceUploadScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-    // Camera state
-    var photoUri by remember { mutableStateOf<Uri?>(null) }
-    var photoFile by remember { mutableStateOf<File?>(null) }
-    var uploadType by remember { mutableStateOf("bill-pic") }
     var showTypeChooser by remember { mutableStateOf(false) }
-    var hasCameraPermission by remember { mutableStateOf(false) }
+    // Holds a pending (invoiceId, type) if we're waiting for a permission grant.
+    var pendingPermissionRequest by remember { mutableStateOf<Pair<Long, String>?>(null) }
 
-    // Camera permission launcher
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        hasCameraPermission = granted
-        if (!granted) {
-            viewModel.clearMessages()
-        }
-    }
-
-    // Camera launcher
+    // Camera launcher — reads pending state from the ViewModel so it survives process death.
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && photoFile != null) {
-            viewModel.uploadPhoto(photoFile!!, uploadType)
+        val pending = viewModel.consumePending()
+        Log.d(
+            "InvoiceUpload",
+            "camera result success=$success pending=$pending exists=${pending?.third?.exists()} size=${pending?.third?.length()}"
+        )
+        when {
+            !success -> scope.launch { snackbarHostState.showSnackbar("Photo not captured") }
+            pending == null -> scope.launch {
+                snackbarHostState.showSnackbar("Lost photo reference — please retry")
+            }
+            !pending.third.exists() || pending.third.length() == 0L -> scope.launch {
+                snackbarHostState.showSnackbar("Photo file missing — please retry")
+            }
+            else -> viewModel.uploadPhoto(pending.third, pending.second, pending.first)
         }
     }
 
-    fun launchCamera(type: String) {
-        uploadType = type
+    fun launchCamera(invoiceId: Long, type: String) {
         val cacheDir = File(context.cacheDir, "camera_photos")
         cacheDir.mkdirs()
         val file = File(cacheDir, "invoice_${System.currentTimeMillis()}.jpg")
-        photoFile = file
+        viewModel.beginCapture(invoiceId, type, file.absolutePath)
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        photoUri = uri
-        cameraLauncher.launch(uri)
+        try {
+            cameraLauncher.launch(uri)
+        } catch (t: Throwable) {
+            Log.e("InvoiceUpload", "cameraLauncher.launch failed", t)
+            viewModel.consumePending()
+            scope.launch { snackbarHostState.showSnackbar("Camera unavailable: ${t.message ?: "unknown"}") }
+        }
+    }
+
+    // Camera permission launcher — chains to launchCamera on grant.
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val pending = pendingPermissionRequest
+        pendingPermissionRequest = null
+        if (granted && pending != null) {
+            launchCamera(pending.first, pending.second)
+        } else if (!granted) {
+            scope.launch { snackbarHostState.showSnackbar("Camera permission denied") }
+        }
+    }
+
+    fun requestCapture(invoiceId: Long, type: String) {
+        val already = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (already) {
+            launchCamera(invoiceId, type)
+        } else {
+            pendingPermissionRequest = invoiceId to type
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
     }
 
     // Show snackbar for messages
@@ -203,10 +235,7 @@ fun InvoiceUploadScreen(
                             onSelect = { viewModel.selectInvoice(invoice) },
                             onCapturePhoto = { type ->
                                 viewModel.selectInvoice(invoice)
-                                permissionLauncher.launch(Manifest.permission.CAMERA)
-                                // The permission callback doesn't chain well, so just launch camera
-                                // Camera permission is usually already granted after first ask
-                                launchCamera(type)
+                                requestCapture(invoice.id, type)
                             }
                         )
                     }
@@ -223,11 +252,11 @@ fun InvoiceUploadScreen(
                     Column {
                         UploadTypeOption("Bill Photo", "bill-pic", Icons.Default.Receipt) {
                             showTypeChooser = false
-                            launchCamera("bill-pic")
+                            uiState.selectedInvoice?.let { requestCapture(it.id, "bill-pic") }
                         }
                         UploadTypeOption("Indent Photo", "indent-pic", Icons.Default.Description) {
                             showTypeChooser = false
-                            launchCamera("indent-pic")
+                            uiState.selectedInvoice?.let { requestCapture(it.id, "indent-pic") }
                         }
                     }
                 },
