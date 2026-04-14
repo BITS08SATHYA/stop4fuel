@@ -165,10 +165,13 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL")
     BigDecimal sumUnpaidLocalCreditAmount(@Param("customerId") Long customerId);
 
-    // All unpaid local credit bills across all customers (not linked to statement), customer fetched
+    // All unpaid local credit bills across all customers (not linked to statement), customer fetched.
+    // Excludes customers whose party type is "Statement" — those belong in the statement report.
     @EntityGraph(attributePaths = {"customer"})
-    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+    @Query("SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer.party p " +
+           "WHERE ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') " +
+           "AND (p IS NULL OR LOWER(p.partyType) <> 'statement') " +
            "ORDER BY ib.customer.name ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findAllUnpaidLocalCreditWithCustomer();
 

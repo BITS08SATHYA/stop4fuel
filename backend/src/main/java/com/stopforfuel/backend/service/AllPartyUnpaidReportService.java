@@ -56,7 +56,7 @@ public class AllPartyUnpaidReportService {
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy, hh:mm a");
     private static final java.text.DecimalFormat NUM_FMT = new java.text.DecimalFormat("#,##0.00");
 
-    private record Row(String date, BigDecimal net, BigDecimal received, BigDecimal balance) {}
+    private record Row(String id, String date, BigDecimal net, BigDecimal received, BigDecimal balance) {}
 
     public byte[] generateStatementPdf() {
         return render("All Party Statement Report", "Unpaid statements grouped by customer", buildStatementGroups());
@@ -83,6 +83,7 @@ public class AllPartyUnpaidReportService {
             if (bal.compareTo(BigDecimal.ZERO) <= 0) continue;
             grouped.computeIfAbsent(s.getCustomer(), k -> new java.util.ArrayList<>())
                     .add(new Row(
+                            s.getStatementNo() != null ? s.getStatementNo() : "-",
                             s.getStatementDate() != null ? s.getStatementDate().format(DATE_FMT) : "-",
                             net, recd, bal));
         }
@@ -98,6 +99,7 @@ public class AllPartyUnpaidReportService {
             if (bal.compareTo(BigDecimal.ZERO) <= 0) continue;
             grouped.computeIfAbsent(ib.getCustomer(), k -> new java.util.ArrayList<>())
                     .add(new Row(
+                            ib.getBillNo() != null ? ib.getBillNo() : "-",
                             ib.getDate() != null ? ib.getDate().format(DATE_FMT) : "-",
                             net, recd, bal));
         }
@@ -129,7 +131,7 @@ public class AllPartyUnpaidReportService {
 
             XSSFSheet sheet = wb.createSheet(sheetName);
             int r = 0;
-            int cols = 5;
+            int cols = 6;
 
             XSSFRow tr = sheet.createRow(r++);
             tr.createCell(0).setCellValue(companyName);
@@ -153,9 +155,9 @@ public class AllPartyUnpaidReportService {
 
             r++; // blank
 
-            // Headers: Customer / Date / Net / Received / Balance
+            // Headers: Customer / ID / Date / Net / Received / Balance
             XSSFRow hr = sheet.createRow(r++);
-            String[] headers = {"Customer", "Date", "Net", "Received", "Balance"};
+            String[] headers = {"Customer", "ID", "Date", "Net", "Received", "Balance"};
             for (int i = 0; i < headers.length; i++) {
                 hr.createCell(i).setCellValue(headers[i]);
                 hr.getCell(i).setCellStyle(headerStyle);
@@ -173,11 +175,13 @@ public class AllPartyUnpaidReportService {
                     XSSFRow xr = sheet.createRow(r++);
                     xr.createCell(0).setCellValue(first ? custName : "");
                     xr.getCell(0).setCellStyle(first ? custStyle : cellStyle);
-                    xr.createCell(1).setCellValue(row.date());
+                    xr.createCell(1).setCellValue(row.id());
                     xr.getCell(1).setCellStyle(cellStyle);
-                    setNum(xr, 2, row.net(), numStyle);
-                    setNum(xr, 3, row.received(), numStyle);
-                    setNum(xr, 4, row.balance(), numStyle);
+                    xr.createCell(2).setCellValue(row.date());
+                    xr.getCell(2).setCellStyle(cellStyle);
+                    setNum(xr, 3, row.net(), numStyle);
+                    setNum(xr, 4, row.received(), numStyle);
+                    setNum(xr, 5, row.balance(), numStyle);
                     subNet = subNet.add(row.net());
                     subRecd = subRecd.add(row.received());
                     subBal = subBal.add(row.balance());
@@ -189,9 +193,11 @@ public class AllPartyUnpaidReportService {
                 subR.getCell(0).setCellStyle(subTextStyle);
                 subR.createCell(1).setCellValue("");
                 subR.getCell(1).setCellStyle(subTextStyle);
-                setNum(subR, 2, subNet, subNumStyle);
-                setNum(subR, 3, subRecd, subNumStyle);
-                setNum(subR, 4, subBal, subNumStyle);
+                subR.createCell(2).setCellValue("");
+                subR.getCell(2).setCellStyle(subTextStyle);
+                setNum(subR, 3, subNet, subNumStyle);
+                setNum(subR, 4, subRecd, subNumStyle);
+                setNum(subR, 5, subBal, subNumStyle);
                 grandNet = grandNet.add(subNet);
                 grandRecd = grandRecd.add(subRecd);
                 grandBal = grandBal.add(subBal);
@@ -202,9 +208,11 @@ public class AllPartyUnpaidReportService {
             gr.getCell(0).setCellStyle(totalText);
             gr.createCell(1).setCellValue("");
             gr.getCell(1).setCellStyle(totalText);
-            setNum(gr, 2, grandNet, totalNum);
-            setNum(gr, 3, grandRecd, totalNum);
-            setNum(gr, 4, grandBal, totalNum);
+            gr.createCell(2).setCellValue("");
+            gr.getCell(2).setCellStyle(totalText);
+            setNum(gr, 3, grandNet, totalNum);
+            setNum(gr, 4, grandRecd, totalNum);
+            setNum(gr, 5, grandBal, totalNum);
 
             for (int i = 0; i < cols; i++) sheet.autoSizeColumn(i);
 
@@ -324,12 +332,13 @@ public class AllPartyUnpaidReportService {
                     head.setSpacingAfter(1);
                     mct.addElement(head);
 
-                    float[] widths = {22f, 26f, 26f, 26f};
+                    float[] widths = {22f, 18f, 20f, 20f, 20f};
                     PdfPTable tbl = new PdfPTable(widths);
                     tbl.setWidthPercentage(100);
 
                     Color headerBg = new Color(230, 81, 0);
                     Color border = new Color(221, 221, 221);
+                    tbl.addCell(headerCell("ID", headerFont, headerBg, Element.ALIGN_LEFT));
                     tbl.addCell(headerCell("Date", headerFont, headerBg, Element.ALIGN_LEFT));
                     tbl.addCell(headerCell("Net", headerFont, headerBg, Element.ALIGN_RIGHT));
                     tbl.addCell(headerCell("Received", headerFont, headerBg, Element.ALIGN_RIGHT));
@@ -339,6 +348,7 @@ public class AllPartyUnpaidReportService {
                     int idx = 0;
                     for (Row r : rows) {
                         Color bg = (idx++ % 2 == 0) ? Color.WHITE : new Color(250, 250, 250);
+                        tbl.addCell(cell(r.id(), cellFont, bg, border, Element.ALIGN_LEFT));
                         tbl.addCell(cell(r.date(), cellFont, bg, border, Element.ALIGN_LEFT));
                         tbl.addCell(cell(NUM_FMT.format(r.net()), cellFont, bg, border, Element.ALIGN_RIGHT));
                         tbl.addCell(cell(NUM_FMT.format(r.received()), cellFont, bg, border, Element.ALIGN_RIGHT));
@@ -350,7 +360,9 @@ public class AllPartyUnpaidReportService {
                     }
 
                     Color subBg = new Color(255, 243, 224);
-                    tbl.addCell(cell("Subtotal", subtotalFont, subBg, border, Element.ALIGN_LEFT));
+                    PdfPCell subLabel = cell("Subtotal", subtotalFont, subBg, border, Element.ALIGN_LEFT);
+                    subLabel.setColspan(2);
+                    tbl.addCell(subLabel);
                     tbl.addCell(cell(NUM_FMT.format(subNet), subtotalFont, subBg, border, Element.ALIGN_RIGHT));
                     tbl.addCell(cell(NUM_FMT.format(subRecd), subtotalFont, subBg, border, Element.ALIGN_RIGHT));
                     tbl.addCell(cell(NUM_FMT.format(subBal), subtotalFont, subBg, border, Element.ALIGN_RIGHT));

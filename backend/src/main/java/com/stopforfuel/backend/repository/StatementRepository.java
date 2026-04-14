@@ -145,8 +145,10 @@ public interface StatementRepository extends ScidRepository<Statement> {
            "AND s.status <> 'PAID' AND s.status <> 'DRAFT'")
     BigDecimal sumUnpaidStatementBalance(@Param("customerId") Long customerId);
 
-    // All unpaid statements across all customers, customer fetched
-    @Query("SELECT s FROM Statement s JOIN FETCH s.customer c WHERE s.status <> 'PAID' AND s.status <> 'DRAFT' " +
+    // All unpaid statements across all customers, customer fetched, only for Statement-party customers
+    @Query("SELECT s FROM Statement s JOIN FETCH s.customer c LEFT JOIN c.party p " +
+           "WHERE s.status <> 'PAID' AND s.status <> 'DRAFT' " +
+           "AND (p IS NULL OR LOWER(p.partyType) = 'statement') " +
            "ORDER BY c.name ASC, s.statementDate ASC, s.id ASC")
     List<Statement> findAllUnpaidWithCustomer();
 
