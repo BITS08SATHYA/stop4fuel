@@ -130,6 +130,7 @@ const paymentManagementNav = [
     { name: "Explorer", href: "/payments/explorer", icon: Search },
     { name: "Payments", href: "/payments", icon: CreditCard },
     { name: "Customer Ledger", href: "/payments/ledger", icon: BookOpen },
+    { name: "Outstanding Explorer", href: "/payments/outstanding", icon: AlertTriangle },
 ];
 
 const financeNav = [

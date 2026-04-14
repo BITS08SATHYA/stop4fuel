@@ -133,6 +133,37 @@ export const getInvoiceHistory = (
     return fetchWithAuth(`${API_BASE_URL}/invoices/history?${params}`).then(handleResponse);
 };
 
+// Outstanding credit bills (Outstanding Explorer)
+export interface OutstandingBill {
+    id: number;
+    billNo?: string | null;
+    date: string;
+    customerId?: number | null;
+    customerName?: string | null;
+    vehicleId?: number | null;
+    vehicleNumber?: string | null;
+    netAmount: number;
+    paidAmount: number;
+    balance: number;
+    paymentStatus?: string | null;
+}
+
+export const searchOutstandingBills = (
+    page = 0,
+    size = 20,
+    filters?: { fromDate?: string; toDate?: string; search?: string; maxBalance?: number | string }
+): Promise<PageResponse<OutstandingBill>> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    // Backend wants LocalDateTime — extend date-only input to cover full day
+    if (filters?.fromDate) params.append('fromDate', `${filters.fromDate}T00:00:00`);
+    if (filters?.toDate) params.append('toDate', `${filters.toDate}T23:59:59`);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.maxBalance !== undefined && filters.maxBalance !== '' && filters.maxBalance !== null) {
+        params.append('maxBalance', String(filters.maxBalance));
+    }
+    return fetchWithAuth(`${API_BASE_URL}/invoices/outstanding?${params}`).then(handleResponse);
+};
+
 // Product Sales Summary for history filters
 export const getProductSalesSummary = (
     filters?: { billType?: string; paymentStatus?: string; fromDate?: string; toDate?: string; categoryType?: string }

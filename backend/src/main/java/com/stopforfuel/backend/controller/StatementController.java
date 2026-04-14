@@ -62,6 +62,21 @@ public class StatementController {
                 .map(StatementDTO::from);
     }
 
+    @GetMapping("/outstanding-search")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public Page<StatementDTO> getOutstandingSearch(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false, defaultValue = "") String search,
+            @RequestParam(required = false) java.math.BigDecimal maxBalance) {
+        return statementRepository.findOutstanding(fromDate, toDate, search == null ? "" : search,
+                        maxBalance, SecurityUtils.getScid(),
+                        PageRequest.of(page, Math.min(size, 100)))
+                .map(StatementDTO::from);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public StatementDTO getById(@PathVariable Long id) {

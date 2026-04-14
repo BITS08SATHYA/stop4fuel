@@ -117,6 +117,21 @@ export const getOutstandingStatements = (): Promise<Statement[]> =>
 export const getOutstandingByCustomer = (customerId: number): Promise<Statement[]> =>
     fetchWithAuth(`${API_BASE_URL}/statements/outstanding/customer/${customerId}`).then(handleResponse);
 
+export const getOutstandingStatementsSearch = (
+    page = 0,
+    size = 20,
+    filters?: { fromDate?: string; toDate?: string; search?: string; maxBalance?: number | string }
+): Promise<PageResponse<Statement>> => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters?.toDate) params.append('toDate', filters.toDate);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.maxBalance !== undefined && filters.maxBalance !== '' && filters.maxBalance !== null) {
+        params.append('maxBalance', String(filters.maxBalance));
+    }
+    return fetchWithAuth(`${API_BASE_URL}/statements/outstanding-search?${params}`).then(handleResponse);
+};
+
 export const generateStatement = (
     customerId: number, fromDate: string, toDate: string,
     filters?: { vehicleId?: number; productId?: number; billIds?: number[] }

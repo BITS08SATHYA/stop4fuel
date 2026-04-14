@@ -2,7 +2,9 @@ package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.InvoiceBillDTO;
+import com.stopforfuel.backend.dto.OutstandingBillDTO;
 import com.stopforfuel.backend.dto.ProductSalesSummary;
+import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.service.InvoiceBillService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +28,7 @@ import java.util.Map;
 public class InvoiceBillController {
 
     private final InvoiceBillService service;
+    private final PaymentRepository paymentRepository;
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
@@ -51,6 +55,20 @@ public class InvoiceBillController {
             @RequestParam(required = false) String categoryType) {
         return service.getInvoiceHistory(billType, paymentStatus, categoryType, fromDate, toDate, search, PageRequest.of(page, Math.min(size, 100)))
                 .map(InvoiceBillDTO::from);
+    }
+
+    @GetMapping("/outstanding")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public Page<OutstandingBillDTO> getOutstanding(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) BigDecimal maxBalance) {
+        return service.findOutstanding(fromDate, toDate, search, maxBalance,
+                        PageRequest.of(page, Math.min(size, 100)))
+                .map(b -> OutstandingBillDTO.from(b, paymentRepository.sumPaymentsByInvoiceBillId(b.getId())));
     }
 
     @GetMapping("/history/product-summary")

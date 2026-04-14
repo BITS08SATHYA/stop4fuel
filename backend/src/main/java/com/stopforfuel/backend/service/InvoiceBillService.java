@@ -597,6 +597,13 @@ public class InvoiceBillService {
     }
 
     @Transactional(readOnly = true)
+    public Page<InvoiceBill> findOutstanding(LocalDateTime fromDate, LocalDateTime toDate,
+            String search, java.math.BigDecimal maxBalance, Pageable pageable) {
+        String s = (search != null && !search.isEmpty()) ? search : "";
+        return repository.findOutstanding(fromDate, toDate, s, maxBalance, SecurityUtils.getScid(), pageable);
+    }
+
+    @Transactional(readOnly = true)
     public List<ProductSalesSummary> getProductSalesSummary(String billType, String paymentStatus, String categoryType,
             LocalDateTime fromDate, LocalDateTime toDate) {
         com.stopforfuel.backend.enums.BillType bt = (billType != null && !billType.isEmpty()) ? com.stopforfuel.backend.enums.BillType.valueOf(billType) : null;
