@@ -53,13 +53,14 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   debug:
-    # TEMPORARY: true so 500 responses include exception class + top stack frame.
-    # Flip to ${DEBUG_ERRORS:false} once the prod 500s are diagnosed.
-    errors: ${DEBUG_ERRORS:true}
+    errors: ${DEBUG_ERRORS:false}
 
 management:
   endpoints:
     web:
+      # Serve actuator under /api/actuator so it reaches the backend through
+      # the same CloudFront behavior as the rest of /api/*.
+      base-path: /api/actuator
       exposure:
         include: health,info,metrics,prometheus
   endpoint:

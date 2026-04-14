@@ -11,12 +11,14 @@ const POLL_MS = 10_000;
 function getActuatorBase(): string {
     if (typeof window === "undefined") return "";
     const host = window.location.hostname;
+    // Actuator is served under /api/actuator so it reaches the backend through
+    // the same CloudFront behavior as the rest of /api/*.
     if (host.startsWith("devapp.")) {
-        return `${window.location.protocol}//devapi.${host.slice(7)}/actuator`;
+        return `${window.location.protocol}//devapi.${host.slice(7)}/api/actuator`;
     }
     const envUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (envUrl) return envUrl.replace(/\/api\/?$/, "") + "/actuator";
-    return `${window.location.protocol}//${host}:8080/actuator`;
+    if (envUrl) return envUrl.replace(/\/api\/?$/, "") + "/api/actuator";
+    return `${window.location.protocol}//${host}:8080/api/actuator`;
 }
 
 type HealthStatus = "UP" | "DOWN" | "UNKNOWN" | "OUT_OF_SERVICE";

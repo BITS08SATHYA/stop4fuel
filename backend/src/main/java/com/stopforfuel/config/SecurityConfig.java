@@ -70,8 +70,8 @@ public class SecurityConfig {
         } else {
             http
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/health").permitAll()
-                    .requestMatchers("/actuator/**").hasAnyRole("OWNER", "ADMIN")
+                    .requestMatchers("/api/actuator/health", "/api/actuator/health/**", "/api/actuator/info", "/health").permitAll()
+                    .requestMatchers("/api/actuator/**").hasAnyRole("OWNER", "ADMIN")
                     .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
                     .requestMatchers("/api/auth/signup-callback").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
