@@ -28,6 +28,7 @@ repositories {
 dependencyManagement {
 	imports {
 		mavenBom 'org.springframework.ai:spring-ai-bom:1.0.0'
+		mavenBom 'software.amazon.awssdk:bom:2.29.52'
 	}
 }
 
@@ -40,17 +41,17 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
-	implementation 'software.amazon.awssdk:cognitoidentityprovider:2.25.16'
+	implementation 'software.amazon.awssdk:cognitoidentityprovider'
 	implementation 'com.bucket4j:bucket4j-core:8.10.1'
 	implementation 'org.apache.pdfbox:pdfbox:3.0.1'
 	implementation 'com.github.librepdf:openpdf:1.3.30'
 	implementation 'net.sf.jasperreports:jasperreports:6.21.3'
 	implementation 'org.apache.poi:poi:5.2.5'
 	implementation 'org.apache.poi:poi-ooxml:5.2.5'
-	implementation 'software.amazon.awssdk:s3:2.25.16'
-	implementation 'software.amazon.awssdk:textract:2.25.16'
-	implementation 'software.amazon.awssdk:secretsmanager:2.25.16'
-	implementation 'software.amazon.awssdk:costexplorer:2.25.16'
+	implementation 'software.amazon.awssdk:s3'
+	implementation 'software.amazon.awssdk:textract'
+	implementation 'software.amazon.awssdk:secretsmanager'
+	implementation 'software.amazon.awssdk:costexplorer'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate6'
 	implementation 'org.springframework.ai:spring-ai-starter-model-anthropic'
 	compileOnly 'org.projectlombok:lombok'
