@@ -47,6 +47,9 @@ export interface DashboardStats {
     shiftCash: number | null;
     shiftUpi: number | null;
     shiftCard: number | null;
+    shiftCheque: number | null;
+    shiftCcms: number | null;
+    shiftBankTransfer: number | null;
     shiftExpense: number | null;
     shiftTotal: number | null;
     shiftNet: number | null;

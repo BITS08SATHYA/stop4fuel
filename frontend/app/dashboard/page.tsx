@@ -30,6 +30,7 @@ import {
     UserPlus,
     FileText,
     ClipboardList,
+    Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -273,12 +274,24 @@ function OwnerDashboard() {
                             </span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                            <ShiftMiniStat label="Cash" value={stats.shiftCash} icon={Banknote} color="text-green-500 bg-green-500/10" />
-                            <ShiftMiniStat label="UPI" value={stats.shiftUpi} icon={Smartphone} color="text-purple-500 bg-purple-500/10" />
-                            <ShiftMiniStat label="Card" value={stats.shiftCard} icon={CreditCard} color="text-blue-500 bg-blue-500/10" />
-                            <ShiftMiniStat label="Expense" value={stats.shiftExpense} icon={Wallet} color="text-red-500 bg-red-500/10" />
-                            <ShiftMiniStat label="Total" value={stats.shiftTotal} icon={IndianRupee} color="text-cyan-500 bg-cyan-500/10" />
-                            <ShiftMiniStat label="Net" value={stats.shiftNet} icon={IndianRupee} color="text-green-600 bg-green-600/10" />
+                            {(() => {
+                                const tiles: Array<{ label: string; value: number | null | undefined; icon: typeof Banknote; color: string; alwaysShow?: boolean }> = [
+                                    { label: "Cash", value: stats.shiftCash, icon: Banknote, color: "text-green-500 bg-green-500/10", alwaysShow: true },
+                                    { label: "UPI", value: stats.shiftUpi, icon: Smartphone, color: "text-purple-500 bg-purple-500/10" },
+                                    { label: "Card", value: stats.shiftCard, icon: CreditCard, color: "text-blue-500 bg-blue-500/10" },
+                                    { label: "Bank", value: stats.shiftBankTransfer, icon: Landmark, color: "text-indigo-500 bg-indigo-500/10" },
+                                    { label: "CCMS", value: stats.shiftCcms, icon: Receipt, color: "text-amber-500 bg-amber-500/10" },
+                                    { label: "Cheque", value: stats.shiftCheque, icon: FileText, color: "text-slate-500 bg-slate-500/10" },
+                                    { label: "Expense", value: stats.shiftExpense, icon: Wallet, color: "text-red-500 bg-red-500/10" },
+                                    { label: "Total", value: stats.shiftTotal, icon: IndianRupee, color: "text-cyan-500 bg-cyan-500/10", alwaysShow: true },
+                                    { label: "Net", value: stats.shiftNet, icon: IndianRupee, color: "text-green-600 bg-green-600/10", alwaysShow: true },
+                                ];
+                                return tiles
+                                    .filter(t => t.alwaysShow || (t.value != null && t.value !== 0))
+                                    .map(t => (
+                                        <ShiftMiniStat key={t.label} label={t.label} value={t.value ?? null} icon={t.icon} color={t.color} />
+                                    ));
+                            })()}
                         </div>
                     </div>
                 )}

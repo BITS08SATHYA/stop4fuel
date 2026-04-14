@@ -83,6 +83,9 @@ public class DashboardController {
         private BigDecimal shiftCash;
         private BigDecimal shiftUpi;
         private BigDecimal shiftCard;
+        private BigDecimal shiftCheque;
+        private BigDecimal shiftCcms;
+        private BigDecimal shiftBankTransfer;
         private BigDecimal shiftExpense;
         private BigDecimal shiftTotal;
         private BigDecimal shiftNet;
