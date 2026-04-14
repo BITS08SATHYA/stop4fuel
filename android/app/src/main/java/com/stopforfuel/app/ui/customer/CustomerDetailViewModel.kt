@@ -18,6 +18,7 @@ data class CustomerDetailState(
     val creditInfo: CreditInfoResponse? = null,
     val vehicles: List<VehicleDto> = emptyList(),
     val vehicleTypes: List<VehicleTypeDto> = emptyList(),
+    val products: List<ProductDto> = emptyList(),
     val userRole: String = "",
     val isLoading: Boolean = true,
     val error: String? = null,
@@ -184,7 +185,9 @@ class CustomerDetailViewModel @Inject constructor(
     fun showAddVehicle() {
         viewModelScope.launch {
             val types = repository.getVehicleTypes().getOrDefault(emptyList())
-            _uiState.value = _uiState.value.copy(showAddVehicle = true, vehicleTypes = types)
+            val products = repository.getActiveProducts().getOrDefault(emptyList())
+                .filter { it.fuelFamily != null } // fuel products only
+            _uiState.value = _uiState.value.copy(showAddVehicle = true, vehicleTypes = types, products = products)
         }
     }
 
@@ -192,10 +195,17 @@ class CustomerDetailViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(showAddVehicle = false)
     }
 
-    fun createVehicle(vehicleNumber: String, vehicleTypeId: Long?, maxLitersPerMonth: String) {
+    fun createVehicle(
+        vehicleNumber: String,
+        vehicleTypeId: Long?,
+        preferredProductId: Long?,
+        maxCapacity: String,
+        maxLitersPerMonth: String
+    ) {
         viewModelScope.launch {
+            val cap = maxCapacity.toBigDecimalOrNull()
             val limit = maxLitersPerMonth.toBigDecimalOrNull()
-            repository.createVehicle(customerId, vehicleNumber, vehicleTypeId, limit).fold(
+            repository.createVehicle(customerId, vehicleNumber, vehicleTypeId, preferredProductId, cap, limit).fold(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(showAddVehicle = false, actionMessage = "Vehicle added")
                     loadAll()

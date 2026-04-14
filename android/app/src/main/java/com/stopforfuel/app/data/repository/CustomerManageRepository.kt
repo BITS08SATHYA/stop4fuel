@@ -60,13 +60,26 @@ class CustomerManageRepository @Inject constructor(
         api.updateVehicleLiterLimit(id, LiterLimitRequest(limit))
     }
 
-    suspend fun createVehicle(customerId: Long, vehicleNumber: String, vehicleTypeId: Long?, maxLitersPerMonth: BigDecimal?): Result<VehicleDto> = runCatching {
+    suspend fun createVehicle(
+        customerId: Long,
+        vehicleNumber: String,
+        vehicleTypeId: Long?,
+        preferredProductId: Long?,
+        maxCapacity: BigDecimal?,
+        maxLitersPerMonth: BigDecimal?
+    ): Result<VehicleDto> = runCatching {
         api.createVehicle(CreateVehicleRequest(
             vehicleNumber = vehicleNumber,
             customer = IdRef(customerId),
             vehicleType = vehicleTypeId?.let { IdRef(it) },
+            preferredProduct = preferredProductId?.let { IdRef(it) },
+            maxCapacity = maxCapacity,
             maxLitersPerMonth = maxLitersPerMonth
         ))
+    }
+
+    suspend fun getActiveProducts(): Result<List<ProductDto>> = runCatching {
+        api.getActiveProducts()
     }
 
     suspend fun toggleForceUnblock(id: Long, enabled: Boolean): Result<CustomerListDto> = runCatching {

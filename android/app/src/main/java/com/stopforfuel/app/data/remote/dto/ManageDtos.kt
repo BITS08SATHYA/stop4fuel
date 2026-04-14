@@ -92,5 +92,7 @@ data class CreateVehicleRequest(
     val vehicleNumber: String,
     val customer: IdRef,
     val vehicleType: IdRef? = null,
+    val preferredProduct: IdRef? = null,
+    val maxCapacity: BigDecimal? = null,
     val maxLitersPerMonth: BigDecimal? = null
 )

@@ -130,8 +130,11 @@ fun CustomerDetailScreen(
     if (state.showAddVehicle) {
         AddVehicleDialog(
             vehicleTypes = state.vehicleTypes,
+            products = state.products,
             onDismiss = { viewModel.hideAddVehicle() },
-            onSave = { number, typeId, limit -> viewModel.createVehicle(number, typeId, limit) }
+            onSave = { number, typeId, fuelId, cap, limit ->
+                viewModel.createVehicle(number, typeId, fuelId, cap, limit)
+            }
         )
     }
 }
@@ -140,13 +143,17 @@ fun CustomerDetailScreen(
 @Composable
 private fun AddVehicleDialog(
     vehicleTypes: List<com.stopforfuel.app.data.remote.dto.VehicleTypeDto>,
+    products: List<com.stopforfuel.app.data.remote.dto.ProductDto>,
     onDismiss: () -> Unit,
-    onSave: (String, Long?, String) -> Unit
+    onSave: (String, Long?, Long?, String, String) -> Unit
 ) {
     var vehicleNumber by remember { mutableStateOf("") }
     var selectedTypeId by remember { mutableStateOf<Long?>(null) }
+    var selectedFuelId by remember { mutableStateOf<Long?>(null) }
+    var maxCapacity by remember { mutableStateOf("") }
     var literLimit by remember { mutableStateOf("") }
     var typeExpanded by remember { mutableStateOf(false) }
+    var fuelExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -184,18 +191,51 @@ private fun AddVehicleDialog(
                     }
                 }
 
+                // Fuel type dropdown
+                ExposedDropdownMenuBox(
+                    expanded = fuelExpanded,
+                    onExpandedChange = { fuelExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = products.find { it.id == selectedFuelId }?.name ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Fuel Type") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fuelExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = fuelExpanded, onDismissRequest = { fuelExpanded = false }) {
+                        products.forEach { p ->
+                            DropdownMenuItem(
+                                text = { Text(p.name ?: "") },
+                                onClick = { selectedFuelId = p.id; fuelExpanded = false }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = maxCapacity,
+                    onValueChange = { maxCapacity = it },
+                    label = { Text("Max Capacity (L)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                )
+
                 OutlinedTextField(
                     value = literLimit,
                     onValueChange = { literLimit = it },
                     label = { Text("Liter Limit / Month") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                 )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(vehicleNumber, selectedTypeId, literLimit) },
+                onClick = { onSave(vehicleNumber, selectedTypeId, selectedFuelId, maxCapacity, literLimit) },
                 enabled = vehicleNumber.isNotBlank()
             ) { Text("Save") }
         },
