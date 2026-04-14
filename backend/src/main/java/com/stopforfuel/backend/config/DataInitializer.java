@@ -278,7 +278,8 @@ public class DataInitializer implements ApplicationRunner {
                 "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
                 "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
                 "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE",
-                "FINANCE_VIEW", "FINANCE_CREATE"
+                "FINANCE_VIEW", "FINANCE_CREATE",
+                "REPORT_VIEW"
         )) {
             if (!rolePermissionRepository.existsByRoleIdAndPermissionCode(cashier.getId(), code)) {
                 permissionRepository.findByCode(code).ifPresent(p -> {
@@ -343,7 +344,8 @@ public class DataInitializer implements ApplicationRunner {
                 "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
                 "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
                 "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE",
-                "FINANCE_VIEW", "FINANCE_CREATE"
+                "FINANCE_VIEW", "FINANCE_CREATE",
+                "REPORT_VIEW"
             ),
             "ADMIN", Set.of(), // gets all except SETTINGS_DELETE, USER_DELETE — handled below
             "EMPLOYEE", Set.of(
