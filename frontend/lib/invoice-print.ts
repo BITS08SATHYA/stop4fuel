@@ -29,6 +29,18 @@ function formatCurrency(val: number | undefined | null): string {
     return val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Dot-matrix drivers (TVS MSP 250) can only render CP437/ASCII. Strip anything
+// else and replace common typographic chars with ASCII equivalents.
+function asciiSafe(s: string | undefined | null): string {
+    if (!s) return "";
+    return s
+        .replace(/[\u2013\u2014]/g, "-")
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/\u20B9/g, "Rs.")
+        .replace(/[^\x20-\x7E]/g, "");
+}
+
 function formatDate(iso: string): string {
     const d = new Date(iso);
     return d.toLocaleString("en-IN", {
@@ -69,7 +81,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
         const disc = (p.discountAmount && p.discountAmount > 0)
             ? ` (-${formatCurrency(p.discountAmount)})` : "";
         return `<tr>
-            <td style="padding:1px 0;">${p.productName || "Product"}${disc}</td>
+            <td style="padding:1px 0;">${asciiSafe(p.productName) || "Product"}${disc}</td>
             <td style="text-align:center;padding:1px 0;">${p.quantity?.toFixed(2) || "0"}</td>
             <td style="text-align:center;padding:1px 0;">${p.unitPrice?.toFixed(2) || "0"}</td>
             <td style="text-align:right;font-weight:bold;padding:1px 0;">${formatCurrency(p.amount)}</td>
@@ -92,7 +104,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     @page { size: 6in 4.5in; margin: 2mm 3mm; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', Courier, monospace; font-size: 14pt; font-weight: 900; line-height: 1.4; color: #000; background: #fff; width: 5.5in; margin: 0 auto; -webkit-text-stroke: 0.5px #000; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 14pt; font-weight: 900; line-height: 1.4; color: #000; background: #fff; width: 5.3in; margin: 0 auto; -webkit-text-stroke: 0.5px #000; }
     table { width: 100%; border-collapse: collapse; }
     td { vertical-align: top; font-size: 14pt; font-weight: 900; }
     .center { text-align: center; }
@@ -114,9 +126,9 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 
 <!-- Header -->
 <div class="center">
-    <div class="big">${company.name}</div>
-    <div class="xs">${company.address} | Ph: ${company.phone}</div>
-    <div class="xs">GSTIN: ${company.gstNo}</div>
+    <div class="big">${asciiSafe(company.name)}</div>
+    <div class="xs">${asciiSafe(company.address)} | Ph: ${asciiSafe(company.phone)}</div>
+    <div class="xs">GSTIN: ${asciiSafe(company.gstNo)}</div>
 </div>
 <hr class="solid">
 <div class="center"><span style="font-size:16pt;font-weight:900;">TAX INVOICE</span> <span class="badge">${billBadge}</span></div>
@@ -124,18 +136,19 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 
 <!-- Bill + Customer info (two columns) -->
 <table><tr>
-<td style="width:50%;">
+<td style="width:48%;">
     <table class="info">
-        <tr><td>Bill:</td><td>${invoice.billNo || "—"}</td></tr>
-        <tr><td>Date:</td><td>${invoice.date ? formatDate(invoice.date) : "—"}</td></tr>
-        <tr><td>Shift:</td><td>#${invoice.shiftId || "—"}</td></tr>
+        <tr><td>Bill:</td><td>${asciiSafe(invoice.billNo) || "-"}</td></tr>
+        <tr><td>Date:</td><td>${invoice.date ? formatDate(invoice.date) : "-"}</td></tr>
+        <tr><td>Shift:</td><td>#${invoice.shiftId || "-"}</td></tr>
     </table>
 </td>
-<td style="width:50%;">
+<td style="width:4%;"></td>
+<td style="width:48%;">
     <table class="info">
-        <tr><td>Customer:</td><td>${customerName}</td></tr>
-        ${vehicleNo ? `<tr><td>Vehicle:</td><td>${vehicleNo}</td></tr>` : ""}
-        ${invoice.driverName ? `<tr><td>Driver:</td><td>${invoice.driverName}</td></tr>` : `<tr><td>Cashier:</td><td>${invoice.raisedBy?.name || "—"}</td></tr>`}
+        <tr><td>Customer:</td><td>${asciiSafe(customerName)}</td></tr>
+        ${vehicleNo ? `<tr><td>Vehicle:</td><td>${asciiSafe(vehicleNo)}</td></tr>` : ""}
+        ${invoice.driverName ? `<tr><td>Driver:</td><td>${asciiSafe(invoice.driverName)}</td></tr>` : `<tr><td>Cashier:</td><td>${asciiSafe(invoice.raisedBy?.name) || "-"}</td></tr>`}
     </table>
 </td>
 </tr></table>
@@ -162,7 +175,7 @@ ${invoice.vehicleKM ? `<div style="font-size:13pt;font-weight:900;text-align:rig
     ${totalDiscount > 0 ? `<tr><td>Discount</td><td style="text-align:right;">-${formatCurrency(totalDiscount)}</td><td></td><td>Status</td><td style="text-align:right;font-weight:bold;">${paymentStatus}</td></tr>` : ""}
 </table>
 
-<div class="grand-total">&#8377; ${formatCurrency(invoice.netAmount)}</div>
+<div class="grand-total">Rs. ${formatCurrency(invoice.netAmount)}</div>
 
 <hr>
 <div class="xs center">Fuel prices include all applicable taxes. Goods once sold will not be taken back. Computer-generated invoice.</div>
