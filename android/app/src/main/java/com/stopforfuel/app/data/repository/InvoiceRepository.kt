@@ -58,21 +58,24 @@ class InvoiceRepository @Inject constructor(
 
     suspend fun uploadInvoiceFile(invoiceId: Long, type: String, file: File): Result<InvoiceBillDto> {
         return try {
+            android.util.Log.d(
+                "InvoiceUpload",
+                "uploadInvoiceFile id=$invoiceId type=$type name=${file.name} exists=${file.exists()} size=${file.length()}"
+            )
             val mediaType = "image/jpeg".toMediaTypeOrNull()
             val requestBody = file.asRequestBody(mediaType)
             val part = MultipartBody.Part.createFormData("file", file.name, requestBody)
             Result.success(api.uploadInvoiceFile(invoiceId, type, part))
         } catch (e: retrofit2.HttpException) {
-            val errorBody = e.response()?.errorBody()?.string()
-            val message = if (e.code() == 400 && errorBody != null) {
-                try {
-                    org.json.JSONObject(errorBody).optString("message", e.message())
-                } catch (_: Exception) { errorBody }
-            } else {
-                e.message()
-            }
-            Result.failure(Exception(message ?: "Upload failed"))
+            val code = e.code()
+            val errorBody = runCatching { e.response()?.errorBody()?.string() }.getOrNull()?.take(400)
+            val serverMsg = errorBody?.let {
+                runCatching { org.json.JSONObject(it).optString("message", "") }.getOrNull()?.ifBlank { null }
+            } ?: errorBody
+            android.util.Log.e("InvoiceUpload", "HTTP $code body=$errorBody", e)
+            Result.failure(Exception("HTTP $code ${e.message().orEmpty()} ${serverMsg.orEmpty()}".trim()))
         } catch (e: Exception) {
+            android.util.Log.e("InvoiceUpload", "upload exception", e)
             Result.failure(e)
         }
     }
