@@ -116,9 +116,11 @@ class InvoiceUploadViewModel @Inject constructor(
                     selectedInvoice = updated
                 )
             }.onFailure { e ->
+                val detail = e.message?.takeIf { it.isNotBlank() } ?: e.toString()
+                android.util.Log.e("InvoiceUpload", "uploadPhoto failed", e)
                 _uiState.value = _uiState.value.copy(
                     isUploading = false,
-                    error = "Upload failed: ${e.message}"
+                    error = "Upload failed: ${e.javaClass.simpleName}: $detail"
                 )
             }
         }
