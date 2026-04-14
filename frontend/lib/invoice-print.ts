@@ -71,6 +71,8 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 
     // Products
     const products = invoice.products || [];
+    const totalDiscount = invoice.totalDiscount || 0;
+    const subTotal = invoice.grossAmount || ((invoice.netAmount || 0) + totalDiscount);
 
     // Items HTML — compact, no nozzle line, discount inline
     const itemsHtml = products.map((p) => {
@@ -84,13 +86,6 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
         </tr>`;
     }).join("");
 
-    // Credit-specific fields
-    const creditFields = !isCash ? `
-        ${invoice.driverName ? `<tr><td style="font-size:13pt;">Driver:</td><td colspan="3" style="text-align:right;">${invoice.driverName}</td></tr>` : ""}
-        ${invoice.indentNo ? `<tr><td style="font-size:13pt;">Indent:</td><td colspan="3" style="text-align:right;">${invoice.indentNo}</td></tr>` : ""}
-        ${invoice.signatoryName ? `<tr><td style="font-size:13pt;">Signatory:</td><td colspan="3" style="text-align:right;">${invoice.signatoryName}</td></tr>` : ""}
-    ` : "";
-
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -100,22 +95,28 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     @page { size: 6in 4.5in; margin: 2mm 3mm; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', Courier, monospace; font-size: 14pt; font-weight: 900; line-height: 1.4; color: #000; background: #fff; width: 5.3in; margin: 0 auto; -webkit-text-stroke: 0.5px #000; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 12pt; font-weight: 900; line-height: 1.15; color: #000; background: #fff; width: 5.3in; margin: 0 auto; -webkit-text-stroke: 0.4px #000; }
     table { width: 100%; border-collapse: collapse; }
-    td { vertical-align: top; font-size: 14pt; font-weight: 900; }
+    td { vertical-align: top; font-size: 12pt; font-weight: 900; }
     .center { text-align: center; }
-    .bold { font-weight: 900; }
-    .big { font-size: 18pt; font-weight: 900; }
-    .sm { font-size: 13pt; font-weight: 900; }
-    .xs { font-size: 12pt; font-weight: 900; color: #000; }
-    hr { border: none; border-top: 2px solid #000; margin: 3px 0; }
+    .right { text-align: right; }
+    .big { font-size: 16pt; font-weight: 900; }
+    .xs { font-size: 10pt; font-weight: 900; color: #000; }
+    hr { border: none; border-top: 2px solid #000; margin: 2px 0; }
     hr.solid { border-top: 3px solid #000; }
-    .badge { display: inline-block; border: 3px solid #000; padding: 1px 10px; font-size: 14pt; font-weight: 900; letter-spacing: 1px; }
-    .grand-total { font-size: 20pt; font-weight: 900; text-align: right; padding: 3px 0; }
-    .info td:first-child { color: #000; font-size: 13pt; font-weight: 900; width: 22%; }
-    .info td:last-child { text-align: right; font-weight: 900; }
-    .items th { font-size: 13pt; font-weight: 900; border-bottom: 3px solid #000; padding: 2px 0; text-transform: uppercase; }
-    .sign-line { margin-top: 18px; border-top: 2px solid #000; text-align: center; }
+    .badge { display: inline-block; border: 2px solid #000; padding: 0 8px; font-size: 12pt; font-weight: 900; letter-spacing: 1px; }
+    .info td:first-child { font-size: 11pt; font-weight: 900; width: 22%; padding: 0; }
+    .info td:last-child { font-weight: 900; padding: 0; }
+    .items th { font-size: 11pt; font-weight: 900; border-bottom: 2px solid #000; padding: 2px 0; text-transform: uppercase; }
+    .items td { padding: 1px 0; }
+    .totals { margin-top: 2px; }
+    .totals td { font-size: 12pt; font-weight: 900; padding: 0; }
+    .totals .label { text-align: right; padding-right: 8px; }
+    .totals .val { text-align: right; width: 28%; }
+    .totals .grand td { font-size: 14pt; border-top: 2px solid #000; border-bottom: 3px double #000; padding: 2px 0; }
+    .sign-line { margin-top: 14px; border-top: 1px solid #000; text-align: center; }
+    .audit { margin-top: 6px; font-size: 10pt; font-weight: 900; display: flex; justify-content: space-between; gap: 6px; }
+    .audit span { border-bottom: 1px dotted #000; flex: 1; padding: 0 2px; }
 </style>
 </head>
 <body>
@@ -126,10 +127,16 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     <div class="xs">${asciiSafe(company.address)} | Ph: ${asciiSafe(company.phone)} | GSTIN: ${asciiSafe(company.gstNo)}</div>
 </div>
 <hr class="solid">
-<div class="center"><span style="font-size:16pt;font-weight:900;">TAX INVOICE</span> <span class="badge">${billBadge}</span></div>
+<div class="center"><span style="font-size:13pt;font-weight:900;">TAX INVOICE</span> <span class="badge">${billBadge}</span></div>
 <hr>
 
-<!-- Bill + Customer info (two columns) -->
+<!-- Customer on its own full-width line -->
+<table class="info"><tr>
+    <td style="width:14%;">Customer:</td>
+    <td style="text-align:left;">${asciiSafe(customerName)}${customerPhone ? ` (${asciiSafe(customerPhone)})` : ""}${customerGST ? ` | GST: ${asciiSafe(customerGST)}` : ""}</td>
+</tr></table>
+
+<!-- Bill / Vehicle two-column strip -->
 <table><tr>
 <td style="width:48%;">
     <table class="info">
@@ -141,13 +148,14 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 <td style="width:4%;"></td>
 <td style="width:48%;">
     <table class="info">
-        <tr><td>Customer:</td><td>${asciiSafe(customerName)}</td></tr>
         ${vehicleNo ? `<tr><td>Vehicle:</td><td>${asciiSafe(vehicleNo)}</td></tr>` : ""}
-        ${invoice.driverName ? `<tr><td>Driver:</td><td>${asciiSafe(invoice.driverName)}</td></tr>` : `<tr><td>Cashier:</td><td>${asciiSafe(invoice.raisedBy?.name) || "-"}</td></tr>`}
+        ${invoice.driverName ? `<tr><td>Driver:</td><td>${asciiSafe(invoice.driverName)}</td></tr>` : ""}
+        ${invoice.indentNo ? `<tr><td>Indent:</td><td>${asciiSafe(invoice.indentNo)}</td></tr>` : ""}
+        <tr><td>Cashier:</td><td>${asciiSafe(invoice.raisedBy?.name) || "-"}</td></tr>
     </table>
 </td>
 </tr></table>
-${invoice.vehicleKM ? `<div style="font-size:13pt;font-weight:900;text-align:right;">KM: ${invoice.vehicleKM.toLocaleString("en-IN")}${invoice.indentNo ? ` | Indent: ${invoice.indentNo}` : ""}${customerGST ? ` | GST: ${customerGST}` : ""}</div>` : ""}
+${invoice.vehicleKM ? `<div class="xs right">KM: ${invoice.vehicleKM.toLocaleString("en-IN")}</div>` : ""}
 <hr class="solid">
 
 <!-- Items -->
@@ -160,14 +168,22 @@ ${invoice.vehicleKM ? `<div style="font-size:13pt;font-weight:900;text-align:rig
     </tr></thead>
     <tbody>${itemsHtml}</tbody>
 </table>
-<hr class="solid">
 
-<div class="grand-total">Rs. ${formatCurrency(invoice.netAmount)}</div>
-
-<hr>
-<div class="xs center">Computer-generated invoice.</div>
+<!-- Right-aligned totals stack -->
+<table class="totals">
+    <tr><td class="label">Sub Total</td><td class="val">${formatCurrency(subTotal)}</td></tr>
+    ${totalDiscount > 0 ? `<tr><td class="label">Discount</td><td class="val">-${formatCurrency(totalDiscount)}</td></tr>` : ""}
+    <tr class="grand"><td class="label">Total (Rs.)</td><td class="val">${formatCurrency(invoice.netAmount)}</td></tr>
+</table>
 
 ${!isCash ? `<div class="sign-line"><span class="xs">Party Signature</span></div>` : ""}
+
+<div class="audit">
+    <span>Pump Reading: </span>
+    <span>Nozzle: </span>
+    <span>Attendant: </span>
+</div>
+<div class="xs center" style="margin-top:2px;">Computer-generated invoice.</div>
 
 </body>
 </html>`;
