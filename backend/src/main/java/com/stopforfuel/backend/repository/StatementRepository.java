@@ -145,6 +145,11 @@ public interface StatementRepository extends ScidRepository<Statement> {
            "AND s.status <> 'PAID' AND s.status <> 'DRAFT'")
     BigDecimal sumUnpaidStatementBalance(@Param("customerId") Long customerId);
 
+    // All unpaid statements across all customers, customer fetched
+    @Query("SELECT s FROM Statement s JOIN FETCH s.customer c WHERE s.status <> 'PAID' AND s.status <> 'DRAFT' " +
+           "ORDER BY c.name ASC, s.statementDate ASC, s.id ASC")
+    List<Statement> findAllUnpaidWithCustomer();
+
     @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.scid = :scid")
     long countByStatementDateRange(
             @org.springframework.data.repository.query.Param("start") LocalDate start,

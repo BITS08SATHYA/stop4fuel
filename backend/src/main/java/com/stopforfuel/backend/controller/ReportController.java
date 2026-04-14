@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.service.AllPartyUnpaidReportService;
 import com.stopforfuel.backend.service.CustomerBalanceReportService;
 import com.stopforfuel.backend.service.DailySalesReportService;
 import com.stopforfuel.backend.service.TankInventorySummaryReportService;
@@ -21,6 +22,7 @@ public class ReportController {
     private final DailySalesReportService dailySalesReportService;
     private final TankInventorySummaryReportService tankInventoryReportService;
     private final CustomerBalanceReportService customerBalanceReportService;
+    private final AllPartyUnpaidReportService allPartyUnpaidReportService;
 
     // ======================== Daily Sales ========================
 
@@ -96,6 +98,54 @@ public class ReportController {
     public ResponseEntity<byte[]> customerBalanceExcel() {
         byte[] excel = customerBalanceReportService.generateExcel();
         String filename = "CustomerBalance_" + LocalDate.now() + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    // ======================== All Party Statement ========================
+
+    @GetMapping("/all-party-statement/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> allPartyStatementPdf() {
+        byte[] pdf = allPartyUnpaidReportService.generateStatementPdf();
+        String filename = "AllPartyStatement_" + LocalDate.now() + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/all-party-statement/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> allPartyStatementExcel() {
+        byte[] excel = allPartyUnpaidReportService.generateStatementExcel();
+        String filename = "AllPartyStatement_" + LocalDate.now() + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    // ======================== All Party Local ========================
+
+    @GetMapping("/all-party-local/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> allPartyLocalPdf() {
+        byte[] pdf = allPartyUnpaidReportService.generateLocalPdf();
+        String filename = "AllPartyLocal_" + LocalDate.now() + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/all-party-local/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> allPartyLocalExcel() {
+        byte[] excel = allPartyUnpaidReportService.generateLocalExcel();
+        String filename = "AllPartyLocal_" + LocalDate.now() + ".xlsx";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))

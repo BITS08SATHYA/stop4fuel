@@ -26,3 +26,19 @@ export const downloadCustomerBalanceReport = (format: 'pdf' | 'excel'): Promise<
         return res.blob();
     });
 };
+
+export const downloadAllPartyStatementReport = (format: 'pdf' | 'excel'): Promise<Blob> => {
+    const endpoint = format === 'pdf' ? 'pdf' : 'excel';
+    return fetchWithAuth(`${API_BASE_URL}/reports/all-party-statement/${endpoint}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};
+
+export const downloadAllPartyLocalReport = (format: 'pdf' | 'excel'): Promise<Blob> => {
+    const endpoint = format === 'pdf' ? 'pdf' : 'excel';
+    return fetchWithAuth(`${API_BASE_URL}/reports/all-party-local/${endpoint}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};

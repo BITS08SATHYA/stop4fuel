@@ -6,6 +6,8 @@ import {
     downloadDailySalesReport,
     downloadTankInventoryReport,
     downloadCustomerBalanceReport,
+    downloadAllPartyStatementReport,
+    downloadAllPartyLocalReport,
 } from "@/lib/api/station";
 import { showToast } from "@/components/ui/toast";
 import {
@@ -17,6 +19,8 @@ import {
     Users,
     Calendar,
     Loader2,
+    FileSignature,
+    Receipt,
 } from "lucide-react";
 
 function getCurrentMonthRange() {
@@ -40,7 +44,12 @@ function triggerDownload(blob: Blob, filename: string) {
     window.URL.revokeObjectURL(url);
 }
 
-type ReportType = "daily-sales" | "tank-inventory" | "customer-balance";
+type ReportType =
+    | "daily-sales"
+    | "tank-inventory"
+    | "customer-balance"
+    | "all-party-statement"
+    | "all-party-local";
 
 interface ReportConfig {
     key: ReportType;
@@ -79,6 +88,24 @@ const reports: ReportConfig[] = [
         color: "text-green-500",
         needsDates: false,
     },
+    {
+        key: "all-party-statement",
+        title: "All Party Statement Report",
+        description:
+            "Every statement customer with their unpaid statements since inception — grouped by customer with Date, Net, Received, Balance and subtotals.",
+        icon: FileSignature,
+        color: "text-purple-500",
+        needsDates: false,
+    },
+    {
+        key: "all-party-local",
+        title: "All Party Local Report",
+        description:
+            "Every local customer with their unpaid credit invoices since inception — grouped by customer with Date, Net, Received, Balance and subtotals.",
+        icon: Receipt,
+        color: "text-amber-500",
+        needsDates: false,
+    },
 ];
 
 export default function ReportsPage() {
@@ -111,6 +138,20 @@ export default function ReportsPage() {
                     triggerDownload(
                         blob,
                         `CustomerBalance_${new Date().toISOString().split("T")[0]}.${ext}`
+                    );
+                    break;
+                case "all-party-statement":
+                    blob = await downloadAllPartyStatementReport(format);
+                    triggerDownload(
+                        blob,
+                        `AllPartyStatement_${new Date().toISOString().split("T")[0]}.${ext}`
+                    );
+                    break;
+                case "all-party-local":
+                    blob = await downloadAllPartyLocalReport(format);
+                    triggerDownload(
+                        blob,
+                        `AllPartyLocal_${new Date().toISOString().split("T")[0]}.${ext}`
                     );
                     break;
             }
