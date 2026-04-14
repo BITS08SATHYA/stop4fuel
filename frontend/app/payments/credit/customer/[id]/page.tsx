@@ -47,6 +47,7 @@ interface CustomerFull {
     forceUnblockedAt?: string | null;
     group?: { id: number; groupName?: string } | null;
     customerCategory?: { id: number; categoryName?: string; categoryType?: string } | null;
+    party?: { id: number; partyType?: string } | null;
 }
 
 interface Vehicle {
@@ -197,7 +198,8 @@ export default function CreditCustomerProfilePage() {
     // statement-party → Statements; local/credit → Credit Invoices.
     useEffect(() => {
         if (!customer) return;
-        const isStmt = !!customer.statementFrequency;
+        const isStmt = customer.party?.partyType?.toLowerCase() === "statement"
+            || !!customer.statementFrequency;
         setActiveTab(prev => {
             if (isStmt && (prev === "invoices" || prev === "payments")) return "statements";
             if (!isStmt && prev === "statements") return "invoices";
@@ -268,7 +270,8 @@ export default function CreditCustomerProfilePage() {
     }
     if (!customer || !health) return <div className="p-4 sm:p-6 lg:p-8 text-muted-foreground">Customer not found.</div>;
 
-    const isStatementCustomer = !!customer.statementFrequency;
+    const isStatementCustomer = customer.party?.partyType?.toLowerCase() === "statement"
+        || !!customer.statementFrequency;
 
     return (
         <div className="p-4 h-screen bg-background overflow-hidden flex flex-col">

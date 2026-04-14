@@ -61,7 +61,13 @@ public class LedgerService {
         // (Opening balance via sumCreditBillsByCustomerBefore is still correct since a
         // statement's total equals the sum of its constituent bills.)
         Customer customer = customerRepository.findById(customerId).orElse(null);
-        boolean isStatementCustomer = customer != null && customer.getStatementFrequency() != null;
+        // Canonical classification: Party.partyType == "Statement" (matches CustomerService,
+        // CreditMonitoringService, PaymentService). Backstop: any generated statements means
+        // the customer should be treated as a statement customer even if Party isn't set.
+        boolean isStatementCustomer =
+                (customer != null && customer.getParty() != null
+                        && "Statement".equalsIgnoreCase(customer.getParty().getPartyType()))
+                || statementRepository.existsByCustomerId(customerId);
 
         // Fetch payments in period
         List<Payment> payments = paymentRepository.findByCustomerIdAndPaymentDateBetween(

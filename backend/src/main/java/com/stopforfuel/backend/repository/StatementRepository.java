@@ -119,6 +119,26 @@ public interface StatementRepository extends ScidRepository<Statement> {
     @Query("SELECT COUNT(s) FROM Statement s WHERE s.customer.id = :customerId AND s.status = 'NOT_PAID'")
     long countUnpaidStatements(@Param("customerId") Long customerId);
 
+    boolean existsByCustomerId(Long customerId);
+
+    // Outstanding statements (unpaid or partial) with balance < :maxBalance, used by
+    // Outstanding Explorer. Ordered by smallest balance first.
+    @EntityGraph(attributePaths = {"customer"})
+    @Query("SELECT s FROM Statement s WHERE s.scid = :scid AND s.status <> 'PAID' AND s.status <> 'DRAFT' "
+            + "AND (CAST(:fromDate AS date) IS NULL OR s.statementDate >= :fromDate) "
+            + "AND (CAST(:toDate AS date) IS NULL OR s.statementDate <= :toDate) "
+            + "AND (:search = '' OR LOWER(s.customer.name) LIKE LOWER(CONCAT('%', :search, '%')) "
+            + "    OR LOWER(s.statementNo) LIKE LOWER(CONCAT('%', :search, '%'))) "
+            + "AND (:maxBalance IS NULL OR s.balanceAmount < :maxBalance) "
+            + "ORDER BY s.balanceAmount ASC, s.statementDate DESC")
+    Page<Statement> findOutstanding(
+            @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,
+            @org.springframework.data.repository.query.Param("toDate") LocalDate toDate,
+            @org.springframework.data.repository.query.Param("search") String search,
+            @org.springframework.data.repository.query.Param("maxBalance") BigDecimal maxBalance,
+            @org.springframework.data.repository.query.Param("scid") Long scid,
+            Pageable pageable);
+
     // Sum unpaid statement balance for a customer
     @Query("SELECT COALESCE(SUM(s.balanceAmount), 0) FROM Statement s WHERE s.customer.id = :customerId AND s.status = 'NOT_PAID'")
     BigDecimal sumUnpaidStatementBalance(@Param("customerId") Long customerId);
