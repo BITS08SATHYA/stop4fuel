@@ -266,7 +266,7 @@ export default function CreditCustomerProfilePage() {
             </div>
         );
     }
-    if (!customer || !health) return <div className="p-8 text-muted-foreground">Customer not found.</div>;
+    if (!customer || !health) return <div className="p-4 sm:p-6 lg:p-8 text-muted-foreground">Customer not found.</div>;
 
     const isStatementCustomer = !!customer.statementFrequency;
 
@@ -489,7 +489,7 @@ export default function CreditCustomerProfilePage() {
                                                     </button>
                                                 </PermissionGate>
                                             </div>
-                                            <div className="grid grid-cols-3 gap-1 mt-1 text-[9px]">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 mt-1 text-[9px]">
                                                 <div>
                                                     <span className="text-muted-foreground">Type: </span>
                                                     <span className="text-foreground">{v.vehicleType?.name || "-"}</span>

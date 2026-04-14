@@ -94,7 +94,7 @@ export default function PumpsPage() {
     };
 
     return (
-        <div className="p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>

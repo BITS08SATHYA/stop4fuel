@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${jakartaSans.variable} ${jetbrainsMono.variable} antialiased flex h-screen overflow-hidden bg-background text-foreground`}
+        className={`${jakartaSans.variable} ${jetbrainsMono.variable} antialiased h-screen overflow-hidden bg-background text-foreground`}
         style={{ fontFamily: "var(--font-body), system-ui, sans-serif" }}
       >
         <ThemeProvider

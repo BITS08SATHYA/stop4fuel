@@ -1189,7 +1189,7 @@ export default function InvoicesPage() {
                         {billType === "CASH" && (
                             <div>
                                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Payment Method</label>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                                     {["CASH", "CARD", "UPI", "CCMS"].map(mode => (
                                         <button
                                             key={mode}
@@ -1258,7 +1258,7 @@ export default function InvoicesPage() {
                         </div>
                     </div>
 
-                    <div className="p-8 bg-muted/30 border border-border rounded-3xl flex flex-col justify-center items-center text-center">
+                    <div className="p-4 sm:p-6 lg:p-8 bg-muted/30 border border-border rounded-3xl flex flex-col justify-center items-center text-center">
                         <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-[0.2em] font-black">Total Payable</p>
                         <p className="text-5xl font-black text-foreground mb-3">₹{calculateTotal().toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                         <div className="w-full space-y-2 mt-6 text-left px-4">
@@ -1533,7 +1533,7 @@ export default function InvoicesPage() {
     );
 
     return (
-        <div className="p-8 min-h-screen bg-background">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-10">
                     <div>
@@ -1669,7 +1669,7 @@ export default function InvoicesPage() {
 
                         {/* Summary cards */}
                         {invoices.length > 0 && (
-                            <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
                                 <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 text-center">
                                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</div>
                                     <div className="text-lg font-bold text-foreground">{invoices.length}</div>

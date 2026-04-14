@@ -111,7 +111,7 @@ export default function NotificationSettingsPage() {
     }
 
     return (
-        <div className="p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-4xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold text-foreground tracking-tight">

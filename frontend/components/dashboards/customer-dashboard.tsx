@@ -54,7 +54,7 @@ export function CustomerDashboard() {
     if (error || !data) {
         return (
             <div className="flex items-center justify-center h-[60vh]">
-                <GlassCard className="p-8 text-center max-w-md">
+                <GlassCard className="p-4 sm:p-6 lg:p-8 text-center max-w-md">
                     <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
                     <p className="text-sm text-muted-foreground">{error || "No data available"}</p>
                 </GlassCard>

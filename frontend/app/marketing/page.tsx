@@ -5,7 +5,7 @@ import { Megaphone, Gift, Tag, TrendingUp, Construction } from "lucide-react";
 
 export default function MarketingPage() {
     return (
-        <div className="p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">

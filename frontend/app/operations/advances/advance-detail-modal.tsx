@@ -198,7 +198,7 @@ export function AdvanceDetailModal({ isOpen, onClose, advance, onDataChanged }: 
 
                         {/* Financial Breakdown */}
                         <div className="mt-4 pt-4 border-t border-border">
-                            <div className="grid grid-cols-4 gap-3 text-sm">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                                 <div>
                                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Amount</p>
                                     <p className="font-bold text-foreground text-base">{formatCurrency(detailAdvance.amount)}</p>

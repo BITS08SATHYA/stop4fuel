@@ -12,7 +12,7 @@ interface StatCardProps {
 
 export function StatCard({ title, value, trend, trendUp, icon: Icon, className }: StatCardProps) {
     return (
-        <div className={cn("rounded-xl border bg-card p-6 text-card-foreground shadow-sm", className)}>
+        <div className={cn("rounded-xl border bg-card p-4 sm:p-5 md:p-6 text-card-foreground shadow-sm", className)}>
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <h3 className="tracking-tight text-sm font-medium text-muted-foreground">{title}</h3>
                 <Icon className="h-4 w-4 text-muted-foreground" />

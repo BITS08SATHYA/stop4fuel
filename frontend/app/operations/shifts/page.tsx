@@ -1074,7 +1074,7 @@ export default function ShiftsPage() {
                     {/* Transaction Type Selector */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">Entry Type</label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                             {TXN_TYPES.map((t) => {
                                 const Icon = t.icon;
                                 return (

@@ -957,7 +957,7 @@ function PaymentsTab({
     return (
         <div className="space-y-4">
             {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="bg-card/50 border border-border rounded-xl p-3 text-center">
                     <p className="text-xs text-muted-foreground">Total Received</p>
                     <p className="text-base font-bold text-green-400">{formatCurrency(totalReceived)}</p>

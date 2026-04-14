@@ -200,7 +200,7 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                 <button onClick={addPhone} className="text-cyan-500 text-sm">+ Add Phone</button>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
                         Customer Type <span className="text-red-500">*</span>

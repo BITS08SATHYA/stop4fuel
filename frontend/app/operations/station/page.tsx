@@ -24,7 +24,7 @@ export default function StationLayoutPage() {
 
     if (isLoading) {
         return (
-            <div className="p-8 min-h-screen bg-background flex items-center justify-center">
+            <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-muted-foreground animate-pulse">Loading station layout...</p>
@@ -38,7 +38,7 @@ export default function StationLayoutPage() {
     const activeNozzles = nozzles.filter(n => n.active).length;
 
     return (
-        <div className="p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">

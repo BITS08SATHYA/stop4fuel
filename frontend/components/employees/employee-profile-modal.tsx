@@ -218,7 +218,7 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
                         </div>
                         {showSalaryForm && (
                             <GlassCard>
-                                <form onSubmit={handleSalaryRevision} className="grid grid-cols-3 gap-4">
+                                <form onSubmit={handleSalaryRevision} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">New Salary *</label>
                                         <input type="number" className={`${inputClass} ${inputErrorClass(salaryErrors.newSalary)}`} value={salaryRevision.newSalary} onChange={(e) => { setSalaryRevision({ ...salaryRevision, newSalary: e.target.value }); clearSalaryError("newSalary"); }} />

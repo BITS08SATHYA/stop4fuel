@@ -25,7 +25,7 @@ export default function CustomerVehiclesPage() {
             {loading ? (
                 <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
             ) : vehicles.length === 0 ? (
-                <GlassCard className="p-8 text-center">
+                <GlassCard className="p-4 sm:p-6 lg:p-8 text-center">
                     <p className="text-sm text-muted-foreground">No vehicles registered</p>
                 </GlassCard>
             ) : (

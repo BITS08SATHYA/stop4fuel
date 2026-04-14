@@ -181,7 +181,7 @@ export function CustomerProfileOverlay({
 
                 {/* Credit Summary Bar */}
                 <div className="px-5 py-3 border-b border-border">
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <div className="bg-muted/30 rounded-lg px-3 py-2">
                             <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Total Billed</div>
                             <div className="text-sm font-bold text-foreground">{fmt(customer.totalBilled)}</div>

@@ -4,7 +4,7 @@ import React from "react";
 
 export default function ProfilePage() {
     return (
-        <div className="p-8 min-h-screen bg-background text-foreground">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background text-foreground">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold tracking-tight">

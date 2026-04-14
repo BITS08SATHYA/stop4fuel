@@ -135,7 +135,7 @@ export default function GradeTypesPage() {
     const uniqueOilTypeNames = [...new Set(grades.map(g => g.oilType?.name || "Uncategorized"))];
 
     return (
-        <div className="p-8 min-h-screen bg-background">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>

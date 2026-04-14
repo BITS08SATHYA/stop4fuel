@@ -54,6 +54,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useSidebar } from "@/components/sidebar-context";
 
 const mainNav = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -256,6 +257,7 @@ export function AppSidebar() {
     const pathname = usePathname();
     const { user, hasPermission, logout, logoutAllDevices } = useAuth();
     const [showLogoutMenu, setShowLogoutMenu] = useState(false);
+    const { open, close } = useSidebar();
 
     const isActive = (href: string) => {
         if (href === "/dashboard") return pathname === "/dashboard";
@@ -269,10 +271,16 @@ export function AppSidebar() {
     const filteredSections = activeSections.filter(section => hasPermission(section.permission));
 
     return (
-        <aside className="w-64 border-r border-border bg-card text-card-foreground flex flex-col h-screen sticky top-0 transition-colors duration-300">
-            <div className="h-16 flex items-center px-6 border-b border-border">
-                <div className="flex items-center gap-2 font-bold text-xl">
-                    <img src="/logo-icon.svg" alt="StopForFuel" className="w-7 h-7" />
+        <aside
+            className={cn(
+                "border-r border-border bg-card text-card-foreground flex flex-col h-screen transition-all duration-300 ease-in-out",
+                "fixed lg:static top-0 left-0 z-40",
+                open ? "w-64 translate-x-0" : "w-64 -translate-x-full lg:w-0 lg:translate-x-0 lg:border-r-0 lg:overflow-hidden"
+            )}
+        >
+            <div className="h-14 flex items-center justify-between px-4 border-b border-border">
+                <div className="flex items-center gap-2 font-bold text-lg">
+                    <img src="/logo-icon.svg" alt="StopForFuel" className="w-6 h-6" />
                     <span className="text-foreground">Stop<span className="text-gradient">ForFuel</span></span>
                 </div>
             </div>
@@ -288,6 +296,9 @@ export function AppSidebar() {
                                 <Link
                                     key={item.name}
                                     href={item.href}
+                                    onClick={() => {
+                                        if (typeof window !== "undefined" && window.innerWidth < 1024) close();
+                                    }}
                                     className={cn(
                                         "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                         isActive(item.href)

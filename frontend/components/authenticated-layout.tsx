@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import { configureAmplify } from "@/lib/auth/amplify-config";
 import { AuthProvider, useAuth } from "@/lib/auth/auth-context";
 import { AppSidebar } from "@/components/app-sidebar";
+import { TopBar } from "@/components/top-bar";
+import { SidebarProvider, useSidebar } from "@/components/sidebar-context";
 import { ToastProvider } from "@/components/ui/toast";
 
 // Initialize Amplify on client side
@@ -30,7 +32,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     }, [isLoading, isAuthenticated, isPublicPath, router]);
 
     if (isPublicPath) {
-        return <main className="flex-1 overflow-y-auto bg-background">{children}</main>;
+        return <main className="h-full overflow-y-auto bg-background">{children}</main>;
     }
 
     if (isLoading) {
@@ -41,11 +43,26 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         );
     }
 
+    return <AppShell>{children}</AppShell>;
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
+    const { open, close } = useSidebar();
     return (
-        <>
+        <div className="flex h-screen overflow-hidden">
             <AppSidebar />
-            <main className="flex-1 overflow-y-auto bg-background">{children}</main>
-        </>
+            {open && (
+                <div
+                    aria-hidden
+                    onClick={close}
+                    className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+                />
+            )}
+            <div className="flex-1 flex flex-col min-w-0">
+                <TopBar />
+                <main className="flex-1 overflow-y-auto bg-background">{children}</main>
+            </div>
+        </div>
     );
 }
 
@@ -53,7 +70,9 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
     return (
         <AuthProvider>
             <ToastProvider>
-                <LayoutContent>{children}</LayoutContent>
+                <SidebarProvider>
+                    <LayoutContent>{children}</LayoutContent>
+                </SidebarProvider>
             </ToastProvider>
         </AuthProvider>
     );

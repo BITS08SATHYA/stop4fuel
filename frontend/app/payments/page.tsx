@@ -388,7 +388,7 @@ export default function PaymentsPage() {
 
     if (loading && payments.length === 0) {
         return (
-            <div className="p-8 flex items-center justify-center h-screen">
+            <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center h-screen">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
         );
@@ -1053,7 +1053,7 @@ export default function PaymentsPage() {
                                 <div className="text-xs text-muted-foreground mb-2 font-medium">
                                     {viewPayment.statement ? "Statement" : "Bill"} Summary
                                 </div>
-                                <div className="grid grid-cols-3 gap-3 text-sm">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                                     <div>
                                         <span className="text-muted-foreground text-xs">Net Amount</span>
                                         <div className="font-bold">

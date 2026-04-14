@@ -430,7 +430,7 @@ export default function CreditOverviewPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-4 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                         <div className="bg-muted/30 rounded-md px-2.5 py-1.5">
                                             <div className="text-[9px] uppercase text-muted-foreground">Total Billed</div>
                                             <div className="text-xs font-bold text-foreground">{fmt(selectedCustomer.totalBilled)}</div>

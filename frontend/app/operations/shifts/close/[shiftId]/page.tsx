@@ -223,7 +223,7 @@ export default function ShiftClosingWorkspace() {
     if (error || !data) {
         return (
             <div className="p-6 max-w-4xl mx-auto">
-                <GlassCard className="p-8 text-center">
+                <GlassCard className="p-4 sm:p-6 lg:p-8 text-center">
                     <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
                     <h2 className="text-lg font-semibold mb-2">Error</h2>
                     <p className="text-muted-foreground mb-4">{error || "No data found"}</p>

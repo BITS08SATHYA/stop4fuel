@@ -326,7 +326,7 @@ export default function CreditMonitoringPage() {
                         <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                     </div>
                 ) : error ? (
-                    <GlassCard className="p-8 text-center">
+                    <GlassCard className="p-4 sm:p-6 lg:p-8 text-center">
                         <p className="text-red-500 mb-4">{error}</p>
                         <button onClick={() => loadData(activeTab)} className="btn-gradient px-6 py-2 rounded-lg">Retry</button>
                     </GlassCard>

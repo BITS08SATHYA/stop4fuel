@@ -371,7 +371,7 @@ function CustomerCard({ c, selected, onSelect, fmt }: {
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 flex-shrink-0" />
             </div>
-            <div className="grid grid-cols-3 gap-1.5 mt-1.5 text-[9px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 mt-1.5 text-[9px]">
                 <div>
                     <div className="text-muted-foreground">Outstanding</div>
                     <div className="font-semibold text-foreground">{fmt(c.ledgerBalance)}</div>
