@@ -60,7 +60,6 @@ interface CompanyInfo {
 function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string {
     const isCash = invoice.billType === "CASH";
     const billBadge = isCash ? "CASH" : "CREDIT";
-    const paymentStatus = invoice.paymentStatus === "PAID" ? "PAID" : "NOT PAID";
 
     // Customer info
     const customerName = invoice.customer?.name || invoice.signatoryName || "Walk-in Customer";
@@ -72,9 +71,6 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 
     // Products
     const products = invoice.products || [];
-    const grossAmount = invoice.grossAmount || invoice.netAmount || 0;
-    const totalDiscount = invoice.totalDiscount || 0;
-    const rounding = (invoice.netAmount || 0) - (grossAmount - totalDiscount);
 
     // Items HTML — compact, no nozzle line, discount inline
     const itemsHtml = products.map((p) => {
@@ -127,8 +123,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 <!-- Header -->
 <div class="center">
     <div class="big">${asciiSafe(company.name)}</div>
-    <div class="xs">${asciiSafe(company.address)} | Ph: ${asciiSafe(company.phone)}</div>
-    <div class="xs">GSTIN: ${asciiSafe(company.gstNo)}</div>
+    <div class="xs">${asciiSafe(company.address)} | Ph: ${asciiSafe(company.phone)} | GSTIN: ${asciiSafe(company.gstNo)}</div>
 </div>
 <hr class="solid">
 <div class="center"><span style="font-size:16pt;font-weight:900;">TAX INVOICE</span> <span class="badge">${billBadge}</span></div>
@@ -167,18 +162,10 @@ ${invoice.vehicleKM ? `<div style="font-size:13pt;font-weight:900;text-align:rig
 </table>
 <hr class="solid">
 
-<!-- Totals -->
-<table style="font-size:14pt;font-weight:900;">
-    <tr><td>Gross</td><td style="text-align:right;font-weight:bold;">${formatCurrency(grossAmount)}</td>
-        <td style="width:10px;"></td>
-        <td>Payment</td><td style="text-align:right;font-weight:bold;">${isCash ? (invoice.paymentMode || "CASH") : "CREDIT"}</td></tr>
-    ${totalDiscount > 0 ? `<tr><td>Discount</td><td style="text-align:right;">-${formatCurrency(totalDiscount)}</td><td></td><td>Status</td><td style="text-align:right;font-weight:bold;">${paymentStatus}</td></tr>` : ""}
-</table>
-
 <div class="grand-total">Rs. ${formatCurrency(invoice.netAmount)}</div>
 
 <hr>
-<div class="xs center">Fuel prices include all applicable taxes. Goods once sold will not be taken back. Computer-generated invoice.</div>
+<div class="xs center">Computer-generated invoice.</div>
 
 ${!isCash ? `<div class="sign-line"><span class="xs">Party Signature</span></div>` : ""}
 
