@@ -25,6 +25,7 @@ public class AiAnalyticsService {
     private final ChatClient chatClient;
     private final DashboardService dashboardService;
     private final ObjectMapper objectMapper;
+    private final com.stopforfuel.config.BusinessMetrics metrics;
 
     public record ChatMessageDTO(String role, String content) {}
     public record ChatResponse(String answer) {}
@@ -44,12 +45,14 @@ public class AiAnalyticsService {
             }
         }
 
-        String response = chatClient.prompt()
-                .system(s -> s.param("current_date", LocalDate.now().toString()))
-                .messages(messages)
-                .user(userMessage)
-                .call()
-                .content();
+        String response = metrics.aiRequestDuration.record(() ->
+                chatClient.prompt()
+                        .system(s -> s.param("current_date", LocalDate.now().toString()))
+                        .messages(messages)
+                        .user(userMessage)
+                        .call()
+                        .content()
+        );
 
         return new ChatResponse(response);
     }
@@ -62,23 +65,25 @@ public class AiAnalyticsService {
 
         String dataContext = buildDataSummary(stats, invoiceAnalytics, paymentAnalytics, systemHealth);
 
-        String response = chatClient.prompt()
-                .system("""
-                        You are a fuel station data analyst. Analyze the provided station data and return
-                        exactly 5-8 key insights as a JSON array. Each insight must have these fields:
-                        - category: one of "sales", "inventory", "credit", "operations"
-                        - title: short summary, max 60 characters
-                        - detail: 1-2 sentences with specific numbers using ₹ for currency
-                        - severity: one of "positive", "info", "warning", "critical"
+        String response = metrics.aiRequestDuration.record(() ->
+                chatClient.prompt()
+                        .system("""
+                                You are a fuel station data analyst. Analyze the provided station data and return
+                                exactly 5-8 key insights as a JSON array. Each insight must have these fields:
+                                - category: one of "sales", "inventory", "credit", "operations"
+                                - title: short summary, max 60 characters
+                                - detail: 1-2 sentences with specific numbers using ₹ for currency
+                                - severity: one of "positive", "info", "warning", "critical"
 
-                        Focus on actionable observations: revenue trends, low tank stock, overdue credit,
-                        unusual patterns, top performers. Today's date is """ + LocalDate.now() + """
-                        .
-                        Return ONLY a valid JSON array, no markdown fencing, no extra text.
-                        """)
-                .user(dataContext)
-                .call()
-                .content();
+                                Focus on actionable observations: revenue trends, low tank stock, overdue credit,
+                                unusual patterns, top performers. Today's date is """ + LocalDate.now() + """
+                                .
+                                Return ONLY a valid JSON array, no markdown fencing, no extra text.
+                                """)
+                        .user(dataContext)
+                        .call()
+                        .content()
+        );
 
         List<Insight> insights = parseInsightsJson(response);
         return new InsightsResponse(insights,

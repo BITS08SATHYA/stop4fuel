@@ -43,6 +43,7 @@ public class InvoiceBillService {
     private final StatementRepository statementRepository;
     private final InvoiceBillPhotoRepository invoiceBillPhotoRepository;
     private final TextractValidationService textractValidationService;
+    private final com.stopforfuel.config.BusinessMetrics metrics;
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -347,6 +348,7 @@ public class InvoiceBillService {
         // --- Auto-create incentive payment for CASH invoices with discount ---
         autoCreateIncentivePayment(saved);
 
+        metrics.invoiceCreated(saved.getBillType() != null ? saved.getBillType().name() : null);
         return saved;
     }
 

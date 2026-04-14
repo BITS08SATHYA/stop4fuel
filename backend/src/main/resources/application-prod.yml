@@ -1,0 +1,8 @@
+management:
+  cloudwatch:
+    metrics:
+      export:
+        enabled: true
+        namespace: StopForFuel/Backend
+        step: 1m
+        batch-size: 20

@@ -44,6 +44,7 @@ public class ShiftService {
     private final ShiftClosingReportRepository shiftClosingReportRepository;
     private final StatementAutoGenerationService statementAutoGenerationService;
     private final com.stopforfuel.backend.repository.UserRepository userRepository;
+    private final com.stopforfuel.config.BusinessMetrics metrics;
 
     public ShiftService(ShiftRepository repository,
                         @Lazy ShiftClosingReportService shiftClosingReportService,
@@ -66,7 +67,8 @@ public class ShiftService {
                         S3StorageService s3StorageService,
                         ShiftClosingReportRepository shiftClosingReportRepository,
                         @Lazy StatementAutoGenerationService statementAutoGenerationService,
-                        com.stopforfuel.backend.repository.UserRepository userRepository) {
+                        com.stopforfuel.backend.repository.UserRepository userRepository,
+                        com.stopforfuel.config.BusinessMetrics metrics) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
         this.productInventoryService = productInventoryService;
@@ -89,6 +91,7 @@ public class ShiftService {
         this.shiftClosingReportRepository = shiftClosingReportRepository;
         this.statementAutoGenerationService = statementAutoGenerationService;
         this.userRepository = userRepository;
+        this.metrics = metrics;
     }
 
     @Transactional(readOnly = true)
@@ -121,6 +124,7 @@ public class ShiftService {
         // Auto-create ProductInventory records for all active products
         productInventoryService.autoCreateForShift(saved);
 
+        metrics.shiftOpened();
         return saved;
     }
 
@@ -326,6 +330,10 @@ public class ShiftService {
 
     @Transactional
     public Shift approveAndClose(Long shiftId) {
+        return metrics.shiftCloseDuration.record(() -> doApproveAndClose(shiftId));
+    }
+
+    private Shift doApproveAndClose(Long shiftId) {
         Shift shift = repository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
@@ -369,6 +377,7 @@ public class ShiftService {
             System.err.println("Failed to auto-generate statement drafts: " + e.getMessage());
         }
 
+        metrics.shiftClosed();
         return saved;
     }
 
