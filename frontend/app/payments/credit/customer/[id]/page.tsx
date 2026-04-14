@@ -192,6 +192,19 @@ export default function CreditCustomerProfilePage() {
     }, [customerId]);
 
     useEffect(() => { loadCore(); }, [loadCore]);
+
+    // Once customer loads, pick the default tab based on billing type:
+    // statement-party → Statements; local/credit → Credit Invoices.
+    useEffect(() => {
+        if (!customer) return;
+        const isStmt = !!customer.statementFrequency;
+        setActiveTab(prev => {
+            if (isStmt && (prev === "invoices" || prev === "payments")) return "statements";
+            if (!isStmt && prev === "statements") return "invoices";
+            return prev;
+        });
+    }, [customer]);
+
     useEffect(() => {
         if (activeTab === "invoices") loadInvoices(0);
         else if (activeTab === "statements") loadStatements();
@@ -508,12 +521,17 @@ export default function CreditCustomerProfilePage() {
                     <div className="col-span-8 flex flex-col overflow-hidden">
                         {/* Tab bar */}
                         <div className="flex items-center gap-1 mb-2 border-b border-border pb-1">
-                            {([
-                                { id: "invoices" as TabId, label: "Credit Invoices", icon: Receipt },
-                                { id: "statements" as TabId, label: "Statements", icon: FileText },
-                                { id: "payments" as TabId, label: "Payments", icon: IndianRupee },
-                                { id: "vehicles" as TabId, label: "Vehicle Details", icon: Truck },
-                            ]).map(tab => (
+                            {(isStatementCustomer
+                                ? [
+                                    { id: "statements" as TabId, label: "Statements", icon: FileText },
+                                    { id: "vehicles" as TabId, label: "Vehicle Details", icon: Truck },
+                                ]
+                                : [
+                                    { id: "invoices" as TabId, label: "Credit Invoices", icon: Receipt },
+                                    { id: "payments" as TabId, label: "Payments", icon: IndianRupee },
+                                    { id: "vehicles" as TabId, label: "Vehicle Details", icon: Truck },
+                                ]
+                            ).map(tab => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
@@ -707,10 +725,10 @@ function PaymentTable({ payments, loading, page, totalPages, onPageChange, fmt, 
                 <thead className="sticky top-0 bg-background">
                     <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
                         <th className="py-2 px-2">Date</th>
+                        <th className="py-2 px-2">Bill No</th>
                         <th className="py-2 px-2 text-right">Amount</th>
                         <th className="py-2 px-2">Mode</th>
                         <th className="py-2 px-2">Reference</th>
-                        <th className="py-2 px-2">Against</th>
                         <th className="py-2 px-2">Remarks</th>
                     </tr>
                 </thead>
@@ -718,12 +736,22 @@ function PaymentTable({ payments, loading, page, totalPages, onPageChange, fmt, 
                     {payments.map((p: any) => (
                         <tr key={p.id} className="border-b border-border/30 hover:bg-muted/20">
                             <td className="py-1.5 px-2 text-muted-foreground">{p.paymentDate ? fmtDate(p.paymentDate) : "-"}</td>
+                            <td className="py-1.5 px-2 font-medium">
+                                {p.invoiceBill ? (
+                                    <Link
+                                        href={`/operations/invoices/explorer?invoiceId=${p.invoiceBill.id}`}
+                                        className="text-primary hover:underline flex items-center gap-0.5"
+                                    >
+                                        {p.invoiceBill.billNo || `#${p.invoiceBill.id}`}
+                                        <ExternalLink className="w-2.5 h-2.5 opacity-50" />
+                                    </Link>
+                                ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                )}
+                            </td>
                             <td className="py-1.5 px-2 text-right font-medium text-emerald-400">{fmt(p.amount)}</td>
                             <td className="py-1.5 px-2 text-muted-foreground">{p.paymentMode || "-"}</td>
                             <td className="py-1.5 px-2 text-muted-foreground">{p.referenceNo || "-"}</td>
-                            <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[120px]">
-                                {p.statement ? `Stmt: ${p.statement.statementNo}` : p.invoiceBill ? `Bill: ${p.invoiceBill.billNo || p.invoiceBill.id}` : "-"}
-                            </td>
                             <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[100px]">{p.remarks || "-"}</td>
                         </tr>
                     ))}
