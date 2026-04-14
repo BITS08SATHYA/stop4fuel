@@ -111,12 +111,14 @@ public interface StatementRepository extends ScidRepository<Statement> {
     @Query("SELECT COALESCE(AVG(s.netAmount), 0) FROM Statement s WHERE s.scid = :scid")
     BigDecimal avgNetAmount(@org.springframework.data.repository.query.Param("scid") Long scid);
 
-    // Oldest unpaid statement date for a customer
-    @Query("SELECT MIN(s.statementDate) FROM Statement s WHERE s.customer.id = :customerId AND s.status = 'NOT_PAID'")
+    // Oldest outstanding statement date for a customer (anything not fully paid / not a draft)
+    @Query("SELECT MIN(s.statementDate) FROM Statement s WHERE s.customer.id = :customerId " +
+           "AND s.status <> 'PAID' AND s.status <> 'DRAFT'")
     LocalDate findOldestUnpaidStatementDate(@Param("customerId") Long customerId);
 
-    // Count unpaid statements for a customer
-    @Query("SELECT COUNT(s) FROM Statement s WHERE s.customer.id = :customerId AND s.status = 'NOT_PAID'")
+    // Count outstanding statements for a customer
+    @Query("SELECT COUNT(s) FROM Statement s WHERE s.customer.id = :customerId " +
+           "AND s.status <> 'PAID' AND s.status <> 'DRAFT'")
     long countUnpaidStatements(@Param("customerId") Long customerId);
 
     boolean existsByCustomerId(Long customerId);
@@ -138,8 +140,9 @@ public interface StatementRepository extends ScidRepository<Statement> {
             @org.springframework.data.repository.query.Param("scid") Long scid,
             Pageable pageable);
 
-    // Sum unpaid statement balance for a customer
-    @Query("SELECT COALESCE(SUM(s.balanceAmount), 0) FROM Statement s WHERE s.customer.id = :customerId AND s.status = 'NOT_PAID'")
+    // Sum outstanding statement balance for a customer
+    @Query("SELECT COALESCE(SUM(s.balanceAmount), 0) FROM Statement s WHERE s.customer.id = :customerId " +
+           "AND s.status <> 'PAID' AND s.status <> 'DRAFT'")
     BigDecimal sumUnpaidStatementBalance(@Param("customerId") Long customerId);
 
     @Query("SELECT COUNT(s) FROM Statement s WHERE s.statementDate >= :start AND s.statementDate < :end AND s.scid = :scid")

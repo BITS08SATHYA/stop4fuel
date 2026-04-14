@@ -147,22 +147,22 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.statement IS NULL AND ib.paymentStatus = 'NOT_PAID'")
     BigDecimal sumUnbilledCreditByCustomer(@Param("customerId") Long customerId);
 
-    // Oldest unpaid local credit bill date (no statement, not paid)
+    // Oldest outstanding local credit bill date (no statement, not fully paid)
     @Query("SELECT MIN(ib.date) FROM InvoiceBill ib " +
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +
-           "AND ib.paymentStatus = 'NOT_PAID' AND ib.statement IS NULL")
+           "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL")
     LocalDateTime findOldestUnpaidLocalBillDate(@Param("customerId") Long customerId);
 
-    // Count unpaid local credit bills
+    // Count outstanding local credit bills
     @Query("SELECT COUNT(ib) FROM InvoiceBill ib " +
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +
-           "AND ib.paymentStatus = 'NOT_PAID' AND ib.statement IS NULL")
+           "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL")
     long countUnpaidLocalCreditBills(@Param("customerId") Long customerId);
 
-    // Sum unpaid local credit bill amount
+    // Sum outstanding local credit bill amount
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +
-           "AND ib.paymentStatus = 'NOT_PAID' AND ib.statement IS NULL")
+           "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL")
     BigDecimal sumUnpaidLocalCreditAmount(@Param("customerId") Long customerId);
 
     // Detect skipped bills: has customer paid any bill newer than their oldest unpaid bill?

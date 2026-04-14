@@ -556,8 +556,6 @@ public class CreditMonitoringService {
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (Customer c : allCustomers) {
-            if (c.getCreditLimitAmount() == null || c.getCreditLimitAmount().compareTo(BigDecimal.ZERO) <= 0) continue;
-
             boolean isStatement = c.getParty() != null && "Statement".equalsIgnoreCase(c.getParty().getPartyType());
 
             // Filter by type
