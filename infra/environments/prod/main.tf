@@ -151,6 +151,16 @@ resource "aws_iam_role_policy" "ecs_task_permissions" {
         Effect   = "Allow"
         Action   = "textract:DetectDocumentText"
         Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "cloudwatch:PutMetricData"
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "cloudwatch:namespace" = "StopForFuel/Backend"
+          }
+        }
       }
     ]
   })
@@ -251,4 +261,22 @@ module "ssm" {
     "ecs-backend-service"  = module.ecs.backend_service_name
     "ecs-frontend-service" = module.ecs.frontend_service_name
   }
+}
+
+# ============================================================
+# Monitoring — CloudWatch alarms, dashboard, SNS
+# ============================================================
+module "monitoring" {
+  source = "../../modules/monitoring"
+
+  project_name              = var.project_name
+  environment               = var.environment
+  aws_region                = var.aws_region
+  alarm_email               = var.alarm_email
+  ecs_cluster_name          = module.ecs.cluster_name
+  ecs_backend_service_name  = module.ecs.backend_service_name
+  ecs_frontend_service_name = module.ecs.frontend_service_name
+  alb_arn_suffix            = module.alb.alb_arn_suffix
+  backend_tg_arn_suffix     = module.alb.backend_target_group_arn_suffix
+  rds_instance_id           = module.rds.instance_id
 }

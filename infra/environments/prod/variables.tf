@@ -44,3 +44,10 @@ variable "cognito_domain" {
 variable "acm_certificate_arn" {
   type = string
 }
+
+# CloudWatch alarm notifications (optional)
+variable "alarm_email" {
+  type        = string
+  description = "Email address to subscribe to the alarms SNS topic. Leave empty to skip — you can subscribe via the AWS console later."
+  default     = ""
+}
