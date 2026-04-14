@@ -10,6 +10,14 @@ export async function fetchWithAuth(
 ): Promise<Response> {
     const headers = new Headers(options.headers || {});
 
+    if (!headers.has("X-Request-Id")) {
+        const rid =
+            typeof crypto !== "undefined" && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        headers.set("X-Request-Id", rid);
+    }
+
     // In Cognito mode, add Authorization header from Cognito session
     if (!DEV_MODE) {
         try {

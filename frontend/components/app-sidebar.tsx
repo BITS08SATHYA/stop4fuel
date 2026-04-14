@@ -150,6 +150,7 @@ const systemNav = [
     { name: "Permissions", href: "/settings/permissions", icon: Shield },
     { name: "Configurations", href: "/settings", icon: Settings },
     { name: "Notifications", href: "/settings/notifications", icon: Bell },
+    { name: "Observability", href: "/admin/observability", icon: Activity },
 ];
 
 // Cashier-specific restricted navigation

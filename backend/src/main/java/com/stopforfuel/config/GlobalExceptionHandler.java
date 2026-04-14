@@ -5,6 +5,7 @@ import com.stopforfuel.backend.exception.DuplicateResourceException;
 import com.stopforfuel.backend.exception.ReportGenerationException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,10 @@ public class GlobalExceptionHandler {
         body.put("status", 400);
         body.put("error", "Validation Failed");
         body.put("fieldErrors", fieldErrors);
+        String requestId = MDC.get("requestId");
+        if (requestId != null) {
+            body.put("requestId", requestId);
+        }
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
@@ -122,6 +127,10 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now().toString());
         body.put("status", status.value());
         body.put("error", message);
+        String requestId = MDC.get("requestId");
+        if (requestId != null) {
+            body.put("requestId", requestId);
+        }
         return ResponseEntity.status(status).body(body);
     }
 }

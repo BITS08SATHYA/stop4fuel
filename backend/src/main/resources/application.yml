@@ -78,6 +78,8 @@ management:
         enabled: false
 
 logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [req=%X{requestId:-}] %logger{36} - %msg%n"
   level:
     org.springframework.data.web.config.SpringDataJacksonConfiguration: ERROR
     org.hibernate.orm.query: ERROR
