@@ -6,6 +6,7 @@ import com.stopforfuel.backend.exception.ReportGenerationException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,9 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @Value("${app.debug.errors:false}")
+    private boolean debugErrors;
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
@@ -113,16 +117,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         log.error("Unhandled RuntimeException", ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An internal error occurred");
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An internal error occurred", ex);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         log.error("Unhandled Exception", ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", ex);
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
+        return buildResponse(status, message, null);
+    }
+
+    private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, Throwable ex) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now().toString());
         body.put("status", status.value());
@@ -130,6 +138,14 @@ public class GlobalExceptionHandler {
         String requestId = MDC.get("requestId");
         if (requestId != null) {
             body.put("requestId", requestId);
+        }
+        if (debugErrors && ex != null) {
+            body.put("exception", ex.getClass().getSimpleName());
+            if (ex.getMessage() != null) body.put("detail", ex.getMessage());
+            StackTraceElement[] st = ex.getStackTrace();
+            if (st != null && st.length > 0) {
+                body.put("at", st[0].getClassName() + "." + st[0].getMethodName() + ":" + st[0].getLineNumber());
+            }
         }
         return ResponseEntity.status(status).body(body);
     }
