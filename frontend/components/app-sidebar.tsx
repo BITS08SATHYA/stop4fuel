@@ -186,6 +186,13 @@ const cashierSections: NavSection[] = [
             { name: "Credit Monitoring", href: "/payments/credit-monitoring", icon: AlertTriangle },
         ],
     },
+    {
+        label: "Reports",
+        permission: "REPORT_VIEW",
+        items: [
+            { name: "Reports", href: "/operations/reports", icon: ClipboardList },
+        ],
+    },
 ];
 
 // Customer-specific portal navigation
