@@ -284,24 +284,22 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     // max balance. Ordered by smallest balance first so near-settled bills surface first.
     @Query(value = "SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v "
             + "WHERE ib.scid = :scid AND ib.billType = 'CREDIT' AND ib.paymentStatus <> 'PAID' "
-            + "AND (:fromDate IS NULL OR ib.date >= :fromDate) "
-            + "AND (:toDate IS NULL OR ib.date <= :toDate) "
+            + "AND ib.date >= :fromDate AND ib.date <= :toDate "
             + "AND (:search = '' OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%')) "
             + "    OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
             + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%'))) "
-            + "AND (:maxBalance IS NULL OR (ib.netAmount - "
-            + "    (SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.invoiceBill = ib)) < :maxBalance) "
+            + "AND (ib.netAmount - "
+            + "    (SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.invoiceBill = ib)) < :maxBalance "
             + "ORDER BY (ib.netAmount - "
             + "    (SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.invoiceBill = ib)) ASC, ib.date DESC",
             countQuery = "SELECT COUNT(ib) FROM InvoiceBill ib LEFT JOIN ib.customer c LEFT JOIN ib.vehicle v "
             + "WHERE ib.scid = :scid AND ib.billType = 'CREDIT' AND ib.paymentStatus <> 'PAID' "
-            + "AND (:fromDate IS NULL OR ib.date >= :fromDate) "
-            + "AND (:toDate IS NULL OR ib.date <= :toDate) "
+            + "AND ib.date >= :fromDate AND ib.date <= :toDate "
             + "AND (:search = '' OR LOWER(ib.billNo) LIKE LOWER(CONCAT('%',:search,'%')) "
             + "    OR LOWER(c.name) LIKE LOWER(CONCAT('%',:search,'%')) "
             + "    OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%',:search,'%'))) "
-            + "AND (:maxBalance IS NULL OR (ib.netAmount - "
-            + "    (SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.invoiceBill = ib)) < :maxBalance)")
+            + "AND (ib.netAmount - "
+            + "    (SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.invoiceBill = ib)) < :maxBalance")
     Page<InvoiceBill> findOutstanding(
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate,

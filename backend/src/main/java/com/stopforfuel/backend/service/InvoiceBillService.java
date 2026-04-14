@@ -599,8 +599,13 @@ public class InvoiceBillService {
     @Transactional(readOnly = true)
     public Page<InvoiceBill> findOutstanding(LocalDateTime fromDate, LocalDateTime toDate,
             String search, java.math.BigDecimal maxBalance, Pageable pageable) {
+        // Sentinel values where the caller did not pass a filter — avoids Postgres
+        // 'could not determine data type of parameter' when all optionals are null.
+        LocalDateTime fd = fromDate != null ? fromDate : LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime td = toDate != null ? toDate : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
         String s = (search != null && !search.isEmpty()) ? search : "";
-        return repository.findOutstanding(fromDate, toDate, s, maxBalance, SecurityUtils.getScid(), pageable);
+        java.math.BigDecimal mb = maxBalance != null ? maxBalance : new java.math.BigDecimal("999999999999");
+        return repository.findOutstanding(fd, td, s, mb, SecurityUtils.getScid(), pageable);
     }
 
     @Transactional(readOnly = true)

@@ -125,11 +125,10 @@ public interface StatementRepository extends ScidRepository<Statement> {
     // Outstanding Explorer. Ordered by smallest balance first.
     @EntityGraph(attributePaths = {"customer"})
     @Query("SELECT s FROM Statement s WHERE s.scid = :scid AND s.status <> 'PAID' AND s.status <> 'DRAFT' "
-            + "AND (CAST(:fromDate AS date) IS NULL OR s.statementDate >= :fromDate) "
-            + "AND (CAST(:toDate AS date) IS NULL OR s.statementDate <= :toDate) "
+            + "AND s.statementDate >= :fromDate AND s.statementDate <= :toDate "
             + "AND (:search = '' OR LOWER(s.customer.name) LIKE LOWER(CONCAT('%', :search, '%')) "
             + "    OR LOWER(s.statementNo) LIKE LOWER(CONCAT('%', :search, '%'))) "
-            + "AND (:maxBalance IS NULL OR s.balanceAmount < :maxBalance) "
+            + "AND s.balanceAmount < :maxBalance "
             + "ORDER BY s.balanceAmount ASC, s.statementDate DESC")
     Page<Statement> findOutstanding(
             @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,

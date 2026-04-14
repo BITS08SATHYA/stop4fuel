@@ -71,8 +71,12 @@ public class StatementController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false, defaultValue = "") String search,
             @RequestParam(required = false) java.math.BigDecimal maxBalance) {
-        return statementRepository.findOutstanding(fromDate, toDate, search == null ? "" : search,
-                        maxBalance, SecurityUtils.getScid(),
+        // Sentinels avoid Postgres 'could not determine data type of parameter' for nulls.
+        LocalDate fd = fromDate != null ? fromDate : LocalDate.of(2000, 1, 1);
+        LocalDate td = toDate != null ? toDate : LocalDate.of(2099, 12, 31);
+        java.math.BigDecimal mb = maxBalance != null ? maxBalance : new java.math.BigDecimal("999999999999");
+        return statementRepository.findOutstanding(fd, td, search == null ? "" : search, mb,
+                        SecurityUtils.getScid(),
                         PageRequest.of(page, Math.min(size, 100)))
                 .map(StatementDTO::from);
     }
