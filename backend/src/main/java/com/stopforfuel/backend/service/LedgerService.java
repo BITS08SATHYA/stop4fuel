@@ -1,9 +1,13 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Payment;
+import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
+import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,8 @@ public class LedgerService {
 
     private final InvoiceBillRepository invoiceBillRepository;
     private final PaymentRepository paymentRepository;
+    private final CustomerRepository customerRepository;
+    private final StatementRepository statementRepository;
 
     /**
      * Calculate opening balance for a customer at a given date.
@@ -50,9 +56,12 @@ public class LedgerService {
 
         BigDecimal openingBalance = getOpeningBalance(customerId, fromDate);
 
-        // Fetch credit bills for this customer in the date range
-        List<InvoiceBill> allCreditBills = invoiceBillRepository.findCreditBillsByCustomerAndDateRange(
-                customerId, fromDateTime, toDateTime, SecurityUtils.getScid());
+        // Statement customers pay against statements, not individual bills. For them,
+        // the ledger shows one debit row per statement; local-credit customers see each bill.
+        // (Opening balance via sumCreditBillsByCustomerBefore is still correct since a
+        // statement's total equals the sum of its constituent bills.)
+        Customer customer = customerRepository.findById(customerId).orElse(null);
+        boolean isStatementCustomer = customer != null && customer.getStatementFrequency() != null;
 
         // Fetch payments in period
         List<Payment> payments = paymentRepository.findByCustomerIdAndPaymentDateBetween(
@@ -61,16 +70,32 @@ public class LedgerService {
         // Build ledger entries
         List<LedgerEntry> entries = new ArrayList<>();
 
-        for (InvoiceBill bill : allCreditBills) {
-            LedgerEntry entry = new LedgerEntry();
-            entry.date = bill.getDate();
-            entry.type = "DEBIT";
-            entry.description = "Credit Bill"
-                    + (bill.getBillDesc() != null ? " - " + bill.getBillDesc() : "");
-            entry.referenceId = bill.getId();
-            entry.debitAmount = bill.getNetAmount();
-            entry.creditAmount = BigDecimal.ZERO;
-            entries.add(entry);
+        if (isStatementCustomer) {
+            List<Statement> statements = statementRepository.findByCustomerIdAndStatementDateBetween(
+                    customerId, fromDate, toDate);
+            for (Statement s : statements) {
+                LedgerEntry entry = new LedgerEntry();
+                entry.date = s.getStatementDate() != null ? s.getStatementDate().atStartOfDay() : fromDateTime;
+                entry.type = "DEBIT";
+                entry.description = "Statement " + (s.getStatementNo() != null ? s.getStatementNo() : "#" + s.getId());
+                entry.referenceId = s.getId();
+                entry.debitAmount = s.getTotalAmount() != null ? s.getTotalAmount() : BigDecimal.ZERO;
+                entry.creditAmount = BigDecimal.ZERO;
+                entries.add(entry);
+            }
+        } else {
+            List<InvoiceBill> allCreditBills = invoiceBillRepository.findCreditBillsByCustomerAndDateRange(
+                    customerId, fromDateTime, toDateTime, SecurityUtils.getScid());
+            for (InvoiceBill bill : allCreditBills) {
+                LedgerEntry entry = new LedgerEntry();
+                entry.date = bill.getDate();
+                entry.type = "DEBIT";
+                entry.description = "Credit Bill " + (bill.getBillNo() != null ? bill.getBillNo() : "#" + bill.getId());
+                entry.referenceId = bill.getId();
+                entry.debitAmount = bill.getNetAmount();
+                entry.creditAmount = BigDecimal.ZERO;
+                entries.add(entry);
+            }
         }
 
         for (Payment payment : payments) {
