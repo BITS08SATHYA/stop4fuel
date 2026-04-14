@@ -8,3 +8,7 @@
 # Gson
 -keep class com.google.gson.** { *; }
 -keepattributes EnclosingMethod
+
+# Tink (encrypted prefs) — errorprone annotations are compile-only
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
