@@ -916,8 +916,8 @@ export default function InvoicesPage() {
                 <div className="space-y-4">
                     {selectedProducts.map((line: any, idx: number) => (
                         <div key={idx} className="p-5 bg-background border border-border rounded-2xl space-y-4 relative border-l-4 border-l-primary">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                                <div className="lg:col-span-2 relative">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+                                <div className="xl:col-span-2 relative">
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Product</label>
                                     <input
                                         type="text"
@@ -1156,7 +1156,7 @@ export default function InvoicesPage() {
                     Payment & Driver
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                     <div className="space-y-6">
                         <div>
                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Bill Type</label>
