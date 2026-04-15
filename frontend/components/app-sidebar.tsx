@@ -177,6 +177,7 @@ const cashierSections: NavSection[] = [
         items: [
             { name: "Invoice Bills", href: "/operations/invoices", icon: FileText },
             { name: "View Invoices", href: "/operations/invoices/history", icon: Eye },
+            { name: "Invoice Explorer", href: "/operations/invoices/explorer", icon: Search },
             { name: "Payments", href: "/payments", icon: CreditCard },
             { name: "Expenses", href: "/operations/expenses", icon: Receipt },
             { name: "Incentive Payments", href: "/operations/incentive-payments", icon: Gift },
@@ -189,6 +190,7 @@ const cashierSections: NavSection[] = [
         label: "Credit",
         permission: "PAYMENT_VIEW",
         items: [
+            { name: "Statement Explorer", href: "/payments/explorer", icon: Search },
             { name: "Credit Monitoring", href: "/payments/credit-monitoring", icon: AlertTriangle },
         ],
     },

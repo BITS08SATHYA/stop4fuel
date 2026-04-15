@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
 import { PermissionGate } from "@/components/permission-gate";
@@ -9,8 +9,10 @@ import { showToast } from "@/components/ui/toast";
 import { Loader2, Truck, ShieldOff, TrendingUp, Send } from "lucide-react";
 import {
     submitApprovalRequest,
+    API_BASE_URL,
     type ApprovalRequestType,
 } from "@/lib/api/station";
+import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
 type BuilderType = Exclude<ApprovalRequestType, "RECORD_STATEMENT_PAYMENT" | "RECORD_INVOICE_PAYMENT">;
 
@@ -29,8 +31,33 @@ function NewRequestInner() {
 
     // ADD_VEHICLE
     const [vehicleNumber, setVehicleNumber] = useState("");
+    const [vehicleTypeId, setVehicleTypeId] = useState<string>("");
+    const [preferredProductId, setPreferredProductId] = useState<string>("");
     const [maxCapacity, setMaxCapacity] = useState("");
     const [maxLitersPerMonth, setMaxLitersPerMonth] = useState("");
+    const [vehicleTypes, setVehicleTypes] = useState<Array<{ id: number; typeName: string }>>([]);
+    const [fuelProducts, setFuelProducts] = useState<Array<{ id: number; name: string; category?: string }>>([]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const vtRes = await fetchWithAuth(`${API_BASE_URL}/vehicle-types`);
+                if (vtRes.ok) {
+                    const d = await vtRes.json();
+                    setVehicleTypes(Array.isArray(d) ? d : d.content || []);
+                }
+            } catch { /* ignore */ }
+            try {
+                const pRes = await fetchWithAuth(`${API_BASE_URL}/products`);
+                if (pRes.ok) {
+                    const d = await pRes.json();
+                    const list: Array<{ id: number; name: string; category?: string }> =
+                        Array.isArray(d) ? d : d.content || [];
+                    setFuelProducts(list.filter(p => p.category === "FUEL"));
+                }
+            } catch { /* ignore */ }
+        })();
+    }, []);
 
     // UNBLOCK_CUSTOMER
     const [unblockReason, setUnblockReason] = useState("");
@@ -42,7 +69,8 @@ function NewRequestInner() {
     const resetForm = () => {
         setCustomerId("");
         setNote("");
-        setVehicleNumber(""); setMaxCapacity(""); setMaxLitersPerMonth("");
+        setVehicleNumber(""); setVehicleTypeId(""); setPreferredProductId("");
+        setMaxCapacity(""); setMaxLitersPerMonth("");
         setUnblockReason("");
         setCreditLimitAmount(""); setCreditLimitLiters("");
     };
@@ -51,8 +79,12 @@ function NewRequestInner() {
         switch (type) {
             case "ADD_VEHICLE": {
                 if (!vehicleNumber.trim()) return "Vehicle number is required";
+                if (!vehicleTypeId) return "Vehicle type is required";
+                if (!preferredProductId) return "Fuel type is required";
                 return {
                     vehicleNumber: vehicleNumber.trim(),
+                    vehicleTypeId: Number(vehicleTypeId),
+                    preferredProductId: Number(preferredProductId),
                     maxCapacity: maxCapacity ? Number(maxCapacity) : null,
                     maxLitersPerMonth: maxLitersPerMonth ? Number(maxLitersPerMonth) : null,
                 };
@@ -137,10 +169,28 @@ function NewRequestInner() {
                 </div>
 
                 {type === "ADD_VEHICLE" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <Field label="Vehicle number *" value={vehicleNumber} onChange={setVehicleNumber} placeholder="e.g. TN 28 AA 1234" />
-                        <Field label="Max capacity (L)" value={maxCapacity} onChange={setMaxCapacity} placeholder="optional" type="number" />
-                        <Field label="Max liters / month" value={maxLitersPerMonth} onChange={setMaxLitersPerMonth} placeholder="optional" type="number" />
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Field label="Vehicle number *" value={vehicleNumber} onChange={v => setVehicleNumber(v.toUpperCase())} placeholder="e.g. TN 28 AA 1234" />
+                            <SelectField
+                                label="Vehicle type *"
+                                value={vehicleTypeId}
+                                onChange={setVehicleTypeId}
+                                placeholder="Select type"
+                                options={vehicleTypes.map(vt => ({ value: String(vt.id), label: vt.typeName }))}
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <SelectField
+                                label="Fuel type *"
+                                value={preferredProductId}
+                                onChange={setPreferredProductId}
+                                placeholder="Select fuel"
+                                options={fuelProducts.map(p => ({ value: String(p.id), label: p.name }))}
+                            />
+                            <Field label="Max capacity (L)" value={maxCapacity} onChange={setMaxCapacity} placeholder="optional" type="number" />
+                            <Field label="Max liters / month" value={maxLitersPerMonth} onChange={setMaxLitersPerMonth} placeholder="optional" type="number" />
+                        </div>
                     </div>
                 )}
 
@@ -203,6 +253,30 @@ function Field({ label, value, onChange, placeholder, type = "text" }: {
                 placeholder={placeholder}
                 className="mt-1 w-full px-3 py-2 rounded-md bg-background border border-border text-sm"
             />
+        </div>
+    );
+}
+
+function SelectField({ label, value, onChange, placeholder, options }: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    options: Array<{ value: string; label: string }>;
+}) {
+    return (
+        <div>
+            <label className="text-xs text-muted-foreground">{label}</label>
+            <select
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-md bg-background border border-border text-sm"
+            >
+                <option value="">{placeholder ?? "Select…"}</option>
+                {options.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+            </select>
         </div>
     );
 }

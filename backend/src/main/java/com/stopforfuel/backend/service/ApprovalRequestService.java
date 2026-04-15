@@ -156,6 +156,12 @@ public class ApprovalRequestService {
                         || p.get("vehicleNumber").toString().isBlank()) {
                     throw new BusinessException("vehicleNumber is required for ADD_VEHICLE");
                 }
+                if (p.get("vehicleTypeId") == null) {
+                    throw new BusinessException("vehicleTypeId is required for ADD_VEHICLE");
+                }
+                if (p.get("preferredProductId") == null) {
+                    throw new BusinessException("preferredProductId (fuel type) is required for ADD_VEHICLE");
+                }
             }
             case RAISE_CREDIT_LIMIT -> {
                 if (!p.containsKey("creditLimitAmount") && !p.containsKey("creditLimitLiters")) {
