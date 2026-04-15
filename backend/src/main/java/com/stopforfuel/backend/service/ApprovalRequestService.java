@@ -9,6 +9,7 @@ import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.entity.VehicleType;
 import com.stopforfuel.backend.enums.PaymentMode;
+import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.enums.ApprovalRequestStatus;
 import com.stopforfuel.backend.enums.ApprovalRequestType;
 import com.stopforfuel.backend.exception.BusinessException;
@@ -89,8 +90,16 @@ public class ApprovalRequestService {
 
         switch (req.getRequestType()) {
             case ADD_VEHICLE -> applyAddVehicle(req.getCustomerId(), payload);
-            case UNBLOCK_CUSTOMER -> customerService.unblockCustomer(req.getCustomerId(),
-                    (String) payload.getOrDefault("reason", null));
+            case UNBLOCK_CUSTOMER -> {
+                // Idempotent: if already active, skip the unblock call and just mark approved
+                Customer c = customerRepository.findById(req.getCustomerId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + req.getCustomerId()));
+                if (c.getStatus() == EntityStatus.BLOCKED) {
+                    customerService.unblockCustomer(req.getCustomerId(),
+                            (String) payload.getOrDefault("reason", null));
+                }
+                // else: already unblocked elsewhere — approval is still valid, just a no-op
+            }
             case RAISE_CREDIT_LIMIT -> customerService.updateCreditLimits(req.getCustomerId(), payload);
             case RECORD_STATEMENT_PAYMENT -> paymentService.recordStatementPayment(
                     Long.valueOf(payload.get("statementId").toString()), buildPayment(payload));
