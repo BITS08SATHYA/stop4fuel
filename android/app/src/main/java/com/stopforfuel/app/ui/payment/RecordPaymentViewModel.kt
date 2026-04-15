@@ -3,9 +3,12 @@ package com.stopforfuel.app.ui.payment
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.stopforfuel.app.data.local.TokenStore
 import com.stopforfuel.app.data.remote.dto.PaymentDto
 import com.stopforfuel.app.data.remote.dto.PaymentSummaryDto
 import com.stopforfuel.app.data.remote.dto.RecordPaymentRequest
+import com.stopforfuel.app.data.remote.dto.SubmitApprovalRequestBody
+import com.stopforfuel.app.data.repository.ApprovalRequestRepository
 import com.stopforfuel.app.data.repository.PaymentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +29,8 @@ data class RecordPaymentUiState(
     val remarks: String = "",
     val isSubmitting: Boolean = false,
     val success: PaymentDto? = null,
+    val requestSubmitted: Boolean = false, // true after cashier submits an approval request
+    val requestMode: Boolean = false,      // true when acting as cashier
     val error: String? = null
 )
 
@@ -34,15 +39,23 @@ val PAYMENT_MODES = listOf("CASH", "UPI", "CARD", "CHEQUE", "NEFT", "CCMS", "BAN
 @HiltViewModel
 class RecordPaymentViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val paymentRepository: PaymentRepository
+    private val paymentRepository: PaymentRepository,
+    private val approvalRepository: ApprovalRequestRepository,
+    private val tokenStore: TokenStore
 ) : ViewModel() {
 
     private val paymentTarget: String = savedStateHandle["paymentTarget"] ?: "bill"
     private val targetId: Long = savedStateHandle["targetId"] ?: 0L
 
+    private val role = tokenStore.getUserRole()?.uppercase().orEmpty()
+    private val designation = tokenStore.getUserDesignation()?.uppercase().orEmpty()
+    private val requestMode: Boolean = role != "OWNER" && role != "ADMIN" && role != "MANAGER"
+            && designation == "CASHIER"
+
     private val _uiState = MutableStateFlow(RecordPaymentUiState(
         paymentTarget = paymentTarget,
-        targetId = targetId
+        targetId = targetId,
+        requestMode = requestMode
     ))
     val uiState: StateFlow<RecordPaymentUiState> = _uiState.asStateFlow()
 
@@ -108,6 +121,29 @@ class RecordPaymentViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSubmitting = true, error = null)
+
+            if (requestMode) {
+                val body = SubmitApprovalRequestBody(
+                    requestType = if (paymentTarget == "statement") "RECORD_STATEMENT_PAYMENT" else "RECORD_INVOICE_PAYMENT",
+                    customerId = null, // backend will derive from statement/bill
+                    payload = buildMap {
+                        if (paymentTarget == "statement") put("statementId", targetId)
+                        else put("invoiceBillId", targetId)
+                        put("amount", amount.toPlainString())
+                        put("paymentMode", state.paymentMode)
+                        state.referenceNo.ifBlank { null }?.let { put("referenceNo", it) }
+                        state.remarks.ifBlank { null }?.let { put("remarks", it) }
+                    },
+                    note = null
+                )
+                approvalRepository.submit(body).onSuccess {
+                    _uiState.value = _uiState.value.copy(isSubmitting = false, requestSubmitted = true)
+                }.onFailure { e ->
+                    _uiState.value = _uiState.value.copy(isSubmitting = false, error = e.message)
+                }
+                return@launch
+            }
+
             val request = RecordPaymentRequest(
                 amount = amount,
                 paymentMode = state.paymentMode,

@@ -26,4 +26,6 @@ sealed class Routes(val route: String) {
         fun forBill(billId: Long) = "record_payment/bill/$billId"
         fun forStatement(statementId: Long) = "record_payment/statement/$statementId"
     }
+    data object MyApprovalRequests : Routes("approvals/mine")
+    data object ApprovalInbox : Routes("approvals/inbox")
 }

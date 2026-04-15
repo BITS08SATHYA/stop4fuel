@@ -256,4 +256,35 @@ interface ApiService {
 
     @GET("api/pump-sessions/shift/{shiftId}")
     suspend fun getPumpSessionsByShift(@Path("shiftId") shiftId: Long): List<PumpSessionDto>
+
+    // Approval Requests
+    @POST("api/approval-requests")
+    suspend fun submitApprovalRequest(@Body body: SubmitApprovalRequestBody): ApprovalRequestDto
+
+    @GET("api/approval-requests/mine")
+    suspend fun getMyApprovalRequests(): List<ApprovalRequestDto>
+
+    @GET("api/approval-requests/pending")
+    suspend fun getPendingApprovalRequests(): List<ApprovalRequestDto>
+
+    @GET("api/approval-requests/pending/count")
+    suspend fun getPendingApprovalCount(): ApprovalPendingCountDto
+
+    @POST("api/approval-requests/{id}/approve")
+    suspend fun approveApprovalRequest(
+        @Path("id") id: Long,
+        @Body body: ApprovalReviewBody
+    ): ApprovalRequestDto
+
+    @POST("api/approval-requests/{id}/reject")
+    suspend fun rejectApprovalRequest(
+        @Path("id") id: Long,
+        @Body body: ApprovalReviewBody
+    ): ApprovalRequestDto
+
+    // Device tokens (push)
+    @POST("api/device-tokens/register")
+    suspend fun registerDeviceToken(
+        @Body body: Map<String, String>
+    ): Map<String, Any>
 }

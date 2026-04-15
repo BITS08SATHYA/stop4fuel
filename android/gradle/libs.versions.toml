@@ -11,6 +11,8 @@ lifecycle = "2.8.7"
 security-crypto = "1.1.0-alpha06"
 coroutines = "1.9.0"
 ksp = "2.1.0-1.0.29"
+firebase-bom = "33.7.0"
+google-services = "4.4.2"
 
 [libraries]
 # Compose
@@ -49,9 +51,14 @@ coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutin
 activity-compose = { group = "androidx.activity", name = "activity-compose", version = "1.9.3" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.15.0" }
 
+# Firebase (FCM only)
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }

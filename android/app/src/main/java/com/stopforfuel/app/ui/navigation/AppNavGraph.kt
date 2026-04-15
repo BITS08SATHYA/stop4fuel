@@ -25,6 +25,8 @@ import com.stopforfuel.app.ui.stocktransfer.StockTransferScreen
 import com.stopforfuel.app.ui.attendance.AttendanceScreen
 import com.stopforfuel.app.ui.invoiceupload.InvoiceUploadScreen
 import com.stopforfuel.app.ui.payment.RecordPaymentScreen
+import com.stopforfuel.app.ui.approvals.MyApprovalRequestsScreen
+import com.stopforfuel.app.ui.approvals.ApprovalInboxScreen
 
 @Composable
 fun AppNavGraph() {
@@ -87,6 +89,12 @@ fun AppNavGraph() {
                 },
                 onNavigateToInvoiceUpload = {
                     navController.navigate(Routes.InvoiceUpload.route)
+                },
+                onNavigateToMyApprovals = {
+                    navController.navigate(Routes.MyApprovalRequests.route)
+                },
+                onNavigateToApprovalInbox = {
+                    navController.navigate(Routes.ApprovalInbox.route)
                 },
                 onLogout = {
                     navController.navigate(Routes.Login.route) {
@@ -218,6 +226,14 @@ fun AppNavGraph() {
                 onBack = { navController.popBackStack() },
                 onPaymentRecorded = { navController.popBackStack() }
             )
+        }
+
+        composable(Routes.MyApprovalRequests.route) {
+            MyApprovalRequestsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.ApprovalInbox.route) {
+            ApprovalInboxScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -47,6 +47,8 @@ fun HomeScreen(
     onNavigateToStockTransfer: () -> Unit = {},
     onNavigateToAttendance: () -> Unit = {},
     onNavigateToInvoiceUpload: () -> Unit = {},
+    onNavigateToMyApprovals: () -> Unit = {},
+    onNavigateToApprovalInbox: () -> Unit = {},
     onLogout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -117,6 +119,19 @@ fun HomeScreen(
                         }
                         DrawerItem(Icons.Default.Description, "Statement Explorer") {
                             scope.launch { drawerState.close() }; onNavigateToStatementExplorer()
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // ── Approvals ──
+                        DrawerSectionHeader("Approvals")
+                        if (isManager) {
+                            DrawerItem(Icons.Default.Inbox, "Approvals Inbox") {
+                                scope.launch { drawerState.close() }; onNavigateToApprovalInbox()
+                            }
+                        }
+                        DrawerItem(Icons.Default.AssignmentTurnedIn, "My Requests") {
+                            scope.launch { drawerState.close() }; onNavigateToMyApprovals()
                         }
 
                         if (isManager) {

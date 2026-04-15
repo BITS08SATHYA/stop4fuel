@@ -6,6 +6,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Apply the Google Services plugin only when google-services.json is present.
+// Lets the app build cleanly in dev environments without Firebase credentials.
+if (project.file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.stopforfuel.app"
     compileSdk = 35
@@ -85,4 +91,8 @@ dependencies {
 
     // Coroutines
     implementation(libs.coroutines.android)
+
+    // Firebase Cloud Messaging (FCM token; push delivery via AWS SNS → GCM/FCM)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 }

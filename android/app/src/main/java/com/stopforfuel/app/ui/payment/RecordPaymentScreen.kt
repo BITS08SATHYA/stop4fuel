@@ -41,6 +41,14 @@ fun RecordPaymentScreen(
         }
     }
 
+    // Navigate back after successful request submission
+    LaunchedEffect(uiState.requestSubmitted) {
+        if (uiState.requestSubmitted) {
+            snackbarHostState.showSnackbar("Request submitted — admin will review shortly")
+            onPaymentRecorded()
+        }
+    }
+
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
             snackbarHostState.showSnackbar(it)
@@ -53,7 +61,7 @@ fun RecordPaymentScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Record Payment") },
+                title = { Text(if (uiState.requestMode) "Request Payment" else "Record Payment") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -207,7 +215,12 @@ fun RecordPaymentScreen(
                     Icon(Icons.Default.Payment, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (uiState.isSubmitting) "Recording..." else "Record Payment",
+                        when {
+                            uiState.isSubmitting && uiState.requestMode -> "Submitting…"
+                            uiState.isSubmitting -> "Recording..."
+                            uiState.requestMode -> "Submit Request"
+                            else -> "Record Payment"
+                        },
                         fontWeight = FontWeight.Bold
                     )
                 }

@@ -56,6 +56,8 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useSidebar } from "@/components/sidebar-context";
+import { usePendingApprovalCount } from "@/lib/hooks/use-pending-approval-count";
+import { Inbox, CheckSquare } from "lucide-react";
 
 const mainNav = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -144,6 +146,10 @@ const reportsNav = [
     { name: "Reports", href: "/operations/reports", icon: ClipboardList },
 ];
 
+const approvalsNav = [
+    { name: "Approvals", href: "/approvals", icon: Inbox, badgeKey: "pendingApprovals" as const },
+];
+
 const analyticsNav = [
     { name: "AI Analytics", href: "/analytics", icon: Brain },
 ];
@@ -191,6 +197,14 @@ const cashierSections: NavSection[] = [
         permission: "REPORT_VIEW",
         items: [
             { name: "Reports", href: "/operations/reports", icon: ClipboardList },
+        ],
+    },
+    {
+        label: "Requests",
+        permission: "APPROVAL_REQUEST_CREATE",
+        items: [
+            { name: "New Request", href: "/approvals/new", icon: Inbox },
+            { name: "My Requests", href: "/approvals/mine", icon: CheckSquare },
         ],
     },
 ];
@@ -245,7 +259,7 @@ const employeeSections: NavSection[] = [
 type NavSection = {
     label: string;
     permission: string;
-    items: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
+    items: { name: string; href: string; icon: React.ComponentType<{ className?: string }>; badgeKey?: "pendingApprovals" }[];
 };
 
 const sections: NavSection[] = [
@@ -260,6 +274,7 @@ const sections: NavSection[] = [
     { label: "Payment Management", permission: "PAYMENT_VIEW", items: paymentManagementNav },
     { label: "Finance", permission: "FINANCE_VIEW", items: financeNav },
     { label: "Reports", permission: "REPORT_VIEW", items: reportsNav },
+    { label: "Approvals", permission: "APPROVAL_REQUEST_VIEW", items: approvalsNav },
     { label: "Analytics", permission: "DASHBOARD_VIEW", items: analyticsNav },
     { label: "System", permission: "SETTINGS_VIEW", items: systemNav },
 ];
@@ -280,6 +295,8 @@ export function AppSidebar() {
     const isEmployee = user?.role === "EMPLOYEE" && !isCashier;
     const activeSections = isCustomer ? customerSections : isCashier ? cashierSections : isEmployee ? employeeSections : sections;
     const filteredSections = activeSections.filter(section => hasPermission(section.permission));
+    const pendingApprovals = usePendingApprovalCount();
+    const badgeValue = (key?: "pendingApprovals") => key === "pendingApprovals" ? pendingApprovals : 0;
 
     return (
         <aside
@@ -318,7 +335,12 @@ export function AppSidebar() {
                                     )}
                                 >
                                     <item.icon className="w-4 h-4" />
-                                    {item.name}
+                                    <span className="flex-1">{item.name}</span>
+                                    {item.badgeKey && badgeValue(item.badgeKey) > 0 && (
+                                        <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-bold">
+                                            {badgeValue(item.badgeKey)}
+                                        </span>
+                                    )}
                                 </Link>
                             ))}
                         </div>

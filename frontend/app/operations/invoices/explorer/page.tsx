@@ -9,6 +9,7 @@ import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { InvoiceAutocomplete } from "@/components/ui/invoice-autocomplete";
 import { PermissionGate } from "@/components/permission-gate";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { showToast } from "@/components/ui/toast";
 import {
     IndianRupee, Search, ChevronDown, ChevronRight, FileText,
     Loader2, ArrowLeft, CreditCard, Receipt, Banknote,
@@ -18,9 +19,11 @@ import {
     getInvoiceHistory, getCustomerInvoices,
     getPaymentsByBill, recordBillPayment, getBillPaymentSummary,
     getCustomerCreditInfo, PAYMENT_MODES, markInvoiceIndependent,
+    submitApprovalRequest,
     type InvoiceBill, type Payment,
     type PageResponse, type BillPaymentSummary
 } from "@/lib/api/station";
+import { useAuth } from "@/lib/auth/auth-context";
 
 function formatCurrency(val?: number | null) {
     if (val == null) return "0.00";
@@ -58,6 +61,9 @@ const PAYMENT_MODE_COLORS: Record<string, string> = {
 };
 
 export default function InvoiceExplorerPage() {
+    const { user } = useAuth();
+    const requestMode = user?.designation === "Cashier" && user?.role !== "OWNER" && user?.role !== "ADMIN";
+
     // Filters
     const [customerId, setCustomerId] = useState<number | "">("");
     const [billTypeFilter, setBillTypeFilter] = useState<string>("");
@@ -196,12 +202,33 @@ export default function InvoiceExplorerPage() {
         }
     };
 
-    // Record payment
+    // Record payment (or submit approval request when cashier)
     const handleRecordPayment = async () => {
         if (!selectedInvoice || !paymentAmount || !paymentModeId) return;
         setPaymentSubmitting(true);
         setPaymentError("");
         try {
+            if (requestMode) {
+                await submitApprovalRequest({
+                    requestType: "RECORD_INVOICE_PAYMENT",
+                    customerId: selectedInvoice.customer?.id ?? null,
+                    payload: {
+                        invoiceBillId: selectedInvoice.id,
+                        amount: Number(paymentAmount),
+                        paymentMode: paymentModeId,
+                        referenceNo: paymentRef || undefined,
+                        remarks: paymentRemarks || undefined,
+                    },
+                });
+                showToast.success("Request submitted — admin will review it shortly");
+                setShowPaymentForm(false);
+                setPaymentAmount("");
+                setPaymentModeId("");
+                setPaymentRef("");
+                setPaymentRemarks("");
+                return;
+            }
+
             await recordBillPayment(selectedInvoice.id!, {
                 amount: Number(paymentAmount),
                 paymentMode: paymentModeId,
@@ -218,7 +245,7 @@ export default function InvoiceExplorerPage() {
             setPaymentRemarks("");
             fetchInvoices(); // refresh list to update statuses
         } catch (err: any) {
-            setPaymentError(err?.message || "Payment failed");
+            setPaymentError(err?.message || (requestMode ? "Submit failed" : "Payment failed"));
         } finally {
             setPaymentSubmitting(false);
         }
@@ -575,6 +602,7 @@ export default function InvoiceExplorerPage() {
                                                 onRecordPayment={() => { setActiveTab("payments"); setShowPaymentForm(true); }}
                                                 onMarkIndependent={() => handleMarkIndependent(selectedInvoice.id!)}
                                                 markingIndependent={markingIndependent}
+                                                requestMode={requestMode}
                                             />
                                         ) : (
                                             <InvoicePaymentsTab
@@ -597,6 +625,7 @@ export default function InvoiceExplorerPage() {
                                                 error={paymentError}
                                                 onSubmit={handleRecordPayment}
                                                 onCancel={() => { setShowPaymentForm(false); setPaymentError(""); }}
+                                                requestMode={requestMode}
                                             />
                                         )}
                                     </div>
@@ -612,7 +641,7 @@ export default function InvoiceExplorerPage() {
 
 // --- Details Tab ---
 function InvoiceDetailsTab({
-    invoice, payments, balance, canPay, onRecordPayment, onMarkIndependent, markingIndependent
+    invoice, payments, balance, canPay, onRecordPayment, onMarkIndependent, markingIndependent, requestMode
 }: {
     invoice: InvoiceBill;
     payments: Payment[];
@@ -621,6 +650,7 @@ function InvoiceDetailsTab({
     onRecordPayment: () => void;
     onMarkIndependent: () => void;
     markingIndependent: boolean;
+    requestMode: boolean;
 }) {
     const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
 
@@ -770,13 +800,13 @@ function InvoiceDetailsTab({
                 )}
             </div>
 
-            {/* Record Payment button */}
+            {/* Record / Request Payment button */}
             {canPay && balance > 0 && (
                 <button
                     onClick={onRecordPayment}
                     className="w-full mt-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                 >
-                    <CreditCard className="w-4 h-4" /> Record Payment
+                    <CreditCard className="w-4 h-4" /> {requestMode ? "Request Payment" : "Record Payment"}
                 </button>
             )}
         </div>
@@ -788,7 +818,7 @@ function InvoicePaymentsTab({
     invoice, payments, balance, canPay, showForm, onShowForm,
     paymentModes, paymentAmount, onAmountChange, paymentModeId, onModeChange,
     paymentRef, onRefChange, paymentRemarks, onRemarksChange,
-    submitting, error, onSubmit, onCancel
+    submitting, error, onSubmit, onCancel, requestMode
 }: {
     invoice: InvoiceBill;
     payments: Payment[];
@@ -809,6 +839,7 @@ function InvoicePaymentsTab({
     error: string;
     onSubmit: () => void;
     onCancel: () => void;
+    requestMode: boolean;
 }) {
     const totalReceived = payments.reduce((s, p) => s + (p.amount || 0), 0);
 
@@ -842,14 +873,14 @@ function InvoicePaymentsTab({
                 </div>
             )}
 
-            {/* Record payment button */}
+            {/* Record / Request payment button */}
             {canPay && balance > 0 && !showForm && (
-                <PermissionGate permission="PAYMENT_CREATE">
+                <PermissionGate permission={requestMode ? "APPROVAL_REQUEST_CREATE" : "PAYMENT_CREATE"}>
                     <button
                         onClick={() => onShowForm(true)}
                         className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                     >
-                        <CreditCard className="w-4 h-4" /> Record Payment
+                        <CreditCard className="w-4 h-4" /> {requestMode ? "Request Payment" : "Record Payment"}
                     </button>
                 </PermissionGate>
             )}
@@ -857,7 +888,7 @@ function InvoicePaymentsTab({
             {/* Payment form */}
             {showForm && canPay && (
                 <div className="border border-primary/30 rounded-lg p-4 space-y-3 bg-card/50">
-                    <h4 className="text-sm font-semibold text-foreground">Record Payment</h4>
+                    <h4 className="text-sm font-semibold text-foreground">{requestMode ? "Request Payment (admin approval required)" : "Record Payment"}</h4>
 
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -923,7 +954,7 @@ function InvoicePaymentsTab({
                             className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                            {submitting ? "Processing..." : "Submit Payment"}
+                            {submitting ? (requestMode ? "Submitting…" : "Processing...") : (requestMode ? "Submit Request" : "Submit Payment")}
                         </button>
                         <button
                             onClick={onCancel}
