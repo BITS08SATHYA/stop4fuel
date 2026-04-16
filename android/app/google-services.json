@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "967175039694",
+    "project_id": "stopforfuel",
+    "storage_bucket": "stopforfuel.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:967175039694:android:598b5c0c6ca92940357e9f",
+        "android_client_info": {
+          "package_name": "com.stopforfuel.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpdhUbKmybNtP5g61MZ6V9YIV0iIr-wlo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
