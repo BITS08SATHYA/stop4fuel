@@ -41,6 +41,7 @@ public class ApprovalRequestService {
     private final ProductRepository productRepository;
     private final PaymentService paymentService;
     private final PushNotificationService pushNotificationService;
+    private final NotificationBroadcaster notificationBroadcaster;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -75,6 +76,17 @@ public class ApprovalRequestService {
         } catch (Exception e) {
             // Never fail submission because of push delivery issues
         }
+        // Real-time SSE fan-out to connected approvers
+        try {
+            notificationBroadcaster.broadcastToPermission("APPROVAL_REQUEST_APPROVE", "approval", Map.of(
+                    "type", "APPROVAL_REQUEST_CREATED",
+                    "requestId", saved.getId(),
+                    "requestType", saved.getRequestType().name(),
+                    "customerId", saved.getCustomerId() != null ? saved.getCustomerId() : "",
+                    "requestedBy", saved.getRequestedBy() != null ? saved.getRequestedBy() : "",
+                    "createdAt", saved.getCreatedAt() != null ? saved.getCreatedAt().toString() : ""
+            ));
+        } catch (Exception ignored) {}
         return saved;
     }
 
@@ -111,7 +123,9 @@ public class ApprovalRequestService {
         req.setReviewedBy(SecurityUtils.getCurrentUserId());
         req.setReviewNote(reviewNote);
         req.setReviewedAt(LocalDateTime.now());
-        return approvalRequestRepository.save(req);
+        ApprovalRequest savedApproved = approvalRequestRepository.save(req);
+        fanoutReviewed(savedApproved, "APPROVAL_REQUEST_APPROVED");
+        return savedApproved;
     }
 
     @Transactional
@@ -128,7 +142,26 @@ public class ApprovalRequestService {
         req.setReviewedBy(SecurityUtils.getCurrentUserId());
         req.setReviewNote(reviewNote);
         req.setReviewedAt(LocalDateTime.now());
-        return approvalRequestRepository.save(req);
+        ApprovalRequest savedRejected = approvalRequestRepository.save(req);
+        fanoutReviewed(savedRejected, "APPROVAL_REQUEST_REJECTED");
+        return savedRejected;
+    }
+
+    /** Notify the cashier who submitted, AND refresh approvers so the request disappears from their inbox. */
+    private void fanoutReviewed(ApprovalRequest req, String eventType) {
+        Map<String, Object> payload = Map.of(
+                "type", eventType,
+                "requestId", req.getId(),
+                "requestType", req.getRequestType().name(),
+                "reviewNote", req.getReviewNote() != null ? req.getReviewNote() : "",
+                "reviewedAt", req.getReviewedAt() != null ? req.getReviewedAt().toString() : ""
+        );
+        try {
+            if (req.getRequestedBy() != null) {
+                notificationBroadcaster.sendToUser(req.getRequestedBy(), "approval", payload);
+            }
+            notificationBroadcaster.broadcastToPermission("APPROVAL_REQUEST_APPROVE", "approval", payload);
+        } catch (Exception ignored) {}
     }
 
     @Transactional(readOnly = true)

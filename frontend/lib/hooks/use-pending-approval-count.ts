@@ -1,44 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getPendingApprovalCount } from "@/lib/api/station";
 import { useAuth } from "@/lib/auth/auth-context";
+import { approvalBus } from "@/lib/notifications/approval-bus";
 
-const POLL_INTERVAL_MS = 30_000;
-
-function fireApprovalDesktopNotification(delta: number) {
-    if (typeof window === "undefined") return;
-    if (!("Notification" in window)) return;
-    if (Notification.permission !== "granted") return;
-    try {
-        const n = new Notification("New approval request", {
-            body: `${delta} new approval${delta > 1 ? "s" : ""} pending review`,
-            tag: "sff-approvals",
-            icon: "/favicon.ico",
-        });
-        n.onclick = () => {
-            window.focus();
-            if (window.location.pathname !== "/approvals") {
-                window.location.href = "/approvals";
-            }
-            n.close();
-        };
-    } catch {
-        // Safari/older browsers may throw on constructor use — ignore.
-    }
-}
+// Poll is now a backstop for when the SSE stream is down or the user just
+// opened the app. The SSE stream itself is the primary path for freshness,
+// and the approval bus nudges a re-fetch on every real-time event.
+const POLL_INTERVAL_MS = 60_000;
 
 export function usePendingApprovalCount(): number {
     const { hasPermission } = useAuth();
     const canView = hasPermission("APPROVAL_REQUEST_VIEW");
-    const canApprove = hasPermission("APPROVAL_REQUEST_APPROVE");
     const [count, setCount] = useState(0);
-    const prevCountRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!canView) {
             setCount(0);
-            prevCountRef.current = null;
             return;
         }
 
@@ -47,13 +26,7 @@ export function usePendingApprovalCount(): number {
         const fetchOnce = async () => {
             try {
                 const c = await getPendingApprovalCount();
-                if (cancelled) return;
-                const prev = prevCountRef.current;
-                if (canApprove && prev !== null && c > prev) {
-                    fireApprovalDesktopNotification(c - prev);
-                }
-                prevCountRef.current = c;
-                setCount(c);
+                if (!cancelled) setCount(c);
             } catch {
                 // ignore transient errors so UI never breaks
             }
@@ -69,12 +42,18 @@ export function usePendingApprovalCount(): number {
         };
         document.addEventListener("visibilitychange", onVisible);
 
+        // Re-fetch immediately whenever the SSE stream delivers an approval event
+        const unsubBus = approvalBus.onArrive(() => {
+            if (!cancelled) fetchOnce();
+        });
+
         return () => {
             cancelled = true;
             window.clearInterval(id);
             document.removeEventListener("visibilitychange", onVisible);
+            unsubBus();
         };
-    }, [canView, canApprove]);
+    }, [canView]);
 
     return count;
 }

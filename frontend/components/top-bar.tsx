@@ -2,6 +2,7 @@
 
 import { Menu } from "lucide-react";
 import { useSidebar } from "@/components/sidebar-context";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function TopBar() {
     const { toggle } = useSidebar();
@@ -17,6 +18,9 @@ export function TopBar() {
             <div className="flex items-center gap-2 font-bold text-lg">
                 <img src="/logo-icon.svg" alt="StopForFuel" className="w-6 h-6" />
                 <span className="text-foreground">Stop<span className="text-gradient">ForFuel</span></span>
+            </div>
+            <div className="ml-auto">
+                <NotificationBell />
             </div>
         </header>
     );

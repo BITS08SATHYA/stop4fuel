@@ -23,4 +23,13 @@ public interface UserRepository extends ScidRepository<User> {
 
     @Query("SELECT u FROM User u JOIN u.phoneNumbers p WHERE p = :phone AND u.scid = :scid")
     Optional<User> findByPhoneNumberAndScid(@Param("phone") String phone, @Param("scid") Long scid);
+
+    @Query("""
+        SELECT u.id FROM User u
+        WHERE u.role.id IN (
+            SELECT rp.role.id FROM RolePermission rp
+            WHERE rp.permission.code = :permissionCode
+        )
+    """)
+    List<Long> findUserIdsByPermissionCode(@Param("permissionCode") String permissionCode);
 }
