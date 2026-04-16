@@ -1,14 +1,19 @@
 package com.stopforfuel.app.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.stopforfuel.app.ui.InAppNotificationBanner
 import com.stopforfuel.app.data.local.TokenStore
 import com.stopforfuel.app.ui.home.HomeScreen
 import com.stopforfuel.app.ui.invoice.InvoiceScreen
@@ -51,6 +56,7 @@ fun AppNavGraph(
         onPushDestinationConsumed()
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     NavHost(
         navController = navController,
         startDestination = Routes.Login.route
@@ -255,4 +261,17 @@ fun AppNavGraph(
             ApprovalInboxScreen(onBack = { navController.popBackStack() })
         }
     }
+
+    // Overlay: slides in from the top whenever an FCM message lands while foregrounded.
+    // Placed after NavHost so it renders above the current screen.
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        InAppNotificationBanner(
+            onOpenInbox = {
+                if (currentRoute != Routes.ApprovalInbox.route) {
+                    navController.navigate(Routes.ApprovalInbox.route)
+                }
+            }
+        )
+    }
+    } // end outer Box
 }
