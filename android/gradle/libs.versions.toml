@@ -46,6 +46,7 @@ security-crypto = { group = "androidx.security", name = "security-crypto", versi
 
 # Coroutines
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
 # Core
 activity-compose = { group = "androidx.activity", name = "activity-compose", version = "1.9.3" }

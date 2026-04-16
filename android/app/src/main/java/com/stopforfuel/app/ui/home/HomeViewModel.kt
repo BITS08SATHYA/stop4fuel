@@ -138,7 +138,9 @@ class HomeViewModel @Inject constructor(
     }
 
     fun logout() {
-        authRepository.logout()
-        lookupRepository.invalidateCache()
+        viewModelScope.launch {
+            runCatching { authRepository.logout() }
+            lookupRepository.invalidateCache()
+        }
     }
 }

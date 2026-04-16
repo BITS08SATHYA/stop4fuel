@@ -1,9 +1,12 @@
 package com.stopforfuel.app.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.stopforfuel.app.data.local.TokenStore
@@ -29,8 +32,24 @@ import com.stopforfuel.app.ui.approvals.MyApprovalRequestsScreen
 import com.stopforfuel.app.ui.approvals.ApprovalInboxScreen
 
 @Composable
-fun AppNavGraph() {
+fun AppNavGraph(
+    pendingPushDestination: String? = null,
+    onPushDestinationConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
+
+    // Deep-link from a tapped push notification: wait until the user is past the
+    // Login screen, then navigate to the requested destination and clear it.
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    LaunchedEffect(pendingPushDestination, currentRoute) {
+        if (pendingPushDestination == null) return@LaunchedEffect
+        if (currentRoute == null || currentRoute == Routes.Login.route) return@LaunchedEffect
+        when (pendingPushDestination) {
+            "approval_inbox" -> navController.navigate(Routes.ApprovalInbox.route)
+        }
+        onPushDestinationConsumed()
+    }
 
     NavHost(
         navController = navController,

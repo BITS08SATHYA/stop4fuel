@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { TopBar } from "@/components/top-bar";
 import { SidebarProvider, useSidebar } from "@/components/sidebar-context";
 import { ToastProvider } from "@/components/ui/toast";
+import { useApprovalNotificationPermission } from "@/lib/hooks/use-approval-notifications";
 
 // Initialize Amplify on client side
 if (typeof window !== "undefined") {
@@ -48,6 +49,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
 function AppShell({ children }: { children: React.ReactNode }) {
     const { open, close } = useSidebar();
+    useApprovalNotificationPermission();
     return (
         <div className="flex h-screen overflow-hidden">
             <AppSidebar />

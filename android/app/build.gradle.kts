@@ -91,6 +91,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.coroutines.android)
+    implementation(libs.coroutines.play.services)
 
     // Firebase Cloud Messaging (FCM token; push delivery via AWS SNS → GCM/FCM)
     implementation(platform(libs.firebase.bom))

@@ -287,4 +287,9 @@ interface ApiService {
     suspend fun registerDeviceToken(
         @Body body: Map<String, String>
     ): Map<String, Any>
+
+    @POST("api/device-tokens/unregister")
+    suspend fun unregisterDeviceToken(
+        @Body body: Map<String, String>
+    ): Map<String, Any>
 }

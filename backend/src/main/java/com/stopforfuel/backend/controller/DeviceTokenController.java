@@ -30,5 +30,16 @@ public class DeviceTokenController {
         return ResponseEntity.ok(Map.of("id", saved.getId(), "registered", true));
     }
 
+    @PostMapping("/unregister")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> unregister(@RequestBody UnregisterBody body) {
+        if (body.fcmToken() == null || body.fcmToken().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "fcmToken is required"));
+        }
+        pushService.deleteToken(body.fcmToken());
+        return ResponseEntity.ok(Map.of("unregistered", true));
+    }
+
     public record RegisterBody(String fcmToken, String platform) {}
+    public record UnregisterBody(String fcmToken) {}
 }

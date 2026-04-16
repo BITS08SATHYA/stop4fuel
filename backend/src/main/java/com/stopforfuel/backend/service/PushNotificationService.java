@@ -37,6 +37,13 @@ public class PushNotificationService {
     @Value("${stopforfuel.push.sns-platform-app-arn:}")
     private String platformAppArn;
 
+    /** Delete a device token (e.g. on logout) so we stop pushing to an ex-user's device. */
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteToken(String fcmToken) {
+        if (fcmToken == null || fcmToken.isBlank()) return;
+        deviceTokenRepository.deleteByFcmToken(fcmToken);
+    }
+
     /** Register (or refresh) a device token for the given user. */
     public DeviceToken registerToken(Long userId, String fcmToken, String platform) {
         DeviceToken token = deviceTokenRepository.findByFcmToken(fcmToken)
