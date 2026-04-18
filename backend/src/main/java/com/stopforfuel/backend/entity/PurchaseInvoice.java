@@ -51,6 +51,10 @@ public class PurchaseInvoice extends BaseEntity {
 
     private String pdfFilePath;
 
+    /** Set once applyPurchase has blended this invoice into product WAC, to keep applyPurchase idempotent. */
+    @Column(name = "wac_applied", nullable = false)
+    private boolean wacApplied = false;
+
     @OneToMany(mappedBy = "purchaseInvoice", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties({"purchaseInvoice", "hibernateLazyInitializer", "handler"})
     private List<PurchaseInvoiceItem> items = new ArrayList<>();

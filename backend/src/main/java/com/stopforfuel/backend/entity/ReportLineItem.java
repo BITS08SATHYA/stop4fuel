@@ -39,6 +39,10 @@ public class ReportLineItem extends SimpleBaseEntity {
     @Column(name = "amount", precision = 19, scale = 4, nullable = false)
     private BigDecimal amount;
 
+    /** COGS snapshot for REVENUE lines (FUEL_SALES/OIL_SALES). Null for non-cost lines. */
+    @Column(name = "cost_amount", precision = 19, scale = 4)
+    private BigDecimal costAmount;
+
     @Column(name = "source_entity_type")
     private String sourceEntityType;
 

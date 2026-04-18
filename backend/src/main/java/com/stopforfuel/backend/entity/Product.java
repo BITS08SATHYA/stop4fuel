@@ -71,6 +71,14 @@ public class Product extends BaseEntity {
     @Column(name = "discount_rate", precision = 19, scale = 4)
     private BigDecimal discountRate;
 
+    /** Weighted-average cost per unit. Drives COGS in bunk audit / P&L. Updated on each purchase. */
+    @Column(name = "wac_cost", precision = 19, scale = 4)
+    private BigDecimal wacCost;
+
+    /** Running stock base the current wacCost was blended against. Decremented on sale, incremented on purchase. */
+    @Column(name = "wac_stock")
+    private Double wacStock;
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean active = true;
 }

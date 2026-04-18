@@ -3,6 +3,7 @@ package com.stopforfuel.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.enums.BillType;
+import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.service.InvoiceBillService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,9 @@ class InvoiceBillControllerTest {
 
     @MockBean
     private InvoiceBillService service;
+
+    @MockBean
+    private PaymentRepository paymentRepository;
 
     private InvoiceBill testBill;
 

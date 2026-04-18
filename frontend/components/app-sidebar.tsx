@@ -154,6 +154,10 @@ const analyticsNav = [
     { name: "AI Analytics", href: "/analytics", icon: Brain },
 ];
 
+const auditNav = [
+    { name: "Bunk Audit", href: "/audit", icon: ClipboardList },
+];
+
 const systemNav = [
     { name: "Users", href: "/settings/users", icon: UserCog },
     { name: "Permissions", href: "/settings/permissions", icon: Shield },
@@ -278,6 +282,7 @@ const sections: NavSection[] = [
     { label: "Reports", permission: "REPORT_VIEW", items: reportsNav },
     { label: "Approvals", permission: "APPROVAL_REQUEST_VIEW", items: approvalsNav },
     { label: "Analytics", permission: "DASHBOARD_VIEW", items: analyticsNav },
+    { label: "Bunk Audit", permission: "SHIFT_VIEW", items: auditNav },
     { label: "System", permission: "SETTINGS_VIEW", items: systemNav },
 ];
 

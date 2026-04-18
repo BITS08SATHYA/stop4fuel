@@ -4,6 +4,7 @@ import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.enums.ShiftStatus;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,4 +15,6 @@ public interface ShiftRepository extends ScidRepository<Shift> {
     long countByScidAndStatus(Long scid, ShiftStatus status);
     Optional<Shift> findTopByStatusAndScidOrderByIdDesc(ShiftStatus status, Long scid);
     Optional<Shift> findTopByStatusInAndScidOrderByIdDesc(List<ShiftStatus> statuses, Long scid);
+
+    List<Shift> findByScidAndStartTimeBetweenOrderByStartTimeAsc(Long scid, LocalDateTime from, LocalDateTime to);
 }

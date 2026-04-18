@@ -13,3 +13,4 @@ export * from './reports';
 export * from './customer-portal';
 export * from './ai-analytics';
 export * from './approvals';
+export * from './audit';

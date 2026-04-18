@@ -21,6 +21,7 @@ public class PurchaseInvoiceService {
 
     private final PurchaseInvoiceRepository repository;
     private final S3StorageService s3StorageService;
+    private final WeightedAverageCostService wacService;
 
     @Transactional(readOnly = true)
     public List<PurchaseInvoice> getAll() {
@@ -62,7 +63,9 @@ public class PurchaseInvoiceService {
                 item.setPurchaseInvoice(invoice);
             }
         }
-        return repository.save(invoice);
+        PurchaseInvoice saved = repository.save(invoice);
+        applyWacIfReady(saved);
+        return saved;
     }
 
     public PurchaseInvoice update(Long id, PurchaseInvoice details) {
@@ -100,7 +103,24 @@ public class PurchaseInvoiceService {
     public PurchaseInvoice updateStatus(Long id, String status) {
         PurchaseInvoice invoice = getById(id);
         invoice.setStatus(status);
-        return repository.save(invoice);
+        PurchaseInvoice saved = repository.save(invoice);
+        applyWacIfReady(saved);
+        return saved;
+    }
+
+    /** Blend this invoice into product WAC once it reaches VERIFIED or PAID. Idempotent. */
+    private void applyWacIfReady(PurchaseInvoice invoice) {
+        if (invoice.isWacApplied()) return;
+        String status = invoice.getStatus();
+        if (!"VERIFIED".equals(status) && !"PAID".equals(status)) return;
+        if (invoice.getItems() != null) {
+            for (PurchaseInvoiceItem item : invoice.getItems()) {
+                if (item.getProduct() == null || item.getQuantity() == null || item.getUnitPrice() == null) continue;
+                wacService.applyPurchase(item.getProduct(), item.getQuantity(), item.getUnitPrice());
+            }
+        }
+        invoice.setWacApplied(true);
+        repository.save(invoice);
     }
 
     public PurchaseInvoice uploadPdf(Long id, MultipartFile file) throws IOException {

@@ -78,7 +78,7 @@ public class ShiftSalesCalculationService {
         BigDecimal cashBillTotal = BigDecimal.ZERO;
         BigDecimal creditBillTotal = BigDecimal.ZERO;
 
-        Map<String, double[]> oilSales = new LinkedHashMap<>();
+        Map<String, double[]> oilSales = new LinkedHashMap<>(); // productName -> [qty, amount, rate, wacCost]
 
         for (InvoiceBill inv : allInvoices) {
             if (com.stopforfuel.backend.enums.BillType.CASH.equals(inv.getBillType())) {
@@ -95,15 +95,17 @@ public class ShiftSalesCalculationService {
                         double qty = ip.getQuantity() != null ? ip.getQuantity().doubleValue() : 0;
                         double amt = ip.getAmount() != null ? ip.getAmount().doubleValue() : 0;
                         double rate = ip.getUnitPrice() != null ? ip.getUnitPrice().doubleValue() : 0;
-                        oilSales.merge(productName, new double[]{qty, amt, rate},
-                                (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2]});
+                        double wacCost = ip.getProduct() != null && ip.getProduct().getWacCost() != null
+                                ? ip.getProduct().getWacCost().doubleValue() : 0;
+                        oilSales.merge(productName, new double[]{qty, amt, rate, wacCost},
+                                (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2], nw[3]});
                     }
                 }
             }
         }
 
         // 1b. Fuel Sales: compute from nozzle meter readings, rate from Product Catalog
-        Map<String, double[]> fuelSales = new LinkedHashMap<>(); // productName -> [netLitres, amount, rate]
+        Map<String, double[]> fuelSales = new LinkedHashMap<>(); // productName -> [netLitres, amount, rate, wacCost]
         double totalTestLitres = 0;
         double totalTestAmount = 0;
         List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
@@ -115,10 +117,11 @@ public class ShiftSalesCalculationService {
             double sales = ni.getSales() != null ? ni.getSales() : 0;
             double test = ni.getTestQuantity() != null ? ni.getTestQuantity() : 0;
             double rate = product.getPrice() != null ? product.getPrice().doubleValue() : 0;
+            double wacCost = product.getWacCost() != null ? product.getWacCost().doubleValue() : 0;
             double netLitres = sales - test;
             double amount = netLitres * rate;
-            fuelSales.merge(productName, new double[]{netLitres, amount, rate},
-                    (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2]});
+            fuelSales.merge(productName, new double[]{netLitres, amount, rate, wacCost},
+                    (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2], nw[3]});
             totalTestLitres += test;
             totalTestAmount += test * rate;
         }
@@ -134,6 +137,9 @@ public class ShiftSalesCalculationService {
             item.setQuantity(vals[0]);
             item.setRate(BigDecimal.valueOf(vals[2]).setScale(4, RoundingMode.HALF_UP));
             item.setAmount(BigDecimal.valueOf(vals[1]).setScale(4, RoundingMode.HALF_UP));
+            if (vals[3] > 0) {
+                item.setCostAmount(BigDecimal.valueOf(vals[0] * vals[3]).setScale(4, RoundingMode.HALF_UP));
+            }
             item.setSortOrder(++sortOrder);
             lineItems.add(item);
         }
@@ -163,6 +169,9 @@ public class ShiftSalesCalculationService {
             item.setQuantity(vals[0]);
             item.setRate(BigDecimal.valueOf(vals[2]).setScale(4, RoundingMode.HALF_UP));
             item.setAmount(BigDecimal.valueOf(vals[1]).setScale(4, RoundingMode.HALF_UP));
+            if (vals[3] > 0) {
+                item.setCostAmount(BigDecimal.valueOf(vals[0] * vals[3]).setScale(4, RoundingMode.HALF_UP));
+            }
             item.setSortOrder(++sortOrder);
             lineItems.add(item);
         }
@@ -326,10 +335,11 @@ public class ShiftSalesCalculationService {
     }
 
     /**
-     * Populate sales differences (tank sale vs meter sale by product) into print data.
+     * Pure computation: tank-sale vs meter-sale per product for one shift.
+     * Used by both the shift print-data populator and the bunk audit roller-upper.
      */
     @Transactional(readOnly = true)
-    public void populateSalesDifferences(ShiftReportPrintData data, Long shiftId) {
+    public List<ShiftReportPrintData.SalesDifference> computeSalesDifferences(Long shiftId) {
         List<TankInventory> tankInvs = tankInventoryRepository.findByShiftId(shiftId);
         List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
 
@@ -349,6 +359,8 @@ public class ShiftSalesCalculationService {
         Set<String> allProducts = new LinkedHashSet<>();
         allProducts.addAll(tankSalesByProduct.keySet());
         allProducts.addAll(meterSalesByProduct.keySet());
+
+        List<ShiftReportPrintData.SalesDifference> result = new ArrayList<>();
         for (String product : allProducts) {
             double tankSale = tankSalesByProduct.containsKey(product) ? tankSalesByProduct.get(product)[0] : 0;
             double meterSale = meterSalesByProduct.containsKey(product) ? meterSalesByProduct.get(product)[0] : 0;
@@ -357,8 +369,17 @@ public class ShiftSalesCalculationService {
             sd.setTankSale(tankSale);
             sd.setMeterSale(meterSale);
             sd.setDifference(tankSale - meterSale);
-            data.getSalesDifferences().add(sd);
+            result.add(sd);
         }
+        return result;
+    }
+
+    /**
+     * Populate sales differences (tank sale vs meter sale by product) into print data.
+     */
+    @Transactional(readOnly = true)
+    public void populateSalesDifferences(ShiftReportPrintData data, Long shiftId) {
+        data.getSalesDifferences().addAll(computeSalesDifferences(shiftId));
     }
 
     /**
