@@ -147,11 +147,14 @@ export default function AuditPage() {
         );
     }
 
-    const allProductSales = data ? [...data.outputs.fuelSold, ...data.outputs.oilSold] : [];
     const inputs = data?.inputs;
     const outputs = data?.outputs;
     const variance = data?.variance ?? [];
     const profitability = data?.profitability;
+    const allProductSales = [
+        ...((outputs?.fuelSold) ?? []),
+        ...((outputs?.oilSold) ?? []),
+    ];
 
     return (
         <div className="min-h-screen bg-background p-6 md:p-8 transition-colors duration-300">
@@ -253,7 +256,7 @@ export default function AuditPage() {
                             </h2>
                             <p className="text-sm text-muted-foreground mt-1">
                                 Margin: <span className={isProfit ? "text-green-500" : "text-red-500"}>
-                                    {profitability.marginPct.toFixed(2)}%
+                                    {(profitability.marginPct ?? 0).toFixed(2)}%
                                 </span>
                             </p>
                         </div>
@@ -297,7 +300,7 @@ export default function AuditPage() {
                             <InputRow
                                 icon={<Fuel className="w-4 h-4 text-blue-500" />}
                                 label="Fuel Received"
-                                items={inputs.fuelReceived.map((f) => ({
+                                items={(inputs.fuelReceived ?? []).map((f) => ({
                                     key: f.productName,
                                     label: `${f.productName} — ${formatLitres(f.litres)} L`,
                                     value: `₹${formatCompact(f.purchaseAmount)}`,
@@ -306,7 +309,7 @@ export default function AuditPage() {
                             <InputRow
                                 icon={<Wallet className="w-4 h-4 text-indigo-500" />}
                                 label="E-Advances"
-                                items={inputs.eAdvances.map((a) => ({
+                                items={(inputs.eAdvances ?? []).map((a) => ({
                                     key: a.mode,
                                     label: a.mode,
                                     value: `₹${formatCompact(a.amount)}`,
@@ -328,7 +331,7 @@ export default function AuditPage() {
                             <InputRow
                                 icon={<Droplet className="w-4 h-4 text-amber-500" />}
                                 label="Operational Advances"
-                                items={outputs.opAdvances.map((a) => ({
+                                items={(outputs.opAdvances ?? []).map((a) => ({
                                     key: a.type,
                                     label: a.type,
                                     value: `₹${formatCompact(a.amount)}`,
@@ -337,7 +340,7 @@ export default function AuditPage() {
                             <InputRow
                                 icon={<Receipt className="w-4 h-4 text-orange-500" />}
                                 label="Expenses"
-                                items={outputs.expenses.map((a) => ({
+                                items={(outputs.expenses ?? []).map((a) => ({
                                     key: a.type,
                                     label: a.type,
                                     value: `₹${formatCompact(a.amount)}`,
@@ -347,7 +350,7 @@ export default function AuditPage() {
                             <SimpleRow label="Incentives" value={`₹${formatCompact(outputs.incentives)}`} />
                             <SimpleRow
                                 label="Test Quantity"
-                                value={`${formatLitres(outputs.testQuantity.litres)} L / ₹${formatCompact(outputs.testQuantity.amount)}`}
+                                value={`${formatLitres(outputs.testQuantity?.litres)} L / ₹${formatCompact(outputs.testQuantity?.amount)}`}
                             />
                         </div>
                     </GlassCard>
@@ -383,7 +386,7 @@ export default function AuditPage() {
                                                 &#8377;{formatCurrency(p.margin)}
                                             </td>
                                             <td className={`py-2 pr-4 text-right ${p.margin >= 0 ? "text-green-500" : "text-red-500"}`}>
-                                                {p.marginPct.toFixed(2)}%
+                                                {(p.marginPct ?? 0).toFixed(2)}%
                                             </td>
                                         </tr>
                                     ))}
@@ -422,7 +425,7 @@ export default function AuditPage() {
                                                 {formatLitres(v.shrinkageLitres)}
                                             </td>
                                             <td className={`py-2 pr-4 text-right ${v.flagged ? "text-red-500 font-semibold" : ""}`}>
-                                                {(v.shrinkagePct * 100).toFixed(3)}%
+                                                {((v.shrinkagePct ?? 0) * 100).toFixed(3)}%
                                             </td>
                                         </tr>
                                     ))}
@@ -562,7 +565,7 @@ function YearlyScorecard({
                                 )}
                             </div>
                             <p className={`text-xs mt-2 ${positive ? "text-green-500" : "text-red-500"}`}>
-                                {m.marginPct.toFixed(2)}% margin
+                                {(m.marginPct ?? 0).toFixed(2)}% margin
                             </p>
                         </GlassCard>
                     );
