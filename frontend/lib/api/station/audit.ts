@@ -43,23 +43,35 @@ export interface ProductVariance {
     flagged: boolean;
 }
 
-export interface AuditInputs {
-    fuelReceived: FuelReceived[];
-    cashReceived: AmountByMode[];
-    creditBilled: number;
-    creditCollected: number;
+export interface CashIn {
+    cashInvoices: number;
+    billPayments: number;
+    statementPayments: number;
     externalInflow: number;
-    eAdvances: AmountByMode[];
 }
 
-export interface AuditOutputs {
-    fuelSold: ProductSale[];
-    oilSold: ProductSale[];
-    opAdvances: AmountByType[];
+export interface CashOut {
+    creditInvoices: number;
+    eAdvances: AmountByMode[];
     expenses: AmountByType[];
     stationExpenses: number;
     incentives: number;
+    salaryAdvance: number;
+    cashAdvanceSpent: number;
+    inflowRepayments: number;
     testQuantity: TestQuantity;
+}
+
+export interface InternalTransfers {
+    managementAdvance: number;
+    cashAdvanceBankDeposit: number;
+}
+
+export interface CashFlow {
+    in: CashIn;
+    out: CashOut;
+    internalTransfers: InternalTransfers;
+    netPosition: number;
 }
 
 export interface Profitability {
@@ -76,10 +88,11 @@ export interface BunkAuditReport {
     toDate: string;
     granularity: AuditGranularity;
     shiftCount: number;
-    inputs: AuditInputs;
-    outputs: AuditOutputs;
-    variance: ProductVariance[];
+    cashFlow: CashFlow;
     profitability: Profitability;
+    productSales: ProductSale[];
+    variance: ProductVariance[];
+    fuelReceived: FuelReceived[];
 }
 
 export const getAudit = (
@@ -122,7 +135,6 @@ export const downloadAuditPdf = async (
     try {
         window.open(url, '_blank', 'noopener,noreferrer');
     } finally {
-        // Revoke after a short delay so the new tab can load the blob first.
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
     }
 };

@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import { StyledSelect } from "@/components/ui/styled-select";
 import { useFormValidation, required, min, indianMobile } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
-import { Employee, ADVANCE_TYPES, createAdvance } from "./advances-api";
+import { Employee, ADVANCE_TYPES, createAdvance, CashAdvanceDestination } from "./advances-api";
 
 interface AdvanceAddModalProps {
     isOpen: boolean;
@@ -17,6 +17,7 @@ interface AdvanceAddModalProps {
 
 export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: AdvanceAddModalProps) {
     const [addType, setAddType] = useState("CASH");
+    const [addCashDestination, setAddCashDestination] = useState<CashAdvanceDestination | "">("");
     const [addAmount, setAddAmount] = useState("");
     const [addRecipientName, setAddRecipientName] = useState("");
     const [addRecipientPhone, setAddRecipientPhone] = useState("");
@@ -34,6 +35,7 @@ export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: Advan
 
     const resetAddForm = () => {
         setAddType("CASH");
+        setAddCashDestination("");
         setAddAmount("");
         setAddRecipientName("");
         setAddRecipientPhone("");
@@ -60,12 +62,17 @@ export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: Advan
     const handleCreateAdvance = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateAdv({ addAmount, addRecipientName, addRecipientPhone })) return;
+        if (addType === "CASH" && !addCashDestination) {
+            setAdvApiError("Pick a destination for the cash advance (Bank Deposit or Spent).");
+            return;
+        }
         setIsSubmitting(true);
         setAdvApiError("");
         try {
             await createAdvance({
                 amount: Number(addAmount),
                 advanceType: addType,
+                cashDestination: addType === "CASH" ? addCashDestination as CashAdvanceDestination : null,
                 recipientName: addRecipientName,
                 recipientPhone: addRecipientPhone,
                 purpose: addPurpose,
@@ -118,6 +125,34 @@ export function AdvanceAddModal({ isOpen, onClose, onSuccess, employees }: Advan
                         })}
                     </div>
                 </div>
+
+                {/* Cash destination (for cash advance) */}
+                {addType === "CASH" && (
+                    <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                            Where is this cash going? <span className="text-red-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {(["BANK_DEPOSIT", "SPENT"] as CashAdvanceDestination[]).map((d) => (
+                                <button
+                                    key={d}
+                                    type="button"
+                                    onClick={() => setAddCashDestination(d)}
+                                    className={`p-3 rounded-xl border text-xs font-medium transition-all ${
+                                        addCashDestination === d
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-border bg-card text-muted-foreground hover:border-primary/30"
+                                    }`}
+                                >
+                                    {d === "BANK_DEPOSIT" ? "Bank Deposit" : "Spent"}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1.5">
+                            Bank Deposit = internal transfer (still with the business). Spent = real cash-out.
+                        </p>
+                    </div>
+                )}
 
                 {/* Employee Selector (for salary advance) */}
                 {addType === "SALARY" && employees.length > 0 && (

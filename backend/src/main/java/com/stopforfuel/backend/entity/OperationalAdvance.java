@@ -3,6 +3,7 @@ package com.stopforfuel.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.stopforfuel.backend.enums.AdvanceStatus;
 import com.stopforfuel.backend.enums.AdvanceType;
+import com.stopforfuel.backend.enums.CashAdvanceDestination;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,6 +33,15 @@ public class OperationalAdvance extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "advance_type", nullable = false)
     private AdvanceType advanceType;
+
+    /**
+     * Only relevant when advanceType=CASH. BANK_DEPOSIT = internal transfer,
+     * SPENT = real cash-out for the business. Required for new CASH advances;
+     * historical nulls are treated as SPENT by the audit for conservative math.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cash_destination")
+    private CashAdvanceDestination cashDestination;
 
     @Column(name = "recipient_name")
     private String recipientName;

@@ -9,9 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Bunk Audit / P&L report. Aggregates one or more shifts into a single money view:
- * everything that came IN, everything that went OUT, physical variance, and a
- * profit verdict. Returned by BunkAuditService#compute.
+ * Bunk Audit report. Two parallel views of the same period:
+ *
+ *  - CashFlow: "did the till gain or lose cash?" — classifies every rupee as
+ *    IN / OUT / INTERNAL_TRANSFER. Rolls up from invoices (now including
+ *    synthetic cash residuals) and shift-level transactions.
+ *  - Profitability: accrual P&L from invoice revenue and per-product WAC cost.
+ *
+ * Variance, per-product margin, and fuel-received (delivery info) stay as
+ * supporting panels.
  */
 @Getter
 @Setter
@@ -24,31 +30,62 @@ public class BunkAuditReport {
     private Granularity granularity;
     private int shiftCount;
 
-    private Inputs inputs = new Inputs();
-    private Outputs outputs = new Outputs();
-    private List<ProductVariance> variance = new ArrayList<>();
+    private CashFlow cashFlow = new CashFlow();
     private Profitability profitability = new Profitability();
+    private List<ProductSale> productSales = new ArrayList<>();
+    private List<ProductVariance> variance = new ArrayList<>();
+    private List<FuelReceived> fuelReceived = new ArrayList<>();
+
+    // ============================== CASH FLOW ==============================
 
     @Getter @Setter
-    public static class Inputs {
-        private List<FuelReceived> fuelReceived = new ArrayList<>();
-        private List<AmountByMode> cashReceived = new ArrayList<>();
-        private BigDecimal creditBilled = BigDecimal.ZERO;
-        private BigDecimal creditCollected = BigDecimal.ZERO;
-        private BigDecimal externalInflow = BigDecimal.ZERO;
-        private List<AmountByMode> eAdvances = new ArrayList<>();
+    public static class CashFlow {
+        private CashIn in = new CashIn();
+        private CashOut out = new CashOut();
+        private InternalTransfers internalTransfers = new InternalTransfers();
+        private BigDecimal netPosition = BigDecimal.ZERO; // in − out
     }
 
     @Getter @Setter
-    public static class Outputs {
-        private List<ProductSale> fuelSold = new ArrayList<>();
-        private List<ProductSale> oilSold = new ArrayList<>();
-        private List<AmountByType> opAdvances = new ArrayList<>();
+    public static class CashIn {
+        /** Sum of cash InvoiceBill.netAmount (explicit cashier-raised + synthetic). */
+        private BigDecimal cashInvoices = BigDecimal.ZERO;
+        /** Payments against individual credit invoices (money settling receivables). */
+        private BigDecimal billPayments = BigDecimal.ZERO;
+        /** Payments against statements. */
+        private BigDecimal statementPayments = BigDecimal.ZERO;
+        /** Owner/manager adding cash to the till (external inflow). */
+        private BigDecimal externalInflow = BigDecimal.ZERO;
+    }
+
+    @Getter @Setter
+    public static class CashOut {
+        /** Sum of credit InvoiceBill.netAmount — fuel/stock left, cash not in yet. */
+        private BigDecimal creditInvoices = BigDecimal.ZERO;
+        /** Electronic payments (card/UPI/etc) carved out of cash receipts at the till. */
+        private List<AmountByMode> eAdvances = new ArrayList<>();
+        /** Per-type shift expenses. */
         private List<AmountByType> expenses = new ArrayList<>();
         private BigDecimal stationExpenses = BigDecimal.ZERO;
         private BigDecimal incentives = BigDecimal.ZERO;
+        private BigDecimal salaryAdvance = BigDecimal.ZERO;
+        /** CASH operational advances whose destination is SPENT (or null historic). */
+        private BigDecimal cashAdvanceSpent = BigDecimal.ZERO;
+        /** Cash returned to external lenders. */
+        private BigDecimal inflowRepayments = BigDecimal.ZERO;
+        /** Test fuel dispensed — informational; no cash moved. Shown for context. */
         private TestQuantity testQuantity = new TestQuantity();
     }
+
+    @Getter @Setter
+    public static class InternalTransfers {
+        /** Money taken by management — stays with the business. */
+        private BigDecimal managementAdvance = BigDecimal.ZERO;
+        /** CASH advances deposited to bank — still with the business, just not in the till. */
+        private BigDecimal cashAdvanceBankDeposit = BigDecimal.ZERO;
+    }
+
+    // ============================ PROFITABILITY ============================
 
     @Getter @Setter
     public static class Profitability {
@@ -59,6 +96,8 @@ public class BunkAuditReport {
         private BigDecimal netProfit = BigDecimal.ZERO;
         private BigDecimal marginPct = BigDecimal.ZERO;
     }
+
+    // ============================ SUPPORTING SHAPES ============================
 
     @Getter @Setter
     public static class FuelReceived {

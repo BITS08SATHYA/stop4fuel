@@ -80,6 +80,8 @@ public class OperationalAdvanceService {
 
     @Transactional
     public OperationalAdvance create(OperationalAdvance advance) {
+        validateCashDestination(advance);
+
         Shift activeShift = shiftService.getActiveShift();
         if (activeShift != null) {
             advance.setShiftId(activeShift.getId());
@@ -99,6 +101,19 @@ public class OperationalAdvanceService {
         }
 
         return repository.save(advance);
+    }
+
+    /** CASH-type advances must declare whether the cash was bank-deposited or spent. */
+    private void validateCashDestination(OperationalAdvance advance) {
+        if (advance.getAdvanceType() == com.stopforfuel.backend.enums.AdvanceType.CASH
+                && advance.getCashDestination() == null) {
+            throw new com.stopforfuel.backend.exception.BusinessException(
+                    "cashDestination is required for CASH advances (BANK_DEPOSIT or SPENT)");
+        }
+        // For non-CASH advances, force-null the destination to avoid stale data
+        if (advance.getAdvanceType() != com.stopforfuel.backend.enums.AdvanceType.CASH) {
+            advance.setCashDestination(null);
+        }
     }
 
     @Transactional

@@ -99,35 +99,51 @@ public class BunkAuditReportService {
             Font verdictValue = new Font(Font.HELVETICA, 14, Font.BOLD,
                     isProfit ? new Color(16, 185, 129) : new Color(239, 68, 68));
 
-            PdfPTable verdict = new PdfPTable(4);
+            BunkAuditReport.CashFlow cf = report.getCashFlow();
+            boolean cashPositive = cf.getNetPosition().signum() >= 0;
+            Font cashValue = new Font(Font.HELVETICA, 14, Font.BOLD,
+                    cashPositive ? new Color(16, 185, 129) : new Color(239, 68, 68));
+
+            // --- Dual verdict strip: Net Cash Position | Net Profit ---
+            PdfPTable verdict = new PdfPTable(2);
             verdict.setWidthPercentage(100);
-            verdict.setWidths(new float[]{25, 25, 25, 25});
-            addVerdictBox(verdict, "Net Profit", formatRupee(p.getNetProfit()),
+            verdict.setWidths(new float[]{50, 50});
+            addVerdictBox(verdict, "Net Cash Position", formatRupee(cf.getNetPosition()),
+                    "IN − OUT", verdictLabelFont, cashValue, subFont);
+            addVerdictBox(verdict, "Net Profit (accrual)", formatRupee(p.getNetProfit()),
                     p.getMarginPct() + "% margin", verdictLabelFont, verdictValue, subFont);
-            addVerdictBox(verdict, "Gross Revenue", formatRupee(p.getGrossRevenue()),
-                    "", verdictLabelFont, verdictValueFont, subFont);
-            addVerdictBox(verdict, "COGS", formatRupee(p.getTotalCogs()),
-                    "", verdictLabelFont, verdictValueFont, subFont);
-            addVerdictBox(verdict, "Operating Expenses", formatRupee(p.getOperatingExpenses()),
-                    "", verdictLabelFont, verdictValueFont, subFont);
             doc.add(verdict);
             doc.add(Chunk.NEWLINE);
 
-            // --- Inputs / Outputs side by side ---
-            BunkAuditReport.Inputs in = report.getInputs();
-            BunkAuditReport.Outputs outp = report.getOutputs();
-
-            PdfPTable sideBySide = new PdfPTable(2);
-            sideBySide.setWidthPercentage(100);
-            sideBySide.setWidths(new float[]{50, 50});
-
-            sideBySide.addCell(buildInputsCell(in, sectionFont, headerFont, cellFont, boldCellFont, amountFont));
-            sideBySide.addCell(buildOutputsCell(outp, sectionFont, headerFont, cellFont, boldCellFont, amountFont));
-            doc.add(sideBySide);
+            // --- Cash Flow panel: IN / OUT / Internal Transfers ---
+            PdfPTable flow = new PdfPTable(2);
+            flow.setWidthPercentage(100);
+            flow.setWidths(new float[]{50, 50});
+            flow.addCell(buildCashInCell(cf.getIn(), sectionFont, cellFont, boldCellFont, amountFont));
+            flow.addCell(buildCashOutCell(cf.getOut(), sectionFont, cellFont, boldCellFont, amountFont));
+            doc.add(flow);
             doc.add(Chunk.NEWLINE);
 
+            if (cf.getInternalTransfers().getManagementAdvance().signum() > 0
+                    || cf.getInternalTransfers().getCashAdvanceBankDeposit().signum() > 0) {
+                Paragraph s = new Paragraph("Internal Transfers (stay with the business — excluded from IN/OUT)", sectionFont);
+                s.setSpacingBefore(6);
+                doc.add(s);
+                PdfPTable xfer = new PdfPTable(2);
+                xfer.setWidthPercentage(60);
+                xfer.setHorizontalAlignment(Element.ALIGN_LEFT);
+                xfer.setWidths(new float[]{65, 35});
+                addCell(xfer, "Management Advance", cellFont, Element.ALIGN_LEFT, Color.WHITE, new Color(238, 238, 238));
+                addCell(xfer, formatRupee(cf.getInternalTransfers().getManagementAdvance()), amountFont, Element.ALIGN_RIGHT, Color.WHITE, new Color(238, 238, 238));
+                addCell(xfer, "Cash Advance → Bank Deposit", cellFont, Element.ALIGN_LEFT, Color.WHITE, new Color(238, 238, 238));
+                addCell(xfer, formatRupee(cf.getInternalTransfers().getCashAdvanceBankDeposit()), amountFont, Element.ALIGN_RIGHT, Color.WHITE, new Color(238, 238, 238));
+                doc.add(xfer);
+                doc.add(Chunk.NEWLINE);
+            }
+
             // --- Per-Product Margin ---
-            List<BunkAuditReport.ProductSale> allSales = combine(outp.getFuelSold(), outp.getOilSold());
+            List<BunkAuditReport.ProductSale> allSales = report.getProductSales() != null
+                    ? report.getProductSales() : java.util.Collections.emptyList();
             if (!allSales.isEmpty()) {
                 Paragraph s = new Paragraph("Per-Product Margin", sectionFont);
                 s.setSpacingBefore(8);
@@ -226,71 +242,48 @@ public class BunkAuditReportService {
 
     // =============================== cell builders ===============================
 
-    private PdfPCell buildInputsCell(BunkAuditReport.Inputs in,
-                                      Font sectionFont, Font headerFont, Font cellFont,
-                                      Font boldCellFont, Font amountFont) {
+    private PdfPCell buildCashInCell(BunkAuditReport.CashIn in,
+                                      Font sectionFont, Font cellFont, Font boldCellFont, Font amountFont) {
         PdfPCell cell = new PdfPCell();
         cell.setPadding(6);
         cell.setBorderColor(new Color(224, 224, 224));
-
-        Paragraph h = new Paragraph("Inputs  (money & fuel in)", sectionFont);
+        Paragraph h = new Paragraph("Money IN", sectionFont);
         h.setSpacingAfter(4);
         cell.addElement(h);
-
-        // Fuel received
-        if (in.getFuelReceived() != null && !in.getFuelReceived().isEmpty()) {
-            cell.addElement(subHeader("Fuel Received", boldCellFont));
-            for (BunkAuditReport.FuelReceived f : in.getFuelReceived()) {
-                cell.addElement(kv(String.format("  %s (%s L)", f.getProductName(), QTY_FMT.format(f.getLitres())),
-                        formatRupee(f.getPurchaseAmount()), cellFont, amountFont));
-            }
-        }
-
-        // E-Advances
-        if (in.getEAdvances() != null && !in.getEAdvances().isEmpty()) {
-            cell.addElement(subHeader("E-Advances", boldCellFont));
-            for (BunkAuditReport.AmountByMode a : in.getEAdvances()) {
-                cell.addElement(kv("  " + a.getMode(), formatRupee(a.getAmount()), cellFont, amountFont));
-            }
-        }
-
-        cell.addElement(subHeader("Other", boldCellFont));
-        cell.addElement(kv("  Credit Billed", formatRupee(in.getCreditBilled()), cellFont, amountFont));
-        cell.addElement(kv("  Credit Collected", formatRupee(in.getCreditCollected()), cellFont, amountFont));
+        cell.addElement(kv("  Cash Invoices", formatRupee(in.getCashInvoices()), cellFont, amountFont));
+        cell.addElement(kv("  Bill Payments", formatRupee(in.getBillPayments()), cellFont, amountFont));
+        cell.addElement(kv("  Statement Payments", formatRupee(in.getStatementPayments()), cellFont, amountFont));
         cell.addElement(kv("  External Inflow", formatRupee(in.getExternalInflow()), cellFont, amountFont));
         return cell;
     }
 
-    private PdfPCell buildOutputsCell(BunkAuditReport.Outputs out,
-                                       Font sectionFont, Font headerFont, Font cellFont,
-                                       Font boldCellFont, Font amountFont) {
+    private PdfPCell buildCashOutCell(BunkAuditReport.CashOut out,
+                                       Font sectionFont, Font cellFont, Font boldCellFont, Font amountFont) {
         PdfPCell cell = new PdfPCell();
         cell.setPadding(6);
         cell.setBorderColor(new Color(224, 224, 224));
-
-        Paragraph h = new Paragraph("Outputs  (money & fuel out)", sectionFont);
+        Paragraph h = new Paragraph("Money OUT", sectionFont);
         h.setSpacingAfter(4);
         cell.addElement(h);
-
-        if (out.getOpAdvances() != null && !out.getOpAdvances().isEmpty()) {
-            cell.addElement(subHeader("Operational Advances", boldCellFont));
-            for (BunkAuditReport.AmountByType a : out.getOpAdvances()) {
-                cell.addElement(kv("  " + a.getType(), formatRupee(a.getAmount()), cellFont, amountFont));
+        cell.addElement(kv("  Credit Invoices", formatRupee(out.getCreditInvoices()), cellFont, amountFont));
+        if (out.getEAdvances() != null && !out.getEAdvances().isEmpty()) {
+            cell.addElement(subHeader("  E-Advances", boldCellFont));
+            for (BunkAuditReport.AmountByMode a : out.getEAdvances()) {
+                cell.addElement(kv("    " + a.getMode(), formatRupee(a.getAmount()), cellFont, amountFont));
             }
         }
-
         if (out.getExpenses() != null && !out.getExpenses().isEmpty()) {
-            cell.addElement(subHeader("Expenses", boldCellFont));
             for (BunkAuditReport.AmountByType a : out.getExpenses()) {
                 cell.addElement(kv("  " + a.getType(), formatRupee(a.getAmount()), cellFont, amountFont));
             }
         }
-
-        cell.addElement(subHeader("Other", boldCellFont));
         cell.addElement(kv("  Station Expenses", formatRupee(out.getStationExpenses()), cellFont, amountFont));
         cell.addElement(kv("  Incentives", formatRupee(out.getIncentives()), cellFont, amountFont));
-        if (out.getTestQuantity() != null) {
-            cell.addElement(kv("  Test Quantity (" + QTY_FMT.format(out.getTestQuantity().getLitres()) + " L)",
+        cell.addElement(kv("  Salary Advance", formatRupee(out.getSalaryAdvance()), cellFont, amountFont));
+        cell.addElement(kv("  Cash Advance (spent)", formatRupee(out.getCashAdvanceSpent()), cellFont, amountFont));
+        cell.addElement(kv("  Inflow Repayments", formatRupee(out.getInflowRepayments()), cellFont, amountFont));
+        if (out.getTestQuantity() != null && out.getTestQuantity().getLitres() > 0) {
+            cell.addElement(kv("  Test Quantity (" + QTY_FMT.format(out.getTestQuantity().getLitres()) + " L, info)",
                     formatRupee(out.getTestQuantity().getAmount()), cellFont, amountFont));
         }
         return cell;

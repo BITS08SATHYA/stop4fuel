@@ -21,11 +21,15 @@ export interface StatementRef {
     status: string;
 }
 
+export type CashAdvanceDestination = "BANK_DEPOSIT" | "SPENT";
+
 export interface OperationalAdvance {
     id: number;
     advanceDate: string;
     amount: number;
     advanceType: string;
+    /** Only set when advanceType=CASH. BANK_DEPOSIT is internal transfer; SPENT is real cash-out. */
+    cashDestination?: CashAdvanceDestination | null;
     recipientName: string;
     recipientPhone: string;
     purpose: string;
@@ -141,6 +145,7 @@ export async function fetchShiftInvoices(shiftId: number): Promise<InvoiceBill[]
 export async function createAdvance(data: {
     amount: number;
     advanceType: string;
+    cashDestination?: CashAdvanceDestination | null;
     recipientName: string;
     recipientPhone: string;
     purpose: string;
