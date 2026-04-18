@@ -35,6 +35,52 @@ public class ShiftSalesCalculationService {
     private final CashierStockRepository cashierStockRepository;
 
     /**
+     * Per-product fuel aggregate for a shift — sourced from nozzle meter readings.
+     * netLitres excludes test quantity; rate is the product's current catalog price.
+     */
+    public static class FuelSaleAggregate {
+        private final Product product;
+        private double netLitres;
+        private double testLitres;
+        private final double rate;
+
+        public FuelSaleAggregate(Product product, double rate) {
+            this.product = product;
+            this.rate = rate;
+        }
+
+        public Product getProduct() { return product; }
+        public double getNetLitres() { return netLitres; }
+        public double getTestLitres() { return testLitres; }
+        public double getRate() { return rate; }
+        public double getAmount() { return netLitres * rate; }
+    }
+
+    /**
+     * Aggregate fuel sales per product across all nozzles in the shift.
+     * Pure — no writes, no ShiftClosingReport required. Callers: synthetic cash
+     * invoice generator, anywhere else that needs a clean per-product map.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, FuelSaleAggregate> computeFuelSalesByProduct(Long shiftId) {
+        Map<Long, FuelSaleAggregate> byProduct = new LinkedHashMap<>();
+        List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
+        for (NozzleInventory ni : nozzleInvs) {
+            if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
+                    || ni.getNozzle().getTank().getProduct() == null) continue;
+            Product product = ni.getNozzle().getTank().getProduct();
+            double rate = product.getPrice() != null ? product.getPrice().doubleValue() : 0;
+            double sales = ni.getSales() != null ? ni.getSales() : 0;
+            double test = ni.getTestQuantity() != null ? ni.getTestQuantity() : 0;
+            FuelSaleAggregate agg = byProduct.computeIfAbsent(product.getId(),
+                    k -> new FuelSaleAggregate(product, rate));
+            agg.netLitres += (sales - test);
+            agg.testLitres += test;
+        }
+        return byProduct;
+    }
+
+    /**
      * Result holder for sales line-item computation.
      */
     public static class SalesResult {
