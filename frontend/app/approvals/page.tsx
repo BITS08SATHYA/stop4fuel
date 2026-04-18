@@ -15,7 +15,6 @@ import {
     listPendingApprovals,
     approveApprovalRequest,
     rejectApprovalRequest,
-    parseApprovalPayload,
     type ApprovalRequest,
     type ApprovalRequestType,
 } from "@/lib/api/station";
@@ -37,16 +36,116 @@ function formatDateTime(dateStr?: string | null) {
     });
 }
 
-function formatPayloadKV(payload: Record<string, unknown>): Array<[string, string]> {
-    return Object.entries(payload).map(([k, v]) => [k, v === null || v === undefined ? "-" : String(v)]);
+function formatRupee(n?: number | null) {
+    if (n == null) return "-";
+    return "\u20B9" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function contextLink(req: ApprovalRequest, payload: Record<string, unknown>): { href: string; label: string } | null {
+function formatLitres(n?: number | null) {
+    if (n == null) return "-";
+    return Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 }) + " L";
+}
+
+/** One-line subtitle for the Pending list card — friendly identifier, customer, amount. */
+function listSubtitle(req: ApprovalRequest): string | null {
+    switch (req.requestType) {
+        case "RECORD_INVOICE_PAYMENT": {
+            const parts = [req.billNo, req.customerName, formatRupee(req.amount)].filter(Boolean) as string[];
+            return parts.join(" \u00B7 ") || null;
+        }
+        case "RECORD_STATEMENT_PAYMENT": {
+            const parts = [req.statementNo, req.customerName, formatRupee(req.amount)].filter(Boolean) as string[];
+            return parts.join(" \u00B7 ") || null;
+        }
+        case "ADD_VEHICLE": {
+            const parts = [req.vehicleNumber, req.customerName].filter(Boolean) as string[];
+            return parts.join(" \u00B7 ") || null;
+        }
+        case "UNBLOCK_CUSTOMER":
+            return req.customerName ?? null;
+        case "RAISE_CREDIT_LIMIT": {
+            const bits: string[] = [];
+            if (req.customerName) bits.push(req.customerName);
+            if (req.requestedCreditLimitAmount != null) {
+                bits.push(`${formatRupee(req.currentCreditLimitAmount ?? 0)} \u2192 ${formatRupee(req.requestedCreditLimitAmount)}`);
+            } else if (req.requestedCreditLimitLiters != null) {
+                bits.push(`${formatLitres(req.currentCreditLimitLiters ?? 0)} \u2192 ${formatLitres(req.requestedCreditLimitLiters)}`);
+            }
+            return bits.join(" \u00B7 ") || null;
+        }
+        default:
+            return null;
+    }
+}
+
+/** Per-type labeled detail rows shown inside the Detail pane. */
+function renderDetailRows(req: ApprovalRequest): Array<[string, string]> {
+    const p = req.payload || {};
+    const rows: Array<[string, string]> = [];
+
+    const pushIf = (label: string, value: string | null | undefined) => {
+        if (value != null && value !== "") rows.push([label, value]);
+    };
+
+    switch (req.requestType) {
+        case "RECORD_INVOICE_PAYMENT":
+            pushIf("Bill No", req.billNo);
+            pushIf("Customer", req.customerName);
+            pushIf("Amount", formatRupee(req.amount));
+            pushIf("Payment Mode", req.paymentMode);
+            pushIf("Reference", strOrNull(p.referenceNo));
+            pushIf("Remarks", strOrNull(p.remarks));
+            pushIf("Payment Date", strOrNull(p.paymentDate));
+            break;
+        case "RECORD_STATEMENT_PAYMENT":
+            pushIf("Statement No", req.statementNo);
+            pushIf("Customer", req.customerName);
+            pushIf("Amount", formatRupee(req.amount));
+            pushIf("Payment Mode", req.paymentMode);
+            pushIf("Reference", strOrNull(p.referenceNo));
+            pushIf("Remarks", strOrNull(p.remarks));
+            pushIf("Payment Date", strOrNull(p.paymentDate));
+            break;
+        case "ADD_VEHICLE":
+            pushIf("Customer", req.customerName);
+            pushIf("Vehicle No", req.vehicleNumber);
+            pushIf("Vehicle Type ID", strOrNull(p.vehicleTypeId));
+            pushIf("Preferred Product ID", strOrNull(p.preferredProductId));
+            pushIf("Max Capacity", strOrNull(p.maxCapacity));
+            pushIf("Max Litres / Month", strOrNull(p.maxLitersPerMonth));
+            break;
+        case "UNBLOCK_CUSTOMER":
+            pushIf("Customer", req.customerName);
+            pushIf("Reason", strOrNull(p.reason));
+            break;
+        case "RAISE_CREDIT_LIMIT":
+            pushIf("Customer", req.customerName);
+            if (req.requestedCreditLimitAmount != null) {
+                rows.push(["Credit Limit (Amount)",
+                    `${formatRupee(req.currentCreditLimitAmount ?? 0)} \u2192 ${formatRupee(req.requestedCreditLimitAmount)}`]);
+            }
+            if (req.requestedCreditLimitLiters != null) {
+                rows.push(["Credit Limit (Litres)",
+                    `${formatLitres(req.currentCreditLimitLiters ?? 0)} \u2192 ${formatLitres(req.requestedCreditLimitLiters)}`]);
+            }
+            break;
+    }
+    return rows;
+}
+
+function strOrNull(v: unknown): string | null {
+    if (v == null) return null;
+    const s = String(v).trim();
+    return s.length > 0 ? s : null;
+}
+
+function contextLink(req: ApprovalRequest): { href: string; label: string } | null {
+    const p = req.payload || {};
     switch (req.requestType) {
         case "RECORD_STATEMENT_PAYMENT":
-            return payload.statementId ? { href: `/payments/explorer?statementId=${payload.statementId}`, label: "Open statement" } : null;
+            return p.statementId ? { href: `/payments/explorer?statementId=${p.statementId}`, label: "Open statement" } : null;
         case "RECORD_INVOICE_PAYMENT":
-            return payload.invoiceBillId ? { href: `/operations/invoices/explorer?invoiceBillId=${payload.invoiceBillId}`, label: "Open invoice" } : null;
+            return p.invoiceBillId ? { href: `/operations/invoices/explorer?invoiceId=${p.invoiceBillId}`, label: "Open invoice" } : null;
         case "ADD_VEHICLE":
         case "UNBLOCK_CUSTOMER":
         case "RAISE_CREDIT_LIMIT":
@@ -86,8 +185,8 @@ function ApprovalsPageInner() {
     useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const selected = useMemo(() => requests.find(r => r.id === selectedId) ?? null, [requests, selectedId]);
-    const selectedPayload = useMemo(() => selected ? parseApprovalPayload(selected) : {}, [selected]);
-    const link = selected ? contextLink(selected, selectedPayload) : null;
+    const selectedDetails = useMemo(() => selected ? renderDetailRows(selected) : [], [selected]);
+    const link = selected ? contextLink(selected) : null;
 
     const onApprove = async () => {
         if (!selected) return;
@@ -158,6 +257,7 @@ function ApprovalsPageInner() {
                             const meta = TYPE_META[r.requestType];
                             const Icon = meta.icon;
                             const active = r.id === selectedId;
+                            const subtitle = listSubtitle(r);
                             return (
                                 <button
                                     key={r.id}
@@ -170,9 +270,14 @@ function ApprovalsPageInner() {
                                         </span>
                                         <span className="ml-auto text-xs text-muted-foreground">#{r.id}</span>
                                     </div>
-                                    <div className="mt-1 text-sm line-clamp-1">
-                                        {r.requestNote || <span className="text-muted-foreground italic">No note</span>}
-                                    </div>
+                                    {subtitle && (
+                                        <div className="mt-1 text-sm font-medium line-clamp-1">{subtitle}</div>
+                                    )}
+                                    {r.requestNote && (
+                                        <div className="mt-0.5 text-xs text-muted-foreground line-clamp-1 italic">
+                                            &ldquo;{r.requestNote}&rdquo;
+                                        </div>
+                                    )}
                                     <div className="mt-0.5 text-xs text-muted-foreground">{formatDateTime(r.createdAt)}</div>
                                 </button>
                             );
@@ -206,8 +311,10 @@ function ApprovalsPageInner() {
                                         <div>{formatDateTime(selected.createdAt)}</div>
                                     </div>
                                     <div>
-                                        <div className="text-xs text-muted-foreground">Customer ID</div>
-                                        <div>{selected.customerId ?? "-"}</div>
+                                        <div className="text-xs text-muted-foreground">Customer</div>
+                                        <div>
+                                            {selected.customerName ?? (selected.customerId ? `#${selected.customerId}` : "-")}
+                                        </div>
                                     </div>
                                     <div>
                                         <div className="text-xs text-muted-foreground">Requested by (user id)</div>
@@ -223,16 +330,16 @@ function ApprovalsPageInner() {
                                 )}
 
                                 <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Payload</div>
+                                    <div className="text-xs text-muted-foreground mb-1">Details</div>
                                     <div className="rounded-md border border-border divide-y divide-border">
-                                        {formatPayloadKV(selectedPayload).map(([k, v]) => (
+                                        {selectedDetails.map(([k, v]) => (
                                             <div key={k} className="flex px-3 py-1.5 text-sm">
                                                 <span className="text-muted-foreground w-48 shrink-0">{k}</span>
                                                 <span className="break-all">{v}</span>
                                             </div>
                                         ))}
-                                        {formatPayloadKV(selectedPayload).length === 0 && (
-                                            <div className="px-3 py-2 text-sm text-muted-foreground">Empty payload</div>
+                                        {selectedDetails.length === 0 && (
+                                            <div className="px-3 py-2 text-sm text-muted-foreground">No additional details</div>
                                         )}
                                     </div>
                                 </div>

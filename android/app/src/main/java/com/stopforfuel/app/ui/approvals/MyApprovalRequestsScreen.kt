@@ -91,19 +91,15 @@ private fun RequestCard(r: ApprovalRequestDto) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            approvalSubtitle(r)?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            }
             if (!r.requestNote.isNullOrBlank()) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "Your note: ${r.requestNote}",
                     style = MaterialTheme.typography.bodySmall
-                )
-            }
-            if (!r.payload.isNullOrBlank() && r.payload != "{}") {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    r.payload,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (!r.reviewNote.isNullOrBlank()) {
@@ -150,4 +146,42 @@ internal fun requestTypeLabel(type: String): String = when (type) {
     "RECORD_STATEMENT_PAYMENT" -> "Statement Payment"
     "RECORD_INVOICE_PAYMENT" -> "Invoice Payment"
     else -> type
+}
+
+private fun formatRupee(n: Double?): String? =
+    n?.let { "\u20B9" + java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }.format(it) }
+
+private fun formatLitres(n: Double?): String? =
+    n?.let { java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")).apply {
+        maximumFractionDigits = 2
+    }.format(it) + " L" }
+
+/**
+ * One-line subtitle for an approval card — friendly identifier + customer + amount.
+ * Returns null if none of the relevant hydrated fields were populated.
+ */
+internal fun approvalSubtitle(r: com.stopforfuel.app.data.remote.dto.ApprovalRequestDto): String? {
+    fun join(parts: List<String?>): String? {
+        val filtered = parts.filter { !it.isNullOrBlank() }
+        return if (filtered.isEmpty()) null else filtered.joinToString(" \u00B7 ")
+    }
+    return when (r.requestType) {
+        "RECORD_INVOICE_PAYMENT" -> join(listOf(r.billNo, r.customerName, formatRupee(r.amount)))
+        "RECORD_STATEMENT_PAYMENT" -> join(listOf(r.statementNo, r.customerName, formatRupee(r.amount)))
+        "ADD_VEHICLE" -> join(listOf(r.vehicleNumber, r.customerName))
+        "UNBLOCK_CUSTOMER" -> r.customerName
+        "RAISE_CREDIT_LIMIT" -> {
+            val bits = mutableListOf<String?>(r.customerName)
+            if (r.requestedCreditLimitAmount != null) {
+                bits += "${formatRupee(r.currentCreditLimitAmount ?: 0.0)} \u2192 ${formatRupee(r.requestedCreditLimitAmount)}"
+            } else if (r.requestedCreditLimitLiters != null) {
+                bits += "${formatLitres(r.currentCreditLimitLiters ?: 0.0)} \u2192 ${formatLitres(r.requestedCreditLimitLiters)}"
+            }
+            join(bits)
+        }
+        else -> null
+    }
 }

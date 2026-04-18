@@ -15,7 +15,9 @@ export interface ApprovalRequest {
     requestType: ApprovalRequestType;
     status: ApprovalRequestStatus;
     customerId: number | null;
-    payload: string; // JSON string
+    customerName?: string | null;
+    /** Server-parsed payload map. */
+    payload: Record<string, unknown>;
     requestedBy: number | null;
     requestNote?: string | null;
     reviewedBy?: number | null;
@@ -23,6 +25,17 @@ export interface ApprovalRequest {
     reviewedAt?: string | null;
     createdAt: string;
     updatedAt: string;
+
+    // Type-specific hydrated extras (nullable — only the relevant ones populated)
+    billNo?: string | null;
+    statementNo?: string | null;
+    amount?: number | null;
+    paymentMode?: string | null;
+    vehicleNumber?: string | null;
+    currentCreditLimitAmount?: number | null;
+    requestedCreditLimitAmount?: number | null;
+    currentCreditLimitLiters?: number | null;
+    requestedCreditLimitLiters?: number | null;
 }
 
 export interface SubmitApprovalRequest {
@@ -75,11 +88,10 @@ export const rejectApprovalRequest = async (id: number, note: string): Promise<A
     return handleResponse(res);
 };
 
+/**
+ * Payload is already parsed by the backend DTO. Kept as a passthrough so callers
+ * written against the older string-payload API don't need churn.
+ */
 export const parseApprovalPayload = (req: ApprovalRequest): Record<string, unknown> => {
-    if (!req.payload) return {};
-    try {
-        return JSON.parse(req.payload);
-    } catch {
-        return {};
-    }
+    return req.payload ?? {};
 };

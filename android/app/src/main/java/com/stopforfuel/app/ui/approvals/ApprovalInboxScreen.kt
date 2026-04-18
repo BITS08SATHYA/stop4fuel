@@ -141,22 +141,15 @@ private fun PendingCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (r.customerId != null) {
-                Text(
-                    "Customer #${r.customerId}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            approvalSubtitle(r)?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }
             if (!r.requestNote.isNullOrBlank()) {
                 Spacer(Modifier.height(6.dp))
-                Text("Note: ${r.requestNote}", style = MaterialTheme.typography.bodySmall)
-            }
-            if (!r.payload.isNullOrBlank() && r.payload != "{}") {
-                Spacer(Modifier.height(4.dp))
                 Text(
-                    r.payload,
-                    style = MaterialTheme.typography.labelSmall,
+                    "\u201C${r.requestNote}\u201D",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

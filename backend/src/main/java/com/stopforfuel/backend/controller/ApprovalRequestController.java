@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.ApprovalRequestDTO;
 import com.stopforfuel.backend.entity.ApprovalRequest;
 import com.stopforfuel.backend.enums.ApprovalRequestType;
 import com.stopforfuel.backend.service.ApprovalRequestService;
@@ -25,14 +26,14 @@ public class ApprovalRequestController {
 
     @GetMapping("/pending")
     @PreAuthorize("hasPermission(null, 'APPROVAL_REQUEST_VIEW')")
-    public List<ApprovalRequest> listPending() {
-        return approvalRequestService.listPending();
+    public List<ApprovalRequestDTO> listPending() {
+        return approvalRequestService.listPendingDtos();
     }
 
     @GetMapping("/mine")
     @PreAuthorize("hasPermission(null, 'APPROVAL_REQUEST_CREATE')")
-    public List<ApprovalRequest> listMine() {
-        return approvalRequestService.listMine();
+    public List<ApprovalRequestDTO> listMine() {
+        return approvalRequestService.listMineDtos();
     }
 
     @GetMapping("/pending/count")
