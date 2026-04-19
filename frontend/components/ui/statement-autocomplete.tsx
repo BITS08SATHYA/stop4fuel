@@ -37,7 +37,7 @@ export function StatementAutocomplete({
         setSearch(val);
         if (val.length < 2) { setSuggestions([]); return; }
         try {
-            const data = await getStatements(0, 10, undefined, undefined, undefined, undefined, val);
+            const data = await getStatements(0, 200, undefined, undefined, undefined, undefined, val);
             setSuggestions(data.content || []);
             setIsOpen(true);
         } catch (err) {
@@ -89,7 +89,7 @@ export function StatementAutocomplete({
                 )}
             </div>
             {isOpen && suggestions.length > 0 && !value && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-48 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-96 overflow-y-auto">
                     {suggestions.map((stmt: any) => (
                         <button
                             key={stmt.id}

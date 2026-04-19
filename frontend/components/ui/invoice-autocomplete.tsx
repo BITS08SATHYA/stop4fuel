@@ -37,7 +37,7 @@ export function InvoiceAutocomplete({
         setSearch(val);
         if (val.length < 2) { setSuggestions([]); return; }
         try {
-            const data = await getInvoiceHistory(0, 10, { search: val });
+            const data = await getInvoiceHistory(0, 200, { search: val });
             setSuggestions(data.content || []);
             setIsOpen(true);
         } catch (err) {
@@ -89,7 +89,7 @@ export function InvoiceAutocomplete({
                 )}
             </div>
             {isOpen && suggestions.length > 0 && !value && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-48 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-96 overflow-y-auto">
                     {suggestions.map((inv: any) => (
                         <button
                             key={inv.id}
