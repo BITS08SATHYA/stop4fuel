@@ -38,4 +38,8 @@ public class NozzleInventory extends BaseEntity {
 
     @Column(name = "test_quantity")
     private Double testQuantity;
+
+    /** Set once applySale has decremented this row's litres from product WAC stock, to keep the hook idempotent across shift recomputes. */
+    @Column(name = "cogs_applied", nullable = false, columnDefinition = "boolean not null default false")
+    private boolean cogsApplied = false;
 }

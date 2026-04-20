@@ -33,6 +33,7 @@ public class ShiftSalesCalculationService {
     private final ProductRepository productRepository;
     private final GodownStockRepository godownStockRepository;
     private final CashierStockRepository cashierStockRepository;
+    private final WeightedAverageCostService wacService;
 
     /**
      * Per-product fuel aggregate for a shift — sourced from nozzle meter readings.
@@ -112,9 +113,12 @@ public class ShiftSalesCalculationService {
 
     /**
      * Compute all REVENUE-section line items for the given shift.
-     * Returns a SalesResult containing line items, cash/credit totals, and raw invoices.
+     * Also decrements product WAC stock for each nozzle's physical litres (sales, which
+     * already includes any test dispensed through the meter) and for each non-fuel invoice
+     * line — both guarded by per-row {@code cogsApplied} flags so recomputing a shift
+     * report never double-decrements.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public SalesResult computeSalesLineItems(ShiftClosingReport report, Long shiftId, int startSortOrder) {
         List<ReportLineItem> lineItems = new ArrayList<>();
         int sortOrder = startSortOrder;
@@ -152,6 +156,7 @@ public class ShiftSalesCalculationService {
 
         // 1b. Fuel Sales: compute from nozzle meter readings, rate from Product Catalog
         Map<String, double[]> fuelSales = new LinkedHashMap<>(); // productName -> [netLitres, amount, rate, wacCost]
+        Map<String, Double> testCostByProduct = new LinkedHashMap<>(); // productName -> test litres × wacCost
         double totalTestLitres = 0;
         double totalTestAmount = 0;
         List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
@@ -170,6 +175,17 @@ public class ShiftSalesCalculationService {
                     (old, nw) -> new double[]{old[0] + nw[0], old[1] + nw[1], nw[2], nw[3]});
             totalTestLitres += test;
             totalTestAmount += test * rate;
+            if (test > 0 && wacCost > 0) {
+                testCostByProduct.merge(productName, test * wacCost, Double::sum);
+            }
+
+            // Decrement WAC stock by the full physical depletion (sales already includes test).
+            // Guarded per-row so shift recompute doesn't double-decrement.
+            if (!ni.isCogsApplied() && sales > 0) {
+                wacService.applySale(product, sales);
+                ni.setCogsApplied(true);
+                nozzleInventoryRepository.save(ni);
+            }
         }
 
         // Add fuel product lines
@@ -203,6 +219,20 @@ public class ShiftSalesCalculationService {
             lineItems.add(testItem);
         }
         // Test data also passed via SalesResult to be added in ADVANCE section
+
+        // Cost of test fuel valued at WAC — appears as a real expense in the P&L view.
+        // (The sale-price Test line above is for the revenue/cash view; this is the accrual cost.)
+        for (Map.Entry<String, Double> entry : testCostByProduct.entrySet()) {
+            ReportLineItem testCostItem = new ReportLineItem();
+            testCostItem.setReport(report);
+            testCostItem.setSection("EXPENSE");
+            testCostItem.setCategory("TEST_QUANTITY_COST");
+            testCostItem.setLabel("Test fuel cost — " + entry.getKey());
+            testCostItem.setAmount(BigDecimal.valueOf(entry.getValue()).setScale(4, RoundingMode.HALF_UP));
+            testCostItem.setCostAmount(BigDecimal.valueOf(entry.getValue()).setScale(4, RoundingMode.HALF_UP));
+            testCostItem.setSortOrder(++sortOrder);
+            lineItems.add(testCostItem);
+        }
 
         // Add oil/lubricant sales lines
         for (Map.Entry<String, double[]> entry : oilSales.entrySet()) {

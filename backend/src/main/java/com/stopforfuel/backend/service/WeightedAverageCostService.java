@@ -1,8 +1,13 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.entity.InvoiceBill;
+import com.stopforfuel.backend.entity.InvoiceProduct;
+import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.entity.PurchaseInvoiceItem;
+import com.stopforfuel.backend.repository.InvoiceBillRepository;
+import com.stopforfuel.backend.repository.NozzleInventoryRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.backend.repository.PurchaseInvoiceRepository;
 import com.stopforfuel.config.SecurityUtils;
@@ -39,6 +44,8 @@ public class WeightedAverageCostService {
 
     private final ProductRepository productRepository;
     private final PurchaseInvoiceRepository purchaseInvoiceRepository;
+    private final NozzleInventoryRepository nozzleInventoryRepository;
+    private final InvoiceBillRepository invoiceBillRepository;
 
     /**
      * Blend a new purchase lot into the product's WAC. Persists the product.
@@ -126,5 +133,64 @@ public class WeightedAverageCostService {
         }
         log.info("WAC recompute complete for scid={} — {} products touched", scid, result.size());
         return result;
+    }
+
+    /**
+     * Sales-side backfill: replay every historical sale (nozzle meter dispense + non-fuel
+     * invoice line) in chronological order, decrementing {@code wacStock} on each product.
+     * Run this once after {@link #recomputeFromHistory()} so the running stock base reflects
+     * (total purchased − total sold). Idempotent per row via {@code cogsApplied} flags —
+     * rows already processed by live hooks are skipped.
+     *
+     * @return summary: nozzle rows applied, invoice rows applied
+     */
+    @Transactional
+    public Map<String, Integer> recomputeSalesFromHistory() {
+        Long scid = SecurityUtils.getScid();
+        int nozzleCount = 0;
+        int invoiceCount = 0;
+
+        List<NozzleInventory> nozzles = nozzleInventoryRepository.findAllByScidWithNozzle(scid);
+        nozzles.sort(Comparator.comparing(NozzleInventory::getDate,
+                Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(NozzleInventory::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+        for (NozzleInventory ni : nozzles) {
+            if (ni.isCogsApplied()) continue;
+            if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
+                    || ni.getNozzle().getTank().getProduct() == null) continue;
+            double sales = ni.getSales() != null ? ni.getSales() : 0;
+            if (sales <= 0) continue;
+            applySale(ni.getNozzle().getTank().getProduct(), sales);
+            ni.setCogsApplied(true);
+            nozzleInventoryRepository.save(ni);
+            nozzleCount++;
+        }
+
+        List<InvoiceBill> invoices = invoiceBillRepository.findAllByScid(scid);
+        invoices.sort(Comparator.comparing(InvoiceBill::getDate,
+                Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(InvoiceBill::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+        for (InvoiceBill inv : invoices) {
+            if (inv.isCogsApplied()) continue;
+            if (inv.getProducts() == null || inv.getProducts().isEmpty()) continue;
+            boolean any = false;
+            for (InvoiceProduct ip : inv.getProducts()) {
+                if (ip.getProduct() == null || ip.getQuantity() == null) continue;
+                String category = ip.getProduct().getCategory();
+                if ("FUEL".equalsIgnoreCase(category)) continue;
+                applySale(ip.getProduct(), ip.getQuantity().doubleValue());
+                any = true;
+            }
+            inv.setCogsApplied(true);
+            invoiceBillRepository.save(inv);
+            if (any) invoiceCount++;
+        }
+
+        Map<String, Integer> summary = new HashMap<>();
+        summary.put("nozzleRowsApplied", nozzleCount);
+        summary.put("invoiceRowsApplied", invoiceCount);
+        log.info("WAC sales backfill for scid={}: {} nozzle rows, {} invoices",
+                scid, nozzleCount, invoiceCount);
+        return summary;
     }
 }

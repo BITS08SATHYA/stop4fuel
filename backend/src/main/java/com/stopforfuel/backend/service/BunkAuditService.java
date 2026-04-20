@@ -208,7 +208,8 @@ public class BunkAuditService {
             if (r.getAmount() != null) acc.inflowRepayments = acc.inflowRepayments.add(r.getAmount());
         }
 
-        // Test quantity — from nozzle readings × product price
+        // Test quantity — litres × sale price for the informational cash-flow line,
+        // litres × WAC cost for the accrual P&L opex line.
         for (NozzleInventory ni : nozzleInventoryRepository.findByShiftId(shiftId)) {
             if (ni.getTestQuantity() == null) continue;
             double test = ni.getTestQuantity();
@@ -216,8 +217,10 @@ public class BunkAuditService {
             Product product = ni.getNozzle() != null && ni.getNozzle().getTank() != null
                     ? ni.getNozzle().getTank().getProduct() : null;
             double rate = product != null && product.getPrice() != null ? product.getPrice().doubleValue() : 0;
+            double wac = product != null && product.getWacCost() != null ? product.getWacCost().doubleValue() : 0;
             acc.testLitres += test;
             acc.testAmount = acc.testAmount.add(BigDecimal.valueOf(test * rate));
+            acc.testCost = acc.testCost.add(BigDecimal.valueOf(test * wac));
         }
 
         // Variance (tank-sale vs meter-sale per product)
@@ -274,7 +277,8 @@ public class BunkAuditService {
         BigDecimal cashAdvanceSpent = BigDecimal.ZERO;
         BigDecimal inflowRepayments = BigDecimal.ZERO;
         double testLitres = 0;
-        BigDecimal testAmount = BigDecimal.ZERO;
+        BigDecimal testAmount = BigDecimal.ZERO; // litres × sale price (cash-flow display only)
+        BigDecimal testCost = BigDecimal.ZERO;   // litres × WAC cost (feeds opex in P&L)
 
         // Internal transfers
         BigDecimal managementAdvance = BigDecimal.ZERO;
@@ -370,9 +374,10 @@ public class BunkAuditService {
                 cogs = cogs.add(BigDecimal.valueOf(v[2]));
             }
             BigDecimal grossProfit = revenue.subtract(cogs);
-            // Test-quantity cost treated as an opex-like loss in the accrual view
+            // Test-quantity valued at WAC — the true cost of fuel consumed on testing,
+            // not the retail value. Sale-price testAmount is purely for the cash-flow display.
             BigDecimal opex = shiftExpenses.add(stationExpenses).add(incentives)
-                    .add(salaryAdvance).add(testAmount);
+                    .add(salaryAdvance).add(testCost);
             BigDecimal netProfit = grossProfit.subtract(opex);
 
             BunkAuditReport.Profitability p = new BunkAuditReport.Profitability();

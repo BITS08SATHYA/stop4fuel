@@ -44,6 +44,7 @@ public class InvoiceBillService {
     private final InvoiceBillPhotoRepository invoiceBillPhotoRepository;
     private final TextractValidationService textractValidationService;
     private final com.stopforfuel.config.BusinessMetrics metrics;
+    private final WeightedAverageCostService wacService;
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -335,6 +336,20 @@ public class InvoiceBillService {
             for (InvoiceProduct invoiceProduct : saved.getProducts()) {
                 deductInventory(invoiceProduct);
             }
+        }
+
+        // --- Decrement WAC stock for non-fuel line items ---
+        // Fuel WAC is decremented at shift close from nozzle readings (sales already includes
+        // what was dispensed via invoices), so skip FUEL here to avoid double-counting.
+        if (!saved.isCogsApplied() && saved.getProducts() != null) {
+            for (InvoiceProduct ip : saved.getProducts()) {
+                if (ip.getProduct() == null || ip.getQuantity() == null) continue;
+                String category = ip.getProduct().getCategory();
+                if ("FUEL".equalsIgnoreCase(category)) continue;
+                wacService.applySale(ip.getProduct(), ip.getQuantity().doubleValue());
+            }
+            saved.setCogsApplied(true);
+            saved = repository.save(saved);
         }
 
         // --- Auto-block check (amount, liters, aging) ---

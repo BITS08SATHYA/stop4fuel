@@ -23,4 +23,10 @@ public class WacAdminController {
     public ResponseEntity<Map<Long, BigDecimal>> recompute() {
         return ResponseEntity.ok(wacService.recomputeFromHistory());
     }
+
+    @PostMapping("/recompute-sales")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<Map<String, Integer>> recomputeSales() {
+        return ResponseEntity.ok(wacService.recomputeSalesFromHistory());
+    }
 }
