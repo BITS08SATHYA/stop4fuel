@@ -54,6 +54,10 @@ data class InvoiceUiState(
     val driverName: String = "",
     val driverPhone: String = "",
 
+    // Blocking status (for selected customer)
+    val blockingStatus: BlockingStatusResponse? = null,
+    val blockingStatusLoading: Boolean = false,
+
     // State
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -235,13 +239,17 @@ class InvoiceViewModel @Inject constructor(
                 isWalkIn = false,
                 selectedCustomer = customer,
                 customerVehicles = vehicles,
-                customerSearchResults = emptyList()
+                customerSearchResults = emptyList(),
+                blockingStatus = null,
+                blockingStatusLoading = true
             )
+            refreshBlockingStatus()
         }
     }
 
     fun selectVehicle(vehicle: VehicleDto) {
         _uiState.value = _uiState.value.copy(selectedVehicle = vehicle)
+        viewModelScope.launch { refreshBlockingStatus() }
     }
 
     fun setWalkIn() {
@@ -250,8 +258,35 @@ class InvoiceViewModel @Inject constructor(
             selectedCustomer = null,
             selectedVehicle = null,
             customerVehicles = emptyList(),
-            customerSearchResults = emptyList()
+            customerSearchResults = emptyList(),
+            blockingStatus = null
         )
+    }
+
+    private suspend fun refreshBlockingStatus() {
+        val state = _uiState.value
+        val customer = state.selectedCustomer ?: return
+        val amount = state.totalAmount.takeIf { it > BigDecimal.ZERO }
+        val litres = state.lineItems
+            .filter { it.product.category.equals("Fuel", ignoreCase = true) }
+            .fold(BigDecimal.ZERO) { acc, li -> acc.add(li.quantity) }
+            .takeIf { it > BigDecimal.ZERO }
+        _uiState.value = state.copy(blockingStatusLoading = true)
+        val status = lookupRepository.getBlockingStatus(
+            customerId = customer.id,
+            vehicleId = state.selectedVehicle?.id,
+            invoiceAmount = amount,
+            invoiceLiters = litres
+        )
+        _uiState.value = _uiState.value.copy(
+            blockingStatus = status,
+            blockingStatusLoading = false
+        )
+    }
+
+    /** Call after line items change to re-check gates with new amount/liters. */
+    fun refreshBlockingStatusAsync() {
+        viewModelScope.launch { refreshBlockingStatus() }
     }
 
     fun confirmInvoice() {

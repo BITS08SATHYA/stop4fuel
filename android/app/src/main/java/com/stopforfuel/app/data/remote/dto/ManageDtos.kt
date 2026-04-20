@@ -18,6 +18,26 @@ data class CreditInfoResponse(
     val balance: BigDecimal?
 )
 
+data class BlockingGateDto(
+    val key: String,
+    val label: String,
+    val state: String,                   // PASS | WARN | FAIL | SKIPPED
+    val value: Any? = null,              // JSON primitive — could be String, Number, null
+    val limit: Any? = null,
+    val detail: String? = null,
+    val progressPercent: Int? = null
+)
+
+data class BlockingStatusResponse(
+    val customerId: Long,
+    val customerName: String,
+    val overall: String,                 // PASS | WARN | BLOCKED | OVERRIDE
+    val forceUnblocked: Boolean,
+    val primaryReason: String?,
+    val suggestedAction: String?,
+    val gates: List<BlockingGateDto>
+)
+
 // --- Vehicle Management ---
 
 data class LiterLimitRequest(

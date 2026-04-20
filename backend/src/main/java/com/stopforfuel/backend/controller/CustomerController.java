@@ -1,14 +1,18 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.BlockingStatusResponse;
 import com.stopforfuel.backend.dto.CustomerDetailDTO;
 import com.stopforfuel.backend.dto.CustomerListDTO;
 import com.stopforfuel.backend.dto.CustomerMapDTO;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.service.CustomerBlockingStatusService;
 import com.stopforfuel.backend.service.CustomerService;
 import com.stopforfuel.backend.service.JasperReportService;
 import com.stopforfuel.backend.service.VehicleService;
+
+import java.math.BigDecimal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -32,6 +36,9 @@ public class CustomerController {
 
     @Autowired
     private JasperReportService jasperReportService;
+
+    @Autowired
+    private CustomerBlockingStatusService blockingStatusService;
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
@@ -128,6 +135,15 @@ public class CustomerController {
     @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
     public java.util.Map<String, Object> getCreditInfo(@PathVariable Long id) {
         return customerService.getCreditInfo(id);
+    }
+
+    @GetMapping("/{id}/blocking-status")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
+    public BlockingStatusResponse getBlockingStatus(@PathVariable Long id,
+            @RequestParam(required = false) Long vehicleId,
+            @RequestParam(required = false) BigDecimal invoiceAmount,
+            @RequestParam(required = false) BigDecimal invoiceLiters) {
+        return blockingStatusService.evaluate(id, vehicleId, invoiceAmount, invoiceLiters);
     }
 
     @PatchMapping("/{id}/credit-limits")

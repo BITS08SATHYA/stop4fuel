@@ -160,33 +160,13 @@ private fun Step1Content(
                 }
             }
 
-            // Force Unblocked banner
-            if (!uiState.isWalkIn && uiState.selectedCustomer?.forceUnblocked == true) {
+            // Blocking-status panel (all 6 gates) — shown when a real customer is selected
+            if (!uiState.isWalkIn && uiState.selectedCustomer != null) {
                 item {
-                    val orange = Color(0xFFFF9800)
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = orange.copy(alpha = 0.15f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = orange,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Credit checks bypassed",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = orange
-                            )
-                        }
-                    }
+                    BlockingGatePanel(
+                        status = uiState.blockingStatus,
+                        loading = uiState.blockingStatusLoading
+                    )
                 }
             }
 

@@ -37,6 +37,17 @@ class LookupRepository @Inject constructor(
         return api.getCustomerVehicles(customerId)
     }
 
+    suspend fun getBlockingStatus(
+        customerId: Long,
+        vehicleId: Long? = null,
+        invoiceAmount: java.math.BigDecimal? = null,
+        invoiceLiters: java.math.BigDecimal? = null
+    ): BlockingStatusResponse? = try {
+        api.getBlockingStatus(customerId, vehicleId, invoiceAmount, invoiceLiters)
+    } catch (e: Exception) {
+        null
+    }
+
     fun invalidateCache() {
         productsCache = null
         nozzlesCache = null

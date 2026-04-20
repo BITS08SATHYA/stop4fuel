@@ -16,6 +16,7 @@ import { PermissionGate } from "@/components/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
 import { StyledSelect } from "@/components/ui/styled-select";
 import { showToast } from "@/components/ui/toast";
+import { BlockingGatePanel } from "@/components/customers/BlockingGatePanel";
 
 const API = API_BASE_URL;
 
@@ -436,6 +437,9 @@ export default function CustomerProfilePage() {
                     </div>
                 </div>
             )}
+
+            {/* Blocking Status — all 6 gates */}
+            <BlockingGatePanel customerId={customer.id} variant="section" />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column: Contact Info */}

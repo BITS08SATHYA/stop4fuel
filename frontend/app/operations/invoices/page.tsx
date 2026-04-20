@@ -42,6 +42,7 @@ interface CustomerWithCredit extends Customer {
     [key: string]: unknown;
 }
 import { FileUploadField } from "@/components/ui/file-upload-field";
+import { BlockingGatePanel } from "@/components/customers/BlockingGatePanel";
 import {
     Receipt,
     Plus,
@@ -661,16 +662,6 @@ export default function InvoicesPage() {
                             </p>
                             <p className="text-foreground font-black text-2xl">{selectedCustomer.name}</p>
                             <p className="text-sm text-muted-foreground">{selectedCustomer.phoneNumbers}</p>
-                            {((selectedCustomer.creditLimitAmount ?? 0) > 0 || (selectedCustomer.creditLimitLiters ?? 0) > 0) && (
-                                <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                                    {(selectedCustomer.creditLimitAmount ?? 0) > 0 && (
-                                        <p>Unbilled: ₹{Number(selectedCustomer.unbilledCredit || 0).toLocaleString("en-IN")} / ₹{Number(selectedCustomer.creditLimitAmount).toLocaleString("en-IN")} limit</p>
-                                    )}
-                                    {(selectedCustomer.creditLimitLiters ?? 0) > 0 && (
-                                        <p>Liters: {selectedCustomer.consumedLiters || 0} / {Number(selectedCustomer.creditLimitLiters)} L used</p>
-                                    )}
-                                </div>
-                            )}
                         </div>
                         <button
                             onClick={() => { setSelectedCustomer(undefined); setCustomerSearch(""); setCustomerVehicles([]); setSelectedVehicle(undefined); }}
@@ -680,20 +671,20 @@ export default function InvoicesPage() {
                         </button>
                     </div>
                 )}
-                {selectedCustomer?.forceUnblocked && (
-                    <div className="mt-4 p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-start gap-3">
-                        <ShieldAlert size={20} className="text-orange-500 shrink-0 mt-0.5" />
-                        <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
-                            Credit checks bypassed — Force Unblocked{selectedCustomer.forceUnblockedBy ? ` by ${selectedCustomer.forceUnblockedBy}` : ""}
-                        </p>
-                    </div>
-                )}
-                {isCustomerBlocked && (
-                    <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
-                        <ShieldAlert size={20} className="text-red-500 shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                            This customer is {selectedCustomer.status}. Invoice creation will be blocked by the system.
-                        </p>
+                {selectedCustomer && isCreditCustomer && (
+                    <div className="mt-4">
+                        <BlockingGatePanel
+                            customerId={selectedCustomer.id}
+                            vehicleId={selectedVehicle?.id}
+                            invoiceAmount={calculateTotal() > 0 ? calculateTotal() : undefined}
+                            invoiceLiters={(() => {
+                                const litres = selectedProducts
+                                    .filter((l: any) => isFuelProduct(l.product))
+                                    .reduce((s: number, l: any) => s + (parseFloat(l.quantity) || 0), 0);
+                                return litres > 0 ? litres : undefined;
+                            })()}
+                            variant="inline"
+                        />
                     </div>
                 )}
             </GlassCard>

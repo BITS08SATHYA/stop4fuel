@@ -245,6 +245,49 @@ export const getCustomerCreditInfo = (id: number): Promise<{
     totalPaid: number;
 }> => fetchWithAuth(`${API_BASE_URL}/customers/${id}/credit-info`).then(handleResponse);
 
+// Blocking Status — aggregated "why is this customer blocked?" gates
+export type GateState = 'PASS' | 'WARN' | 'FAIL' | 'SKIPPED';
+export type GateKey =
+    | 'CUSTOMER_STATUS'
+    | 'CREDIT_AMOUNT'
+    | 'CREDIT_LITERS'
+    | 'AGING'
+    | 'VEHICLE_STATUS'
+    | 'VEHICLE_MONTHLY_LITERS';
+
+export interface BlockingGate {
+    key: GateKey;
+    label: string;
+    state: GateState;
+    value: number | string | null;
+    limit: number | string | null;
+    detail: string;
+    progressPercent: number | null;
+}
+
+export interface BlockingStatus {
+    customerId: number;
+    customerName: string;
+    overall: 'PASS' | 'WARN' | 'BLOCKED' | 'OVERRIDE';
+    forceUnblocked: boolean;
+    primaryReason: string;
+    suggestedAction: string;
+    gates: BlockingGate[];
+}
+
+export const getBlockingStatus = (
+    id: number,
+    opts?: { vehicleId?: number; invoiceAmount?: number; invoiceLiters?: number }
+): Promise<BlockingStatus> => {
+    const params = new URLSearchParams();
+    if (opts?.vehicleId != null) params.set('vehicleId', String(opts.vehicleId));
+    if (opts?.invoiceAmount != null) params.set('invoiceAmount', String(opts.invoiceAmount));
+    if (opts?.invoiceLiters != null) params.set('invoiceLiters', String(opts.invoiceLiters));
+    const qs = params.toString();
+    const url = `${API_BASE_URL}/customers/${id}/blocking-status${qs ? `?${qs}` : ''}`;
+    return fetchWithAuth(url).then(handleResponse);
+};
+
 // Block / Unblock Customer (with optional notes for audit trail)
 export const blockCustomer = (id: number, notes?: string): Promise<any> =>
     fetchWithAuth(`${API_BASE_URL}/customers/${id}/block`, {

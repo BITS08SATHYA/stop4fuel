@@ -41,6 +41,14 @@ interface ApiService {
     @GET("api/customers/{id}/credit-info")
     suspend fun getCreditInfo(@Path("id") id: Long): CreditInfoResponse
 
+    @GET("api/customers/{id}/blocking-status")
+    suspend fun getBlockingStatus(
+        @Path("id") id: Long,
+        @Query("vehicleId") vehicleId: Long? = null,
+        @Query("invoiceAmount") invoiceAmount: java.math.BigDecimal? = null,
+        @Query("invoiceLiters") invoiceLiters: java.math.BigDecimal? = null
+    ): BlockingStatusResponse
+
     @PATCH("api/customers/{id}/credit-limits")
     suspend fun updateCreditLimits(
         @Path("id") id: Long,
