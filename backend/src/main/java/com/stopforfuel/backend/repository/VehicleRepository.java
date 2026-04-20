@@ -34,19 +34,20 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     /**
      * Paginated search with all ManyToOne relationships eagerly fetched in a single query
      * (eliminates N+1 on vehicleType, preferredProduct, customer).
-     * All params are nullable — null means "no filter on this dimension".
+     * search: "" means no filter (cannot be null — Postgres can't infer type of null inside LOWER()).
+     * status / customerId are directly compared so null is safe as "no filter".
      */
     @Query(value = "SELECT v FROM Vehicle v " +
                    "LEFT JOIN FETCH v.customer c " +
                    "LEFT JOIN FETCH v.vehicleType " +
                    "LEFT JOIN FETCH v.preferredProduct " +
-                   "WHERE (:search IS NULL OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                   "WHERE (:search = '' OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
                    "       OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
                    "  AND (:status IS NULL OR v.status = :status) " +
                    "  AND (:customerId IS NULL OR c.id = :customerId)",
            countQuery = "SELECT COUNT(v) FROM Vehicle v " +
                         "LEFT JOIN v.customer c " +
-                        "WHERE (:search IS NULL OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "WHERE (:search = '' OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
                         "       OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
                         "  AND (:status IS NULL OR v.status = :status) " +
                         "  AND (:customerId IS NULL OR c.id = :customerId)")

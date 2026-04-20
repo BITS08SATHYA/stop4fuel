@@ -53,6 +53,7 @@ class VehicleControllerTest {
     @Test
     void getAllVehicles_returnsPagedList() throws Exception {
         Page<Vehicle> page = new PageImpl<>(List.of(testVehicle));
+        // service is called with raw request params — search is null when not provided
         when(vehicleService.searchPaged(isNull(), isNull(), isNull(), any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/vehicles"))

@@ -36,7 +36,7 @@ public class VehicleService {
 
     @Transactional(readOnly = true)
     public Page<Vehicle> searchPaged(String search, EntityStatus status, Long customerId, Pageable pageable) {
-        String s = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        String s = (search != null) ? search.trim() : "";
         return vehicleRepository.searchPaged(s, status, customerId, pageable);
     }
 
