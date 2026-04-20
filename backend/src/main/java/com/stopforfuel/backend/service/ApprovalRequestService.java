@@ -202,6 +202,25 @@ public class ApprovalRequestService {
         return hydrate(listMine());
     }
 
+    /** Pending RECORD_INVOICE_PAYMENT requests targeting the given invoice bill. */
+    @Transactional(readOnly = true)
+    public List<ApprovalRequestDTO> listPendingInvoicePaymentDtos(Long invoiceBillId) {
+        if (invoiceBillId == null) return List.of();
+        List<ApprovalRequest> candidates = approvalRequestRepository
+                .findByStatusAndRequestTypeOrderByCreatedAtAsc(
+                        ApprovalRequestStatus.PENDING,
+                        ApprovalRequestType.RECORD_INVOICE_PAYMENT);
+        List<ApprovalRequest> matched = new ArrayList<>();
+        for (ApprovalRequest r : candidates) {
+            Map<String, Object> p = readJsonSafe(r.getPayload());
+            Long id = toLong(p.get("invoiceBillId"));
+            if (id != null && id.equals(invoiceBillId)) {
+                matched.add(r);
+            }
+        }
+        return hydrate(matched);
+    }
+
     /**
      * Batch-hydrate a list of ApprovalRequest entities into DTOs, resolving
      * referenced customer/bill/statement IDs into friendly identifiers in one pass.

@@ -42,6 +42,12 @@ public class ApprovalRequestController {
         return Map.of("count", approvalRequestService.pendingCount());
     }
 
+    @GetMapping("/pending/invoice/{invoiceBillId}")
+    @PreAuthorize("hasPermission(null, 'APPROVAL_REQUEST_CREATE') or hasPermission(null, 'APPROVAL_REQUEST_VIEW')")
+    public List<ApprovalRequestDTO> pendingForInvoice(@PathVariable Long invoiceBillId) {
+        return approvalRequestService.listPendingInvoicePaymentDtos(invoiceBillId);
+    }
+
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasPermission(null, 'APPROVAL_REQUEST_APPROVE')")
     public ApprovalRequest approve(@PathVariable Long id, @RequestBody(required = false) ReviewRequest body) {

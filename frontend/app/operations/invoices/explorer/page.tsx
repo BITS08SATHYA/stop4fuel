@@ -13,15 +13,15 @@ import { showToast } from "@/components/ui/toast";
 import {
     IndianRupee, Search, ChevronDown, ChevronRight, FileText,
     Loader2, ArrowLeft, CreditCard, Receipt, Banknote,
-    ImageIcon, Truck, ShoppingCart, AlertTriangle, Link2, Link2Off
+    ImageIcon, Truck, ShoppingCart, AlertTriangle, Link2, Link2Off, Clock
 } from "lucide-react";
 import {
-    getInvoiceHistory, getCustomerInvoices,
+    getInvoiceHistory, getCustomerInvoices, getInvoiceById,
     getPaymentsByBill, recordBillPayment, getBillPaymentSummary,
     getCustomerCreditInfo, PAYMENT_MODES, markInvoiceIndependent,
-    submitApprovalRequest,
+    submitApprovalRequest, getPendingRequestsForInvoice,
     type InvoiceBill, type Payment,
-    type PageResponse, type BillPaymentSummary
+    type PageResponse, type BillPaymentSummary, type ApprovalRequest
 } from "@/lib/api/station";
 import { useAuth } from "@/lib/auth/auth-context";
 
@@ -83,6 +83,7 @@ export default function InvoiceExplorerPage() {
     const [selectedInvoice, setSelectedInvoice] = useState<InvoiceBill | null>(null);
     const [activeTab, setActiveTab] = useState<"details" | "payments">("details");
     const [invoicePayments, setInvoicePayments] = useState<Payment[]>([]);
+    const [pendingRequests, setPendingRequests] = useState<ApprovalRequest[]>([]);
     const [detailLoading, setDetailLoading] = useState(false);
 
     // Payment form
@@ -127,12 +128,9 @@ export default function InvoiceExplorerPage() {
             if (found) {
                 selectInvoice(found);
             } else {
-                // Fetch directly by ID
-                import("@/lib/api/station/invoices").then(({ getInvoiceById }) => {
-                    getInvoiceById(Number(invId)).then(inv => {
-                        if (inv) selectInvoice(inv);
-                    }).catch(console.error);
-                });
+                getInvoiceById(Number(invId)).then(inv => {
+                    if (inv) selectInvoice(inv);
+                }).catch(console.error);
             }
         }
     }, [invoices, searchParams]);
@@ -192,9 +190,14 @@ export default function InvoiceExplorerPage() {
         setPaymentError("");
         setShowMobileDetail(true);
         setDetailLoading(true);
+        setPendingRequests([]);
         try {
-            const payments = await getPaymentsByBill(inv.id!);
+            const [payments, pending] = await Promise.all([
+                getPaymentsByBill(inv.id!),
+                getPendingRequestsForInvoice(inv.id!).catch(() => [] as ApprovalRequest[]),
+            ]);
             setInvoicePayments(payments);
+            setPendingRequests(pending);
         } catch (err) {
             console.error(err);
         } finally {
@@ -209,7 +212,7 @@ export default function InvoiceExplorerPage() {
         setPaymentError("");
         try {
             if (requestMode) {
-                await submitApprovalRequest({
+                const submitted = await submitApprovalRequest({
                     requestType: "RECORD_INVOICE_PAYMENT",
                     customerId: selectedInvoice.customer?.id ?? null,
                     payload: {
@@ -220,6 +223,20 @@ export default function InvoiceExplorerPage() {
                         remarks: paymentRemarks || undefined,
                     },
                 });
+                // Optimistic: show the freshly-submitted request in the banner immediately.
+                // submitted is the raw entity (payload as string); synthesize the DTO-shape fields the UI reads.
+                const optimistic: ApprovalRequest = {
+                    ...(submitted as unknown as ApprovalRequest),
+                    amount: Number(paymentAmount),
+                    paymentMode: paymentModeId,
+                    billNo: selectedInvoice.billNo,
+                    payload: {
+                        invoiceBillId: selectedInvoice.id,
+                        amount: Number(paymentAmount),
+                        paymentMode: paymentModeId,
+                    },
+                };
+                setPendingRequests(prev => [optimistic, ...prev]);
                 showToast.success("Request submitted — admin will review it shortly");
                 setShowPaymentForm(false);
                 setPaymentAmount("");
@@ -235,9 +252,13 @@ export default function InvoiceExplorerPage() {
                 referenceNo: paymentRef || undefined,
                 remarks: paymentRemarks || undefined,
             });
-            // Refresh
-            const payments = await getPaymentsByBill(selectedInvoice.id!);
+            // Refresh payments, and re-fetch the invoice so its paymentStatus badge updates.
+            const [payments, refreshed] = await Promise.all([
+                getPaymentsByBill(selectedInvoice.id!),
+                getInvoiceById(selectedInvoice.id!).catch(() => null),
+            ]);
             setInvoicePayments(payments);
+            if (refreshed) setSelectedInvoice(refreshed);
             setShowPaymentForm(false);
             setPaymentAmount("");
             setPaymentModeId("");
@@ -605,6 +626,7 @@ export default function InvoiceExplorerPage() {
                                             <InvoiceDetailsTab
                                                 invoice={selectedInvoice}
                                                 payments={invoicePayments}
+                                                pendingRequests={pendingRequests}
                                                 balance={selectedBalance}
                                                 canPay={canPayDirectly(selectedInvoice)}
                                                 onRecordPayment={() => { setActiveTab("payments"); setShowPaymentForm(true); }}
@@ -649,10 +671,11 @@ export default function InvoiceExplorerPage() {
 
 // --- Details Tab ---
 function InvoiceDetailsTab({
-    invoice, payments, balance, canPay, onRecordPayment, onMarkIndependent, markingIndependent, requestMode
+    invoice, payments, pendingRequests, balance, canPay, onRecordPayment, onMarkIndependent, markingIndependent, requestMode
 }: {
     invoice: InvoiceBill;
     payments: Payment[];
+    pendingRequests: ApprovalRequest[];
     balance: number;
     canPay: boolean;
     onRecordPayment: () => void;
@@ -661,9 +684,25 @@ function InvoiceDetailsTab({
     requestMode: boolean;
 }) {
     const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
+    const pendingTotal = pendingRequests.reduce((s, r) => s + (r.amount || 0), 0);
 
     return (
         <div className="space-y-4">
+            {/* Pending approval banner: a Request Payment has been submitted but not yet approved. */}
+            {pendingRequests.length > 0 && (
+                <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div>
+                        <span className="font-semibold">
+                            Pending approval: ₹{formatCurrency(pendingTotal)}
+                        </span>
+                        <span> awaiting admin review</span>
+                        {pendingRequests.length > 1 && <span> ({pendingRequests.length} requests)</span>}
+                        <span>. Received / Balance will update once approved.</span>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>

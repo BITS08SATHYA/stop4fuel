@@ -70,6 +70,11 @@ export const getPendingApprovalCount = async (): Promise<number> => {
     return data?.count ?? 0;
 };
 
+export const getPendingRequestsForInvoice = async (invoiceBillId: number): Promise<ApprovalRequest[]> => {
+    const res = await fetchWithAuth(`${API_BASE_URL}/approval-requests/pending/invoice/${invoiceBillId}`);
+    return handleResponse(res);
+};
+
 export const approveApprovalRequest = async (id: number, note?: string): Promise<ApprovalRequest> => {
     const res = await fetchWithAuth(`${API_BASE_URL}/approval-requests/${id}/approve`, {
         method: 'POST',

@@ -2,6 +2,7 @@ package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.ApprovalRequest;
 import com.stopforfuel.backend.enums.ApprovalRequestStatus;
+import com.stopforfuel.backend.enums.ApprovalRequestType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -13,4 +14,7 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
     List<ApprovalRequest> findByRequestedByOrderByCreatedAtDesc(Long requestedBy);
 
     long countByStatus(ApprovalRequestStatus status);
+
+    List<ApprovalRequest> findByStatusAndRequestTypeOrderByCreatedAtAsc(
+            ApprovalRequestStatus status, ApprovalRequestType requestType);
 }
