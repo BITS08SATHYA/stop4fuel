@@ -140,7 +140,7 @@ function CustomerAutocomplete({
     );
 }
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 7;
 
 export default function VehiclesPage() {
     const [vehicles, setVehicles] = useState<any[]>([]);
