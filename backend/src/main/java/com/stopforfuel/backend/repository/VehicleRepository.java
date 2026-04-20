@@ -1,7 +1,10 @@
 package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -27,6 +30,30 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
     @Query("SELECT v FROM Vehicle v LEFT JOIN FETCH v.customer WHERE v.customer.id = :customerId")
     List<Vehicle> findByCustomerIdWithCustomer(@Param("customerId") Long customerId);
+
+    /**
+     * Paginated search with all ManyToOne relationships eagerly fetched in a single query
+     * (eliminates N+1 on vehicleType, preferredProduct, customer).
+     * All params are nullable — null means "no filter on this dimension".
+     */
+    @Query(value = "SELECT v FROM Vehicle v " +
+                   "LEFT JOIN FETCH v.customer c " +
+                   "LEFT JOIN FETCH v.vehicleType " +
+                   "LEFT JOIN FETCH v.preferredProduct " +
+                   "WHERE (:search IS NULL OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                   "       OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                   "  AND (:status IS NULL OR v.status = :status) " +
+                   "  AND (:customerId IS NULL OR c.id = :customerId)",
+           countQuery = "SELECT COUNT(v) FROM Vehicle v " +
+                        "LEFT JOIN v.customer c " +
+                        "WHERE (:search IS NULL OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "       OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                        "  AND (:status IS NULL OR v.status = :status) " +
+                        "  AND (:customerId IS NULL OR c.id = :customerId)")
+    Page<Vehicle> searchPaged(@Param("search") String search,
+                              @Param("status") EntityStatus status,
+                              @Param("customerId") Long customerId,
+                              Pageable pageable);
 
     List<Vehicle> findByVehicleNumberContainingIgnoreCase(String vehicleNumber);
     List<Vehicle> findByCustomerId(Long customerId);

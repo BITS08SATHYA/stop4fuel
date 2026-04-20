@@ -3,8 +3,13 @@ package com.stopforfuel.backend.controller;
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.VehicleDTO;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,8 +24,12 @@ public class VehicleController {
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'VEHICLE_VIEW')")
-    public List<VehicleDTO> getAllVehicles(@RequestParam(required = false) String search) {
-        return vehicleService.getAllVehicles(search).stream().map(VehicleDTO::from).toList();
+    public Page<VehicleDTO> getAllVehicles(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) EntityStatus status,
+            @RequestParam(required = false) Long customerId,
+            @PageableDefault(size = 25, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+        return vehicleService.searchPaged(search, status, customerId, pageable).map(VehicleDTO::from);
     }
 
     @GetMapping("/search")

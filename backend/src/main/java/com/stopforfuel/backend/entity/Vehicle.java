@@ -11,7 +11,10 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "vehicle")
+@Table(name = "vehicle", indexes = {
+        @Index(name = "idx_vehicle_customer_id", columnList = "customer_id"),
+        @Index(name = "idx_vehicle_status", columnList = "status")
+})
 @Getter
 @Setter
 public class Vehicle extends SimpleBaseEntity {

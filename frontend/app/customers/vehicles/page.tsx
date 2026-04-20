@@ -8,7 +8,7 @@ import { VehicleStep } from "@/components/steps/vehicle-step";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
-import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { StyledSelect } from "@/components/ui/styled-select";
 
 function CustomerAutocomplete({
@@ -140,6 +140,8 @@ function CustomerAutocomplete({
     );
 }
 
+const PAGE_SIZE = 25;
+
 export default function VehiclesPage() {
     const [vehicles, setVehicles] = useState<any[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
@@ -148,18 +150,54 @@ export default function VehiclesPage() {
     const [loading, setLoading] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [customerFilter, setCustomerFilter] = useState<string>("");
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
 
-    const filteredVehicles = useMemo(() => vehicles.filter((v) => {
-        const q = searchQuery.toLowerCase();
-        const matchesSearch = !searchQuery || v.vehicleNumber?.toLowerCase().includes(q) || v.customer?.name?.toLowerCase().includes(q);
-        const matchesStatus = statusFilter === "ALL" || (v.status || "ACTIVE") === statusFilter;
-        const matchesCustomer = !customerFilter || String(v.customer?.id) === customerFilter;
-        return matchesSearch && matchesStatus && matchesCustomer;
-    }), [vehicles, searchQuery, statusFilter, customerFilter]);
+    // Debounce the search input (300ms) so we don't fire a request per keystroke
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+        return () => clearTimeout(t);
+    }, [searchQuery]);
 
-    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedVehicles } = useClientPagination(filteredVehicles);
+    // Reset to page 0 when filters change
+    useEffect(() => {
+        setPage(0);
+    }, [debouncedSearch, statusFilter, customerFilter]);
+
+    const pagedVehicles = vehicles;
+
+    const fetchVehicles = useMemo(() => async () => {
+        try {
+            const params = new URLSearchParams();
+            params.set("page", String(page));
+            params.set("size", String(PAGE_SIZE));
+            if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
+            if (statusFilter !== "ALL") params.set("status", statusFilter);
+            if (customerFilter) params.set("customerId", customerFilter);
+
+            const res = await fetchWithAuth(`${API_BASE_URL}/vehicles?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setVehicles(Array.isArray(data) ? data : data.content || []);
+                setTotalPages(data.totalPages ?? 1);
+                setTotalElements(data.totalElements ?? (Array.isArray(data) ? data.length : 0));
+            }
+        } catch (error) {
+            console.error("Failed to fetch vehicles", error);
+        }
+    }, [page, debouncedSearch, statusFilter, customerFilter]);
+
+    useEffect(() => {
+        fetchVehicles();
+    }, [fetchVehicles]);
+
+    useEffect(() => {
+        fetchCustomers();
+    }, []);
 
     const handleToggleVehicleStatus = async (id: number) => {
         try {
@@ -170,26 +208,9 @@ export default function VehiclesPage() {
         }
     };
 
-    useEffect(() => {
-        fetchVehicles();
-        fetchCustomers();
-    }, []);
-
-    const fetchVehicles = async () => {
-        try {
-            const res = await fetchWithAuth(`${API_BASE_URL}/vehicles`);
-            if (res.ok) {
-                const data = await res.json();
-                setVehicles(Array.isArray(data) ? data : data.content || []);
-            }
-        } catch (error) {
-            console.error("Failed to fetch vehicles", error);
-        }
-    };
-
     const fetchCustomers = async () => {
         try {
-            const res = await fetchWithAuth(`${API_BASE_URL}/customers?size=1000`);
+            const res = await fetchWithAuth(`${API_BASE_URL}/customers/autocomplete`);
             if (res.ok) {
                 const data = await res.json();
                 setCustomers(Array.isArray(data) ? data : data.content || []);
@@ -433,7 +454,7 @@ export default function VehiclesPage() {
                             })}
                         </tbody>
                     </table>
-                    {vehicles.length === 0 && (
+                    {totalElements === 0 && (
                         <div className="p-12 text-center text-muted-foreground">
                             No vehicles found. Click "Add New Vehicle" to get started.
                         </div>
@@ -442,7 +463,7 @@ export default function VehiclesPage() {
                         page={page}
                         totalPages={totalPages}
                         totalElements={totalElements}
-                        pageSize={pageSize}
+                        pageSize={PAGE_SIZE}
                         onPageChange={setPage}
                     />
                 </div>

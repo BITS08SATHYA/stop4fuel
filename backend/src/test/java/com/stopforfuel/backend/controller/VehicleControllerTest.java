@@ -2,6 +2,7 @@ package com.stopforfuel.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stopforfuel.backend.entity.Vehicle;
+import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.service.VehicleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -47,21 +51,24 @@ class VehicleControllerTest {
     }
 
     @Test
-    void getAllVehicles_returnsList() throws Exception {
-        when(vehicleService.getAllVehicles(isNull())).thenReturn(List.of(testVehicle));
+    void getAllVehicles_returnsPagedList() throws Exception {
+        Page<Vehicle> page = new PageImpl<>(List.of(testVehicle));
+        when(vehicleService.searchPaged(isNull(), isNull(), isNull(), any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/vehicles"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].vehicleNumber").value("TN01AB1234"));
+                .andExpect(jsonPath("$.content[0].vehicleNumber").value("TN01AB1234"))
+                .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
     void getAllVehicles_withSearch() throws Exception {
-        when(vehicleService.getAllVehicles("TN01")).thenReturn(List.of(testVehicle));
+        Page<Vehicle> page = new PageImpl<>(List.of(testVehicle));
+        when(vehicleService.searchPaged(eq("TN01"), isNull(), isNull(), any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/vehicles").param("search", "TN01"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].vehicleNumber").value("TN01AB1234"));
+                .andExpect(jsonPath("$.content[0].vehicleNumber").value("TN01AB1234"));
     }
 
     @Test

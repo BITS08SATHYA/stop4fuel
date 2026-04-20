@@ -1576,6 +1576,9 @@ export default function InvoicesPage() {
                         <div className="flex items-center gap-2">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${bgClass} ${color} border ${borderClass}`}>{bill.billType}</span>
                             <span className="font-mono font-bold text-sm text-foreground">{bill.billNo}</span>
+                            {bill.vehicle?.vehicleNumber && (
+                                <span className="font-mono text-xs text-primary">{bill.vehicle.vehicleNumber}</span>
+                            )}
                             <span className="text-xs text-muted-foreground">{bill.customer?.name || "Walk-in"}</span>
                             <span className="font-bold text-foreground text-sm">₹{bill.netAmount?.toFixed(2)}</span>
                         </div>
@@ -1705,6 +1708,9 @@ export default function InvoicesPage() {
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                                                 inv.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                                             }`}>{inv.billType}</span>
+                                            {inv.vehicle?.vehicleNumber && (
+                                                <span className="font-mono text-xs text-primary">{inv.vehicle.vehicleNumber}</span>
+                                            )}
                                             <span className="text-sm text-muted-foreground">{inv.customer?.name || "Walk-in"}</span>
                                             {inv.products && inv.products.length > 0 && (
                                                 <span className="text-xs text-muted-foreground">

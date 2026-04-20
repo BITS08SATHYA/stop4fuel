@@ -9,6 +9,8 @@ import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,12 @@ public class VehicleService {
             return vehicleRepository.findByVehicleNumberContainingIgnoreCaseWithCustomer(search);
         }
         return vehicleRepository.findAllWithCustomer();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Vehicle> searchPaged(String search, EntityStatus status, Long customerId, Pageable pageable) {
+        String s = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        return vehicleRepository.searchPaged(s, status, customerId, pageable);
     }
 
     @Transactional(readOnly = true)
