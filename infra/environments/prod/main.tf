@@ -16,7 +16,7 @@ module "networking" {
   public_subnet_cidrs    = ["10.0.1.0/24", "10.0.2.0/24"]
   private_subnet_cidrs   = ["10.0.3.0/24", "10.0.4.0/24"]
   availability_zones     = local.azs
-  enable_nat_gateway     = true
+  enable_nat_gateway     = false
   enable_private_subnets = true
   aws_region             = var.aws_region
   allowed_db_cidrs       = ["108.35.55.67/32"]
