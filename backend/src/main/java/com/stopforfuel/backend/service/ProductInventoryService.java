@@ -8,6 +8,7 @@ import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.CashierStockRepository;
 import com.stopforfuel.backend.repository.ProductInventoryRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
+import com.stopforfuel.backend.util.UnitUtils;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -175,13 +176,20 @@ public class ProductInventoryService {
     }
 
     private void calculateFields(ProductInventory inventory) {
+        String unit = inventory.getProduct() != null ? inventory.getProduct().getUnit() : null;
+
+        // Round incoming stock inputs first so computed fields (total, sales) are consistent.
+        inventory.setOpenStock(UnitUtils.roundIfWholeCount(unit, inventory.getOpenStock()));
+        inventory.setIncomeStock(UnitUtils.roundIfWholeCount(unit, inventory.getIncomeStock()));
+        inventory.setCloseStock(UnitUtils.roundIfWholeCount(unit, inventory.getCloseStock()));
+
         double open = inventory.getOpenStock() != null ? inventory.getOpenStock() : 0.0;
         double income = inventory.getIncomeStock() != null ? inventory.getIncomeStock() : 0.0;
         double total = open + income;
-        inventory.setTotalStock(total);
+        inventory.setTotalStock(UnitUtils.roundIfWholeCount(unit, total));
 
         if (inventory.getCloseStock() != null) {
-            inventory.setSales(total - inventory.getCloseStock());
+            inventory.setSales(UnitUtils.roundIfWholeCount(unit, total - inventory.getCloseStock()));
         }
 
         // Set rate from product price if not explicitly provided

@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.GodownStock;
 import com.stopforfuel.backend.repository.GodownStockRepository;
+import com.stopforfuel.backend.util.UnitUtils;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class GodownStockService {
 
     public GodownStock save(GodownStock stock) {
         if (stock.getScid() == null) stock.setScid(SecurityUtils.getScid());
+        roundForWholeCount(stock);
         return repository.save(stock);
     }
 
@@ -49,7 +51,16 @@ public class GodownStockService {
         existing.setMaxStock(details.getMaxStock());
         existing.setLocation(details.getLocation());
         existing.setLastRestockDate(details.getLastRestockDate());
+        roundForWholeCount(existing);
         return repository.save(existing);
+    }
+
+    private void roundForWholeCount(GodownStock stock) {
+        String unit = stock.getProduct() != null ? stock.getProduct().getUnit() : null;
+        if (!UnitUtils.isWholeCount(unit)) return;
+        stock.setCurrentStock(UnitUtils.roundIfWholeCount(unit, stock.getCurrentStock()));
+        stock.setReorderLevel(UnitUtils.roundIfWholeCount(unit, stock.getReorderLevel()));
+        stock.setMaxStock(UnitUtils.roundIfWholeCount(unit, stock.getMaxStock()));
     }
 
     public void delete(Long id) {

@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/station";
 import { Box, Plus, Calendar, Archive, TrendingUp, Trash2, Edit2, Search, FileText, FileSpreadsheet } from "lucide-react";
 import { useFormValidation, required } from "@/lib/validation";
+import { fmtProductQty, isWholeCountUnit } from "@/lib/utils";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
 
@@ -191,6 +192,8 @@ export default function ProductInventoryPage() {
         const p = products.find(p => p.id === Number(productId));
         return p?.unit || "Units";
     };
+    const isWholeCount = isWholeCountUnit(getUnit());
+    const qtyStep = isWholeCount ? "1" : "any";
 
     return (
         <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
@@ -345,18 +348,18 @@ export default function ProductInventoryPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <div className="text-sm font-mono">{inv.openStock?.toLocaleString()}</div>
+                                                <div className="text-sm font-mono">{fmtProductQty(inv.openStock, inv.product?.unit)}</div>
                                                 <div className="text-[9px] text-muted-foreground uppercase">{inv.product?.unit}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right text-blue-500 font-medium font-mono text-sm leading-none">
-                                                {inv.incomeStock && inv.incomeStock > 0 ? `+${inv.incomeStock.toLocaleString()}` : "-"}
+                                                {inv.incomeStock && inv.incomeStock > 0 ? `+${fmtProductQty(inv.incomeStock, inv.product?.unit)}` : "-"}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <div className="text-sm font-mono">{inv.closeStock?.toLocaleString()}</div>
+                                                <div className="text-sm font-mono">{fmtProductQty(inv.closeStock, inv.product?.unit)}</div>
                                                 <div className="text-[9px] text-muted-foreground uppercase">{inv.product?.unit}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-primary text-base font-mono bg-primary/5">
-                                                {inv.sales?.toLocaleString()}
+                                                {fmtProductQty(inv.sales, inv.product?.unit)}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="text-sm font-mono text-muted-foreground">{inv.rate != null ? `₹${Number(inv.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : "-"}</div>
@@ -459,6 +462,7 @@ export default function ProductInventoryPage() {
                             <label className="block text-sm font-medium text-foreground mb-1.5">Opening Stock</label>
                             <input
                                 type="number"
+                                step={qtyStep}
                                 value={openStock}
                                 onChange={(e) => { setOpenStock(e.target.value); clearError("openStock"); }}
                                 className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.openStock)}`}
@@ -471,6 +475,7 @@ export default function ProductInventoryPage() {
                             <label className="block text-sm font-medium text-foreground mb-1.5">New Arrivals (+)</label>
                             <input
                                 type="number"
+                                step={qtyStep}
                                 value={incomeStock}
                                 onChange={(e) => setIncomeStock(e.target.value)}
                                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground border-blue-200"
@@ -482,6 +487,7 @@ export default function ProductInventoryPage() {
                             <label className="block text-sm font-medium text-foreground mb-1.5 font-bold">Units Sold</label>
                             <input
                                 type="number"
+                                step={qtyStep}
                                 value={salesInput}
                                 onChange={(e) => setSalesInput(e.target.value)}
                                 className="w-full bg-primary/5 border-primary/30 border rounded-xl px-4 py-3 text-foreground text-center text-xl font-bold"
@@ -506,12 +512,12 @@ export default function ProductInventoryPage() {
                         <div className="flex justify-between items-center text-center">
                             <div className="flex-1">
                                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Book Stock</p>
-                                <p className="text-xl font-bold">{totalStock}</p>
+                                <p className="text-xl font-bold">{fmtProductQty(totalStock, getUnit())}</p>
                             </div>
                             <div className="w-px h-8 bg-border"></div>
                             <div className="flex-1">
                                 <p className="text-[10px] text-primary uppercase font-bold tracking-widest">Closing Stock</p>
-                                <p className="text-2xl font-black text-primary">{closeStock} <span className="text-sm">{getUnit()}</span></p>
+                                <p className="text-2xl font-black text-primary">{fmtProductQty(closeStock, getUnit())} <span className="text-sm">{getUnit()}</span></p>
                             </div>
                             <div className="w-px h-8 bg-border"></div>
                             <div className="flex-1">
