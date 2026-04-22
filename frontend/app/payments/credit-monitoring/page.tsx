@@ -525,15 +525,15 @@ export default function CreditMonitoringPage() {
                     <div className="space-y-4">
                         <div className="grid grid-cols-3 gap-3">
                             <GlassCard className="p-3 text-center">
-                                <p className="text-2xl font-bold">{scanResult.scannedCount}</p>
+                                <p className="text-2xl font-bold">{scanResult.scannedCount ?? 0}</p>
                                 <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Scanned</p>
                             </GlassCard>
                             <GlassCard className="p-3 text-center">
-                                <p className="text-2xl font-bold text-red-500">{scanResult.blockedCount}</p>
+                                <p className="text-2xl font-bold text-red-500">{scanResult.blockedCount ?? 0}</p>
                                 <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Blocked</p>
                             </GlassCard>
                             <GlassCard className="p-3 text-center">
-                                <p className="text-2xl font-bold text-muted-foreground">{scanResult.skippedCount}</p>
+                                <p className="text-2xl font-bold text-muted-foreground">{scanResult.skippedCount ?? 0}</p>
                                 <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Skipped</p>
                             </GlassCard>
                         </div>
@@ -554,7 +554,7 @@ export default function CreditMonitoringPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {scanResult.entries
+                                    {(scanResult.entries ?? [])
                                         .filter(e => !blockedOnly || e.outcome === "BLOCKED")
                                         .sort((a, b) => {
                                             const order: Record<string, number> = { BLOCKED: 0, SKIPPED: 1, PASS: 2 };
