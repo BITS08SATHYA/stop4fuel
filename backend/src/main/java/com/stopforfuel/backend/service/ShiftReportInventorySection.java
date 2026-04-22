@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.service;
 
-import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
 import com.lowagie.text.pdf.PdfPTable;
 import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.dto.ShiftReportPrintData.*;
@@ -15,10 +16,10 @@ import static com.stopforfuel.backend.service.ShiftReportPdfUtils.*;
  */
 public class ShiftReportInventorySection {
 
-    public void addProductInventory(PdfPCell container, ShiftReportPrintData data) {
+    public void addProductInventory(Document doc, ShiftReportPrintData data) throws DocumentException {
         // Stock Summary (products with sales)
         if (!data.getStockSummary().isEmpty()) {
-            container.addElement(sectionHeader("PRODUCT INVENTORY (Non-Zero)"));
+            doc.add(sectionHeader("PRODUCT INVENTORY (Non-Zero)"));
             PdfPTable table = new PdfPTable(new float[]{0.4f, 2.5f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 0.8f, 1.2f});
             table.setWidthPercentage(100);
             table.setSpacingAfter(1);
@@ -56,12 +57,12 @@ public class ShiftReportInventorySection {
             for (int i = 0; i < 6; i++) addCellRight(table, "", SMALL_BOLD);
             addCellRight(table, fmtComma(grandTotal), SMALL_BOLD);
 
-            container.addElement(table);
+            doc.add(table);
         }
 
         // Stock Position (non-fuel godown+cashier)
         if (!data.getStockPosition().isEmpty()) {
-            container.addElement(sectionHeader("STOCK POSITION"));
+            doc.add(sectionHeader("STOCK POSITION"));
             PdfPTable table = new PdfPTable(new float[]{3f, 1.5f, 1.5f, 1.5f});
             table.setWidthPercentage(100);
             table.setSpacingAfter(1);
@@ -79,7 +80,7 @@ public class ShiftReportInventorySection {
                 addCellRight(table, fmt0(row.getTotalStock()), f);
             }
 
-            container.addElement(table);
+            doc.add(table);
         }
     }
 }

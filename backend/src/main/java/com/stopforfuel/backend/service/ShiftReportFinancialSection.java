@@ -1,5 +1,7 @@
 package com.stopforfuel.backend.service;
 
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.Paragraph;
@@ -23,8 +25,8 @@ import static com.stopforfuel.backend.service.ShiftReportPdfUtils.*;
  */
 public class ShiftReportFinancialSection {
 
-    public void addRevenue(PdfPCell container, ShiftReportPrintData data, ShiftClosingReport report) {
-        container.addElement(sectionHeader("REVENUE"));
+    public void addRevenue(Document doc, ShiftReportPrintData data, ShiftClosingReport report) throws DocumentException {
+        doc.add(sectionHeader("REVENUE"));
         PdfPTable table = new PdfPTable(new float[]{3f, 1f, 1.2f, 2f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
@@ -139,11 +141,11 @@ public class ShiftReportFinancialSection {
         addTotalCellRight(table, "");
         addTotalCellRight(table, fmtComma(totalRevenue));
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addAdvances(PdfPCell container, ShiftReportPrintData data, ShiftClosingReport report) {
-        container.addElement(sectionHeader("ADVANCES"));
+    public void addAdvances(Document doc, ShiftReportPrintData data, ShiftClosingReport report) throws DocumentException {
+        doc.add(sectionHeader("ADVANCES"));
         PdfPTable table = new PdfPTable(new float[]{4f, 2.5f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
@@ -178,10 +180,10 @@ public class ShiftReportFinancialSection {
         addTotalCellLeft(table, "TOTAL");
         addTotalCellRight(table, fmtComma(totalAdvances));
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addTurnoverBalanceBox(PdfPCell container, ShiftClosingReport report) {
+    public void addTurnoverBalanceBox(Document doc, ShiftClosingReport report) throws DocumentException {
         Font BOX_LABEL = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
         Font BOX_VALUE = new Font(Font.HELVETICA, 9, Font.BOLD);
 
@@ -220,13 +222,13 @@ public class ShiftReportFinancialSection {
         cashCell.addElement(new Paragraph(fmtComma(report.getCashBillAmount()), BOX_VALUE));
         box.addCell(cashCell);
 
-        container.addElement(box);
+        doc.add(box);
     }
 
-    public void addIncomeBills(PdfPCell container, ShiftReportPrintData data) {
+    public void addIncomeBills(Document doc, ShiftReportPrintData data) throws DocumentException {
         if (data.getPaymentEntries().isEmpty()) return;
 
-        container.addElement(sectionHeader("INCOME BILLS (Payments Received)"));
+        doc.add(sectionHeader("INCOME BILLS (Payments Received)"));
         PdfPTable table = new PdfPTable(new float[]{0.5f, 3f, 1.5f, 1.5f, 2f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
@@ -254,10 +256,10 @@ public class ShiftReportFinancialSection {
         addCellLeft(table, "", SMALL_BOLD);
         addCellRight(table, fmtComma(total), SMALL_BOLD);
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addCreditBillsSummary(PdfPCell container, ShiftReportPrintData data) {
+    public void addCreditBillsSummary(Document doc, ShiftReportPrintData data) throws DocumentException {
         if (data.getCreditBillDetails().isEmpty()) return;
 
         BigDecimal creditTotal = BigDecimal.ZERO;
@@ -265,10 +267,12 @@ public class ShiftReportFinancialSection {
             creditTotal = creditTotal.add(cbd.getAmount() != null ? cbd.getAmount() : BigDecimal.ZERO);
         }
 
-        container.addElement(sectionHeader("CREDIT BILLS (" + data.getCreditBillDetails().size() + ") — \u20B9" + fmtComma(creditTotal)));
-        PdfPTable table = new PdfPTable(new float[]{0.4f, 1.8f, 1f, 1.6f, 0.8f, 0.8f, 1.2f});
+        doc.add(sectionHeader("CREDIT BILLS (" + data.getCreditBillDetails().size() + ") — \u20B9" + fmtComma(creditTotal)));
+        PdfPTable table = new PdfPTable(new float[]{0.4f, 2.4f, 1f, 1.8f, 1.3f, 0.8f, 1.2f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
+        // Robust pagination if credit bills spill past a single page — header row repeats.
+        table.setHeaderRows(1);
 
         addHeaderCell(table, "#");
         addHeaderCell(table, "CUSTOMER");
@@ -278,6 +282,10 @@ public class ShiftReportFinancialSection {
         addHeaderCell(table, "QTY");
         addHeaderCell(table, "AMT");
 
+        // Resolve abbr -> full product display name (10 chars) using meter-reading product names.
+        java.util.Set<String> knownProducts = new java.util.LinkedHashSet<>();
+        for (MeterReading mr : data.getMeterReadings()) knownProducts.add(mr.getProductName());
+
         int idx = 1;
         double totalQty = 0;
         for (CreditBillDetail cbd : data.getCreditBillDetails()) {
@@ -285,19 +293,20 @@ public class ShiftReportFinancialSection {
             addCellLeft(table, cbd.getCustomerName(), SMALL_FONT);
             addCellLeft(table, cbd.getBillNo(), SMALL_FONT);
             addCellLeft(table, cbd.getVehicleNo(), SMALL_FONT);
-            // Parse product abbreviation and quantity from "MS:500 HSD:200"
+            // Parse "abbr:qty abbr:qty" — abbr is whitespace-free (fixed 2026-04-22).
             String prodAbbr = "";
             double qty = 0;
             if (cbd.getProducts() != null && !cbd.getProducts().isBlank()) {
                 for (String part : cbd.getProducts().split("\\s+")) {
                     String[] kv = part.split(":");
                     if (kv.length == 2) {
-                        if (prodAbbr.isEmpty()) prodAbbr = kv[0]; else prodAbbr += "+" + kv[0];
+                        String display = productDisplayFromAbbr(kv[0], knownProducts);
+                        prodAbbr = prodAbbr.isEmpty() ? display : prodAbbr + "+" + display;
                         try { qty += Double.parseDouble(kv[1]); } catch (NumberFormatException ignored) {}
                     }
                 }
             }
-            addCellLeft(table, prodAbbr, SMALL_FONT);
+            addCellCenter(table, prodAbbr, SMALL_FONT);
             addCellRight(table, fmt0(qty), SMALL_FONT);
             addCellRight(table, fmtComma(cbd.getAmount()), SMALL_FONT);
             totalQty += qty;
@@ -312,10 +321,10 @@ public class ShiftReportFinancialSection {
         addCellRight(table, fmt0(totalQty), SMALL_BOLD);
         addCellRight(table, fmtComma(creditTotal), SMALL_BOLD);
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addEAdvanceDetailsCompact(PdfPCell container, ShiftReportPrintData data) {
+    public void addEAdvanceDetailsCompact(Document doc, ShiftReportPrintData data) throws DocumentException {
         List<String> eTypes = List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER");
         List<AdvanceEntryDetail> entries = data.getAdvanceEntries().stream()
                 .filter(ae -> eTypes.contains(ae.getType()))
@@ -327,7 +336,7 @@ public class ShiftReportFinancialSection {
             total = total.add(e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO);
         }
 
-        container.addElement(sectionHeader("E-ADVANCES (" + entries.size() + ") — Rs." + fmtComma(total)));
+        doc.add(sectionHeader("E-ADVANCES (" + entries.size() + ") — Rs." + fmtComma(total)));
 
         PdfPTable table = new PdfPTable(new float[]{0.4f, 1f, 3f, 1.5f});
         table.setWidthPercentage(100);
@@ -355,55 +364,10 @@ public class ShiftReportFinancialSection {
         addCellLeft(table, "Total", SMALL_BOLD);
         addCellRight(table, fmtComma(total), SMALL_BOLD);
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addOperationalAdvanceDetailsCompact(PdfPCell container, ShiftReportPrintData data) {
-        // Incentive is revenue reduction, not an advance — excluded from this detail section.
-        // (Still appears in the main ADVANCES table via addAdvances().)
-        List<String> opTypes = List.of("CASH_ADVANCE", "HOME_ADVANCE", "SALARY_ADVANCE", "EXPENSE", "REPAYMENT");
-        List<AdvanceEntryDetail> entries = data.getAdvanceEntries().stream()
-                .filter(ae -> opTypes.contains(ae.getType()))
-                .toList();
-        if (entries.isEmpty()) return;
-
-        BigDecimal total = BigDecimal.ZERO;
-        for (AdvanceEntryDetail e : entries) {
-            total = total.add(e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO);
-        }
-
-        container.addElement(sectionHeader("OPERATIONAL ADVANCES (" + entries.size() + ") — Rs." + fmtComma(total)));
-
-        PdfPTable table = new PdfPTable(new float[]{0.4f, 1f, 3f, 1.5f});
-        table.setWidthPercentage(100);
-        table.setSpacingAfter(1);
-
-        addHeaderCell(table, "#");
-        addHeaderCell(table, "TYPE");
-        addHeaderCell(table, "DESCRIPTION");
-        addHeaderCell(table, "AMOUNT");
-
-        int idx = 1;
-        for (AdvanceEntryDetail entry : entries) {
-            addCellRight(table, String.valueOf(idx++), SMALL_FONT);
-            addCellLeft(table, getAdvanceLabel(entry.getType()), SMALL_FONT);
-            String desc = entry.getDescription() != null ? entry.getDescription() : "-";
-            if (entry.getReference() != null && !entry.getReference().isBlank()) {
-                desc += " [" + entry.getReference() + "]";
-            }
-            addCellLeft(table, desc, SMALL_FONT);
-            addCellRight(table, fmtComma(entry.getAmount()), SMALL_FONT);
-        }
-
-        addCellRight(table, "", SMALL_BOLD);
-        addCellLeft(table, "", SMALL_BOLD);
-        addCellLeft(table, "Total", SMALL_BOLD);
-        addCellRight(table, fmtComma(total), SMALL_BOLD);
-
-        container.addElement(table);
-    }
-
-    public void addCashBillsSummary(PdfPCell container, ShiftReportPrintData data) {
+    public void addCashBillsSummary(Document doc, ShiftReportPrintData data) throws DocumentException {
         if (data.getPaymentModeBreakdown().isEmpty() && data.getCashBillDetails().isEmpty()) return;
 
         // Only count CASH payment mode bills (UPI/CCMS/Card are covered in E-Advances)
@@ -418,7 +382,7 @@ public class ShiftReportFinancialSection {
             }
         }
 
-        container.addElement(sectionHeader("CASH BILLS (" + totalBills + " total, " + cashBills + " cash) — \u20B9" + fmtComma(cashTotal)));
+        doc.add(sectionHeader("CASH BILLS (" + totalBills + " total, " + cashBills + " cash) — \u20B9" + fmtComma(cashTotal)));
         PdfPTable table = new PdfPTable(new float[]{2.5f, 1f, 2f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
@@ -431,10 +395,10 @@ public class ShiftReportFinancialSection {
         addCellRight(table, String.valueOf(cashBills), SMALL_BOLD);
         addCellRight(table, fmtComma(cashTotal), SMALL_BOLD);
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addEAdvanceSummary(PdfPCell container, ShiftReportPrintData data) {
+    public void addEAdvanceSummary(Document doc, ShiftReportPrintData data) throws DocumentException {
         List<String> eTypes = List.of("CARD", "UPI", "CCMS", "CHEQUE", "BANK_TRANSFER");
 
         // Group by type: count + sum
@@ -452,7 +416,7 @@ public class ShiftReportFinancialSection {
         }
         if (typeSummary.isEmpty()) return;
 
-        container.addElement(sectionHeader("E-ADVANCES (" + totalCount + ") — Rs." + fmtComma(grandTotal)));
+        doc.add(sectionHeader("E-ADVANCES (" + totalCount + ") — Rs." + fmtComma(grandTotal)));
 
         PdfPTable table = new PdfPTable(new float[]{2.5f, 1f, 2f});
         table.setWidthPercentage(100);
@@ -472,10 +436,10 @@ public class ShiftReportFinancialSection {
         addCellRight(table, String.valueOf(totalCount), SMALL_BOLD);
         addCellRight(table, fmtComma(grandTotal), SMALL_BOLD);
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addSalesSummary(PdfPCell container, ShiftReportPrintData data) {
+    public void addSalesSummary(Document doc, ShiftReportPrintData data) throws DocumentException {
         // Known product names (from meter readings) for abbr -> full-name expansion
         Set<String> knownProducts = new LinkedHashSet<>();
         for (MeterReading mr : data.getMeterReadings()) knownProducts.add(mr.getProductName());
@@ -513,8 +477,8 @@ public class ShiftReportFinancialSection {
 
         if (productSales.isEmpty()) return;
 
-        container.addElement(sectionHeader("SALES SUMMARY"));
-        PdfPTable table = new PdfPTable(new float[]{1.5f, 1f, 1f, 1f, 1.5f});
+        doc.add(sectionHeader("SALES SUMMARY"));
+        PdfPTable table = new PdfPTable(new float[]{2.2f, 1f, 1f, 1f, 1.5f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
 
@@ -528,7 +492,7 @@ public class ShiftReportFinancialSection {
         for (Map.Entry<String, double[]> entry : productSales.entrySet()) {
             double[] vals = entry.getValue();
             double total = vals[0] + vals[1];
-            addCellLeft(table, productDisplayFromAbbr(entry.getKey(), knownProducts), SMALL_FONT);
+            addCellCenter(table, productDisplayFromAbbr(entry.getKey(), knownProducts), SMALL_FONT);
             addCellRight(table, fmt0(vals[0]), SMALL_FONT);
             addCellRight(table, fmt0(vals[1]), SMALL_FONT);
             addCellRight(table, fmt0(total), SMALL_FONT);
@@ -545,6 +509,6 @@ public class ShiftReportFinancialSection {
         addCellRight(table, fmt0(totalAll), SMALL_BOLD);
         addCellRight(table, fmtComma(BigDecimal.valueOf(totalAmt).setScale(2, java.math.RoundingMode.HALF_UP)), SMALL_BOLD);
 
-        container.addElement(table);
+        doc.add(table);
     }
 }

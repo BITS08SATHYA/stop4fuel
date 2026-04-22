@@ -723,12 +723,19 @@ public class ShiftSalesCalculationService {
         }
     }
 
-    String abbreviateProduct(String name) {
+    /**
+     * Produces the abbreviation written into CashBillDetail.products / CreditBillDetail.products
+     * as "{abbr}:{qty}" tokens separated by spaces. The abbr MUST contain no whitespace — otherwise
+     * the space-separated parser at read time splits inside the abbr and drops the prefix
+     * (historical bug: "2T Loose Oil" -> "2T L:5" parsed as just "L").
+     */
+    public static String abbreviateProduct(String name) {
         if (name == null) return "?";
         String upper = name.toUpperCase();
         if (upper.contains("PETROL") || upper.equals("MS")) return "P";
         if (upper.contains("XTRA") || upper.contains("XP") || upper.contains("PREMIUM")) return "XP";
         if (upper.contains("DIESEL") || upper.equals("HSD") || upper.contains("HIGH SPEED")) return "HSD";
-        return name.length() > 4 ? name.substring(0, 4) : name;
+        String compact = name.replaceAll("\\s+", "");
+        return compact.length() > 10 ? compact.substring(0, 10) : compact;
     }
 }

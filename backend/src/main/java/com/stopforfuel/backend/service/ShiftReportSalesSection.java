@@ -1,7 +1,8 @@
 package com.stopforfuel.backend.service;
 
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
 import com.lowagie.text.Paragraph;
-import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.dto.ShiftReportPrintData.*;
@@ -18,10 +19,10 @@ import static com.stopforfuel.backend.service.ShiftReportPdfUtils.*;
  */
 public class ShiftReportSalesSection {
 
-    public void addMeterwise(PdfPCell container, ShiftReportPrintData data) {
+    public void addMeterwise(Document doc, ShiftReportPrintData data) throws DocumentException {
         if (data.getMeterReadings().isEmpty()) return;
 
-        container.addElement(sectionHeader("METERWISE"));
+        doc.add(sectionHeader("METERWISE"));
 
         // Group nozzles by product
         Map<String, List<MeterReading>> byProduct = new LinkedHashMap<>();
@@ -37,7 +38,7 @@ public class ShiftReportSalesSection {
             // Product subtotal header
             Paragraph pHeader = new Paragraph(productName + " : " + fmt0(totalSales), BOLD_FONT);
             pHeader.setSpacingBefore(1);
-            container.addElement(pHeader);
+            doc.add(pHeader);
 
             // Split into chunks of 3 nozzles per row
             int chunkSize = 3;
@@ -74,12 +75,12 @@ public class ShiftReportSalesSection {
                     addCellRight(table, fmt0(mr.getSales()), SMALL_BOLD);
                 }
 
-                container.addElement(table);
+                doc.add(table);
             }
         }
     }
 
-    public void addGrossNetSales(PdfPCell container, ShiftReportPrintData data) {
+    public void addGrossNetSales(Document doc, ShiftReportPrintData data) throws DocumentException {
         // Compute gross/net sales per product from meter readings + credit bills
         Map<String, Double> meterByProduct = new LinkedHashMap<>();
         Map<String, Double> testByProduct = new LinkedHashMap<>();
@@ -116,7 +117,7 @@ public class ShiftReportSalesSection {
         List<String> products = new ArrayList<>(meterByProduct.keySet());
 
         // GROSS SALES
-        container.addElement(sectionHeader("GROSS SALES"));
+        doc.add(sectionHeader("GROSS SALES"));
         PdfPTable grossTable = new PdfPTable(products.size() + 1);
         grossTable.setWidthPercentage(100);
         grossTable.setSpacingAfter(1);
@@ -145,10 +146,10 @@ public class ShiftReportSalesSection {
         addTotalCellLeft(grossTable, "Gross");
         for (String p : products) addTotalCellRight(grossTable, fmt2(meterByProduct.getOrDefault(p, 0.0)));
 
-        container.addElement(grossTable);
+        doc.add(grossTable);
 
         // NET SALES
-        container.addElement(sectionHeader("NET SALES"));
+        doc.add(sectionHeader("NET SALES"));
         PdfPTable netTable = new PdfPTable(products.size() + 1);
         netTable.setWidthPercentage(100);
         netTable.setSpacingAfter(1);
@@ -168,13 +169,13 @@ public class ShiftReportSalesSection {
             addTotalCellRight(netTable, fmt2(net));
         }
 
-        container.addElement(netTable);
+        doc.add(netTable);
     }
 
-    public void addTankwise(PdfPCell container, ShiftReportPrintData data) {
+    public void addTankwise(Document doc, ShiftReportPrintData data) throws DocumentException {
         if (data.getTankReadings().isEmpty()) return;
 
-        container.addElement(sectionHeader("TANKWISE"));
+        doc.add(sectionHeader("TANKWISE"));
         PdfPTable table = new PdfPTable(new float[]{1.8f, 1f, 1.2f, 0.8f, 1.2f, 1f, 1.2f, 1f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
@@ -199,13 +200,13 @@ public class ShiftReportSalesSection {
             addCellRight(table, fmt0(tr.getSaleStock()), SMALL_BOLD);
         }
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addSalesReconciliation(PdfPCell container, ShiftReportPrintData data) {
+    public void addSalesReconciliation(Document doc, ShiftReportPrintData data) throws DocumentException {
         if (data.getSalesReconciliation() == null || data.getSalesReconciliation().isEmpty()) return;
 
-        container.addElement(sectionHeader("SALES RECONCILIATION (METER vs INVOICE)"));
+        doc.add(sectionHeader("SALES RECONCILIATION (METER vs INVOICE)"));
         PdfPTable table = new PdfPTable(new float[]{1.6f, 1f, 1f, 0.7f, 1.2f, 1.2f, 1f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
@@ -235,13 +236,13 @@ public class ShiftReportSalesSection {
             }
         }
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addSalesDifference(PdfPCell container, ShiftReportPrintData data) {
+    public void addSalesDifference(Document doc, ShiftReportPrintData data) throws DocumentException {
         if (data.getSalesDifferences().isEmpty()) return;
 
-        container.addElement(sectionHeader("SALES DIFFERENCE"));
+        doc.add(sectionHeader("SALES DIFFERENCE"));
         PdfPTable table = new PdfPTable(new float[]{2f, 1.5f, 1.5f, 1.5f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
@@ -263,18 +264,18 @@ public class ShiftReportSalesSection {
             }
         }
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addCashBillSales(PdfPCell container, ShiftReportPrintData data) {
+    public void addCashBillSales(Document doc, ShiftReportPrintData data) throws DocumentException {
         if (data.getCashBillDetails().isEmpty() && data.getPaymentModeBreakdown().isEmpty()) return;
 
-        container.addElement(sectionHeader("CASH BILL SALES BY MODE — LITRES PER PRODUCT"));
+        doc.add(sectionHeader("CASH BILL SALES BY MODE — LITRES PER PRODUCT"));
         Paragraph caption = new Paragraph(
                 "Litres dispensed against cash invoices, split by tender. Rows: payment mode. Columns: product.",
                 SMALL_FONT);
         caption.setSpacingAfter(1);
-        container.addElement(caption);
+        doc.add(caption);
 
         // Resolve abbreviation -> full product name using meter-reading product names
         Set<String> knownProducts = new LinkedHashSet<>();
@@ -321,7 +322,7 @@ public class ShiftReportSalesSection {
             addCellLeft(table, "TOTAL", SMALL_BOLD);
             addCellRight(table, String.valueOf(totalBills), SMALL_BOLD);
             addCellRight(table, fmtBD(total), SMALL_BOLD);
-            container.addElement(table);
+            doc.add(table);
             return;
         }
 
@@ -350,14 +351,14 @@ public class ShiftReportSalesSection {
             addCellRight(table, fmt2(total), SMALL_BOLD);
         }
 
-        container.addElement(table);
+        doc.add(table);
     }
 
-    public void addStockReference(PdfPCell container, ShiftReportPrintData data) {
+    public void addStockReference(Document doc, ShiftReportPrintData data) throws DocumentException {
         // Stock reference from tank readings (fuel products) showing price, sales, available stock
         if (data.getTankReadings().isEmpty()) return;
 
-        container.addElement(sectionHeader("STOCK REFERENCE"));
+        doc.add(sectionHeader("STOCK REFERENCE"));
         PdfPTable table = new PdfPTable(new float[]{2f, 1.5f, 1.5f, 2f});
         table.setWidthPercentage(100);
         table.setSpacingAfter(1);
@@ -376,6 +377,6 @@ public class ShiftReportSalesSection {
             addCellRight(table, fmtComma(avail), SMALL_FONT);
         }
 
-        container.addElement(table);
+        doc.add(table);
     }
 }

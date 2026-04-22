@@ -1,8 +1,12 @@
 package com.stopforfuel.backend.service;
 
 import com.lowagie.text.*;
-import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.BaseFont;
+import com.lowagie.text.pdf.ColumnText;
+import com.lowagie.text.pdf.PdfContentByte;
+import com.lowagie.text.pdf.PdfPageEventHelper;
+import com.lowagie.text.pdf.PdfTemplate;
+import com.lowagie.text.pdf.PdfWriter;
 import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.ShiftClosingReport;
 import com.stopforfuel.backend.exception.ReportGenerationException;
@@ -16,8 +20,10 @@ import static com.stopforfuel.backend.service.ShiftReportPdfUtils.*;
 /**
  * Orchestrates shift report PDF generation by delegating to focused section generators.
  *
- * <p>Page 1: Operations &amp; Financial Summary (sales left, financials+advances+inventory right)
- * <p>Page 2: Invoice &amp; Payment Details (cash+credit bills left, income bills right)
+ * <p>Legal-paper single-column layout. Sections flow top-to-bottom and iText paginates
+ * naturally — busier shifts grow to 3+ pages, quieter shifts compact to 2. A compact
+ * running header (company / shift / cashier) and a "Page X of N — Generated ..." footer
+ * appear on every page via {@link PageChromeEvent}.
  */
 @Component
 public class ShiftReportPdfGenerator {
@@ -28,42 +34,47 @@ public class ShiftReportPdfGenerator {
     private final ShiftReportInventorySection inventorySection = new ShiftReportInventorySection();
 
     public byte[] generate(ShiftReportPrintData data, ShiftClosingReport report) {
-        return generate(data, report, "A4");
+        return generate(data, report, "LEGAL");
     }
 
     public byte[] generate(ShiftReportPrintData data, ShiftClosingReport report, String paperSize) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Rectangle pageSize = "LEGAL".equalsIgnoreCase(paperSize) ? PageSize.LEGAL : PageSize.A4;
-        Document document = new Document(pageSize, 8, 8, 6, 6);
+        Rectangle pageSize = "A4".equalsIgnoreCase(paperSize) ? PageSize.A4 : PageSize.LEGAL;
+        // Top margin is generous to leave room for the running header drawn by PageChromeEvent.
+        Document document = new Document(pageSize, 20, 20, 40, 28);
 
         try {
-            com.lowagie.text.pdf.PdfWriter.getInstance(document, baos);
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new PageChromeEvent(data));
             document.open();
 
-            // ===== PAGE 1: Operations & Financial Summary =====
+            // Page 1 starts with the full company header. Subsequent pages get only the
+            // compact running header drawn by the page event.
             headerSection.addPageOneHeader(document, data);
-            addPageOneBody(document, data, report);
-            headerSection.addPageOneFooter(document, data);
 
-            // ===== PAGE 2: Invoice & Payment Details =====
-            document.newPage();
-            headerSection.addPageTwoHeader(document, data);
-            addPageTwoInvoiceBody(document, data);
+            // Section 1 — Sales Operations
+            salesSection.addMeterwise(document, data);
+            salesSection.addTankwise(document, data);
+            salesSection.addGrossNetSales(document, data);
+            salesSection.addSalesReconciliation(document, data);
+            salesSection.addSalesDifference(document, data);
 
-            // Page 2 footer
-            PdfPTable pg2Footer = new PdfPTable(2);
-            pg2Footer.setWidthPercentage(100);
-            pg2Footer.setSpacingBefore(3);
-            PdfPCell genCell = new PdfPCell(new Phrase("Generated: " + LocalDateTime.now().format(DT_FMT), SMALL_FONT));
-            genCell.setBorder(Rectangle.TOP);
-            genCell.setPadding(2);
-            pg2Footer.addCell(genCell);
-            PdfPCell pgCell = new PdfPCell(new Phrase("Page 2 of 2", SMALL_FONT));
-            pgCell.setBorder(Rectangle.TOP);
-            pgCell.setPadding(2);
-            pgCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            pg2Footer.addCell(pgCell);
-            document.add(pg2Footer);
+            // Section 2 — Financial Summary
+            financialSection.addRevenue(document, data, report);
+            financialSection.addAdvances(document, data, report);
+            financialSection.addTurnoverBalanceBox(document, report);
+            salesSection.addCashBillSales(document, data);
+
+            // Section 3 — Inventory & Stock
+            salesSection.addStockReference(document, data);
+            inventorySection.addProductInventory(document, data);
+            financialSection.addSalesSummary(document, data);
+
+            // Section 4 — Invoice & Payment Details
+            financialSection.addCashBillsSummary(document, data);
+            financialSection.addEAdvanceSummary(document, data);
+            financialSection.addIncomeBills(document, data);
+            financialSection.addCreditBillsSummary(document, data);
 
             document.close();
         } catch (DocumentException e) {
@@ -73,72 +84,93 @@ public class ShiftReportPdfGenerator {
         return baos.toByteArray();
     }
 
-    private void addPageOneBody(Document doc, ShiftReportPrintData data, ShiftClosingReport report) throws DocumentException {
-        PdfPTable outer = new PdfPTable(2);
-        outer.setWidthPercentage(100);
-        outer.setWidths(new float[]{50, 50});
+    /**
+     * Draws a compact running header on every page (company · shift · cashier) and
+     * a "Page X of N — Generated ts" footer. The total page count is written after
+     * the document is closed via a PdfTemplate placeholder — standard iText pattern.
+     */
+    private static final class PageChromeEvent extends PdfPageEventHelper {
 
-        // LEFT COLUMN — Sales & Stock
-        PdfPCell leftCell = new PdfPCell();
-        leftCell.setBorder(Rectangle.NO_BORDER);
-        leftCell.setPadding(0);
-        leftCell.setPaddingRight(3);
+        private final ShiftReportPrintData data;
+        private BaseFont baseFont;
+        private BaseFont baseBold;
+        private PdfTemplate totalPagesPh;
+        private String generatedAt;
 
-        salesSection.addMeterwise(leftCell, data);
-        salesSection.addGrossNetSales(leftCell, data);
-        salesSection.addSalesReconciliation(leftCell, data);
-        salesSection.addTankwise(leftCell, data);
-        salesSection.addSalesDifference(leftCell, data);
-        salesSection.addCashBillSales(leftCell, data);
-        salesSection.addStockReference(leftCell, data);
+        PageChromeEvent(ShiftReportPrintData data) {
+            this.data = data;
+        }
 
-        outer.addCell(leftCell);
+        @Override
+        public void onOpenDocument(PdfWriter writer, Document document) {
+            try {
+                baseFont = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+                baseBold = BaseFont.createFont(BaseFont.HELVETICA_BOLD, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+                totalPagesPh = writer.getDirectContent().createTemplate(40, 12);
+                generatedAt = LocalDateTime.now().format(DT_FMT);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
 
-        // RIGHT COLUMN — Financials, Advances, Inventory
-        PdfPCell rightCell = new PdfPCell();
-        rightCell.setBorder(Rectangle.NO_BORDER);
-        rightCell.setPadding(0);
-        rightCell.setPaddingLeft(3);
+        @Override
+        public void onEndPage(PdfWriter writer, Document document) {
+            // Skip the running header on page 1 — page 1 already has the big company header.
+            PdfContentByte cb = writer.getDirectContent();
+            Rectangle page = document.getPageSize();
+            float left = document.leftMargin();
+            float right = page.getWidth() - document.rightMargin();
+            float top = page.getHeight() - 20;
+            float bottom = 20;
 
-        financialSection.addRevenue(rightCell, data, report);
-        financialSection.addAdvances(rightCell, data, report);
-        financialSection.addTurnoverBalanceBox(rightCell, report);
-        financialSection.addOperationalAdvanceDetailsCompact(rightCell, data);
-        inventorySection.addProductInventory(rightCell, data);
+            cb.saveState();
 
-        outer.addCell(rightCell);
+            if (writer.getPageNumber() > 1) {
+                String company = data.getCompanyName() != null ? data.getCompanyName().toUpperCase() : "";
+                String shift = "SHIFT CLOSING REPORT — Shift #" + data.getShiftId()
+                        + " — Cashier: " + (data.getEmployeeName() != null ? data.getEmployeeName() : "-");
+                // Left: company | Right: shift + cashier
+                ColumnText.showTextAligned(cb, Element.ALIGN_LEFT,
+                        new Phrase(company, new Font(baseBold, 9)), left, top, 0);
+                ColumnText.showTextAligned(cb, Element.ALIGN_RIGHT,
+                        new Phrase(shift, new Font(baseFont, 8)), right, top, 0);
+                // Thin separator under the header
+                cb.setLineWidth(0.5f);
+                cb.moveTo(left, top - 4);
+                cb.lineTo(right, top - 4);
+                cb.stroke();
+            }
 
-        doc.add(outer);
-    }
+            // Footer: left = Generated, right = "Page X of [template]"
+            ColumnText.showTextAligned(cb, Element.ALIGN_LEFT,
+                    new Phrase("Generated: " + generatedAt, new Font(baseFont, 7.5f)),
+                    left, bottom, 0);
 
-    private void addPageTwoInvoiceBody(Document doc, ShiftReportPrintData data) throws DocumentException {
-        PdfPTable outer = new PdfPTable(2);
-        outer.setWidthPercentage(100);
-        outer.setWidths(new float[]{45, 55});
+            String pageLabel = "Page " + writer.getPageNumber() + " of ";
+            float labelWidth = baseFont.getWidthPoint(pageLabel, 8);
+            ColumnText.showTextAligned(cb, Element.ALIGN_LEFT,
+                    new Phrase(pageLabel, new Font(baseFont, 8)),
+                    right - labelWidth - 20, bottom, 0);
+            cb.addTemplate(totalPagesPh, right - 20, bottom - 2);
 
-        // LEFT COLUMN — Summaries + Payments
-        PdfPCell leftCell = new PdfPCell();
-        leftCell.setBorder(Rectangle.NO_BORDER);
-        leftCell.setPadding(0);
-        leftCell.setPaddingRight(3);
+            // Thin separator above the footer
+            cb.setLineWidth(0.5f);
+            cb.moveTo(left, bottom + 8);
+            cb.lineTo(right, bottom + 8);
+            cb.stroke();
 
-        financialSection.addCashBillsSummary(leftCell, data);
-        financialSection.addEAdvanceSummary(leftCell, data);
-        financialSection.addSalesSummary(leftCell, data);
-        financialSection.addIncomeBills(leftCell, data);
+            cb.restoreState();
+        }
 
-        outer.addCell(leftCell);
-
-        // RIGHT COLUMN — Credit Bills (dedicated, full list)
-        PdfPCell rightCell = new PdfPCell();
-        rightCell.setBorder(Rectangle.NO_BORDER);
-        rightCell.setPadding(0);
-        rightCell.setPaddingLeft(3);
-
-        financialSection.addCreditBillsSummary(rightCell, data);
-
-        outer.addCell(rightCell);
-
-        doc.add(outer);
+        @Override
+        public void onCloseDocument(PdfWriter writer, Document document) {
+            // Write the final total-pages value into the placeholder. getPageNumber() at close
+            // time is the next page to be written, hence -1 for the last actual page count.
+            int total = writer.getPageNumber() - 1;
+            totalPagesPh.beginText();
+            totalPagesPh.setFontAndSize(baseFont, 8);
+            totalPagesPh.showText(String.valueOf(total));
+            totalPagesPh.endText();
+        }
     }
 }

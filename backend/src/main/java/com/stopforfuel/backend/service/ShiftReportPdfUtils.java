@@ -90,6 +90,15 @@ public final class ShiftReportPdfUtils {
         table.addCell(cell);
     }
 
+    public static void addCellCenter(PdfPTable table, String text, Font font) {
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "-", font));
+        cell.setPadding(1);
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setBorderWidth(0.25f);
+        cell.setBorderColor(Color.LIGHT_GRAY);
+        table.addCell(cell);
+    }
+
     public static void addTotalCellLeft(PdfPTable table, String text) {
         PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", SMALL_BOLD));
         cell.setBackgroundColor(TOTAL_BG);
@@ -204,13 +213,13 @@ public final class ShiftReportPdfUtils {
         return name.length() > 5 ? name.substring(0, 5) : name;
     }
 
-    /** Render a product column label: first 7 chars of the full name (fallback to the input if null). */
+    /** Render a product column label: first 10 chars of the full name (fallback to the input if null). */
     public static String productDisplay(String fullName) {
         if (fullName == null) return "?";
-        return fullName.length() > 7 ? fullName.substring(0, 7) : fullName;
+        return fullName.length() > 10 ? fullName.substring(0, 10) : fullName;
     }
 
-    /** Resolve an abbreviation (e.g. "HSD", "MS") to the first 7 chars of its full product name, if resolvable. */
+    /** Resolve an abbreviation (e.g. "HSD", "MS") to the first 10 chars of its full product name, if resolvable. */
     public static String productDisplayFromAbbr(String abbr, java.util.Set<String> productNames) {
         String resolved = expandAbbreviation(abbr, productNames);
         return productDisplay(resolved != null ? resolved : abbr);
