@@ -529,4 +529,15 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
 
     // Unassigned invoices in a shift (available for advance assignment)
     List<InvoiceBill> findByShiftIdAndOperationalAdvanceIsNull(Long shiftId);
+
+    // Bank-statement parser: credit bills within an amount range, not fully paid, with customer loaded for name matching.
+    @EntityGraph(attributePaths = {"customer"})
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.scid = :scid AND ib.billType = 'CREDIT' "
+         + "AND ib.paymentStatus <> 'PAID' "
+         + "AND ib.netAmount BETWEEN :low AND :high "
+         + "ORDER BY ib.date DESC")
+    List<InvoiceBill> findOutstandingCreditByAmountRange(
+            @Param("low") BigDecimal low,
+            @Param("high") BigDecimal high,
+            @Param("scid") Long scid);
 }

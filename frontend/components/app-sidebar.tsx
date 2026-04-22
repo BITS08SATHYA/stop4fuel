@@ -51,6 +51,7 @@ import {
     Search,
     AlertTriangle,
     Paperclip,
+    FileSearch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -131,6 +132,7 @@ const paymentManagementNav = [
     { name: "Watchlist", href: "/payments/credit/watchlist", icon: Shield },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
     { name: "Statement Reports", href: "/payments/statements/reports", icon: FileText },
+    { name: "Bank Statements", href: "/payments/bank-statements", icon: FileSearch },
     { name: "Explorer", href: "/payments/explorer", icon: Search },
     { name: "Payments", href: "/payments", icon: CreditCard },
     { name: "Customer Ledger", href: "/payments/ledger", icon: BookOpen },

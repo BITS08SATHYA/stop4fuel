@@ -175,4 +175,14 @@ public interface StatementRepository extends ScidRepository<Statement> {
             @org.springframework.data.repository.query.Param("start") LocalDate start,
             @org.springframework.data.repository.query.Param("end") LocalDate end,
             @org.springframework.data.repository.query.Param("scid") Long scid);
+
+    // Bank-statement parser: unpaid statements with balanceAmount in a range, customer loaded for name matching.
+    @EntityGraph(attributePaths = {"customer"})
+    @Query("SELECT s FROM Statement s WHERE s.scid = :scid AND s.status <> 'PAID' AND s.status <> 'DRAFT' "
+         + "AND s.balanceAmount BETWEEN :low AND :high "
+         + "ORDER BY s.statementDate DESC")
+    List<Statement> findOutstandingByBalanceRange(
+            @Param("low") BigDecimal low,
+            @Param("high") BigDecimal high,
+            @Param("scid") Long scid);
 }
