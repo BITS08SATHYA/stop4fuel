@@ -236,6 +236,35 @@ export default function ShiftReportPage() {
                 </div></GlassCard>
             </div>)}
 
+            {/* Sales Reconciliation (Meter vs Invoice) */}
+            {printData && printData.salesReconciliation && printData.salesReconciliation.length > 0 && (
+            <GlassCard><div className="p-4">
+                <h2 className="text-base font-semibold mb-1 text-blue-500">Sales Reconciliation (Meter vs Invoice)</h2>
+                <p className="text-[11px] text-muted-foreground mb-3">Expected Cash = Meter &minus; Credit &minus; Test. Variance flags cash invoices short (&minus;) or over (+) per product.</p>
+                <table className="w-full text-xs"><thead><tr className="border-b border-border text-muted-foreground">
+                    <th className="text-left py-1 px-1.5">Product</th>
+                    <th className="text-right py-1 px-1.5">Meter (L)</th>
+                    <th className="text-right py-1 px-1.5">Credit (L)</th>
+                    <th className="text-right py-1 px-1.5">Test (L)</th>
+                    <th className="text-right py-1 px-1.5">Expected Cash (L)</th>
+                    <th className="text-right py-1 px-1.5">Actual Cash (L)</th>
+                    <th className="text-right py-1 px-1.5">Variance</th>
+                </tr></thead><tbody>
+                    {printData.salesReconciliation.map((r, i) => (
+                        <tr key={i} className="border-b border-border/30">
+                            <td className="py-1 px-1.5">{r.productName}</td>
+                            <td className="py-1 px-1.5 text-right">{fmtQty(r.meterLitres)}</td>
+                            <td className="py-1 px-1.5 text-right">{fmtQty(r.creditLitres)}</td>
+                            <td className="py-1 px-1.5 text-right">{fmtQty(r.testLitres)}</td>
+                            <td className="py-1 px-1.5 text-right font-semibold">{fmtQty(r.expectedCashLitres)}</td>
+                            <td className="py-1 px-1.5 text-right">{fmtQty(r.actualCashLitres)}</td>
+                            <td className={`py-1 px-1.5 text-right font-semibold ${Math.abs(r.variance || 0) > 0.5 ? "text-red-500" : ""}`}>{fmtQty(r.variance)}</td>
+                        </tr>
+                    ))}
+                </tbody></table>
+            </div></GlassCard>
+            )}
+
             {/* Cash Bill Breakdown + Sales Difference */}
             {printData && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

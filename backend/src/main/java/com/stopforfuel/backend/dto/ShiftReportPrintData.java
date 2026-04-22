@@ -25,6 +25,7 @@ public class ShiftReportPrintData {
     private List<MeterReading> meterReadings = new ArrayList<>();
     private List<TankReading> tankReadings = new ArrayList<>();
     private List<SalesDifference> salesDifferences = new ArrayList<>();
+    private List<SalesReconciliation> salesReconciliation = new ArrayList<>();
 
     // Front Page - Right Column (from ShiftClosingReport line items - cumulatives)
     // These come from the existing report entity
@@ -79,6 +80,18 @@ public class ShiftReportPrintData {
         private Double tankSale;
         private Double meterSale;
         private Double difference;
+    }
+
+    /** Meter vs Invoice reconciliation — tells cashier how many litres of cash invoices are short/over per product. */
+    @Data
+    public static class SalesReconciliation {
+        private String productName;
+        private Double meterLitres;        // gross meter sales (includes test)
+        private Double creditLitres;       // litres against credit invoices
+        private Double testLitres;         // nozzle test fuel
+        private Double expectedCashLitres; // meter - credit - test
+        private Double actualCashLitres;   // litres against cash invoices
+        private Double variance;           // actual - expected (positive = over-billed, negative = short)
     }
 
     @Data

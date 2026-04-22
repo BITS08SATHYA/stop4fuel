@@ -105,10 +105,11 @@ public class ShiftClosingReportController {
 
     @GetMapping("/{shiftId}/download-pdf")
     @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
-    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long shiftId) {
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long shiftId,
+                                              @RequestParam(name = "paperSize", required = false, defaultValue = "A4") String paperSize) {
         ShiftClosingReport report = reportService.getReport(shiftId);
         ShiftReportPrintData printData = reportService.getPrintData(shiftId);
-        byte[] pdfBytes = pdfGenerator.generate(printData, report);
+        byte[] pdfBytes = pdfGenerator.generate(printData, report, paperSize);
 
         String filename = "shift-report-" + shiftId + ".pdf";
         return ResponseEntity.ok()

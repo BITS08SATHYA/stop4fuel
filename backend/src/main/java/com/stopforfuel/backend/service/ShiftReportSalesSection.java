@@ -122,7 +122,7 @@ public class ShiftReportSalesSection {
         grossTable.setSpacingAfter(1);
 
         addHeaderCell(grossTable, "");
-        for (String p : products) addHeaderCell(grossTable, abbreviateProduct(p));
+        for (String p : products) addHeaderCell(grossTable, productDisplay(p));
 
         // Credit row
         addCellLeft(grossTable, "Credit", SMALL_FONT);
@@ -154,7 +154,7 @@ public class ShiftReportSalesSection {
         netTable.setSpacingAfter(1);
 
         addHeaderCell(netTable, "");
-        for (String p : products) addHeaderCell(netTable, abbreviateProduct(p));
+        for (String p : products) addHeaderCell(netTable, productDisplay(p));
 
         addCellLeft(netTable, "Gross", SMALL_FONT);
         for (String p : products) addCellRight(netTable, fmt2(meterByProduct.getOrDefault(p, 0.0)), SMALL_FONT);
@@ -202,6 +202,42 @@ public class ShiftReportSalesSection {
         container.addElement(table);
     }
 
+    public void addSalesReconciliation(PdfPCell container, ShiftReportPrintData data) {
+        if (data.getSalesReconciliation() == null || data.getSalesReconciliation().isEmpty()) return;
+
+        container.addElement(sectionHeader("SALES RECONCILIATION (METER vs INVOICE)"));
+        PdfPTable table = new PdfPTable(new float[]{1.6f, 1f, 1f, 0.7f, 1.2f, 1.2f, 1f});
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(1);
+
+        addHeaderCell(table, "PRODUCT");
+        addHeaderCell(table, "METER");
+        addHeaderCell(table, "CREDIT");
+        addHeaderCell(table, "TEST");
+        addHeaderCell(table, "EXP. CASH");
+        addHeaderCell(table, "ACT. CASH");
+        addHeaderCell(table, "VARIANCE");
+
+        for (SalesReconciliation sr : data.getSalesReconciliation()) {
+            addCellLeft(table, productDisplay(sr.getProductName()), SMALL_FONT);
+            addCellRight(table, fmt2(sr.getMeterLitres()), SMALL_FONT);
+            addCellRight(table, fmt2(sr.getCreditLitres()), SMALL_FONT);
+            addCellRight(table, fmt2(sr.getTestLitres()), SMALL_FONT);
+            addCellRight(table, fmt2(sr.getExpectedCashLitres()), SMALL_BOLD);
+            addCellRight(table, fmt2(sr.getActualCashLitres()), SMALL_FONT);
+            double variance = sr.getVariance() != null ? sr.getVariance() : 0;
+            if (Math.abs(variance) > 0.5) {
+                com.lowagie.text.Font redBold = new com.lowagie.text.Font(
+                        com.lowagie.text.Font.HELVETICA, 8.5f, com.lowagie.text.Font.BOLD, DIFF_RED);
+                addCellRight(table, fmt2(variance), redBold);
+            } else {
+                addCellRight(table, fmt2(variance), SMALL_BOLD);
+            }
+        }
+
+        container.addElement(table);
+    }
+
     public void addSalesDifference(PdfPCell container, ShiftReportPrintData data) {
         if (data.getSalesDifferences().isEmpty()) return;
 
@@ -233,7 +269,16 @@ public class ShiftReportSalesSection {
     public void addCashBillSales(PdfPCell container, ShiftReportPrintData data) {
         if (data.getCashBillDetails().isEmpty() && data.getPaymentModeBreakdown().isEmpty()) return;
 
-        container.addElement(sectionHeader("CASH BILL SALES (Litres)"));
+        container.addElement(sectionHeader("CASH BILL SALES BY MODE — LITRES PER PRODUCT"));
+        Paragraph caption = new Paragraph(
+                "Litres dispensed against cash invoices, split by tender. Rows: payment mode. Columns: product.",
+                SMALL_FONT);
+        caption.setSpacingAfter(1);
+        container.addElement(caption);
+
+        // Resolve abbreviation -> full product name using meter-reading product names
+        Set<String> knownProducts = new LinkedHashSet<>();
+        for (MeterReading mr : data.getMeterReadings()) knownProducts.add(mr.getProductName());
 
         // Compute litres per product per payment mode from cash bill details
         Set<String> productAbbrs = new LinkedHashSet<>();
@@ -287,7 +332,7 @@ public class ShiftReportSalesSection {
         table.setSpacingAfter(1);
 
         addHeaderCell(table, "");
-        for (String p : products) addHeaderCell(table, p);
+        for (String p : products) addHeaderCell(table, productDisplayFromAbbr(p, knownProducts));
 
         for (Map.Entry<String, Map<String, Double>> entry : modeProductQty.entrySet()) {
             addCellLeft(table, entry.getKey(), SMALL_FONT);

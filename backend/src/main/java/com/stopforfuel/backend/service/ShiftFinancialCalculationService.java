@@ -212,6 +212,33 @@ public class ShiftFinancialCalculationService {
             data.getAdvanceEntries().add(entry);
         }
 
+        // Expenses (expense + station_expenses) — both shift-linked
+        List<Expense> expenses = expenseRepository.findByShiftIdOrderByIdDesc(shiftId);
+        for (Expense ex : expenses) {
+            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
+            entry.setType("EXPENSE");
+            String label = ex.getExpenseType() != null ? ex.getExpenseType().getTypeName() : "Expense";
+            String desc = ex.getDescription() != null && !ex.getDescription().isBlank()
+                    ? label + " — " + ex.getDescription()
+                    : label;
+            entry.setDescription(desc);
+            entry.setAmount(ex.getAmount());
+            data.getAdvanceEntries().add(entry);
+        }
+        List<StationExpense> stationExpenses = stationExpenseRepository.findByShiftIdOrderByIdDesc(shiftId);
+        for (StationExpense se : stationExpenses) {
+            if (se.getAmount() == null || se.getAmount() <= 0) continue;
+            ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
+            entry.setType("EXPENSE");
+            String label = se.getExpenseType() != null ? se.getExpenseType().getTypeName() : "Station Expense";
+            String desc = se.getDescription() != null && !se.getDescription().isBlank()
+                    ? label + " — " + se.getDescription()
+                    : label;
+            entry.setDescription(desc);
+            entry.setAmount(BigDecimal.valueOf(se.getAmount()));
+            data.getAdvanceEntries().add(entry);
+        }
+
         // Inflow Repayments
         List<CashInflowRepayment> repayments = repaymentRepository.findByShiftIdOrderByRepaymentDateDesc(shiftId);
         for (CashInflowRepayment r : repayments) {
@@ -222,17 +249,13 @@ public class ShiftFinancialCalculationService {
             data.getAdvanceEntries().add(entry);
         }
 
-        // Incentive from invoices
-        BigDecimal incentiveTotal = BigDecimal.ZERO;
-        for (InvoiceBill inv : invoices) {
-            if (inv.getTotalDiscount() != null && inv.getTotalDiscount().compareTo(BigDecimal.ZERO) > 0) {
-                incentiveTotal = incentiveTotal.add(inv.getTotalDiscount());
-            }
-        }
-        if (incentiveTotal.compareTo(BigDecimal.ZERO) > 0) {
+        // Incentive — single source of truth: incentive_payment table (matches web UI).
+        // Do NOT re-derive from InvoiceBill.totalDiscount — that produced a divergent total.
+        BigDecimal incentiveTotal = incentivePaymentRepository.sumByShift(shiftId);
+        if (incentiveTotal != null && incentiveTotal.compareTo(BigDecimal.ZERO) > 0) {
             ShiftReportPrintData.AdvanceEntryDetail entry = new ShiftReportPrintData.AdvanceEntryDetail();
             entry.setType("INCENTIVE");
-            entry.setDescription("Discounts given");
+            entry.setDescription("Incentive / Discount");
             entry.setAmount(incentiveTotal);
             data.getAdvanceEntries().add(entry);
         }

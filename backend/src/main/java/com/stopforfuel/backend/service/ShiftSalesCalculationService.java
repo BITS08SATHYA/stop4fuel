@@ -459,6 +459,74 @@ public class ShiftSalesCalculationService {
     }
 
     /**
+     * Populate meter-vs-invoice reconciliation into print data.
+     * For each fuel product: meter litres, credit-invoice litres, test litres,
+     * expected cash litres (= meter − credit − test), actual cash-invoice litres, and
+     * variance (= actual − expected). Depends on meterReadings + cashBillDetails +
+     * creditBillDetails already being populated on {@code data}.
+     */
+    public void populateSalesReconciliation(ShiftReportPrintData data) {
+        // Meter + test per product (ground truth)
+        Map<String, double[]> byProduct = new LinkedHashMap<>(); // [meter, credit, test, actualCash]
+        for (ShiftReportPrintData.MeterReading mr : data.getMeterReadings()) {
+            double sales = mr.getSales() != null ? mr.getSales() : 0;
+            double test = mr.getTestQuantity() != null ? mr.getTestQuantity() : 0;
+            byProduct.merge(mr.getProductName(), new double[]{sales, 0, test, 0},
+                    (o, n) -> new double[]{o[0] + n[0], o[1], o[2] + n[2], o[3]});
+        }
+        Set<String> knownProducts = new LinkedHashSet<>(byProduct.keySet());
+
+        // Credit invoice litres per product (abbr -> full name via expandAbbreviation)
+        for (ShiftReportPrintData.CreditBillDetail cbd : data.getCreditBillDetails()) {
+            if (cbd.getProducts() == null || cbd.getProducts().isBlank()) continue;
+            for (String part : cbd.getProducts().split("\\s+")) {
+                String[] kv = part.split(":");
+                if (kv.length != 2) continue;
+                String pName = com.stopforfuel.backend.service.ShiftReportPdfUtils
+                        .expandAbbreviation(kv[0], knownProducts);
+                if (pName == null) continue;
+                double qty;
+                try { qty = Double.parseDouble(kv[1]); } catch (NumberFormatException e) { continue; }
+                double[] cur = byProduct.get(pName);
+                if (cur != null) cur[1] += qty;
+            }
+        }
+
+        // Cash invoice litres per product
+        for (ShiftReportPrintData.CashBillDetail cbd : data.getCashBillDetails()) {
+            if (cbd.getProducts() == null || cbd.getProducts().isBlank()) continue;
+            for (String part : cbd.getProducts().split("\\s+")) {
+                String[] kv = part.split(":");
+                if (kv.length != 2) continue;
+                String pName = com.stopforfuel.backend.service.ShiftReportPdfUtils
+                        .expandAbbreviation(kv[0], knownProducts);
+                if (pName == null) continue;
+                double qty;
+                try { qty = Double.parseDouble(kv[1]); } catch (NumberFormatException e) { continue; }
+                double[] cur = byProduct.get(pName);
+                if (cur != null) cur[3] += qty;
+            }
+        }
+
+        for (Map.Entry<String, double[]> entry : byProduct.entrySet()) {
+            double meter = entry.getValue()[0];
+            double credit = entry.getValue()[1];
+            double test = entry.getValue()[2];
+            double actualCash = entry.getValue()[3];
+            double expectedCash = meter - credit - test;
+            ShiftReportPrintData.SalesReconciliation row = new ShiftReportPrintData.SalesReconciliation();
+            row.setProductName(entry.getKey());
+            row.setMeterLitres(meter);
+            row.setCreditLitres(credit);
+            row.setTestLitres(test);
+            row.setExpectedCashLitres(expectedCash);
+            row.setActualCashLitres(actualCash);
+            row.setVariance(actualCash - expectedCash);
+            data.getSalesReconciliation().add(row);
+        }
+    }
+
+    /**
      * Populate cash and credit bill details into print data.
      */
     @Transactional(readOnly = true)

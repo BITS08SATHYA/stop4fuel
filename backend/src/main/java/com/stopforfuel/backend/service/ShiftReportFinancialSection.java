@@ -359,7 +359,9 @@ public class ShiftReportFinancialSection {
     }
 
     public void addOperationalAdvanceDetailsCompact(PdfPCell container, ShiftReportPrintData data) {
-        List<String> opTypes = List.of("CASH_ADVANCE", "HOME_ADVANCE", "SALARY_ADVANCE", "EXPENSE", "INCENTIVE", "REPAYMENT");
+        // Incentive is revenue reduction, not an advance — excluded from this detail section.
+        // (Still appears in the main ADVANCES table via addAdvances().)
+        List<String> opTypes = List.of("CASH_ADVANCE", "HOME_ADVANCE", "SALARY_ADVANCE", "EXPENSE", "REPAYMENT");
         List<AdvanceEntryDetail> entries = data.getAdvanceEntries().stream()
                 .filter(ae -> opTypes.contains(ae.getType()))
                 .toList();
@@ -474,6 +476,10 @@ public class ShiftReportFinancialSection {
     }
 
     public void addSalesSummary(PdfPCell container, ShiftReportPrintData data) {
+        // Known product names (from meter readings) for abbr -> full-name expansion
+        Set<String> knownProducts = new LinkedHashSet<>();
+        for (MeterReading mr : data.getMeterReadings()) knownProducts.add(mr.getProductName());
+
         // Aggregate product sales from cash + credit bill details
         Map<String, double[]> productSales = new LinkedHashMap<>(); // [cashQty, creditQty, totalAmount]
 
@@ -522,7 +528,7 @@ public class ShiftReportFinancialSection {
         for (Map.Entry<String, double[]> entry : productSales.entrySet()) {
             double[] vals = entry.getValue();
             double total = vals[0] + vals[1];
-            addCellLeft(table, entry.getKey(), SMALL_FONT);
+            addCellLeft(table, productDisplayFromAbbr(entry.getKey(), knownProducts), SMALL_FONT);
             addCellRight(table, fmt0(vals[0]), SMALL_FONT);
             addCellRight(table, fmt0(vals[1]), SMALL_FONT);
             addCellRight(table, fmt0(total), SMALL_FONT);

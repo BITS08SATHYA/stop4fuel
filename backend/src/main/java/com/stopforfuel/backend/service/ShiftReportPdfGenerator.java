@@ -28,8 +28,13 @@ public class ShiftReportPdfGenerator {
     private final ShiftReportInventorySection inventorySection = new ShiftReportInventorySection();
 
     public byte[] generate(ShiftReportPrintData data, ShiftClosingReport report) {
+        return generate(data, report, "A4");
+    }
+
+    public byte[] generate(ShiftReportPrintData data, ShiftClosingReport report, String paperSize) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4, 12, 12, 10, 10);
+        Rectangle pageSize = "LEGAL".equalsIgnoreCase(paperSize) ? PageSize.LEGAL : PageSize.A4;
+        Document document = new Document(pageSize, 8, 8, 6, 6);
 
         try {
             com.lowagie.text.pdf.PdfWriter.getInstance(document, baos);
@@ -81,6 +86,7 @@ public class ShiftReportPdfGenerator {
 
         salesSection.addMeterwise(leftCell, data);
         salesSection.addGrossNetSales(leftCell, data);
+        salesSection.addSalesReconciliation(leftCell, data);
         salesSection.addTankwise(leftCell, data);
         salesSection.addSalesDifference(leftCell, data);
         salesSection.addCashBillSales(leftCell, data);

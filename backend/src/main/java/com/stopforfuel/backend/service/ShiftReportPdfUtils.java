@@ -19,19 +19,19 @@ public final class ShiftReportPdfUtils {
 
     private ShiftReportPdfUtils() {}
 
-    // Fonts — ultra-compact for dense 2-page layout
-    public static final Font COMPANY_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
-    public static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
-    public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 8, Font.BOLD);
-    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 7, Font.BOLD, Color.WHITE);
-    public static final Font HEADER_FONT = new Font(Font.HELVETICA, 6, Font.BOLD);
-    public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 7, Font.NORMAL);
-    public static final Font BOLD_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
-    public static final Font SMALL_FONT = new Font(Font.HELVETICA, 6.5f, Font.NORMAL);
-    public static final Font SMALL_BOLD = new Font(Font.HELVETICA, 6.5f, Font.BOLD);
-    public static final Font TOTAL_FONT = new Font(Font.HELVETICA, 7, Font.BOLD);
-    public static final Font FOOTER_FONT = new Font(Font.HELVETICA, 5.5f, Font.NORMAL);
-    public static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
+    // Fonts — +2pt over prior ultra-compact baseline for legibility on printed output.
+    public static final Font COMPANY_FONT = new Font(Font.HELVETICA, 11, Font.BOLD);
+    public static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 7.5f, Font.NORMAL);
+    public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 10, Font.BOLD);
+    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 9, Font.BOLD, Color.WHITE);
+    public static final Font HEADER_FONT = new Font(Font.HELVETICA, 8, Font.BOLD);
+    public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 9, Font.NORMAL);
+    public static final Font BOLD_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
+    public static final Font SMALL_FONT = new Font(Font.HELVETICA, 8.5f, Font.NORMAL);
+    public static final Font SMALL_BOLD = new Font(Font.HELVETICA, 8.5f, Font.BOLD);
+    public static final Font TOTAL_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
+    public static final Font FOOTER_FONT = new Font(Font.HELVETICA, 7.5f, Font.NORMAL);
+    public static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 7.5f, Font.BOLD);
 
     public static final Color HEADER_BG = new Color(224, 224, 224);   // #e0e0e0
     public static final Color LIGHT_BG = new Color(245, 245, 245);
@@ -202,6 +202,18 @@ public final class ShiftReportPdfUtils {
         if (upper.contains("XTRA") || upper.contains("XP") || upper.contains("PREMIUM")) return "XP";
         if (upper.contains("DIESEL") || upper.equals("HSD") || upper.contains("HIGH SPEED")) return "HSD";
         return name.length() > 5 ? name.substring(0, 5) : name;
+    }
+
+    /** Render a product column label: first 7 chars of the full name (fallback to the input if null). */
+    public static String productDisplay(String fullName) {
+        if (fullName == null) return "?";
+        return fullName.length() > 7 ? fullName.substring(0, 7) : fullName;
+    }
+
+    /** Resolve an abbreviation (e.g. "HSD", "MS") to the first 7 chars of its full product name, if resolvable. */
+    public static String productDisplayFromAbbr(String abbr, java.util.Set<String> productNames) {
+        String resolved = expandAbbreviation(abbr, productNames);
+        return productDisplay(resolved != null ? resolved : abbr);
     }
 
     public static String expandAbbreviation(String abbr, java.util.Set<String> productNames) {

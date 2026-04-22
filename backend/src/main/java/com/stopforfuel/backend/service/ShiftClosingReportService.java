@@ -468,6 +468,8 @@ public class ShiftClosingReportService {
         salesCalculationService.populateSalesDifferences(data, shiftId);
         salesCalculationService.populateBillDetails(data, shiftId);
         salesCalculationService.populateStockData(data, shiftId);
+        // Reconciliation depends on meterReadings + cashBillDetails + creditBillDetails above.
+        salesCalculationService.populateSalesReconciliation(data);
 
         // Delegate financial print data sections
         List<InvoiceBill> invoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(shiftId);
