@@ -72,3 +72,9 @@ variable "anthropic_api_key_secret_arn" {
   type        = string
   default     = ""
 }
+
+variable "assign_public_ip" {
+  description = "Assign public IP to Fargate tasks. Set true when running in public subnets without NAT."
+  type        = bool
+  default     = false
+}

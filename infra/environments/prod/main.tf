@@ -203,7 +203,8 @@ module "ecs" {
   environment                  = var.environment
   aws_region                   = var.aws_region
   vpc_id                       = module.networking.vpc_id
-  subnet_ids                   = module.networking.private_subnet_ids
+  subnet_ids                   = module.networking.public_subnet_ids
+  assign_public_ip             = true
   security_group_id            = module.networking.ecs_security_group_id
   backend_target_group_arn     = module.alb.backend_target_group_arn
   frontend_target_group_arn    = module.alb.frontend_target_group_arn
