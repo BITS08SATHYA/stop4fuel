@@ -30,7 +30,7 @@ public interface CustomerRepository extends ScidRepository<Customer> {
             "AND (:categoryType IS NULL OR cc.categoryType = :categoryType)")
     org.springframework.data.domain.Page<Customer> findByGroupAndStatus(
             @org.springframework.data.repository.query.Param("groupId") Long groupId,
-            @org.springframework.data.repository.query.Param("status") String status,
+            @org.springframework.data.repository.query.Param("status") com.stopforfuel.backend.enums.EntityStatus status,
             @org.springframework.data.repository.query.Param("categoryType") String categoryType,
             org.springframework.data.domain.Pageable pageable);
 
@@ -43,7 +43,7 @@ public interface CustomerRepository extends ScidRepository<Customer> {
     org.springframework.data.domain.Page<Customer> findBySearchAndFilters(
             @org.springframework.data.repository.query.Param("search") String search,
             @org.springframework.data.repository.query.Param("groupId") Long groupId,
-            @org.springframework.data.repository.query.Param("status") String status,
+            @org.springframework.data.repository.query.Param("status") com.stopforfuel.backend.enums.EntityStatus status,
             @org.springframework.data.repository.query.Param("categoryType") String categoryType,
             org.springframework.data.domain.Pageable pageable);
 

@@ -33,6 +33,7 @@ interface CustomerDetail {
     creditLimitAmount?: number | null;
     creditLimitLiters?: number | null;
     consumedLiters?: number;
+    repaymentDays?: number | null;
     ledgerBalance?: number;
     statementGrouping?: string | null;
     statementFrequency?: string | null;
@@ -699,6 +700,30 @@ export default function CustomerProfilePage() {
                                     ) : (
                                         <span className="font-bold text-foreground">
                                             {customer.creditLimitAmount ? `₹${customer.creditLimitAmount.toLocaleString()}` : "Unlimited"}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Repayment Period */}
+                            <div className="pt-4 border-t border-border">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-muted-foreground" title="Auto-block when oldest unpaid bill exceeds this many days. Leave blank to use the station default policy.">Repayment Period</span>
+                                    {isEditing ? (
+                                        <div className="flex items-center gap-1">
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                value={customer.repaymentDays ?? ""}
+                                                onChange={(e) => setCustomer({ ...customer, repaymentDays: e.target.value ? parseInt(e.target.value, 10) : null })}
+                                                className="w-20 bg-secondary border border-border rounded px-1 py-0.5 text-right text-foreground"
+                                                placeholder="90"
+                                            />
+                                            <span>days</span>
+                                        </div>
+                                    ) : (
+                                        <span className="font-bold text-foreground">
+                                            {customer.repaymentDays ? `${customer.repaymentDays} days` : "Policy default"}
                                         </span>
                                     )}
                                 </div>

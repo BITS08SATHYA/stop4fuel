@@ -43,10 +43,11 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String categoryType, org.springframework.data.domain.Pageable pageable) {
         String cat = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
+        EntityStatus statusEnum = (status != null && !status.isEmpty()) ? EntityStatus.valueOf(status) : null;
         if (search != null && !search.isEmpty()) {
-            return customerRepository.findBySearchAndFilters(search, groupId, status, cat, pageable);
+            return customerRepository.findBySearchAndFilters(search, groupId, statusEnum, cat, pageable);
         }
-        return customerRepository.findByGroupAndStatus(groupId, status, cat, pageable);
+        return customerRepository.findByGroupAndStatus(groupId, statusEnum, cat, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -95,6 +96,7 @@ public class CustomerService {
         customer.setPhoneNumbers(customerDetails.getPhoneNumbers());
         customer.setCreditLimitAmount(customerDetails.getCreditLimitAmount());
         customer.setCreditLimitLiters(customerDetails.getCreditLimitLiters());
+        customer.setRepaymentDays(customerDetails.getRepaymentDays());
         customer.setGroup(customerDetails.getGroup());
         customer.setParty(customerDetails.getParty());
         customer.setJoinDate(customerDetails.getJoinDate());

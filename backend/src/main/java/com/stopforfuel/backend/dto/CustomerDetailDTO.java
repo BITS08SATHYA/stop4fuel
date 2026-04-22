@@ -40,6 +40,7 @@ public class CustomerDetailDTO {
     private BigDecimal creditLimitAmount;
     private BigDecimal creditLimitLiters;
     private BigDecimal consumedLiters;
+    private Integer repaymentDays;
 
     // Compliance & location
     private String gstNumber;
@@ -81,6 +82,7 @@ public class CustomerDetailDTO {
                 .creditLimitAmount(c.getCreditLimitAmount())
                 .creditLimitLiters(c.getCreditLimitLiters())
                 .consumedLiters(c.getConsumedLiters())
+                .repaymentDays(c.getRepaymentDays())
                 .gstNumber(c.getGstNumber())
                 .latitude(c.getLatitude())
                 .longitude(c.getLongitude())
