@@ -349,6 +349,21 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
 
             <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Repayment Period (days)
+                </label>
+                <input
+                    type="number"
+                    min={1}
+                    value={data.repaymentDays || ""}
+                    onChange={(e) => updateData({ ...data, repaymentDays: e.target.value ? parseInt(e.target.value, 10) : null })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                    placeholder="Leave blank to use station policy default"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Auto-block when oldest unpaid bill exceeds this many days.</p>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                     GST Number
                 </label>
                 <input

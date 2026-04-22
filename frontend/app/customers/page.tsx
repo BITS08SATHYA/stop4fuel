@@ -36,6 +36,7 @@ export default function CustomersPage() {
                     group: formData.group,
                     creditLimitAmount: formData.creditLimitAmount,
                     creditLimitLiters: formData.creditLimitLiters,
+                    repaymentDays: formData.repaymentDays,
                     customerCategory: formData.customerCategory,
                     latitude: formData.latitude,
                     longitude: formData.longitude,
