@@ -120,4 +120,32 @@ public class StockRoundingAdminController {
         result.put("cashierStockRoundedRows", csRows);
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * One-shot cleanup: delete legacy {@link ProductInventory} rows for FUEL products.
+     * Fuel is tracked via TankInventory; these rows exist only because earlier versions of
+     * {@code autoCreateForShift} created one per active product regardless of category.
+     * Legacy rows produced the "Diesel closing -1188.36" artifact on the Product Stock page.
+     */
+    @PostMapping("/purge-fuel-product-inventory")
+    @PreAuthorize("hasRole('OWNER')")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> purgeFuelProductInventory() {
+        Long scid = SecurityUtils.getScid();
+        List<ProductInventory> all = productInventoryRepository.findAllByScidWithProduct(scid);
+        int deleted = 0;
+        for (ProductInventory pi : all) {
+            if (pi.getProduct() == null) continue;
+            if (!"FUEL".equalsIgnoreCase(pi.getProduct().getCategory())) continue;
+            log.info("Deleting legacy fuel ProductInventory#{} ({}, date {}, open {}, close {})",
+                    pi.getId(), pi.getProduct().getName(), pi.getDate(),
+                    pi.getOpenStock(), pi.getCloseStock());
+            productInventoryRepository.delete(pi);
+            deleted++;
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("scid", scid);
+        result.put("deletedFuelProductInventoryRows", deleted);
+        return ResponseEntity.ok(result);
+    }
 }

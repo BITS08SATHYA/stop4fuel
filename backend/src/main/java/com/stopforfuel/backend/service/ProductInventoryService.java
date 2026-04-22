@@ -30,29 +30,46 @@ public class ProductInventoryService {
     private final CashierStockRepository cashierStockRepository;
     private final ShiftService shiftService;
 
+    // Fuel is tracked in TankInventory; never surface fuel rows on the Product Stock page
+    // (legacy rows exist from before autoCreateForShift skipped fuel).
+    private static boolean isNonFuel(ProductInventory pi) {
+        return pi.getProduct() != null
+                && !"FUEL".equalsIgnoreCase(pi.getProduct().getCategory());
+    }
+
     @Transactional(readOnly = true)
     public List<ProductInventory> getAll() {
-        return repository.findAllByScidWithProduct(SecurityUtils.getScid());
+        return repository.findAllByScidWithProduct(SecurityUtils.getScid()).stream()
+                .filter(ProductInventoryService::isNonFuel)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ProductInventory> getByDate(LocalDate date) {
-        return repository.findByDateWithProduct(date, SecurityUtils.getScid());
+        return repository.findByDateWithProduct(date, SecurityUtils.getScid()).stream()
+                .filter(ProductInventoryService::isNonFuel)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ProductInventory> getByProductId(Long productId) {
-        return repository.findByProductIdWithProduct(productId, SecurityUtils.getScid());
+        return repository.findByProductIdWithProduct(productId, SecurityUtils.getScid()).stream()
+                .filter(ProductInventoryService::isNonFuel)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ProductInventory> getByDateRange(LocalDate fromDate, LocalDate toDate) {
-        return repository.findByScidAndDateBetween(SecurityUtils.getScid(), fromDate, toDate);
+        return repository.findByScidAndDateBetween(SecurityUtils.getScid(), fromDate, toDate).stream()
+                .filter(ProductInventoryService::isNonFuel)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ProductInventory> getByProductAndDateRange(Long productId, LocalDate fromDate, LocalDate toDate) {
-        return repository.findByScidAndProductIdAndDateBetween(SecurityUtils.getScid(), productId, fromDate, toDate);
+        return repository.findByScidAndProductIdAndDateBetween(SecurityUtils.getScid(), productId, fromDate, toDate).stream()
+                .filter(ProductInventoryService::isNonFuel)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -112,6 +129,12 @@ public class ProductInventoryService {
         for (Product product : activeProducts) {
             if (existingProductIds.contains(product.getId())) {
                 continue; // Already created for this shift
+            }
+            // Fuel is tracked via TankInventory, not ProductInventory. Creating a row here
+            // would seed openStock=0 (no CashierStock for fuel) and, once invoices land,
+            // produce a negative closeStock — the "Diesel closing -1188.36" bug.
+            if ("FUEL".equalsIgnoreCase(product.getCategory())) {
+                continue;
             }
 
             // Primary source: CashierStock (the real counter balance)
