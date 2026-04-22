@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.ManualScanResult;
 import com.stopforfuel.backend.service.CreditMonitoringService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -7,7 +8,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/credit/monitoring")
@@ -54,9 +54,8 @@ public class CreditMonitoringController {
 
     @PostMapping("/scan")
     @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
-    public ResponseEntity<Map<String, Object>> triggerManualScan() {
-        int blocked = creditMonitoringService.runManualScan();
-        return ResponseEntity.ok(Map.of("blockedCount", blocked));
+    public ResponseEntity<ManualScanResult> triggerManualScan() {
+        return ResponseEntity.ok(creditMonitoringService.runManualScan());
     }
 
     @GetMapping("/block-history/{customerId}")

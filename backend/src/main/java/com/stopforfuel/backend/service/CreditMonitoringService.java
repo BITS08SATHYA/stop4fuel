@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.dto.ManualScanResult;
 import com.stopforfuel.backend.entity.CreditPolicy;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.CustomerBlockEvent;
@@ -266,33 +267,63 @@ public class CreditMonitoringService {
 
     /**
      * Manual trigger for the auto-block scan (admin use).
-     * Runs for the current tenant only.
+     * Runs for the current tenant only. Returns a per-customer breakdown so the
+     * UI can show which customers were blocked vs. passed vs. skipped.
      */
     @Transactional
-    public int runManualScan() {
+    public ManualScanResult runManualScan() {
         Long scid = SecurityUtils.getScid();
         List<Customer> activeCustomers = customerRepository.findByStatusAndScid(EntityStatus.ACTIVE, scid);
-        int blocked = 0;
+        ManualScanResult result = new ManualScanResult();
 
         for (Customer customer : activeCustomers) {
+            ManualScanResult.ScanEntry entry = new ManualScanResult.ScanEntry();
+            entry.setCustomerId(customer.getId());
+            entry.setCustomerName(customer.getName());
+            entry.setPartyType(customer.getParty() != null ? customer.getParty().getPartyType() : null);
+            result.getEntries().add(entry);
+            result.setScannedCount(result.getScannedCount() + 1);
+
             if (customer.getCreditLimitAmount() == null
                     || customer.getCreditLimitAmount().compareTo(BigDecimal.ZERO) == 0) {
+                entry.setOutcome("SKIPPED");
+                entry.setReason("No credit limit set");
+                result.setSkippedCount(result.getSkippedCount() + 1);
                 continue;
             }
 
             CreditPolicy policy = creditPolicyService.getEffectivePolicy(customer);
             if (!Boolean.TRUE.equals(policy.getAutoBlockEnabled())) {
+                entry.setOutcome("SKIPPED");
+                entry.setReason("Policy auto-block disabled");
+                result.setSkippedCount(result.getSkippedCount() + 1);
                 continue;
             }
+
+            // Populate diagnostics regardless of outcome (for the UI table)
+            BigDecimal totalBilled = invoiceBillRepository.sumAllCreditBillsByCustomer(customer.getId());
+            BigDecimal totalPaid = paymentRepository.sumAllPaymentsByCustomer(customer.getId());
+            BigDecimal ledgerBalance = totalBilled.subtract(totalPaid);
+            if (customer.getCreditLimitAmount().compareTo(BigDecimal.ZERO) > 0) {
+                entry.setUtilizationPercent(ledgerBalance.multiply(new BigDecimal(100))
+                        .divide(customer.getCreditLimitAmount(), 2, RoundingMode.HALF_UP));
+            }
+            Optional<LocalDateTime> oldest = invoiceBillRepository.findOldestUnpaidBillDate(customer.getId());
+            oldest.ifPresent(d -> entry.setOldestUnpaidDays(ChronoUnit.DAYS.between(d.toLocalDate(), java.time.LocalDate.now())));
 
             String blockReason = evaluateBlockTriggers(customer, policy);
             if (blockReason != null) {
                 blockCustomerWithEvent(customer, "AUTO_SCHEDULED", blockReason, null);
-                blocked++;
+                entry.setOutcome("BLOCKED");
+                entry.setReason(blockReason);
+                result.setBlockedCount(result.getBlockedCount() + 1);
+            } else {
+                entry.setOutcome("PASS");
+                entry.setReason(null);
             }
         }
 
-        return blocked;
+        return result;
     }
 
     /**

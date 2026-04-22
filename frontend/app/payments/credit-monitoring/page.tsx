@@ -3,11 +3,30 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Modal } from "@/components/ui/modal";
+import { PermissionGate } from "@/components/permission-gate";
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import {
-    AlertTriangle, Users, IndianRupee, RefreshCw, Zap, Search, X, Receipt, Clock, CreditCard
+    AlertTriangle, Users, IndianRupee, RefreshCw, Zap, Search, X, Receipt, Clock, CreditCard, ShieldCheck, Loader2
 } from "lucide-react";
+
+interface ScanEntry {
+    customerId: number;
+    customerName: string;
+    partyType: string | null;
+    outcome: "BLOCKED" | "PASS" | "SKIPPED";
+    reason: string | null;
+    utilizationPercent: number | null;
+    oldestUnpaidDays: number | null;
+}
+
+interface ManualScanResult {
+    scannedCount: number;
+    blockedCount: number;
+    skippedCount: number;
+    entries: ScanEntry[];
+}
 
 interface BubbleCustomer {
     customerId: number;
@@ -126,6 +145,31 @@ export default function CreditMonitoringPage() {
     const [selectedDetail, setSelectedDetail] = useState<CustomerUnpaidDetail | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
 
+    // Manual scan modal
+    const [scanOpen, setScanOpen] = useState(false);
+    const [scanning, setScanning] = useState(false);
+    const [scanResult, setScanResult] = useState<ManualScanResult | null>(null);
+    const [scanError, setScanError] = useState<string | null>(null);
+    const [blockedOnly, setBlockedOnly] = useState(false);
+
+    const runScan = async () => {
+        setScanning(true);
+        setScanError(null);
+        setScanResult(null);
+        try {
+            const res = await fetchWithAuth(`${API_BASE_URL}/credit/monitoring/scan`, { method: "POST" });
+            if (!res.ok) throw new Error(`Scan failed: ${res.status}`);
+            const result: ManualScanResult = await res.json();
+            setScanResult(result);
+            // Refresh bubble map so newly-blocked customers re-render
+            loadData(activeTab);
+        } catch (e: any) {
+            setScanError(e.message || "Scan failed");
+        } finally {
+            setScanning(false);
+        }
+    };
+
     const loadData = async (type: string) => {
         setIsLoading(true);
         setError(null);
@@ -213,9 +257,21 @@ export default function CreditMonitoringPage() {
                         </h1>
                         <p className="text-muted-foreground mt-1">Repayment aging map — each dot is a customer</p>
                     </div>
-                    <button onClick={() => loadData(activeTab)} className="p-2 rounded-lg hover:bg-muted transition-colors">
-                        <RefreshCw className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <PermissionGate permission="CUSTOMER_UPDATE">
+                            <button
+                                onClick={() => { setScanOpen(true); setScanResult(null); setScanError(null); }}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 transition-colors text-sm font-medium"
+                                title="Re-check every active credit customer against policy gates"
+                            >
+                                <ShieldCheck className="w-4 h-4" />
+                                Run Invoice Check
+                            </button>
+                        </PermissionGate>
+                        <button onClick={() => loadData(activeTab)} className="p-2 rounded-lg hover:bg-muted transition-colors">
+                            <RefreshCw className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -432,6 +488,106 @@ export default function CreditMonitoringPage() {
                     ) : null}
                 </div>
             )}
+
+            {/* Manual Invoice-Check Modal */}
+            <Modal isOpen={scanOpen} onClose={() => !scanning && setScanOpen(false)} title="Run Invoice Check">
+                {!scanResult && !scanning && !scanError && (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            This will re-evaluate every <strong>active credit customer</strong> against their policy
+                            gates (utilization, liters, aging) and auto-block those failing. A Block History event is
+                            stamped for each blocked customer. Usually runs in a few seconds.
+                        </p>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button onClick={() => setScanOpen(false)} className="px-4 py-2 rounded-lg text-sm hover:bg-muted transition-colors">Cancel</button>
+                            <button onClick={runScan} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium">
+                                <ShieldCheck className="w-4 h-4" /> Run scan
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {scanning && (
+                    <div className="flex flex-col items-center justify-center py-10 gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Scanning active customers…</p>
+                    </div>
+                )}
+
+                {scanError && (
+                    <div className="py-6">
+                        <p className="text-sm text-red-500">{scanError}</p>
+                        <button onClick={runScan} className="mt-3 px-4 py-2 rounded-lg border border-border hover:bg-muted text-sm">Retry</button>
+                    </div>
+                )}
+
+                {scanResult && !scanning && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-3">
+                            <GlassCard className="p-3 text-center">
+                                <p className="text-2xl font-bold">{scanResult.scannedCount}</p>
+                                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Scanned</p>
+                            </GlassCard>
+                            <GlassCard className="p-3 text-center">
+                                <p className="text-2xl font-bold text-red-500">{scanResult.blockedCount}</p>
+                                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Blocked</p>
+                            </GlassCard>
+                            <GlassCard className="p-3 text-center">
+                                <p className="text-2xl font-bold text-muted-foreground">{scanResult.skippedCount}</p>
+                                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Skipped</p>
+                            </GlassCard>
+                        </div>
+
+                        <label className="flex items-center gap-2 text-xs">
+                            <input type="checkbox" checked={blockedOnly} onChange={(e) => setBlockedOnly(e.target.checked)} />
+                            Show blocked only
+                        </label>
+
+                        <div className="max-h-96 overflow-auto border border-border rounded-lg">
+                            <table className="w-full text-xs">
+                                <thead className="bg-muted sticky top-0">
+                                    <tr>
+                                        <th className="text-left py-2 px-2">Customer</th>
+                                        <th className="text-left py-2 px-2">Party</th>
+                                        <th className="text-left py-2 px-2">Outcome</th>
+                                        <th className="text-left py-2 px-2">Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {scanResult.entries
+                                        .filter(e => !blockedOnly || e.outcome === "BLOCKED")
+                                        .sort((a, b) => {
+                                            const order: Record<string, number> = { BLOCKED: 0, SKIPPED: 1, PASS: 2 };
+                                            return order[a.outcome] - order[b.outcome];
+                                        })
+                                        .map(e => (
+                                            <tr key={e.customerId} className="border-t border-border/40">
+                                                <td className="py-1.5 px-2">
+                                                    <button onClick={() => { setScanOpen(false); router.push(`/customers/${e.customerId}`); }} className="text-primary hover:underline text-left">
+                                                        {e.customerName}
+                                                    </button>
+                                                </td>
+                                                <td className="py-1.5 px-2 text-muted-foreground">{e.partyType || "—"}</td>
+                                                <td className="py-1.5 px-2">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                        e.outcome === "BLOCKED" ? "bg-red-500/20 text-red-500"
+                                                        : e.outcome === "PASS" ? "bg-emerald-500/20 text-emerald-500"
+                                                        : "bg-muted text-muted-foreground"
+                                                    }`}>{e.outcome}</span>
+                                                </td>
+                                                <td className="py-1.5 px-2 text-muted-foreground">{e.reason || "—"}</td>
+                                            </tr>
+                                        ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="flex justify-end">
+                            <button onClick={() => setScanOpen(false)} className="px-4 py-2 rounded-lg text-sm hover:bg-muted transition-colors">Close</button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 }
