@@ -537,10 +537,10 @@ public class CreditMonitoringService {
             detail.setUnpaidItems(items);
             detail.setTotalUnpaid(items.stream().map(i -> i.getAmount() != null ? i.getAmount() : java.math.BigDecimal.ZERO).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
         } else {
-            // Get unpaid local credit bills
-            var bills = invoiceBillRepository.findByCustomerIdAndBillTypeAndPaymentStatusAndScidOrderByDateDesc(
-                    customerId, com.stopforfuel.backend.enums.BillType.CREDIT, com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID,
-                    SecurityUtils.getScid(), org.springframework.data.domain.PageRequest.of(0, 500));
+            // Get unpaid local credit bills — aligns with bubble-map aggregate so
+            // the detail panel shows the same rows that put the customer into its bucket.
+            var bills = invoiceBillRepository.findUnpaidLocalCreditByCustomer(
+                    customerId, org.springframework.data.domain.PageRequest.of(0, 500));
             List<UnpaidItem> items = new ArrayList<>();
             for (var b : bills.getContent()) {
                 UnpaidItem item = new UnpaidItem();

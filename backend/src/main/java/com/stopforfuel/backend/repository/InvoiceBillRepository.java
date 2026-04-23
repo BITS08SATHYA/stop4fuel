@@ -173,6 +173,18 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL")
     BigDecimal sumUnpaidLocalCreditAmount(@Param("customerId") Long customerId);
 
+    // Unpaid local credit bills for a single customer (not linked to statement).
+    // Matches the bubble-map aggregate filter exactly so the Credit Monitoring
+    // detail panel agrees with the bubble bucket the customer landed in.
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
+           "AND ib.billType = 'CREDIT' " +
+           "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') " +
+           "AND ib.statement IS NULL " +
+           "ORDER BY ib.date DESC")
+    org.springframework.data.domain.Page<InvoiceBill> findUnpaidLocalCreditByCustomer(
+            @Param("customerId") Long customerId,
+            org.springframework.data.domain.Pageable pageable);
+
     // All unpaid local credit bills across all customers (not linked to statement), customer fetched.
     // Excludes customers whose party type is "Statement" — those belong in the statement report.
     @EntityGraph(attributePaths = {"customer"})
