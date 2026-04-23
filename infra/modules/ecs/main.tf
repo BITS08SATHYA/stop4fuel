@@ -48,7 +48,8 @@ resource "aws_ecs_task_definition" "backend" {
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
         { name = "AUTH_ENABLED", value = "true" },
-        { name = "SERVER_PORT", value = "8080" }
+        { name = "SERVER_PORT", value = "8080" },
+        { name = "TZ", value = "Asia/Kolkata" }
       ]
       secrets = concat(
         [

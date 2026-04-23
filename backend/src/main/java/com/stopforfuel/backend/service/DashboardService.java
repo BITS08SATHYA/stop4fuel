@@ -14,6 +14,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,6 +23,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class DashboardService {
+
+    private static final ZoneId APP_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final InvoiceBillRepository invoiceBillRepository;
     private final PaymentRepository paymentRepository;
@@ -48,7 +51,7 @@ public class DashboardService {
     @Transactional(readOnly = true)
     public DashboardStats getStats() {
         DashboardStats stats = new DashboardStats();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(APP_ZONE);
         LocalDateTime todayStart = today.atStartOfDay();
         LocalDateTime todayEnd = today.atTime(LocalTime.MAX);
         Long scid = com.stopforfuel.config.SecurityUtils.getScid();
@@ -281,7 +284,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public InvoiceAnalytics getInvoiceAnalytics(LocalDate from, LocalDate to) {
-        LocalDate endDate = to != null ? to : LocalDate.now();
+        LocalDate endDate = to != null ? to : LocalDate.now(APP_ZONE);
         LocalDate startDate = from != null ? from : endDate.minusDays(29);
         LocalDateTime fromDt = startDate.atStartOfDay();
         LocalDateTime toDt = endDate.atTime(LocalTime.MAX);
@@ -417,7 +420,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public PaymentAnalytics getPaymentAnalytics(LocalDate from, LocalDate to) {
-        LocalDate endDate = to != null ? to : LocalDate.now();
+        LocalDate endDate = to != null ? to : LocalDate.now(APP_ZONE);
         LocalDate startDate = from != null ? from : endDate.minusDays(29);
         LocalDateTime fromDt = startDate.atStartOfDay();
         LocalDateTime toDt = endDate.atTime(LocalTime.MAX);
@@ -624,7 +627,7 @@ public class DashboardService {
         health.setActiveShiftCount(shiftRepository.countByScidAndStatus(scid, com.stopforfuel.backend.enums.ShiftStatus.OPEN));
 
         // Today's attendance
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(APP_ZONE);
         health.setTodayAttendanceCount(attendanceRepository.countByDateAndScid(today, scid));
 
         return health;

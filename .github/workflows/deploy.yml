@@ -170,6 +170,11 @@ jobs:
             --query 'taskDefinition' \
             | jq --arg img "$IMAGE_URI" '
                 .containerDefinitions[0].image = $img
+                | .containerDefinitions[0].environment = (
+                    (.containerDefinitions[0].environment // [])
+                    | map(select(.name != "TZ"))
+                    + [{"name": "TZ", "value": "Asia/Kolkata"}]
+                  )
                 | .runtimePlatform = {"cpuArchitecture":"ARM64","operatingSystemFamily":"LINUX"}
                 | {family, networkMode, containerDefinitions, executionRoleArn, taskRoleArn,
                    requiresCompatibilities, cpu, memory, volumes, placementConstraints,
