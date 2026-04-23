@@ -547,7 +547,12 @@ public class CreditMonitoringService {
                 item.setId(b.getId());
                 item.setReference(b.getBillNo());
                 item.setDate(b.getDate() != null ? b.getDate().toLocalDate().toString() : null);
-                item.setAmount(b.getNetAmount());
+                // PARTIAL bills: show the outstanding balance (net - payments) rather than the face value.
+                BigDecimal net = b.getNetAmount() != null ? b.getNetAmount() : BigDecimal.ZERO;
+                BigDecimal paid = b.getPaymentStatus() == com.stopforfuel.backend.enums.PaymentStatus.PARTIAL
+                        ? paymentRepository.sumPaymentsByInvoiceBillId(b.getId())
+                        : BigDecimal.ZERO;
+                item.setAmount(net.subtract(paid != null ? paid : BigDecimal.ZERO));
                 item.setVehicleNo(b.getVehicle() != null ? b.getVehicle().getVehicleNumber() : b.getBillDesc());
                 long days = b.getDate() != null ? java.time.temporal.ChronoUnit.DAYS.between(b.getDate().toLocalDate(), java.time.LocalDate.now()) : 0;
                 item.setDaysOld(days);

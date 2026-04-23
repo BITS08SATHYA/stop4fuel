@@ -167,8 +167,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL")
     long countUnpaidLocalCreditBills(@Param("customerId") Long customerId);
 
-    // Sum outstanding local credit bill amount
-    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+    // Sum outstanding local credit bill amount — for PARTIAL bills this subtracts
+    // the payments already applied, so the total reflects what's actually owed.
+    @Query("SELECT COALESCE(SUM(ib.netAmount - " +
+           "   (SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.invoiceBill = ib) " +
+           "), 0) FROM InvoiceBill ib " +
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +
            "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL")
     BigDecimal sumUnpaidLocalCreditAmount(@Param("customerId") Long customerId);
