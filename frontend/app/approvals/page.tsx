@@ -9,7 +9,7 @@ import { showToast } from "@/components/ui/toast";
 import { PermissionGate } from "@/components/permission-gate";
 import {
     CheckCircle2, XCircle, Clock, Loader2, RefreshCw,
-    Truck, ShieldOff, TrendingUp, Receipt, FileText,
+    Truck, ShieldOff, TrendingUp, Gauge, Receipt, FileText,
 } from "lucide-react";
 import {
     listPendingApprovals,
@@ -23,6 +23,7 @@ const TYPE_META: Record<ApprovalRequestType, { label: string; icon: React.Compon
     ADD_VEHICLE:              { label: "Add Vehicle",           icon: Truck,      tone: "bg-blue-500/15 text-blue-400" },
     UNBLOCK_CUSTOMER:         { label: "Unblock Customer",      icon: ShieldOff,  tone: "bg-green-500/15 text-green-400" },
     RAISE_CREDIT_LIMIT:       { label: "Raise Credit Limit",    icon: TrendingUp, tone: "bg-amber-500/15 text-amber-400" },
+    RAISE_VEHICLE_LIMIT:      { label: "Raise Vehicle Limit",   icon: Gauge,      tone: "bg-indigo-500/15 text-indigo-400" },
     RECORD_STATEMENT_PAYMENT: { label: "Statement Payment",     icon: Receipt,    tone: "bg-purple-500/15 text-purple-400" },
     RECORD_INVOICE_PAYMENT:   { label: "Invoice Payment",       icon: FileText,   tone: "bg-cyan-500/15 text-cyan-400" },
 };
@@ -70,6 +71,17 @@ function listSubtitle(req: ApprovalRequest): string | null {
                 bits.push(`${formatRupee(req.currentCreditLimitAmount ?? 0)} \u2192 ${formatRupee(req.requestedCreditLimitAmount)}`);
             } else if (req.requestedCreditLimitLiters != null) {
                 bits.push(`${formatLitres(req.currentCreditLimitLiters ?? 0)} \u2192 ${formatLitres(req.requestedCreditLimitLiters)}`);
+            }
+            return bits.join(" \u00B7 ") || null;
+        }
+        case "RAISE_VEHICLE_LIMIT": {
+            const bits: string[] = [];
+            if (req.vehicleNumber) bits.push(req.vehicleNumber);
+            if (req.customerName) bits.push(req.customerName);
+            if (req.requestedMaxLitersPerMonth != null) {
+                bits.push(`${formatLitres(req.currentMaxLitersPerMonth ?? 0)}/mo \u2192 ${formatLitres(req.requestedMaxLitersPerMonth)}/mo`);
+            } else if (req.requestedMaxCapacity != null) {
+                bits.push(`${formatLitres(req.currentMaxCapacity ?? 0)} cap \u2192 ${formatLitres(req.requestedMaxCapacity)} cap`);
             }
             return bits.join(" \u00B7 ") || null;
         }
@@ -129,6 +141,18 @@ function renderDetailRows(req: ApprovalRequest): Array<[string, string]> {
                     `${formatLitres(req.currentCreditLimitLiters ?? 0)} \u2192 ${formatLitres(req.requestedCreditLimitLiters)}`]);
             }
             break;
+        case "RAISE_VEHICLE_LIMIT":
+            pushIf("Customer", req.customerName);
+            pushIf("Vehicle No", req.vehicleNumber);
+            if (req.requestedMaxLitersPerMonth != null) {
+                rows.push(["Max Litres / Month",
+                    `${formatLitres(req.currentMaxLitersPerMonth ?? 0)} \u2192 ${formatLitres(req.requestedMaxLitersPerMonth)}`]);
+            }
+            if (req.requestedMaxCapacity != null) {
+                rows.push(["Max Capacity",
+                    `${formatLitres(req.currentMaxCapacity ?? 0)} \u2192 ${formatLitres(req.requestedMaxCapacity)}`]);
+            }
+            break;
     }
     return rows;
 }
@@ -149,6 +173,7 @@ function contextLink(req: ApprovalRequest): { href: string; label: string } | nu
         case "ADD_VEHICLE":
         case "UNBLOCK_CUSTOMER":
         case "RAISE_CREDIT_LIMIT":
+        case "RAISE_VEHICLE_LIMIT":
             return req.customerId ? { href: `/customers/${req.customerId}`, label: "Open customer" } : null;
         default:
             return null;

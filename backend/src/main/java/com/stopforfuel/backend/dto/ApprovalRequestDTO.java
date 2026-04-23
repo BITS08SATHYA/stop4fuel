@@ -59,4 +59,10 @@ public class ApprovalRequestDTO {
     private BigDecimal requestedCreditLimitAmount;
     private BigDecimal currentCreditLimitLiters;
     private BigDecimal requestedCreditLimitLiters;
+
+    /** RAISE_VEHICLE_LIMIT: delta context — current vs requested. vehicleNumber reused from ADD_VEHICLE field. */
+    private BigDecimal currentMaxLitersPerMonth;
+    private BigDecimal requestedMaxLitersPerMonth;
+    private BigDecimal currentMaxCapacity;
+    private BigDecimal requestedMaxCapacity;
 }

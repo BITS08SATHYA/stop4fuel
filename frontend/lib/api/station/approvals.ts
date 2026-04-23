@@ -5,6 +5,7 @@ export type ApprovalRequestType =
     | 'ADD_VEHICLE'
     | 'UNBLOCK_CUSTOMER'
     | 'RAISE_CREDIT_LIMIT'
+    | 'RAISE_VEHICLE_LIMIT'
     | 'RECORD_STATEMENT_PAYMENT'
     | 'RECORD_INVOICE_PAYMENT';
 
@@ -36,6 +37,10 @@ export interface ApprovalRequest {
     requestedCreditLimitAmount?: number | null;
     currentCreditLimitLiters?: number | null;
     requestedCreditLimitLiters?: number | null;
+    currentMaxLitersPerMonth?: number | null;
+    requestedMaxLitersPerMonth?: number | null;
+    currentMaxCapacity?: number | null;
+    requestedMaxCapacity?: number | null;
 }
 
 export interface SubmitApprovalRequest {

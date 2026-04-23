@@ -6,7 +6,7 @@ import { PermissionGate } from "@/components/permission-gate";
 import { showToast } from "@/components/ui/toast";
 import {
     Loader2, RefreshCw, Clock, CheckCircle2, XCircle,
-    Truck, ShieldOff, TrendingUp, Receipt, FileText,
+    Truck, ShieldOff, TrendingUp, Gauge, Receipt, FileText,
 } from "lucide-react";
 import {
     listMyApprovals,
@@ -20,6 +20,7 @@ const TYPE_LABEL: Record<ApprovalRequestType, string> = {
     ADD_VEHICLE: "Add Vehicle",
     UNBLOCK_CUSTOMER: "Unblock Customer",
     RAISE_CREDIT_LIMIT: "Raise Credit Limit",
+    RAISE_VEHICLE_LIMIT: "Raise Vehicle Limit",
     RECORD_STATEMENT_PAYMENT: "Statement Payment",
     RECORD_INVOICE_PAYMENT: "Invoice Payment",
 };
@@ -28,6 +29,7 @@ const TYPE_ICON: Record<ApprovalRequestType, React.ComponentType<{ className?: s
     ADD_VEHICLE: Truck,
     UNBLOCK_CUSTOMER: ShieldOff,
     RAISE_CREDIT_LIMIT: TrendingUp,
+    RAISE_VEHICLE_LIMIT: Gauge,
     RECORD_STATEMENT_PAYMENT: Receipt,
     RECORD_INVOICE_PAYMENT: FileText,
 };

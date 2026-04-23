@@ -6,7 +6,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { PermissionGate } from "@/components/permission-gate";
 import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
 import { showToast } from "@/components/ui/toast";
-import { Loader2, Truck, ShieldOff, TrendingUp, Send } from "lucide-react";
+import { Loader2, Truck, ShieldOff, TrendingUp, Gauge, Send } from "lucide-react";
 import {
     submitApprovalRequest,
     API_BASE_URL,
@@ -17,9 +17,10 @@ import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 type BuilderType = Exclude<ApprovalRequestType, "RECORD_STATEMENT_PAYMENT" | "RECORD_INVOICE_PAYMENT">;
 
 const TABS: { type: BuilderType; label: string; icon: React.ComponentType<{ className?: string }>; hint: string }[] = [
-    { type: "ADD_VEHICLE",        label: "Add Vehicle",        icon: Truck,      hint: "Request admin to register a new vehicle under a customer" },
-    { type: "UNBLOCK_CUSTOMER",   label: "Unblock Customer",   icon: ShieldOff,  hint: "Ask admin to reactivate a blocked customer" },
-    { type: "RAISE_CREDIT_LIMIT", label: "Raise Credit Limit", icon: TrendingUp, hint: "Propose a higher credit limit (amount and/or liters)" },
+    { type: "ADD_VEHICLE",         label: "Add Vehicle",         icon: Truck,      hint: "Request admin to register a new vehicle under a customer" },
+    { type: "UNBLOCK_CUSTOMER",    label: "Unblock Customer",    icon: ShieldOff,  hint: "Ask admin to reactivate a blocked customer" },
+    { type: "RAISE_CREDIT_LIMIT",  label: "Raise Credit Limit",  icon: TrendingUp, hint: "Propose a higher credit limit (amount and/or liters)" },
+    { type: "RAISE_VEHICLE_LIMIT", label: "Raise Vehicle Limit", icon: Gauge,      hint: "Propose a higher monthly liter limit or tank capacity for a specific vehicle" },
 ];
 
 function NewRequestInner() {
@@ -66,6 +67,43 @@ function NewRequestInner() {
     const [creditLimitAmount, setCreditLimitAmount] = useState("");
     const [creditLimitLiters, setCreditLimitLiters] = useState("");
 
+    // RAISE_VEHICLE_LIMIT
+    type CustomerVehicle = {
+        id: number;
+        vehicleNumber: string;
+        maxCapacity: number | null;
+        maxLitersPerMonth: number | null;
+    };
+    const [customerVehicles, setCustomerVehicles] = useState<CustomerVehicle[]>([]);
+    const [raiseVehicleId, setRaiseVehicleId] = useState<string>("");
+    const [raiseMaxLitersPerMonth, setRaiseMaxLitersPerMonth] = useState("");
+    const [raiseMaxCapacity, setRaiseMaxCapacity] = useState("");
+
+    // Reload vehicles whenever the selected customer changes (used by RAISE_VEHICLE_LIMIT)
+    useEffect(() => {
+        setCustomerVehicles([]);
+        setRaiseVehicleId("");
+        if (!customerId) return;
+        (async () => {
+            try {
+                const res = await fetchWithAuth(`${API_BASE_URL}/vehicles/customer/${customerId}`);
+                if (res.ok) {
+                    const d = await res.json();
+                    const list: Array<{ id: number; vehicleNumber: string; maxCapacity?: number | null; maxLitersPerMonth?: number | null }> =
+                        Array.isArray(d) ? d : (d.content || []);
+                    setCustomerVehicles(list.map(v => ({
+                        id: v.id,
+                        vehicleNumber: v.vehicleNumber,
+                        maxCapacity: v.maxCapacity ?? null,
+                        maxLitersPerMonth: v.maxLitersPerMonth ?? null,
+                    })));
+                }
+            } catch { /* ignore */ }
+        })();
+    }, [customerId]);
+
+    const selectedVehicle = customerVehicles.find(v => String(v.id) === raiseVehicleId) ?? null;
+
     const resetForm = () => {
         setCustomerId("");
         setNote("");
@@ -73,6 +111,7 @@ function NewRequestInner() {
         setMaxCapacity(""); setMaxLitersPerMonth("");
         setUnblockReason("");
         setCreditLimitAmount(""); setCreditLimitLiters("");
+        setRaiseVehicleId(""); setRaiseMaxLitersPerMonth(""); setRaiseMaxCapacity("");
     };
 
     const buildPayload = (): Record<string, unknown> | string => {
@@ -96,6 +135,14 @@ function NewRequestInner() {
                 const p: Record<string, unknown> = {};
                 if (creditLimitAmount) p.creditLimitAmount = Number(creditLimitAmount);
                 if (creditLimitLiters) p.creditLimitLiters = Number(creditLimitLiters);
+                return p;
+            }
+            case "RAISE_VEHICLE_LIMIT": {
+                if (!raiseVehicleId) return "Please pick a vehicle";
+                if (!raiseMaxLitersPerMonth && !raiseMaxCapacity) return "Enter at least one of new max liters / month or max capacity";
+                const p: Record<string, unknown> = { vehicleId: Number(raiseVehicleId) };
+                if (raiseMaxLitersPerMonth) p.maxLitersPerMonth = Number(raiseMaxLitersPerMonth);
+                if (raiseMaxCapacity) p.maxCapacity = Number(raiseMaxCapacity);
                 return p;
             }
         }
@@ -138,7 +185,7 @@ function NewRequestInner() {
             </div>
 
             {/* Type tabs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 {TABS.map(tab => {
                     const Icon = tab.icon;
                     const active = tab.type === type;
@@ -202,6 +249,27 @@ function NewRequestInner() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Field label="New credit limit (₹)" value={creditLimitAmount} onChange={setCreditLimitAmount} type="number" placeholder="e.g. 50000" />
                         <Field label="New credit limit (liters)" value={creditLimitLiters} onChange={setCreditLimitLiters} type="number" placeholder="optional" />
+                    </div>
+                )}
+
+                {type === "RAISE_VEHICLE_LIMIT" && (
+                    <div className="space-y-3">
+                        <SelectField
+                            label="Vehicle *"
+                            value={raiseVehicleId}
+                            onChange={setRaiseVehicleId}
+                            placeholder={customerId ? (customerVehicles.length === 0 ? "No vehicles under this customer" : "Select vehicle") : "Pick a customer first"}
+                            options={customerVehicles.map(v => ({ value: String(v.id), label: v.vehicleNumber }))}
+                        />
+                        {selectedVehicle && (
+                            <div className="text-xs text-muted-foreground">
+                                Current: max liters / month = {selectedVehicle.maxLitersPerMonth ?? "—"} · max capacity = {selectedVehicle.maxCapacity ?? "—"}
+                            </div>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Field label="New max liters / month" value={raiseMaxLitersPerMonth} onChange={setRaiseMaxLitersPerMonth} type="number" placeholder="optional" />
+                            <Field label="New max capacity (L)" value={raiseMaxCapacity} onChange={setRaiseMaxCapacity} type="number" placeholder="optional" />
+                        </div>
                     </div>
                 )}
 

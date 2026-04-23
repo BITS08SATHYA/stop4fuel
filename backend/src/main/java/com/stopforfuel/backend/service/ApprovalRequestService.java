@@ -22,6 +22,7 @@ import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
+import com.stopforfuel.backend.repository.VehicleRepository;
 import com.stopforfuel.backend.repository.VehicleTypeRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class ApprovalRequestService {
     private final CustomerService customerService;
     private final CustomerRepository customerRepository;
     private final VehicleService vehicleService;
+    private final VehicleRepository vehicleRepository;
     private final VehicleTypeRepository vehicleTypeRepository;
     private final ProductRepository productRepository;
     private final InvoiceBillRepository invoiceBillRepository;
@@ -62,7 +64,8 @@ public class ApprovalRequestService {
         }
         boolean customerRequired = type == ApprovalRequestType.ADD_VEHICLE
                 || type == ApprovalRequestType.UNBLOCK_CUSTOMER
-                || type == ApprovalRequestType.RAISE_CREDIT_LIMIT;
+                || type == ApprovalRequestType.RAISE_CREDIT_LIMIT
+                || type == ApprovalRequestType.RAISE_VEHICLE_LIMIT;
         if (customerRequired && customerId == null) {
             throw new BusinessException("customerId is required for " + type);
         }
@@ -124,6 +127,7 @@ public class ApprovalRequestService {
                 // else: already unblocked elsewhere — approval is still valid, just a no-op
             }
             case RAISE_CREDIT_LIMIT -> customerService.updateCreditLimits(req.getCustomerId(), payload);
+            case RAISE_VEHICLE_LIMIT -> applyRaiseVehicleLimit(req.getCustomerId(), payload);
             case RECORD_STATEMENT_PAYMENT -> paymentService.recordStatementPayment(
                     Long.valueOf(payload.get("statementId").toString()), buildPayment(payload));
             case RECORD_INVOICE_PAYMENT -> paymentService.recordBillPayment(
@@ -232,6 +236,7 @@ public class ApprovalRequestService {
         Set<Long> customerIds = new HashSet<>();
         Set<Long> invoiceBillIds = new HashSet<>();
         Set<Long> statementIds = new HashSet<>();
+        Set<Long> vehicleIds = new HashSet<>();
         List<Map<String, Object>> parsedPayloads = new ArrayList<>(requests.size());
 
         for (ApprovalRequest r : requests) {
@@ -244,6 +249,9 @@ public class ApprovalRequestService {
             } else if (r.getRequestType() == ApprovalRequestType.RECORD_STATEMENT_PAYMENT
                     && p.get("statementId") != null) {
                 statementIds.add(toLong(p.get("statementId")));
+            } else if (r.getRequestType() == ApprovalRequestType.RAISE_VEHICLE_LIMIT
+                    && p.get("vehicleId") != null) {
+                vehicleIds.add(toLong(p.get("vehicleId")));
             }
         }
 
@@ -256,10 +264,13 @@ public class ApprovalRequestService {
         Map<Long, Statement> statements = statementIds.isEmpty() ? Map.of()
                 : statementRepository.findAllById(statementIds).stream()
                     .collect(Collectors.toMap(Statement::getId, s -> s));
+        Map<Long, Vehicle> vehicles = vehicleIds.isEmpty() ? Map.of()
+                : vehicleRepository.findAllById(vehicleIds).stream()
+                    .collect(Collectors.toMap(Vehicle::getId, v -> v));
 
         List<ApprovalRequestDTO> out = new ArrayList<>(requests.size());
         for (int i = 0; i < requests.size(); i++) {
-            out.add(toDto(requests.get(i), parsedPayloads.get(i), customers, bills, statements));
+            out.add(toDto(requests.get(i), parsedPayloads.get(i), customers, bills, statements, vehicles));
         }
         return out;
     }
@@ -268,7 +279,8 @@ public class ApprovalRequestService {
                                       Map<String, Object> payload,
                                       Map<Long, Customer> customers,
                                       Map<Long, InvoiceBill> bills,
-                                      Map<Long, Statement> statements) {
+                                      Map<Long, Statement> statements,
+                                      Map<Long, Vehicle> vehicles) {
         ApprovalRequestDTO dto = new ApprovalRequestDTO();
         dto.setId(r.getId());
         dto.setRequestType(r.getRequestType());
@@ -327,6 +339,17 @@ public class ApprovalRequestService {
             case UNBLOCK_CUSTOMER -> {
                 // nothing extra — reason already in payload
             }
+            case RAISE_VEHICLE_LIMIT -> {
+                Long vehicleId = payload.get("vehicleId") != null ? toLong(payload.get("vehicleId")) : null;
+                Vehicle v = vehicleId != null ? vehicles.get(vehicleId) : null;
+                if (v != null) {
+                    dto.setVehicleNumber(v.getVehicleNumber());
+                    dto.setCurrentMaxLitersPerMonth(v.getMaxLitersPerMonth());
+                    dto.setCurrentMaxCapacity(v.getMaxCapacity());
+                }
+                dto.setRequestedMaxLitersPerMonth(toBigDecimal(payload.get("maxLitersPerMonth")));
+                dto.setRequestedMaxCapacity(toBigDecimal(payload.get("maxCapacity")));
+            }
         }
         return dto;
     }
@@ -376,6 +399,14 @@ public class ApprovalRequestService {
                     throw new BusinessException("creditLimitAmount or creditLimitLiters is required for RAISE_CREDIT_LIMIT");
                 }
             }
+            case RAISE_VEHICLE_LIMIT -> {
+                if (p.get("vehicleId") == null) {
+                    throw new BusinessException("vehicleId is required for RAISE_VEHICLE_LIMIT");
+                }
+                if (p.get("maxLitersPerMonth") == null && p.get("maxCapacity") == null) {
+                    throw new BusinessException("maxLitersPerMonth or maxCapacity is required for RAISE_VEHICLE_LIMIT");
+                }
+            }
             case UNBLOCK_CUSTOMER -> {
                 // reason is optional
             }
@@ -423,6 +454,22 @@ public class ApprovalRequestService {
             payment.setProofImageKey(p.get("proofImageKey").toString());
         }
         return payment;
+    }
+
+    private void applyRaiseVehicleLimit(Long customerId, Map<String, Object> p) {
+        Long vehicleId = toLong(p.get("vehicleId"));
+        Vehicle v = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found: " + vehicleId));
+        if (v.getCustomer() == null || !customerId.equals(v.getCustomer().getId())) {
+            throw new BusinessException("Vehicle " + v.getVehicleNumber() + " does not belong to the selected customer");
+        }
+        if (p.get("maxLitersPerMonth") != null) {
+            v.setMaxLitersPerMonth(new BigDecimal(p.get("maxLitersPerMonth").toString()));
+        }
+        if (p.get("maxCapacity") != null) {
+            v.setMaxCapacity(new BigDecimal(p.get("maxCapacity").toString()));
+        }
+        vehicleRepository.save(v);
     }
 
     private void applyAddVehicle(Long customerId, Map<String, Object> p) {
