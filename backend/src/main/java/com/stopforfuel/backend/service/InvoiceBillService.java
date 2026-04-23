@@ -453,6 +453,10 @@ public class InvoiceBillService {
      * and auto-blocks them if limits are exceeded.
      */
     private void updateConsumedLiters(Vehicle vehicle, Customer customer, BigDecimal liters) {
+        boolean forceUnblocked = customer != null
+                && customerRepository.findById(customer.getId())
+                        .map(Customer::isForceUnblocked).orElse(false);
+
         if (vehicle != null) {
             Vehicle v = vehicleRepository.findByIdForUpdate(vehicle.getId()).orElse(null);
             if (v != null) {
@@ -460,7 +464,8 @@ public class InvoiceBillService {
                         .add(liters);
                 v.setConsumedLiters(newConsumed);
 
-                if (v.getMaxLitersPerMonth() != null
+                if (!forceUnblocked
+                        && v.getMaxLitersPerMonth() != null
                         && newConsumed.compareTo(v.getMaxLitersPerMonth()) >= 0
                         && v.getStatus() == com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
                     v.setStatus(com.stopforfuel.backend.enums.EntityStatus.BLOCKED);
@@ -476,7 +481,8 @@ public class InvoiceBillService {
                         .add(liters);
                 c.setConsumedLiters(newConsumed);
 
-                if (c.getCreditLimitLiters() != null
+                if (!c.isForceUnblocked()
+                        && c.getCreditLimitLiters() != null
                         && newConsumed.compareTo(c.getCreditLimitLiters()) >= 0
                         && c.getStatus() == com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
                     c.setStatus(com.stopforfuel.backend.enums.EntityStatus.BLOCKED);
