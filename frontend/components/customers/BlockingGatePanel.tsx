@@ -194,7 +194,7 @@ export function BlockingGatePanel({
                 <div className="min-w-0">
                     <h3 className={cn("font-semibold text-foreground", compact ? "text-sm" : "text-base")}>
                         Why <span className="text-primary">{status.customerName}</span>
-                        {" "}{status.overall === "PASS" ? "can take" : "cannot take"} a credit invoice
+                        {" "}{status.overall === "PASS" || status.overall === "OVERRIDE" ? "can take" : "cannot take"} a credit invoice
                     </h3>
                     {loading && (
                         <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">

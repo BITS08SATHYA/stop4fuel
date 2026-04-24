@@ -431,6 +431,11 @@ public class CustomerService {
         info.put("creditLimitAmount", customer.getCreditLimitAmount());
         info.put("creditLimitLiters", customer.getCreditLimitLiters());
         info.put("consumedLiters", customer.getConsumedLiters());
+        // Owner force-unblock override — invoice screen needs this to know the
+        // customer can be billed even when status=BLOCKED/INACTIVE.
+        info.put("forceUnblocked", customer.isForceUnblocked());
+        info.put("forceUnblockedAt", customer.getForceUnblockedAt());
+        info.put("forceUnblockedBy", customer.getForceUnblockedBy());
 
         // Calculate ledger balance
         BigDecimal totalBilled = invoiceBillRepository.sumAllCreditBillsByCustomer(customerId);

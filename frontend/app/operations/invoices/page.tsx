@@ -468,6 +468,7 @@ export default function InvoicesPage() {
 
     const isCustomerBlockedRaw = selectedCustomer && (selectedCustomer.status === "BLOCKED" || selectedCustomer.status === "INACTIVE");
     const isCustomerBlocked = isCustomerBlockedRaw && !selectedCustomer?.forceUnblocked;
+    const isForceUnblockActive = isCustomerBlockedRaw && !!selectedCustomer?.forceUnblocked;
     const isVehicleBlocked = selectedVehicle && (selectedVehicle.status === "BLOCKED" || selectedVehicle.status === "INACTIVE");
     const isCreditCustomer = selectedCustomer && (
         (selectedCustomer.creditLimitAmount && Number(selectedCustomer.creditLimitAmount) > 0) ||
@@ -647,18 +648,32 @@ export default function InvoicesPage() {
                     <div className={`mt-8 p-6 rounded-2xl flex items-center gap-6 ${
                         isCustomerBlocked
                             ? "bg-red-500/5 border border-red-500/20"
-                            : "bg-green-500/5 border border-green-500/20"
+                            : isForceUnblockActive
+                                ? "bg-indigo-500/5 border border-indigo-500/20"
+                                : "bg-green-500/5 border border-green-500/20"
                     }`}>
                         <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                            isCustomerBlocked ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"
+                            isCustomerBlocked
+                                ? "bg-red-500/10 text-red-500"
+                                : isForceUnblockActive
+                                    ? "bg-indigo-500/10 text-indigo-400"
+                                    : "bg-green-500/10 text-green-500"
                         }`}>
                             {isCustomerBlocked ? <Ban size={32} /> : <CheckCircle2 size={32} />}
                         </div>
                         <div className="flex-1">
                             <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${
-                                isCustomerBlocked ? "text-red-600/60" : "text-green-600/60"
+                                isCustomerBlocked
+                                    ? "text-red-600/60"
+                                    : isForceUnblockActive
+                                        ? "text-indigo-400/80"
+                                        : "text-green-600/60"
                             }`}>
-                                {isCustomerBlocked ? "Customer Blocked/Inactive" : "Customer Confirmed"}
+                                {isCustomerBlocked
+                                    ? "Customer Blocked/Inactive"
+                                    : isForceUnblockActive
+                                        ? "Force-Unblock Override Active"
+                                        : "Customer Confirmed"}
                             </p>
                             <p className="text-foreground font-black text-2xl">{selectedCustomer.name}</p>
                             <p className="text-sm text-muted-foreground">{selectedCustomer.phoneNumbers}</p>

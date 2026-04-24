@@ -243,6 +243,9 @@ export const getCustomerCreditInfo = (id: number): Promise<{
     ledgerBalance: number;
     totalBilled: number;
     totalPaid: number;
+    forceUnblocked: boolean;
+    forceUnblockedAt: string | null;
+    forceUnblockedBy: string | null;
 }> => fetchWithAuth(`${API_BASE_URL}/customers/${id}/credit-info`).then(handleResponse);
 
 // Blocking Status — aggregated "why is this customer blocked?" gates
