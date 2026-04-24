@@ -398,8 +398,9 @@ export default function CustomerProfilePage() {
                 </div>
             </div>
 
-            {/* Blocked/Inactive banner */}
-            {customerStatus !== "ACTIVE" && (
+            {/* Blocked/Inactive banner — suppressed when force-unblock override is active,
+                since the orange banner below already explains the state and shows invoices are allowed. */}
+            {customerStatus !== "ACTIVE" && !customer.forceUnblocked && (
                 <div className={`rounded-xl p-4 flex items-center gap-3 ${
                     customerStatus === "BLOCKED"
                         ? "bg-red-500/10 border border-red-500/20 text-red-400"
@@ -439,8 +440,14 @@ export default function CustomerProfilePage() {
                 </div>
             )}
 
-            {/* Blocking Status — all 6 gates */}
-            <BlockingGatePanel customerId={customer.id} variant="section" />
+            {/* Blocking Status — all 6 gates.
+                refreshKey is the force-unblock flag so toggling it triggers a refetch
+                (the gate panel's other deps don't change when force-unblock toggles). */}
+            <BlockingGatePanel
+                customerId={customer.id}
+                variant="section"
+                refreshKey={customer.forceUnblocked ? "on" : "off"}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column: Contact Info */}

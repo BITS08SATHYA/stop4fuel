@@ -18,6 +18,9 @@ interface BlockingGatePanelProps {
     variant?: "inline" | "section" | "modal";
     onForceUnblockClick?: () => void;
     className?: string;
+    // Bump to force a refetch after actions that change the server-side state
+    // but don't change any of the other props (e.g. toggling force-unblock).
+    refreshKey?: number | string;
 }
 
 const GATE_ICONS: Record<string, typeof ShieldCheck> = {
@@ -113,6 +116,7 @@ export function BlockingGatePanel({
     variant = "section",
     onForceUnblockClick,
     className,
+    refreshKey,
 }: BlockingGatePanelProps) {
     const [status, setStatus] = useState<BlockingStatus | null>(null);
     const [loading, setLoading] = useState(false);
@@ -148,7 +152,7 @@ export function BlockingGatePanel({
         return () => {
             if (debounceRef.current) clearTimeout(debounceRef.current);
         };
-    }, [customerId, vehicleId, roundedAmount, roundedLiters]);
+    }, [customerId, vehicleId, roundedAmount, roundedLiters, refreshKey]);
 
     if (!customerId) return null;
 
