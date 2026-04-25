@@ -1,0 +1,24 @@
+digraph Reset {
+    rankdir=LR;
+    bgcolor="white";
+    node [fontname="Helvetica", fontsize=11, style="filled,rounded"];
+    edge [fontname="Helvetica", fontsize=10];
+
+    labelloc="t";
+    label=<<B>Monthly Reset — Automatic Job</B>>;
+    fontsize=16;
+
+    cron [label="1st of every month\n00:00 server time\nScheduled job",
+          shape=box, fillcolor="#e2d5f7"];
+
+    res1 [label="Customer.consumedLiters\n→ 0", shape=box, fillcolor="#d4edda"];
+    res2 [label="Vehicle.consumedLiters\n→ 0", shape=box, fillcolor="#d4edda"];
+
+    note [label="DOES NOT happen on reset:\n• BLOCKED status is NOT cleared\n• Unbilled ₹ balance is NOT reset\n  (only payments / statements reduce it)",
+          shape=note, fillcolor="#fff3cd"];
+
+    cron -> res1;
+    cron -> res2;
+    res1 -> note;
+    res2 -> note;
+}

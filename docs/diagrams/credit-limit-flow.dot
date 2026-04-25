@@ -1,0 +1,51 @@
+digraph CreditLimitFlow {
+    rankdir=TB;
+    bgcolor="white";
+    node [fontname="Helvetica", fontsize=11, style="filled,rounded"];
+    edge [fontname="Helvetica", fontsize=10];
+
+    labelloc="t";
+    label=<<B>Credit Invoice — Limit Validation Flow</B><BR/><FONT POINT-SIZE="10">StopForFuel · any NO rejects the invoice</FONT>>;
+    fontsize=16;
+
+    start  [label="Cashier raises\ncredit invoice", shape=oval, fillcolor="#cfe8ff"];
+
+    chk1   [label="Customer ACTIVE?", shape=diamond, fillcolor="#fff3cd"];
+    chk2   [label="Vehicle ACTIVE?", shape=diamond, fillcolor="#fff3cd"];
+    chk3   [label="Customer ₹ limit\nwould be exceeded?", shape=diamond, fillcolor="#fff3cd"];
+    chk4   [label="Customer liter cap\nwould be exceeded?", shape=diamond, fillcolor="#fff3cd"];
+    chk5   [label="Vehicle monthly liters\nwould be exceeded?", shape=diamond, fillcolor="#fff3cd"];
+
+    rej1   [label="REJECT\nCustomer BLOCKED", shape=box, fillcolor="#f8d7da"];
+    rej2   [label="REJECT\nVehicle BLOCKED", shape=box, fillcolor="#f8d7da"];
+    rej3   [label="REJECT\nCredit limit exceeded", shape=box, fillcolor="#f8d7da"];
+    rej4   [label="REJECT\nLiter limit exceeded", shape=box, fillcolor="#f8d7da"];
+    rej5   [label="REJECT\nVehicle monthly cap", shape=box, fillcolor="#f8d7da"];
+
+    save   [label="SAVE invoice", shape=box, fillcolor="#d4edda"];
+    upd    [label="Add liters to\ncustomer + vehicle counters", shape=box, fillcolor="#d4edda"];
+    auto   [label="Any limit now\nbreached?", shape=diamond, fillcolor="#fff3cd"];
+    aublk  [label="Auto-BLOCK\ncustomer / vehicle", shape=box, fillcolor="#f8d7da"];
+    done   [label="Done", shape=oval, fillcolor="#d4edda"];
+
+    force  [label="If forceUnblocked = true\nALL checks skip to SAVE",
+            shape=note, fillcolor="#e2d5f7"];
+
+    start -> chk1;
+    chk1  -> rej1 [label="No"];
+    chk1  -> chk2 [label="Yes"];
+    chk2  -> rej2 [label="No"];
+    chk2  -> chk3 [label="Yes"];
+    chk3  -> rej3 [label="Yes"];
+    chk3  -> chk4 [label="No"];
+    chk4  -> rej4 [label="Yes"];
+    chk4  -> chk5 [label="No"];
+    chk5  -> rej5 [label="Yes"];
+    chk5  -> save [label="No"];
+    save  -> upd;
+    upd   -> auto;
+    auto  -> aublk [label="Yes"];
+    auto  -> done  [label="No"];
+
+    force -> save [style=dashed, color="#6f42c1", constraint=false];
+}

@@ -1,0 +1,88 @@
+digraph CreditSimple {
+    rankdir=TB;
+    bgcolor="white";
+    compound=true;
+    nodesep=0.4;
+    ranksep=0.7;
+    node [fontname="Helvetica", fontsize=13, style="filled,rounded", margin="0.2,0.12"];
+    edge [fontname="Helvetica", fontsize=11, color="#555555"];
+
+    labelloc="t";
+    label=<<B><FONT POINT-SIZE="20">Customer Credit &amp; Fuel Limits — How It Works</FONT></B>>;
+
+    /* ============ 1. THE LIMITS ============ */
+    subgraph cluster_limits {
+        label=<<B>1. Every customer has these limits</B>>;
+        labeljust="l";
+        fontsize=15;
+        style="rounded,filled";
+        fillcolor="#f7f9fc";
+        color="#0b5394";
+
+        L1 [label="MONEY LIMIT\n\nMax unpaid credit\n(in ₹)", fillcolor="#cfe8ff"];
+        L2 [label="MONTHLY FUEL LIMIT\n(customer)\n\nTotal liters allowed\nper month", fillcolor="#cfe8ff"];
+        L3 [label="MONTHLY FUEL LIMIT\n(each vehicle)\n\nLiters allowed\nper vehicle per month", fillcolor="#d4edda"];
+
+        { rank=same; L1 L2 L3 }
+    }
+
+    /* ============ 2. AT THE PUMP ============ */
+    subgraph cluster_pump {
+        label=<<B>2. When customer fills fuel on credit</B>>;
+        labeljust="l";
+        fontsize=15;
+        style="rounded,filled";
+        fillcolor="#f7f9fc";
+        color="#0b5394";
+
+        P1 [label="System checks:\nWill this fuel sale cross\nANY of the 3 limits above?",
+            shape=box, fillcolor="#fff3cd"];
+        P2 [label="ALL OK →\nSale goes through", fillcolor="#d4edda"];
+        P3 [label="Limit crossed →\nSale is BLOCKED\n\nCashier sees exact reason:\n\"Limit: 500 L, Used: 480 L,\nThis sale: 50 L\"",
+            fillcolor="#f8d7da"];
+
+        P1 -> P2 [label="  No limit crossed  "];
+        P1 -> P3 [label="  Limit would cross  "];
+    }
+
+    /* ============ 3. IF BLOCKED ============ */
+    subgraph cluster_unblock {
+        label=<<B>3. If a customer is BLOCKED, three ways to allow them again</B>>;
+        labeljust="l";
+        fontsize=15;
+        style="rounded,filled";
+        fillcolor="#f7f9fc";
+        color="#0b5394";
+
+        U1 [label="ADMIN\n\nClick \"Unblock\"\non customer page\n(limits stay the same)",
+            fillcolor="#cfe8ff"];
+        U2 [label="OWNER — EMERGENCY\n\nTurn on\n\"Force Unblock\"\nAll checks are skipped\nuntil you turn it off",
+            fillcolor="#e2d5f7"];
+        U3 [label="APPROVAL REQUEST\n\nCashier requests\nhigher limit →\nOwner approves on phone →\nCustomer is unblocked\nwith new limit",
+            fillcolor="#fff3cd"];
+
+        { rank=same; U1 U2 U3 }
+    }
+
+    /* ============ 4. MONTHLY RESET ============ */
+    subgraph cluster_reset {
+        label=<<B>4. Automatic monthly reset</B>>;
+        labeljust="l";
+        fontsize=15;
+        style="rounded,filled";
+        fillcolor="#f7f9fc";
+        color="#0b5394";
+
+        R1 [label="On the 1st of every month,\nat midnight, the system automatically:\n\n• Resets \"liters used this month\" to 0\n   (for customer AND every vehicle)\n\nThe customer's money owed is NOT reset —\nthat only drops when they pay their bill.",
+            shape=box, fillcolor="#e2d5f7"];
+        R2 [label="Important:\nBlocked customers STAY BLOCKED\neven after reset.\nAdmin must unblock manually.",
+            shape=note, fillcolor="#fff3cd"];
+
+        R1 -> R2 [style=dashed];
+    }
+
+    /* section connectors */
+    L2 -> P1 [ltail=cluster_limits, lhead=cluster_pump, style=invis];
+    P3 -> U2 [ltail=cluster_pump, lhead=cluster_unblock, style=invis];
+    U2 -> R1 [ltail=cluster_unblock, lhead=cluster_reset, style=invis];
+}

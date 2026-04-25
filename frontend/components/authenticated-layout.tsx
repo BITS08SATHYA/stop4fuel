@@ -11,6 +11,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { useApprovalNotificationPermission } from "@/lib/hooks/use-approval-notifications";
 import { useNotificationStream } from "@/lib/hooks/use-notification-stream";
 import { ApprovalToastHost } from "@/components/approval-toast-host";
+import { MessengerDock } from "@/components/messaging/MessengerDock";
 
 // Initialize Amplify on client side
 if (typeof window !== "undefined") {
@@ -68,6 +69,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <main className="flex-1 overflow-y-auto bg-background">{children}</main>
             </div>
             <ApprovalToastHost />
+            <MessengerDock />
         </div>
     );
 }

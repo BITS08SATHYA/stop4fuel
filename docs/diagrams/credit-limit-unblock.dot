@@ -1,0 +1,36 @@
+digraph Unblock {
+    rankdir=LR;
+    bgcolor="white";
+    node [fontname="Helvetica", fontsize=11, style="filled,rounded"];
+    edge [fontname="Helvetica", fontsize=10];
+
+    labelloc="t";
+    label=<<B>How to Lift a Block</B>>;
+    fontsize=16;
+
+    blocked [label="Customer / Vehicle\nBLOCKED", shape=oval, fillcolor="#f8d7da"];
+
+    opt1 [label="Admin\nManual Unblock\nbutton", shape=box, fillcolor="#cfe8ff"];
+    opt2 [label="Owner\nForce-Unblock toggle\n(bypasses ALL checks)", shape=box, fillcolor="#e2d5f7"];
+    opt3 [label="Cashier raises\nApproval Request", shape=box, fillcolor="#fff3cd"];
+
+    app  [label="Owner approves?", shape=diamond, fillcolor="#fff3cd"];
+
+    up1  [label="RAISE_CREDIT_LIMIT\nnew ₹ / L values", shape=box, fillcolor="#d4edda"];
+    up2  [label="UNBLOCK_CUSTOMER\nreason only", shape=box, fillcolor="#d4edda"];
+    stay [label="Stays BLOCKED", shape=box, fillcolor="#f8d7da"];
+
+    active [label="Back to ACTIVE", shape=oval, fillcolor="#d4edda"];
+
+    blocked -> opt1;
+    blocked -> opt2;
+    blocked -> opt3;
+    opt3 -> app;
+    app -> up1 [label="Approved"];
+    app -> up2 [label="Approved"];
+    app -> stay [label="Rejected"];
+    opt1 -> active;
+    opt2 -> active;
+    up1  -> active;
+    up2  -> active;
+}

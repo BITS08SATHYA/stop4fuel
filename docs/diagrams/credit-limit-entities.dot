@@ -1,0 +1,18 @@
+digraph Entities {
+    rankdir=LR;
+    bgcolor="white";
+    node [fontname="Helvetica", fontsize=11, shape=record, style="filled"];
+    edge [fontname="Helvetica", fontsize=10];
+
+    labelloc="t";
+    label=<<B>Credit &amp; Liter Limit — Data Model</B>>;
+    fontsize=16;
+
+    cust [label="{CUSTOMER|creditLimitAmount (₹)\lcreditLimitLiters (L/month)\lconsumedLiters (running)\lstatus : ACTIVE / BLOCKED\lforceUnblocked (flag)\l}",
+          fillcolor="#cfe8ff"];
+
+    veh  [label="{VEHICLE (each)|maxLitersPerMonth\lconsumedLiters (running)\lstatus : ACTIVE / BLOCKED\l}",
+          fillcolor="#d4edda"];
+
+    cust -> veh [label="owns many", style=dashed];
+}
