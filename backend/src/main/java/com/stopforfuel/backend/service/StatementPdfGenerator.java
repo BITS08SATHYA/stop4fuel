@@ -199,44 +199,64 @@ public class StatementPdfGenerator {
     }
 
     // ========== BILLS TABLE ==========
+    // 9-column layout: # / DATE / BILL NO / INDENT / PROD / QTY (L) / RATE / GROSS / NET AMT
+    // Rows render as one sub-table per vehicle (group header + column header repeat on page break),
+    // followed by a single grand-total sub-table. All sub-tables share the same widths so they
+    // visually align as one continuous table.
+    private static final float[] BILL_WIDTHS = {0.35f, 0.6f, 0.8f, 0.7f, 0.55f, 0.65f, 0.6f, 0.8f, 0.85f};
+    private static final String[] BILL_HEADERS = {"#", "DATE", "BILL NO", "INDENT", "PROD", "QTY (L)", "RATE", "GROSS", "NET AMT"};
+    private static final Set<Integer> BILL_RIGHT_ALIGN = new HashSet<>(Arrays.asList(5, 6, 7, 8));
+    private static final Color GROUP_HEADER_BG = new Color(225, 230, 240);
+    private static final Color SUBTOTAL_BG = new Color(245, 247, 250);
+    private static final Color GRAND_TOTAL_BG = new Color(233, 236, 239);
+
     private void addBillsTable(Document doc, List<InvoiceBill> bills) throws DocumentException {
-        float[] widths = {0.35f, 0.6f, 0.8f, 1.3f, 0.9f, 0.7f, 0.55f, 0.65f, 0.6f, 0.8f, 0.5f, 0.85f};
-        PdfPTable table = new PdfPTable(widths);
+        LinkedHashMap<String, List<InvoiceBill>> grouped = new LinkedHashMap<>();
+        for (InvoiceBill b : bills) {
+            String key = b.getVehicle() != null ? b.getVehicle().getVehicleNumber() : "-";
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(b);
+        }
+
+        BillTotals grand = new BillTotals();
+        for (Map.Entry<String, List<InvoiceBill>> e : grouped.entrySet()) {
+            addVehicleTable(doc, e.getKey(), e.getValue(), grand);
+            doc.add(new Paragraph(" ", new Font(Font.HELVETICA, 4)));
+        }
+        addGrandTotalRow(doc, bills.size(), grand);
+    }
+
+    private void addVehicleTable(Document doc, String vehicleNumber, List<InvoiceBill> vehicleBills,
+                                 BillTotals grand) throws DocumentException {
+        PdfPTable table = new PdfPTable(BILL_WIDTHS);
         table.setWidthPercentage(100);
-        table.setHeaderRows(1);
+        table.setHeaderRows(2); // group header row + column header row both repeat on page break
 
-        String[] headers = {"#", "DATE", "BILL NO", "VEHICLE", "DRIVER", "INDENT", "PROD", "QTY (L)", "RATE", "GROSS", "DISC", "NET AMT"};
-        int[] rightAlign = {0, 7, 8, 9, 10, 11};
-        Set<Integer> rightSet = new HashSet<>();
-        for (int r : rightAlign) rightSet.add(r);
+        // Row 1: group header spanning all 9 columns
+        PdfPCell groupHeader = new PdfPCell(new Phrase("Vehicle: " + vehicleNumber, F_TD_BOLD));
+        groupHeader.setColspan(BILL_WIDTHS.length);
+        groupHeader.setBackgroundColor(GROUP_HEADER_BG);
+        groupHeader.setPadding(5);
+        groupHeader.setBorderColor(LIGHT_BORDER);
+        groupHeader.setBorderWidth(0.5f);
+        groupHeader.setHorizontalAlignment(Element.ALIGN_LEFT);
+        table.addCell(groupHeader);
 
-        for (int i = 0; i < headers.length; i++) {
-            PdfPCell cell = new PdfPCell(new Phrase(headers[i], F_TH));
+        // Row 2: column headers
+        for (int i = 0; i < BILL_HEADERS.length; i++) {
+            PdfPCell cell = new PdfPCell(new Phrase(BILL_HEADERS[i], F_TH));
             cell.setBackgroundColor(HEADER_BG);
             cell.setPadding(3);
             cell.setBorderColor(HEADER_BG);
-            cell.setHorizontalAlignment(rightSet.contains(i) ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT);
+            cell.setHorizontalAlignment(BILL_RIGHT_ALIGN.contains(i) ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT);
             if (i == 0) cell.setHorizontalAlignment(Element.ALIGN_CENTER);
             table.addCell(cell);
         }
 
-        BigDecimal totalQty = BigDecimal.ZERO;
-        BigDecimal totalGross = BigDecimal.ZERO;
-        BigDecimal totalDisc = BigDecimal.ZERO;
-        BigDecimal totalNet = BigDecimal.ZERO;
-
+        BillTotals sub = new BillTotals();
         int index = 1;
-        for (InvoiceBill bill : bills) {
+        for (InvoiceBill bill : vehicleBills) {
             Color bg = (index % 2 == 0) ? ALT_ROW : Color.WHITE;
 
-            addCell(table, String.valueOf(index), bg, Element.ALIGN_CENTER, false);
-            addCell(table, bill.getDate() != null ? bill.getDate().format(SHORT_DATE) : "-", bg, Element.ALIGN_LEFT, false);
-            addCell(table, bill.getBillNo() != null ? bill.getBillNo() : "-", bg, Element.ALIGN_LEFT, true);
-            addCell(table, bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-", bg, Element.ALIGN_LEFT, false);
-            addCell(table, bill.getDriverName() != null ? bill.getDriverName() : "-", bg, Element.ALIGN_LEFT, false);
-            addCell(table, bill.getIndentNo() != null ? bill.getIndentNo() : "-", bg, Element.ALIGN_LEFT, false);
-
-            // Product (first product short name)
             String prodName = "-";
             BigDecimal qty = BigDecimal.ZERO;
             BigDecimal rate = BigDecimal.ZERO;
@@ -248,41 +268,66 @@ public class StatementPdfGenerator {
                 qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
                 rate = ip.getUnitPrice() != null ? ip.getUnitPrice() : BigDecimal.ZERO;
             }
+
+            BigDecimal gross = bill.getGrossAmount() != null ? bill.getGrossAmount()
+                    : (bill.getNetAmount() != null ? bill.getNetAmount() : BigDecimal.ZERO);
+            BigDecimal net = bill.getNetAmount() != null ? bill.getNetAmount() : BigDecimal.ZERO;
+
+            addCell(table, String.valueOf(index), bg, Element.ALIGN_CENTER, false);
+            addCell(table, bill.getDate() != null ? bill.getDate().format(SHORT_DATE) : "-", bg, Element.ALIGN_LEFT, false);
+            addCell(table, bill.getBillNo() != null ? bill.getBillNo() : "-", bg, Element.ALIGN_LEFT, true);
+            addCell(table, bill.getIndentNo() != null ? bill.getIndentNo() : "-", bg, Element.ALIGN_LEFT, false);
             addCell(table, prodName, bg, Element.ALIGN_LEFT, false);
             addCell(table, qty.compareTo(BigDecimal.ZERO) > 0 ? fmt0(qty) : "-", bg, Element.ALIGN_RIGHT, false);
             addCell(table, rate.compareTo(BigDecimal.ZERO) > 0 ? fmtRate(rate) : "-", bg, Element.ALIGN_RIGHT, false);
-
-            BigDecimal gross = bill.getGrossAmount() != null ? bill.getGrossAmount() : (bill.getNetAmount() != null ? bill.getNetAmount() : BigDecimal.ZERO);
-            BigDecimal disc = bill.getTotalDiscount() != null ? bill.getTotalDiscount() : BigDecimal.ZERO;
-            BigDecimal net = bill.getNetAmount() != null ? bill.getNetAmount() : BigDecimal.ZERO;
-
             addCell(table, fmtAmt(gross), bg, Element.ALIGN_RIGHT, false);
-            addCell(table, disc.compareTo(BigDecimal.ZERO) > 0 ? fmtAmt(disc) : "-", bg, Element.ALIGN_RIGHT, false);
             addCell(table, fmtAmt(net), bg, Element.ALIGN_RIGHT, true);
 
-            totalQty = totalQty.add(qty);
-            totalGross = totalGross.add(gross);
-            totalDisc = totalDisc.add(disc);
-            totalNet = totalNet.add(net);
+            sub.qty = sub.qty.add(qty);
+            sub.gross = sub.gross.add(gross);
+            sub.net = sub.net.add(net);
             index++;
         }
 
-        // Total row
-        Color totBg = new Color(233, 236, 239);
-        addCell(table, "", totBg, Element.ALIGN_LEFT, false);
-        addCell(table, "", totBg, Element.ALIGN_LEFT, false);
-        addCell(table, "TOTAL (" + bills.size() + " bills)", totBg, Element.ALIGN_LEFT, true);
-        addCell(table, "", totBg, Element.ALIGN_LEFT, false);
-        addCell(table, "", totBg, Element.ALIGN_LEFT, false);
-        addCell(table, "", totBg, Element.ALIGN_LEFT, false);
-        addCell(table, "", totBg, Element.ALIGN_LEFT, false);
-        addCell(table, fmt0(totalQty), totBg, Element.ALIGN_RIGHT, true);
-        addCell(table, "", totBg, Element.ALIGN_RIGHT, false);
-        addCell(table, fmtAmt(totalGross), totBg, Element.ALIGN_RIGHT, true);
-        addCell(table, totalDisc.compareTo(BigDecimal.ZERO) > 0 ? fmtAmt(totalDisc) : "-", totBg, Element.ALIGN_RIGHT, true);
-        addCell(table, fmtAmt(totalNet), totBg, Element.ALIGN_RIGHT, true);
+        // Subtotal row
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "Subtotal", SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, fmt0(sub.qty), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_RIGHT, false);
+        addCell(table, fmtAmt(sub.gross), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, fmtAmt(sub.net), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+
+        grand.qty = grand.qty.add(sub.qty);
+        grand.gross = grand.gross.add(sub.gross);
+        grand.net = grand.net.add(sub.net);
 
         doc.add(table);
+    }
+
+    private void addGrandTotalRow(Document doc, int billCount, BillTotals grand) throws DocumentException {
+        PdfPTable table = new PdfPTable(BILL_WIDTHS);
+        table.setWidthPercentage(100);
+
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "TOTAL (" + billCount + " bills)", GRAND_TOTAL_BG, Element.ALIGN_LEFT, true);
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, fmt0(grand.qty), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_RIGHT, false);
+        addCell(table, fmtAmt(grand.gross), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, fmtAmt(grand.net), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
+
+        doc.add(table);
+    }
+
+    private static class BillTotals {
+        BigDecimal qty = BigDecimal.ZERO;
+        BigDecimal gross = BigDecimal.ZERO;
+        BigDecimal net = BigDecimal.ZERO;
     }
 
     // ========== BOTTOM SECTION ==========
