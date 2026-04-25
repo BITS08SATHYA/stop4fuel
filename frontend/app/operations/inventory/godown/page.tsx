@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Modal } from "@/components/ui/modal";
-import { StyledSelect } from "@/components/ui/styled-select";
+import { ProductAutocomplete } from "@/components/ui/product-autocomplete";
 import {
     getGodownStocks,
     getActiveProducts,
@@ -278,14 +278,12 @@ export default function GodownStockPage() {
                     <FormErrorBanner message={apiError} />
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">Product</label>
-                        <StyledSelect
+                        <ProductAutocomplete
                             value={productId}
-                            onChange={(val) => { setProductId(val); clearError("productId"); }}
-                            options={[
-                                { value: "", label: "Select a product..." },
-                                ...products.map((p) => ({ value: String(p.id), label: `${p.name} (${p.unit})` })),
-                            ]}
-                            placeholder="Select a product..."
+                            onChange={(val) => { setProductId(String(val)); clearError("productId"); }}
+                            products={products}
+                            placeholder="Search product..."
+                            disabled={!!editingId}
                             className={`w-full ${!!editingId ? "opacity-50 pointer-events-none" : ""} ${inputErrorClass(errors.productId)}`}
                         />
                         <FieldError error={errors.productId} />
