@@ -382,6 +382,80 @@ public class StatementService {
         return invoiceBillRepository.findByStatementId(statementId);
     }
 
+    /**
+     * Build the same statement PDF that {@link #generateStatement} + {@link #generateAndStorePdf}
+     * would produce, but never persists a Statement row, never links bills, never uploads to S3,
+     * and never consumes a statement-sequence number. Pure read-only — used for the
+     * "Download PDF (Preview)" button in the Generate Statement dialog so cashiers can verify
+     * the layout before committing.
+     */
+    @Transactional(readOnly = true)
+    public byte[] previewStatementPdf(Long customerId, LocalDate fromDate, LocalDate toDate,
+                                      Long vehicleId, Long productId, List<Long> billIds) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found with id: " + customerId));
+
+        List<InvoiceBill> bills;
+        if (billIds != null && !billIds.isEmpty()) {
+            bills = invoiceBillRepository.findUnlinkedCreditBillsByIds(billIds, SecurityUtils.getScid());
+            for (InvoiceBill bill : bills) {
+                if (!bill.getCustomer().getId().equals(customerId)) {
+                    throw new BusinessException("Bill " + bill.getId() + " does not belong to customer " + customerId);
+                }
+            }
+        } else {
+            LocalDateTime fromDateTime = fromDate.atStartOfDay();
+            LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
+            if (vehicleId != null && productId != null) {
+                bills = invoiceBillRepository.findUnlinkedCreditBillsByVehicleAndProduct(
+                        customerId, fromDateTime, toDateTime, vehicleId, productId);
+            } else if (vehicleId != null) {
+                bills = invoiceBillRepository.findUnlinkedCreditBillsByVehicle(
+                        customerId, fromDateTime, toDateTime, vehicleId);
+            } else if (productId != null) {
+                bills = invoiceBillRepository.findUnlinkedCreditBillsByProduct(
+                        customerId, fromDateTime, toDateTime, productId);
+            } else {
+                bills = invoiceBillRepository.findUnlinkedCreditBills(
+                        customerId, fromDateTime, toDateTime);
+            }
+        }
+
+        if (bills.isEmpty()) {
+            throw new BusinessException("No unlinked credit bills found for the selected filters");
+        }
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (InvoiceBill bill : bills) {
+            if (bill.getNetAmount() != null) totalAmount = totalAmount.add(bill.getNetAmount());
+        }
+        BigDecimal netAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
+        BigDecimal roundingAmount = netAmount.subtract(totalAmount);
+
+        Statement preview = new Statement();
+        preview.setScid(customer.getScid());
+        preview.setStatementNo("PREVIEW");
+        preview.setCustomer(customer);
+        preview.setFromDate(fromDate);
+        preview.setToDate(toDate);
+        preview.setStatementDate(LocalDate.now());
+        preview.setNumberOfBills(bills.size());
+        preview.setTotalAmount(totalAmount);
+        preview.setRoundingAmount(roundingAmount);
+        preview.setNetAmount(netAmount);
+        preview.setReceivedAmount(BigDecimal.ZERO);
+        preview.setBalanceAmount(netAmount);
+        preview.setStatus("NOT_PAID");
+        List<Long> invoiceBillIds = bills.stream().map(InvoiceBill::getId).toList();
+        preview.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(invoiceBillIds));
+
+        List<Company> companies = companyRepository.findByScid(
+                customer.getScid() != null ? customer.getScid() : SecurityUtils.getScid());
+        Company company = !companies.isEmpty() ? companies.get(0) : null;
+
+        return pdfGenerator.generate(preview, bills, company, java.util.Collections.emptyList());
+    }
+
     @Transactional
     public Statement generateAndStorePdf(Long id) {
         Statement statement = statementRepository.findById(id)

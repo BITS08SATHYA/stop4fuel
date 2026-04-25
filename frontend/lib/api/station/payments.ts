@@ -165,6 +165,31 @@ export const previewStatementBills = (
     return fetchWithAuth(`${API_BASE_URL}/statements/preview?${params}`).then(handleResponse);
 };
 
+/**
+ * Build the same statement PDF that Generate would produce, but without persisting
+ * a Statement row or consuming a sequence number. Returns the PDF as a blob so the
+ * caller can trigger a browser download.
+ */
+export const previewStatementPdf = (
+    customerId: number, fromDate: string, toDate: string,
+    filters?: { vehicleId?: number; productId?: number; billIds?: number[] }
+): Promise<Blob> => {
+    const params = new URLSearchParams({
+        customerId: String(customerId),
+        fromDate,
+        toDate,
+    });
+    if (filters?.vehicleId) params.append('vehicleId', String(filters.vehicleId));
+    if (filters?.productId) params.append('productId', String(filters.productId));
+    if (filters?.billIds?.length) {
+        filters.billIds.forEach(id => params.append('billIds', String(id)));
+    }
+    return fetchWithAuth(`${API_BASE_URL}/statements/preview-pdf?${params}`).then(r => {
+        if (!r.ok) return r.text().then(t => { throw new Error(t || 'Failed to generate preview PDF'); });
+        return r.blob();
+    });
+};
+
 export const getStatementBills = (statementId: number): Promise<InvoiceBill[]> =>
     fetchWithAuth(`${API_BASE_URL}/statements/${statementId}/bills`).then(handleResponse);
 

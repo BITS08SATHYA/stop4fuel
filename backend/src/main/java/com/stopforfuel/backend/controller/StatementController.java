@@ -201,6 +201,28 @@ public class StatementController {
         return ResponseEntity.ok(StatementDTO.from(updated));
     }
 
+    /**
+     * Preview the statement PDF without persisting a Statement row, linking bills,
+     * uploading to S3, or consuming a statement number. Used by the
+     * "Download PDF (Preview)" button so cashiers can verify the layout before committing.
+     */
+    @GetMapping("/preview-pdf")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public ResponseEntity<byte[]> previewPdf(
+            @RequestParam Long customerId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Long vehicleId,
+            @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) List<Long> billIds) {
+        byte[] pdf = statementService.previewStatementPdf(customerId, fromDate, toDate, vehicleId, productId, billIds);
+        String filename = "Statement_PREVIEW_" + customerId + "_" + fromDate + "_" + toDate + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+                .body(pdf);
+    }
+
     @GetMapping("/{id}/pdf-url")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public ResponseEntity<Map<String, String>> getPdfUrl(@PathVariable Long id) {

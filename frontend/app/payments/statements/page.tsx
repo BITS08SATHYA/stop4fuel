@@ -16,7 +16,7 @@ import {
 import {
     getStatements, generateStatement, regenerateStatement, getStatementBills,
     getCustomers, deleteStatement, removeBillFromStatement,
-    getVehiclesByCustomer, getProducts, previewStatementBills,
+    getVehiclesByCustomer, getProducts, previewStatementBills, previewStatementPdf,
     generateStatementPdf, getStatementPdfUrl, getStatementStats,
     approveStatement, autoGenerateStatementDrafts,
     updateCustomerCreditLimits, updateVehicleLiterLimit,
@@ -56,6 +56,7 @@ export default function StatementsPage() {
     const [showPreview, setShowPreview] = useState(false);
     const [previewing, setPreviewing] = useState(false);
     const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
+    const [previewingPdf, setPreviewingPdf] = useState(false);
     const [selectedBillIds, setSelectedBillIds] = useState<Set<number>>(new Set());
     const [useBillSelection, setUseBillSelection] = useState(false);
 
@@ -261,6 +262,37 @@ export default function StatementsPage() {
             setError(e.message || "Failed to generate statement");
         } finally {
             setGenerating(false);
+        }
+    };
+
+    const handlePreviewPdf = async () => {
+        if (!selectedCustomerId || !fromDate || !toDate) {
+            setError("Customer and date range are required to preview the PDF");
+            return;
+        }
+        setPreviewingPdf(true);
+        setError("");
+        try {
+            const filters: { vehicleId?: number; productId?: number; billIds?: number[] } = {};
+            if (useBillSelection && selectedBillIds.size > 0) {
+                filters.billIds = Array.from(selectedBillIds);
+            } else {
+                if (filterVehicleId) filters.vehicleId = Number(filterVehicleId);
+                if (filterProductId) filters.productId = Number(filterProductId);
+            }
+            const blob = await previewStatementPdf(Number(selectedCustomerId), fromDate, toDate, filters);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Statement_PREVIEW_${selectedCustomerId}_${fromDate}_to_${toDate}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e: any) {
+            setError(e.message || "Failed to generate preview PDF");
+        } finally {
+            setPreviewingPdf(false);
         }
     };
 
@@ -918,6 +950,16 @@ export default function StatementsPage() {
                             className="px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
                         >
                             Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handlePreviewPdf}
+                            disabled={previewingPdf || generating || !selectedCustomerId || !fromDate || !toDate}
+                            className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50"
+                            title="Download a draft PDF without saving the statement"
+                        >
+                            {previewingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                            {previewingPdf ? "Building PDF..." : "Download PDF (Preview)"}
                         </button>
                         <button
                             onClick={handleGenerate}
