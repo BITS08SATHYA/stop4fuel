@@ -3,6 +3,7 @@ package com.stopforfuel.backend.controller;
 import com.stopforfuel.backend.service.AllPartyUnpaidReportService;
 import com.stopforfuel.backend.service.CustomerBalanceReportService;
 import com.stopforfuel.backend.service.DailySalesReportService;
+import com.stopforfuel.backend.service.OpeningBalanceReportService;
 import com.stopforfuel.backend.service.TankInventorySummaryReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -23,6 +24,7 @@ public class ReportController {
     private final TankInventorySummaryReportService tankInventoryReportService;
     private final CustomerBalanceReportService customerBalanceReportService;
     private final AllPartyUnpaidReportService allPartyUnpaidReportService;
+    private final OpeningBalanceReportService openingBalanceReportService;
 
     // ======================== Daily Sales ========================
 
@@ -146,6 +148,62 @@ public class ReportController {
     public ResponseEntity<byte[]> allPartyLocalExcel() {
         byte[] excel = allPartyUnpaidReportService.generateLocalExcel();
         String filename = "AllPartyLocal_" + LocalDate.now() + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    // ======================== Opening Balance — Local ========================
+
+    @GetMapping("/opening-balance-local/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> openingBalanceLocalPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] pdf = openingBalanceReportService.generateLocalPdf(fromDate, toDate);
+        String filename = "LocalOpeningBalance_" + fromDate + "_to_" + toDate + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/opening-balance-local/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> openingBalanceLocalExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] excel = openingBalanceReportService.generateLocalExcel(fromDate, toDate);
+        String filename = "LocalOpeningBalance_" + fromDate + "_to_" + toDate + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    // ======================== Opening Balance — Statement ========================
+
+    @GetMapping("/opening-balance-statement/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> openingBalanceStatementPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] pdf = openingBalanceReportService.generateStatementPdf(fromDate, toDate);
+        String filename = "StatementOpeningBalance_" + fromDate + "_to_" + toDate + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/opening-balance-statement/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> openingBalanceStatementExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] excel = openingBalanceReportService.generateStatementExcel(fromDate, toDate);
+        String filename = "StatementOpeningBalance_" + fromDate + "_to_" + toDate + ".xlsx";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))

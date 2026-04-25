@@ -176,6 +176,21 @@ public interface StatementRepository extends ScidRepository<Statement> {
             @org.springframework.data.repository.query.Param("end") LocalDate end,
             @org.springframework.data.repository.query.Param("scid") Long scid);
 
+    // Opening-balance report: net amount of statements issued to a customer before a date.
+    @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM Statement s " +
+           "WHERE s.customer.id = :customerId AND s.statementDate < :beforeDate")
+    BigDecimal sumStatementsByCustomerBefore(
+            @org.springframework.data.repository.query.Param("customerId") Long customerId,
+            @org.springframework.data.repository.query.Param("beforeDate") LocalDate beforeDate);
+
+    // Opening-balance report: net amount of statements issued inside a date range.
+    @Query("SELECT COALESCE(SUM(s.netAmount), 0) FROM Statement s " +
+           "WHERE s.customer.id = :customerId AND s.statementDate >= :fromDate AND s.statementDate <= :toDate")
+    BigDecimal sumStatementsByCustomerInRange(
+            @org.springframework.data.repository.query.Param("customerId") Long customerId,
+            @org.springframework.data.repository.query.Param("fromDate") LocalDate fromDate,
+            @org.springframework.data.repository.query.Param("toDate") LocalDate toDate);
+
     // Bank-statement parser: unpaid statements with balanceAmount in a range, customer loaded for name matching.
     @EntityGraph(attributePaths = {"customer"})
     @Query("SELECT s FROM Statement s WHERE s.scid = :scid AND s.status <> 'PAID' AND s.status <> 'DRAFT' "

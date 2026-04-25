@@ -42,3 +42,19 @@ export const downloadAllPartyLocalReport = (format: 'pdf' | 'excel'): Promise<Bl
         return res.blob();
     });
 };
+
+export const downloadOpeningBalanceLocalReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> => {
+    const endpoint = format === 'pdf' ? 'pdf' : 'excel';
+    return fetchWithAuth(`${API_BASE_URL}/reports/opening-balance-local/${endpoint}?fromDate=${fromDate}&toDate=${toDate}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};
+
+export const downloadOpeningBalanceStatementReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> => {
+    const endpoint = format === 'pdf' ? 'pdf' : 'excel';
+    return fetchWithAuth(`${API_BASE_URL}/reports/opening-balance-statement/${endpoint}?fromDate=${fromDate}&toDate=${toDate}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};

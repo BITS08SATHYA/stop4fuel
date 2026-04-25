@@ -8,6 +8,8 @@ import {
     downloadCustomerBalanceReport,
     downloadAllPartyStatementReport,
     downloadAllPartyLocalReport,
+    downloadOpeningBalanceLocalReport,
+    downloadOpeningBalanceStatementReport,
 } from "@/lib/api/station";
 import { showToast } from "@/components/ui/toast";
 import {
@@ -21,6 +23,8 @@ import {
     Loader2,
     FileSignature,
     Receipt,
+    Wallet,
+    Landmark,
 } from "lucide-react";
 
 function getCurrentMonthRange() {
@@ -49,7 +53,9 @@ type ReportType =
     | "tank-inventory"
     | "customer-balance"
     | "all-party-statement"
-    | "all-party-local";
+    | "all-party-local"
+    | "opening-balance-local"
+    | "opening-balance-statement";
 
 interface ReportConfig {
     key: ReportType;
@@ -106,6 +112,24 @@ const reports: ReportConfig[] = [
         color: "text-amber-500",
         needsDates: false,
     },
+    {
+        key: "opening-balance-local",
+        title: "Local Opening Balance Report",
+        description:
+            "Per-customer ledger movement for local credit customers across the date range: opening balance, bills issued, payments received, and closing balance.",
+        icon: Wallet,
+        color: "text-cyan-500",
+        needsDates: true,
+    },
+    {
+        key: "opening-balance-statement",
+        title: "Statement Opening Balance Report",
+        description:
+            "Per-customer ledger movement for statement customers across the date range: opening balance, statements issued, payments received, and closing balance.",
+        icon: Landmark,
+        color: "text-rose-500",
+        needsDates: true,
+    },
 ];
 
 export default function ReportsPage() {
@@ -153,6 +177,14 @@ export default function ReportsPage() {
                         blob,
                         `AllPartyLocal_${new Date().toISOString().split("T")[0]}.${ext}`
                     );
+                    break;
+                case "opening-balance-local":
+                    blob = await downloadOpeningBalanceLocalReport(fromDate, toDate, format);
+                    triggerDownload(blob, `LocalOpeningBalance_${fromDate}_to_${toDate}.${ext}`);
+                    break;
+                case "opening-balance-statement":
+                    blob = await downloadOpeningBalanceStatementReport(fromDate, toDate, format);
+                    triggerDownload(blob, `StatementOpeningBalance_${fromDate}_to_${toDate}.${ext}`);
                     break;
             }
         } catch {

@@ -105,6 +105,14 @@ public interface PaymentRepository extends ScidRepository<Payment> {
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.customer.id = :customerId AND p.paymentDate < :beforeDate")
     BigDecimal sumPaymentsByCustomerBefore(@Param("customerId") Long customerId, @Param("beforeDate") LocalDateTime beforeDate);
 
+    // Sum payments for a customer inside a date range (for opening-balance report)
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+           "WHERE p.customer.id = :customerId AND p.paymentDate >= :fromDate AND p.paymentDate <= :toDate")
+    BigDecimal sumPaymentsByCustomerInRange(
+            @Param("customerId") Long customerId,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
     // Sum all payments by a customer (total ever paid)
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.customer.id = :customerId")
     BigDecimal sumAllPaymentsByCustomer(@Param("customerId") Long customerId);

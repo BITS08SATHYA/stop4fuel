@@ -149,6 +149,15 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT'")
     BigDecimal sumAllCreditBillsByCustomer(@Param("customerId") Long customerId);
 
+    // Sum of credit bills for a customer inside a date range (for opening-balance report)
+    @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
+           "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +
+           "AND ib.date >= :fromDate AND ib.date <= :toDate")
+    BigDecimal sumCreditBillsByCustomerInRange(
+            @Param("customerId") Long customerId,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
     // Sum of unbilled credit purchases (not yet added to a statement, still unpaid)
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib " +
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' " +
