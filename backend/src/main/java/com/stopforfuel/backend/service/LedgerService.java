@@ -108,8 +108,19 @@ public class LedgerService {
             LedgerEntry entry = new LedgerEntry();
             entry.date = payment.getPaymentDate();
             entry.type = "CREDIT";
+
+            String target = "";
+            if (payment.getStatement() != null) {
+                Statement s = payment.getStatement();
+                target = " for Statement " + (s.getStatementNo() != null ? s.getStatementNo() : "#" + s.getId());
+            } else if (payment.getInvoiceBill() != null) {
+                InvoiceBill b = payment.getInvoiceBill();
+                target = " for Bill " + (b.getBillNo() != null ? b.getBillNo() : "#" + b.getId());
+            }
+
             entry.description = "Payment"
                     + (payment.getPaymentMode() != null ? " (" + payment.getPaymentMode().name() + ")" : "")
+                    + target
                     + (payment.getReferenceNo() != null ? " Ref: " + payment.getReferenceNo() : "");
             entry.referenceId = payment.getId();
             entry.debitAmount = BigDecimal.ZERO;

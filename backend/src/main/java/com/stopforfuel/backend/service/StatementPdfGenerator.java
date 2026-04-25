@@ -53,7 +53,6 @@ public class StatementPdfGenerator {
     private static final Font F_BALANCE_DUE_LABEL = new Font(Font.HELVETICA, 10, Font.BOLD, BLACK);
     private static final Font F_BALANCE_DUE = new Font(Font.HELVETICA, 13, Font.BOLD, RED);
     private static final Font F_WORDS = new Font(Font.HELVETICA, 8, Font.ITALIC, MUTED);
-    private static final Font F_TERMS = new Font(Font.HELVETICA, 8, Font.NORMAL, MUTED);
     private static final Font F_SIGNATORY = new Font(Font.HELVETICA, 7.5f, Font.ITALIC, BLACK);
     private static final Font F_FOOTER = new Font(Font.HELVETICA, 6, Font.ITALIC, MUTED);
     private static final Font F_STATUS = new Font(Font.HELVETICA, 8, Font.BOLD);
@@ -558,8 +557,6 @@ public class StatementPdfGenerator {
 
         PdfPCell termsCell = new PdfPCell();
         termsCell.setBorder(Rectangle.NO_BORDER);
-        termsCell.addElement(new Paragraph("Terms: Payment due within 15 days. Late payments attract 18% p.a. interest.", F_TERMS));
-        termsCell.addElement(new Paragraph("Disputes within 7 days. Subject to Chennai jurisdiction. Computer-generated statement.", F_TERMS));
         footer.addCell(termsCell);
 
         String companyName = company != null && company.getName() != null ? company.getName() : "StopForFuel";
