@@ -32,6 +32,7 @@ public class PaymentService {
     private final EAdvanceRepository eAdvanceRepository;
     private final S3StorageService s3StorageService;
     private final com.stopforfuel.config.BusinessMetrics metrics;
+    private final CreditMonitoringService creditMonitoringService;
 
     @Transactional(readOnly = true)
     public Page<Payment> getPayments(String categoryType, String paidAgainst,
@@ -154,6 +155,11 @@ public class PaymentService {
         // Auto-create shift transaction for this payment
         autoCreateShiftTransaction(saved);
 
+        // Auto-unblock if this payment cleared all credit triggers
+        if (statement.getCustomer() != null) {
+            creditMonitoringService.tryAutoUnblock(statement.getCustomer(), "AUTO_PAYMENT");
+        }
+
         metrics.paymentRecorded(saved.getPaymentMode() != null ? saved.getPaymentMode().name() : null, "STATEMENT");
         return saved;
     }
@@ -223,6 +229,11 @@ public class PaymentService {
 
         // Auto-create shift transaction for this payment
         autoCreateShiftTransaction(saved);
+
+        // Auto-unblock if this payment cleared all credit triggers
+        if (bill.getCustomer() != null) {
+            creditMonitoringService.tryAutoUnblock(bill.getCustomer(), "AUTO_PAYMENT");
+        }
 
         metrics.paymentRecorded(saved.getPaymentMode() != null ? saved.getPaymentMode().name() : null, "BILL");
         return saved;

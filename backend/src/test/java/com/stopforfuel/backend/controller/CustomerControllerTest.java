@@ -5,6 +5,7 @@ import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Roles;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.enums.EntityStatus;
+import com.stopforfuel.backend.service.CustomerBlockingStatusService;
 import com.stopforfuel.backend.service.CustomerService;
 import com.stopforfuel.backend.service.JasperReportService;
 import com.stopforfuel.backend.service.VehicleService;
@@ -52,6 +53,9 @@ class CustomerControllerTest {
 
     @MockBean
     private JasperReportService jasperReportService;
+
+    @MockBean
+    private CustomerBlockingStatusService blockingStatusService;
 
     private Customer testCustomer;
 

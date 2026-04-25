@@ -15,6 +15,7 @@ import java.util.List;
 public class ManualScanResult {
     private int scannedCount;
     private int blockedCount;
+    private int unblockedCount;
     private int skippedCount;
     private List<ScanEntry> entries = new ArrayList<>();
 
@@ -23,8 +24,8 @@ public class ManualScanResult {
         private Long customerId;
         private String customerName;
         private String partyType;           // "Local" / "Statement" / null
-        private String outcome;             // "BLOCKED" | "PASS" | "SKIPPED"
-        private String reason;              // blocking reason, or skip reason
+        private String outcome;             // "BLOCKED" | "UNBLOCKED" | "PASS" | "SKIPPED"
+        private String reason;              // blocking/unblocking reason, or skip reason
         private BigDecimal utilizationPercent; // null when not computed
         private Long oldestUnpaidDays;      // null when no unpaid bill
     }

@@ -238,6 +238,7 @@ public class CreditMonitoringService {
         log.info("Starting daily credit auto-block scan...");
         List<Long> scids = customerRepository.findDistinctScids();
         int totalBlocked = 0;
+        int totalUnblocked = 0;
 
         for (Long scid : scids) {
             List<Customer> activeCustomers = customerRepository.findByStatusAndScid(EntityStatus.ACTIVE, scid);
@@ -260,9 +261,16 @@ public class CreditMonitoringService {
                     totalBlocked++;
                 }
             }
+
+            List<Customer> blockedCustomers = customerRepository.findByStatusAndScid(EntityStatus.BLOCKED, scid);
+            for (Customer customer : blockedCustomers) {
+                if (tryAutoUnblock(customer, "AUTO_RESOLVED")) {
+                    totalUnblocked++;
+                }
+            }
         }
 
-        log.info("Daily auto-block scan complete. Blocked {} customers.", totalBlocked);
+        log.info("Daily auto-block scan complete. Blocked {}, auto-unblocked {}.", totalBlocked, totalUnblocked);
     }
 
     /**
@@ -323,7 +331,82 @@ public class CreditMonitoringService {
             }
         }
 
+        // Symmetric pass: any currently-BLOCKED customer whose triggers have
+        // since cleared gets auto-unblocked. Skips manual admin blocks.
+        List<Customer> blockedCustomers = customerRepository.findByStatusAndScid(EntityStatus.BLOCKED, scid);
+        for (Customer customer : blockedCustomers) {
+            if (tryAutoUnblock(customer, "AUTO_RESOLVED")) {
+                ManualScanResult.ScanEntry entry = new ManualScanResult.ScanEntry();
+                entry.setCustomerId(customer.getId());
+                entry.setCustomerName(customer.getName());
+                entry.setPartyType(customer.getParty() != null ? customer.getParty().getPartyType() : null);
+                entry.setOutcome("UNBLOCKED");
+                entry.setReason("All credit triggers cleared");
+                result.getEntries().add(entry);
+                result.setUnblockedCount(result.getUnblockedCount() + 1);
+            }
+        }
+
         return result;
+    }
+
+    /**
+     * Tries to auto-unblock one customer. Returns true if the status was flipped
+     * back to ACTIVE. Skips when:
+     *  - customer is not currently BLOCKED
+     *  - the most-recent BLOCKED event in the audit log is MANUAL (admin block —
+     *    must stay sticky so the system never undoes a deliberate admin decision)
+     *  - any auto-block trigger is still firing
+     */
+    @Transactional
+    public boolean tryAutoUnblock(Customer customer, String triggerType) {
+        if (customer.getStatus() != EntityStatus.BLOCKED) return false;
+
+        // Find the most recent BLOCKED event; protect MANUAL blocks but only when
+        // they are still the latest event (a later UNBLOCKED followed by a silent
+        // auto-block from the legacy InvoiceBillService path would otherwise be
+        // mis-classified as manual).
+        List<CustomerBlockEvent> events = blockEventRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId());
+        var latestBlocked = events.stream()
+                .filter(e -> "BLOCKED".equals(e.getEventType()))
+                .findFirst();
+        if (latestBlocked.isPresent() && "MANUAL".equals(latestBlocked.get().getTriggerType())) {
+            boolean stillCurrent = !events.isEmpty()
+                    && events.get(0).getId().equals(latestBlocked.get().getId());
+            if (stillCurrent) return false;
+        }
+
+        if (customer.getCreditLimitAmount() == null
+                || customer.getCreditLimitAmount().compareTo(BigDecimal.ZERO) == 0) {
+            // Nothing to evaluate — refuse to auto-unblock; an admin must intervene.
+            return false;
+        }
+
+        CreditPolicy policy = creditPolicyService.getEffectivePolicy(customer);
+        if (evaluateBlockTriggers(customer, policy) != null) return false;
+
+        unblockCustomerWithEvent(customer, triggerType,
+                "Auto-unblocked: all credit triggers cleared");
+        return true;
+    }
+
+    /**
+     * Sets status back to ACTIVE and writes an UNBLOCKED audit event.
+     * Mirror of blockCustomerWithEvent — never touches forceUnblocked or blockCount.
+     */
+    @Transactional
+    public void unblockCustomerWithEvent(Customer customer, String triggerType, String reason) {
+        customer.setStatus(EntityStatus.ACTIVE);
+        customerRepository.save(customer);
+
+        CustomerBlockEvent event = new CustomerBlockEvent();
+        event.setCustomer(customer);
+        event.setScid(customer.getScid());
+        event.setEventType("UNBLOCKED");
+        event.setTriggerType(triggerType);
+        event.setReason(reason);
+        event.setPreviousStatus("BLOCKED");
+        blockEventRepository.save(event);
     }
 
     /**

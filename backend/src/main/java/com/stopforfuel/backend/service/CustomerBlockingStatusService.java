@@ -366,6 +366,12 @@ public class CustomerBlockingStatusService {
             if (!"FAIL".equals(g.getState())) continue;
             switch (g.getKey()) {
                 case "CUSTOMER_STATUS":
+                    boolean otherGatesAllPass = gates.stream()
+                            .filter(other -> !"CUSTOMER_STATUS".equals(other.getKey()))
+                            .noneMatch(other -> "FAIL".equals(other.getState()));
+                    if (otherGatesAllPass) {
+                        return "All credit triggers have cleared — pending auto-unblock. Admin can also click Unblock now.";
+                    }
                     return "Admin must unblock the customer before invoicing";
                 case "CREDIT_AMOUNT":
                     return "Collect a payment to reduce unbilled credit, or raise the credit limit";

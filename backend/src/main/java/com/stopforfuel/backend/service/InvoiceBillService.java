@@ -45,6 +45,7 @@ public class InvoiceBillService {
     private final TextractValidationService textractValidationService;
     private final com.stopforfuel.config.BusinessMetrics metrics;
     private final WeightedAverageCostService wacService;
+    private final CreditMonitoringService creditMonitoringService;
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -480,14 +481,16 @@ public class InvoiceBillService {
                 BigDecimal newConsumed = (c.getConsumedLiters() != null ? c.getConsumedLiters() : BigDecimal.ZERO)
                         .add(liters);
                 c.setConsumedLiters(newConsumed);
+                customerRepository.save(c);
 
                 if (!c.isForceUnblocked()
                         && c.getCreditLimitLiters() != null
                         && newConsumed.compareTo(c.getCreditLimitLiters()) >= 0
                         && c.getStatus() == com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
-                    c.setStatus(com.stopforfuel.backend.enums.EntityStatus.BLOCKED);
+                    String reason = "Consumed liters " + newConsumed.toPlainString()
+                            + " exceeds limit " + c.getCreditLimitLiters().toPlainString();
+                    creditMonitoringService.blockCustomerWithEvent(c, "AUTO_INVOICE", reason, null);
                 }
-                customerRepository.save(c);
             }
         }
     }
