@@ -28,6 +28,7 @@ public class PaymentService {
     private final InvoiceBillRepository invoiceBillRepository;
     private final CustomerRepository customerRepository;
     private final ShiftService shiftService;
+    private final ShiftRepository shiftRepository;
     private final EAdvanceService eAdvanceService;
     private final EAdvanceRepository eAdvanceRepository;
     private final S3StorageService s3StorageService;
@@ -291,6 +292,22 @@ public class PaymentService {
         Payment payment = paymentRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
         payment.setPaymentDate(newDate);
+
+        // If the new date falls outside the linked shift's window, detach the payment
+        // so it stops counting in that shift's register/closing totals. We never re-link
+        // to a historical (closed) shift — leaving shiftId null means the payment is a
+        // standalone ledger row, which is exactly what migration cleanup needs.
+        if (payment.getShiftId() != null) {
+            Shift shift = shiftRepository.findById(payment.getShiftId()).orElse(null);
+            if (shift != null) {
+                LocalDateTime start = shift.getStartTime();
+                LocalDateTime end = shift.getEndTime() != null ? shift.getEndTime() : LocalDateTime.now();
+                if (start != null && (newDate.isBefore(start) || newDate.isAfter(end))) {
+                    payment.setShiftId(null);
+                }
+            }
+        }
+
         return paymentRepository.save(payment);
     }
 
