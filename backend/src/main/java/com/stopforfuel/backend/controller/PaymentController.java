@@ -186,6 +186,25 @@ public class PaymentController {
     }
 
     /**
+     * Move a payment to a different date (backdate or forward-date). Amount,
+     * mode and links are unchanged; only paymentDate moves.
+     * PATCH /api/payments/{id}/date  body: { "paymentDate": "ISO-8601" }
+     */
+    @PatchMapping("/{id}/date")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    public ResponseEntity<PaymentDTO> updatePaymentDate(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String iso = body != null ? body.get("paymentDate") : null;
+        if (iso == null || iso.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        LocalDateTime newDate = LocalDateTime.parse(iso);
+        Payment updated = paymentService.updatePaymentDate(id, newDate);
+        return ResponseEntity.ok(PaymentDTO.from(updated));
+    }
+
+    /**
      * Delete a payment and reverse all side effects.
      * DELETE /api/payments/{id}
      */

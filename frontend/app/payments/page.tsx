@@ -15,7 +15,7 @@ import {
     getCustomers, recordStatementPayment, recordBillPayment,
     getOutstandingBills, uploadPaymentProof, getPaymentProofUrl,
     exportPaymentsPdf, exportPaymentsExcel, downloadPaymentReceipt,
-    deletePayment,
+    deletePayment, updatePaymentDate,
     API_BASE_URL, PAYMENT_MODES,
     type Payment, type Statement, type InvoiceBill, type Customer, type PageResponse
 } from "@/lib/api/station";
@@ -95,6 +95,8 @@ export default function PaymentsPage() {
 
     // Detail view modal
     const [viewPayment, setViewPayment] = useState<Payment | null>(null);
+    const [editingDate, setEditingDate] = useState<string | null>(null);
+    const [savingDate, setSavingDate] = useState(false);
 
     // Export loading
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -339,6 +341,39 @@ export default function PaymentsPage() {
             window.URL.revokeObjectURL(url);
         } catch (e) {
             console.error("Receipt download failed", e);
+        }
+    };
+
+    const beginEditDate = () => {
+        if (!viewPayment?.paymentDate) {
+            const now = new Date();
+            const pad = (n: number) => String(n).padStart(2, "0");
+            setEditingDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`);
+            return;
+        }
+        const d = new Date(viewPayment.paymentDate);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setEditingDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    };
+
+    const handleSaveDate = async () => {
+        if (!viewPayment?.id || !editingDate) return;
+        setSavingDate(true);
+        try {
+            const iso = `${editingDate}:00`;
+            const updated = await updatePaymentDate(viewPayment.id, iso);
+            setViewPayment(updated);
+            setEditingDate(null);
+            showToast.success("Payment date updated");
+            if (viewMode === "shift" && activeShiftId) {
+                loadPaymentsByShift(activeShiftId);
+            } else {
+                loadPaymentsByDate();
+            }
+        } catch {
+            showToast.error("Failed to update payment date");
+        } finally {
+            setSavingDate(false);
         }
     };
 
@@ -993,20 +1028,56 @@ export default function PaymentsPage() {
             {/* Payment Detail View Modal */}
             <Modal
                 isOpen={!!viewPayment}
-                onClose={() => setViewPayment(null)}
+                onClose={() => { setViewPayment(null); setEditingDate(null); }}
                 title="Payment Details"
             >
                 {viewPayment && (
                     <div className="space-y-4">
                         {/* Amount & Status */}
                         <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-3">
-                            <div>
+                            <div className="flex-1">
                                 <div className="text-2xl font-bold text-emerald-400">{fmtCurrency(viewPayment.amount)}</div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                    {viewPayment.paymentDate ? new Date(viewPayment.paymentDate).toLocaleString("en-IN", {
-                                        day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
-                                    }) : "-"}
-                                </div>
+                                {editingDate !== null ? (
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <input
+                                            type="datetime-local"
+                                            value={editingDate}
+                                            onChange={(e) => setEditingDate(e.target.value)}
+                                            className="px-2 py-1 rounded-md border border-input bg-background text-xs"
+                                        />
+                                        <button
+                                            onClick={handleSaveDate}
+                                            disabled={savingDate || !editingDate}
+                                            className="px-3 py-1 text-xs rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-50"
+                                        >
+                                            {savingDate ? "Saving..." : "Save"}
+                                        </button>
+                                        <button
+                                            onClick={() => setEditingDate(null)}
+                                            disabled={savingDate}
+                                            className="px-3 py-1 text-xs rounded-md border border-border text-muted-foreground hover:bg-muted"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                        <span>
+                                            {viewPayment.paymentDate ? new Date(viewPayment.paymentDate).toLocaleString("en-IN", {
+                                                day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+                                            }) : "-"}
+                                        </span>
+                                        <PermissionGate permission="PAYMENT_UPDATE">
+                                            <button
+                                                onClick={beginEditDate}
+                                                title="Change payment date"
+                                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                                            >
+                                                <Pencil className="w-3 h-3" />
+                                            </button>
+                                        </PermissionGate>
+                                    </div>
+                                )}
                             </div>
                             <div className="text-right">
                                 {statusBadge(viewPayment.targetPaymentStatus)}

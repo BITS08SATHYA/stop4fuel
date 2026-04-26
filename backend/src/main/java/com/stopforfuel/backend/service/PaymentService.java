@@ -278,6 +278,23 @@ public class PaymentService {
     }
 
     /**
+     * Backdate (or forward-date) a payment. Amount and side effects are unchanged —
+     * this only moves when the payment is reported to have been received, e.g. for
+     * migration cleanups where a credit bill was missed and the matching payment
+     * later got recorded against today's date.
+     */
+    @Transactional
+    public Payment updatePaymentDate(Long id, LocalDateTime newDate) {
+        if (newDate == null) {
+            throw new BusinessException("Payment date is required");
+        }
+        Payment payment = paymentRepository.findByIdAndScid(id, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
+        payment.setPaymentDate(newDate);
+        return paymentRepository.save(payment);
+    }
+
+    /**
      * Delete a payment and reverse all side effects:
      * - Revert statement received/balance amounts and status
      * - Revert bill payment status
