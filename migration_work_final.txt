@@ -1,5 +1,0 @@
-1. Vishnavi work (her work --> complete)
-2. Tank - Pump - Nozzle (names --> connectivity names)
-3. Tank and nozzle inventory push it into the database
-4. Recent db ..
-5. Create users for vishanvi, mani and rajendran 
