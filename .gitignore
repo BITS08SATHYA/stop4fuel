@@ -73,4 +73,6 @@ landing_page/
 CODEBASE_ANALYSIS.md
 SECURITY_AUDIT.md
 migration_bunkdb.txt
+migration_work_final.txt
+android-mvp-plan.md
 start_services.sh
