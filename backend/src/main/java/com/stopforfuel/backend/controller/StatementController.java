@@ -268,15 +268,16 @@ public class StatementController {
     }
 
     @PostMapping("/bulk-generate-pdf")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
     public ResponseEntity<Map<String, Object>> bulkGeneratePdfs(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(defaultValue = "false") boolean force) {
         Long scid = SecurityUtils.getScid();
         List<Statement> statements = statementRepository.findByDateRangeAndScid(fromDate, toDate, scid);
         int generated = 0;
         for (Statement s : statements) {
-            if (s.getStatementPdfUrl() == null || s.getStatementPdfUrl().isBlank()) {
+            if (force || s.getStatementPdfUrl() == null || s.getStatementPdfUrl().isBlank()) {
                 statementService.generateAndStorePdf(s.getId());
                 generated++;
             }

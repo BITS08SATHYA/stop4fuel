@@ -392,7 +392,14 @@ export const exportStatementsExcel = (fromDate: string, toDate: string, status?:
         });
 };
 
-export const bulkGenerateStatementPdfs = (fromDate: string, toDate: string): Promise<{ generated: number }> =>
-    fetchWithAuth(`${API_BASE_URL}/statements/bulk-generate-pdf?fromDate=${fromDate}&toDate=${toDate}`, {
+export const bulkGenerateStatementPdfs = (
+    fromDate: string,
+    toDate: string,
+    opts?: { force?: boolean }
+): Promise<{ generated: number }> => {
+    const params = new URLSearchParams({ fromDate, toDate });
+    if (opts?.force) params.set('force', 'true');
+    return fetchWithAuth(`${API_BASE_URL}/statements/bulk-generate-pdf?${params}`, {
         method: 'POST'
     }).then(handleResponse);
+};

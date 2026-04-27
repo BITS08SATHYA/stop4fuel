@@ -5,7 +5,8 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { StyledSelect } from "@/components/ui/styled-select";
 import {
     FileText, FileSpreadsheet, Download, CheckCircle2, Loader2,
-    Calendar, IndianRupee, Receipt, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown
+    Calendar, IndianRupee, Receipt, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown,
+    RefreshCw
 } from "lucide-react";
 import {
     getStatements,
@@ -47,6 +48,7 @@ export default function StatementReportsPage() {
     const [loading, setLoading] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
 
     // Sorting
@@ -174,6 +176,29 @@ export default function StatementReportsPage() {
         }
     };
 
+    const handleBulkRefresh = async () => {
+        const count = statements.filter(s => s.statementPdfUrl && s.statementPdfUrl.trim() !== "").length;
+        if (count === 0) {
+            showToast.error("No existing PDFs in this range to refresh");
+            return;
+        }
+        const ok = window.confirm(
+            `Re-render ${count} statement PDF${count === 1 ? "" : "s"} in ${fromDate} → ${toDate} using the latest layout? ` +
+            `This overwrites the stored S3 file. Totals, statement numbers, and bill links are not changed.`
+        );
+        if (!ok) return;
+        setIsRefreshing(true);
+        try {
+            const result = await bulkGenerateStatementPdfs(fromDate, toDate, { force: true });
+            showToast.success(`Refreshed ${result.generated} PDFs`);
+            loadStatements();
+        } catch {
+            showToast.error("Failed to refresh PDFs");
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     const statusBadge = (s: string) => {
         switch (s) {
             case "PAID":
@@ -241,11 +266,20 @@ export default function StatementReportsPage() {
                 <div className="ml-auto flex gap-2">
                     <button
                         onClick={handleBulkGenerate}
-                        disabled={isGenerating}
+                        disabled={isGenerating || isRefreshing}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 transition-colors disabled:opacity-50"
                     >
                         {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
                         Generate All PDFs
+                    </button>
+                    <button
+                        onClick={handleBulkRefresh}
+                        disabled={isGenerating || isRefreshing}
+                        title="Re-render existing PDFs with the latest layout (overwrites S3 file; totals/numbers unchanged)"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 transition-colors disabled:opacity-50"
+                    >
+                        {isRefreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        Refresh Existing PDFs
                     </button>
                     <button
                         onClick={handleExcelDownload}
