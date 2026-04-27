@@ -299,6 +299,11 @@ export const approveShift = (shiftId: number): Promise<Shift> =>
         method: 'POST',
     }).then(handleResponse);
 
+export const generateSyntheticCashInvoices = (shiftId: number): Promise<Shift> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/generate-cash-bills`, {
+        method: 'POST',
+    }).then(handleResponse);
+
 export const reopenShift = (shiftId: number): Promise<Shift> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/reopen`, {
         method: 'POST',

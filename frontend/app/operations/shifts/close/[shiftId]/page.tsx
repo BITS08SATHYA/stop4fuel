@@ -6,6 +6,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import {
     getShiftClosingData,
     submitShiftForReview,
+    generateSyntheticCashInvoices,
     getInvoicesByShift,
     getPaymentsByShift,
     ShiftClosingData,
@@ -35,6 +36,7 @@ import {
     ChevronDown,
     ChevronUp,
     List,
+    ReceiptText,
 } from "lucide-react";
 
 function fmtCur(v?: number | null) {
@@ -69,6 +71,7 @@ export default function ShiftClosingWorkspace() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // Nozzle close readings (keyed by nozzleId)
     const [nozzleCloseReadings, setNozzleCloseReadings] = useState<Record<number, string>>({});
@@ -164,6 +167,21 @@ export default function ShiftClosingWorkspace() {
         const amt = getNozzleAmount(n.nozzleId, n.openMeterReading, n.productPrice);
         return sum + (amt || 0);
     }, 0) || 0;
+
+    const handleGenerateCashBills = async () => {
+        if (!confirm("Generate cash invoices for any unbilled fuel? This is safe to re-run after correcting readings.")) return;
+        try {
+            setIsGenerating(true);
+            await generateSyntheticCashInvoices(shiftId);
+            showToast.success("Synthetic cash invoices regenerated");
+            setInvoices([]);
+            setShowInvoices(true);
+        } catch (err: any) {
+            showToast.error(err?.message || "Failed to generate cash invoices");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     const handleSubmit = async () => {
         if (!data) return;
@@ -725,6 +743,19 @@ export default function ShiftClosingWorkspace() {
 
             {/* Submit Button */}
             <div className="flex justify-end gap-3 pb-8">
+                <button
+                    onClick={handleGenerateCashBills}
+                    disabled={isGenerating || isSubmitting}
+                    className="px-4 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 flex items-center gap-2"
+                    title="Materialise synthetic cash invoices for fuel sales not yet billed (cash + credit). Idempotent — safe to re-run after correcting readings."
+                >
+                    {isGenerating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <ReceiptText className="h-4 w-4" />
+                    )}
+                    Generate Cash Bills
+                </button>
                 <button
                     onClick={() => router.back()}
                     className="px-4 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-accent transition-colors"

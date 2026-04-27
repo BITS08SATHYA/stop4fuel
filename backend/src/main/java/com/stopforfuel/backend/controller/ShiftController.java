@@ -8,7 +8,9 @@ import com.stopforfuel.backend.dto.UserListDTO;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.User;
 import com.stopforfuel.backend.enums.EntityStatus;
+import com.stopforfuel.backend.repository.ShiftRepository;
 import com.stopforfuel.backend.repository.UserRepository;
+import com.stopforfuel.backend.service.ShiftCashInvoiceAutoService;
 import com.stopforfuel.backend.service.ShiftService;
 import com.stopforfuel.config.SecurityUtils;
 import com.stopforfuel.backend.service.ShiftTestDataSeeder;
@@ -28,13 +30,19 @@ public class ShiftController {
     private final ShiftService service;
     private final ShiftTestDataSeeder testDataSeeder;
     private final UserRepository userRepository;
+    private final ShiftCashInvoiceAutoService shiftCashInvoiceAutoService;
+    private final ShiftRepository shiftRepository;
 
     public ShiftController(ShiftService service,
                            @Autowired(required = false) ShiftTestDataSeeder testDataSeeder,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           ShiftCashInvoiceAutoService shiftCashInvoiceAutoService,
+                           ShiftRepository shiftRepository) {
         this.service = service;
         this.testDataSeeder = testDataSeeder;
         this.userRepository = userRepository;
+        this.shiftCashInvoiceAutoService = shiftCashInvoiceAutoService;
+        this.shiftRepository = shiftRepository;
     }
 
     @GetMapping
@@ -99,6 +107,14 @@ public class ShiftController {
     @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
     public ShiftDTO approve(@PathVariable Long id) {
         return ShiftDTO.from(service.approveAndClose(id));
+    }
+
+    @PostMapping("/{id}/generate-cash-bills")
+    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
+    public ShiftDTO generateCashBills(@PathVariable Long id) {
+        shiftCashInvoiceAutoService.generateForShift(id);
+        return ShiftDTO.from(shiftRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shift not found: " + id)));
     }
 
     @PostMapping("/{id}/reopen")
