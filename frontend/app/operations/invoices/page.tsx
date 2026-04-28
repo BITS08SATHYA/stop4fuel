@@ -5,7 +5,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { StyledSelect } from "@/components/ui/styled-select";
 import { useToast } from "@/components/ui/toast";
 import {
-    getInvoices,
+    getInvoiceHistory,
     getInvoicesByShift,
     createInvoice,
     getActiveProducts,
@@ -122,14 +122,14 @@ export default function InvoicesPage() {
             if (mode === "shift" && shiftId) {
                 invData = await getInvoicesByShift(shiftId);
             } else if (mode === "dates" && from && to) {
-                // Use getInvoices with date filtering — falls back to all if no backend search
-                invData = await getInvoices();
-                const fromTs = new Date(from).getTime();
-                const toTs = new Date(to + "T23:59:59").getTime();
-                invData = invData.filter((inv: any) => {
-                    const t = new Date(inv.date).getTime();
-                    return t >= fromTs && t <= toTs;
+                // Server-side date filter via /api/invoices/history (paginated, EntityGraph-fetched).
+                // We pull a generous page so the existing client-side table works unchanged for
+                // typical date ranges; date filter happens in SQL, not after shipping every invoice.
+                const result = await getInvoiceHistory(0, 500, {
+                    fromDate: new Date(from).toISOString(),
+                    toDate: new Date(to + "T23:59:59").toISOString(),
                 });
+                invData = result.content;
             } else {
                 invData = [];
             }

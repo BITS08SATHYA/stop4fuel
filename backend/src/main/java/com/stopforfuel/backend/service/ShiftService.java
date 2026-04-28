@@ -101,7 +101,7 @@ public class ShiftService {
 
     @Transactional(readOnly = true)
     public List<Shift> getAllShifts() {
-        return repository.findAllByScid(SecurityUtils.getScid());
+        return repository.findByScidOrderByIdDesc(SecurityUtils.getScid());
     }
 
     @Transactional

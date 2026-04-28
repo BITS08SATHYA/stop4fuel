@@ -4,6 +4,7 @@ import com.stopforfuel.backend.entity.OperationalAdvance;
 import com.stopforfuel.backend.enums.AdvanceStatus;
 import com.stopforfuel.backend.enums.AdvanceType;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +16,11 @@ import java.util.Optional;
 
 @Repository
 public interface OperationalAdvanceRepository extends ScidRepository<OperationalAdvance> {
+
+    // Eager-load relations touched by OperationalAdvanceDTO so list endpoints avoid N+1 selects.
+    @Override
+    @EntityGraph(attributePaths = {"employee", "statement"})
+    List<OperationalAdvance> findAllByScid(Long scid);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT oa FROM OperationalAdvance oa WHERE oa.id = :id")

@@ -2,6 +2,7 @@ package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.EAdvance;
 import com.stopforfuel.backend.enums.PaymentMode;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,6 +14,11 @@ import java.util.Optional;
 
 @Repository
 public interface EAdvanceRepository extends ScidRepository<EAdvance> {
+    // Eager-load relations touched by EAdvanceDTO so list endpoints avoid N+1 selects.
+    @Override
+    @EntityGraph(attributePaths = {"upiCompany", "invoiceBill", "payment", "statement"})
+    List<EAdvance> findAllByScid(Long scid);
+
     List<EAdvance> findByShiftIdOrderByIdDesc(Long shiftId);
     List<EAdvance> findByAdvanceTypeAndScidOrderByTransactionDateDesc(PaymentMode advanceType, Long scid);
     // shiftId is already tenant-scoped via shift creation

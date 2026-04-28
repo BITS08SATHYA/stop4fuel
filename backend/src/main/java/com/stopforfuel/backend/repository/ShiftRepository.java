@@ -2,6 +2,7 @@ package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.enums.ShiftStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -17,4 +18,9 @@ public interface ShiftRepository extends ScidRepository<Shift> {
     Optional<Shift> findTopByStatusInAndScidOrderByIdDesc(List<ShiftStatus> statuses, Long scid);
 
     List<Shift> findByScidAndStartTimeBetweenOrderByStartTimeAsc(Long scid, LocalDateTime from, LocalDateTime to);
+
+    // Eager-load attendant (+ its EAGER role) so the Shift History page doesn't
+    // do 1 + 2N selects when mapping to ShiftDTO. Used by service.getAllShifts().
+    @EntityGraph(attributePaths = {"attendant", "attendant.role"})
+    List<Shift> findByScidOrderByIdDesc(Long scid);
 }
