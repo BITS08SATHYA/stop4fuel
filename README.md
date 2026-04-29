@@ -61,16 +61,6 @@ Built with a modern stack (Spring Boot + Next.js + Kotlin/Compose), deployed on 
   <img src="docs/screenshots/payment_dash.png" alt="Payment Dashboard" width="90%" />
 </p>
 
-### Shift Closing Report
-<p align="center">
-  <img src="docs/screenshots/shift_register.png" alt="Shift Closing Report" width="90%" />
-</p>
-
-### Credit Management
-<p align="center">
-  <img src="docs/screenshots/credit_overview.png" alt="Credit Overview" width="90%" />
-</p>
-
 ### Invoice Analytics
 <p align="center">
   <img src="docs/screenshots/invoice_analytics.png" alt="Invoice Dashboard" width="90%" />
