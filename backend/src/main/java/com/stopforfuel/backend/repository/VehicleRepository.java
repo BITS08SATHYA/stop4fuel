@@ -29,16 +29,18 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
      * Suggestion-style search used by /api/vehicles/search.
      * Joins customer + vehicleType so the suggestion row can render plate · type · owner
      * without N+1. Excludes INACTIVE — picking an inactive vehicle from a typeahead is a
-     * dead end at submit time. Optional typeName filter (null = any type) keeps the
+     * dead end at submit time. Optional typeName filter ("" = any type) keeps the
      * endpoint generic so future "trucks-only" reuse doesn't need a new query.
-     * search="" sentinel since binding null String inside LOWER() trips Postgres type inference.
+     * search="" / typeName="" sentinels since binding null String inside LOWER() trips
+     * Postgres type inference (planner resolves lower(?) → lower(bytea), throws 42883).
+     * Service layer must coerce null → "" before binding.
      */
     @Query("SELECT v FROM Vehicle v " +
            "LEFT JOIN FETCH v.customer c " +
            "LEFT JOIN FETCH v.vehicleType vt " +
            "WHERE v.status <> com.stopforfuel.backend.enums.EntityStatus.INACTIVE " +
            "  AND (:search = '' OR LOWER(v.vehicleNumber) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "  AND (:typeName IS NULL OR LOWER(vt.typeName) = LOWER(:typeName)) " +
+           "  AND (:typeName = '' OR LOWER(vt.typeName) = LOWER(:typeName)) " +
            "ORDER BY v.vehicleNumber ASC")
     List<Vehicle> findForSuggestion(@Param("search") String search,
                                     @Param("typeName") String typeName);

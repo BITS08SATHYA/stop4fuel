@@ -51,7 +51,10 @@ public class VehicleService {
         if (s.isEmpty()) {
             return List.of();
         }
-        String type = (typeName == null || typeName.trim().isEmpty()) ? null : typeName.trim();
+        // Empty-string sentinel for typeName matches the JPQL `:typeName = ''` no-filter clause.
+        // Cannot bind null inside LOWER() — Postgres resolves lower(?) → lower(bytea) and throws
+        // SQLState 42883. Same fix as f7bfa86 for the :search param on searchPaged.
+        String type = (typeName == null) ? "" : typeName.trim();
         return vehicleRepository.findForSuggestion(s, type);
     }
 
