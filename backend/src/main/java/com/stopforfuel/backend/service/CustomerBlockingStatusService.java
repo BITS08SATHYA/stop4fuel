@@ -3,9 +3,11 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.dto.BlockingStatusResponse;
 import com.stopforfuel.backend.entity.CreditPolicy;
 import com.stopforfuel.backend.entity.Customer;
+import com.stopforfuel.backend.entity.CustomerBlockEvent;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
+import com.stopforfuel.backend.repository.CustomerBlockEventRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
@@ -40,6 +42,7 @@ public class CustomerBlockingStatusService {
     private final InvoiceBillRepository invoiceBillRepository;
     private final StatementRepository statementRepository;
     private final CreditPolicyService creditPolicyService;
+    private final CustomerBlockEventRepository blockEventRepository;
 
     @Transactional(readOnly = true)
     public BlockingStatusResponse evaluate(Long customerId,
@@ -50,9 +53,10 @@ public class CustomerBlockingStatusService {
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
 
         CreditPolicy policy = creditPolicyService.getEffectivePolicy(customer);
+        BlockClassification classification = classifyBlock(customer);
         List<BlockingStatusResponse.Gate> gates = new ArrayList<>();
 
-        gates.add(evaluateCustomerStatus(customer));
+        gates.add(evaluateCustomerStatus(customer, classification));
         gates.add(evaluateCreditAmount(customer, invoiceAmount));
         gates.add(evaluateCreditLiters(customer, invoiceLiters));
         gates.add(evaluateAging(customer, policy));
@@ -63,7 +67,7 @@ public class CustomerBlockingStatusService {
 
         String overall = computeOverall(gates, customer.isForceUnblocked());
         String primaryReason = buildPrimaryReason(gates, customer.isForceUnblocked());
-        String suggestedAction = buildSuggestedAction(gates, customer.isForceUnblocked());
+        String suggestedAction = buildSuggestedAction(gates, customer.isForceUnblocked(), classification);
 
         return BlockingStatusResponse.builder()
                 .customerId(customer.getId())
@@ -78,14 +82,14 @@ public class CustomerBlockingStatusService {
 
     // ─── Gate evaluators ──────────────────────────────────────────
 
-    private BlockingStatusResponse.Gate evaluateCustomerStatus(Customer customer) {
+    private BlockingStatusResponse.Gate evaluateCustomerStatus(Customer customer, BlockClassification classification) {
         EntityStatus status = customer.getStatus();
         String statusName = status != null ? status.name() : "ACTIVE";
         String state;
         String detail;
         if (status == EntityStatus.BLOCKED) {
             state = "FAIL";
-            detail = "Customer is manually or auto-blocked";
+            detail = describeBlockSource(classification);
         } else if (status == EntityStatus.INACTIVE) {
             state = "FAIL";
             detail = "Customer is inactive";
@@ -102,6 +106,14 @@ public class CustomerBlockingStatusService {
                 .detail(detail)
                 .progressPercent(null)
                 .build();
+    }
+
+    private String describeBlockSource(BlockClassification c) {
+        if (c.stickyManual) return "Manually blocked by admin";
+        if ("AUTO_SCHEDULED".equals(c.triggerType)) return "Auto-blocked by daily credit scan";
+        if ("AUTO_INVOICE".equals(c.triggerType)) return "Auto-blocked at invoicing";
+        if ("MANUAL".equals(c.triggerType)) return "Manually blocked by admin";
+        return "Customer is blocked";
     }
 
     private BlockingStatusResponse.Gate evaluateCreditAmount(Customer customer, BigDecimal invoiceAmount) {
@@ -358,7 +370,9 @@ public class CustomerBlockingStatusService {
         return forceUnblocked ? joined + " (force-unblock override active)" : joined;
     }
 
-    private String buildSuggestedAction(List<BlockingStatusResponse.Gate> gates, boolean forceUnblocked) {
+    private String buildSuggestedAction(List<BlockingStatusResponse.Gate> gates,
+                                        boolean forceUnblocked,
+                                        BlockClassification classification) {
         if (forceUnblocked) {
             return "Invoice allowed via force-unblock (owner override)";
         }
@@ -370,7 +384,13 @@ public class CustomerBlockingStatusService {
                             .filter(other -> !"CUSTOMER_STATUS".equals(other.getKey()))
                             .noneMatch(other -> "FAIL".equals(other.getState()));
                     if (otherGatesAllPass) {
-                        return "All credit triggers have cleared — pending auto-unblock. Admin can also click Unblock now.";
+                        if (classification.stickyManual) {
+                            return "Manual block — admin must click Unblock. The system will not auto-unblock manually blocked customers.";
+                        }
+                        if (classification.noCreditLimit) {
+                            return "All credit triggers cleared, but no credit limit is configured — admin must click Unblock.";
+                        }
+                        return "All credit triggers have cleared — pending auto-unblock at the next 6 AM scan. Admin can also click Unblock now.";
                     }
                     return "Admin must unblock the customer before invoicing";
                 case "CREDIT_AMOUNT":
@@ -388,5 +408,46 @@ public class CustomerBlockingStatusService {
             }
         }
         return "No action needed";
+    }
+
+    // ─── Block-source classification ──────────────────────────────
+    //
+    // Mirrors the auto-unblock guard in CreditMonitoringService.tryAutoUnblock:
+    // a MANUAL block is "sticky" only while it is still the latest event in the
+    // audit log. A later UNBLOCKED followed by a non-manual re-block clears the
+    // stickiness. noCreditLimit is the second auto-unblock blocker — without a
+    // credit limit the auto-unblock job refuses to act and an admin must
+    // intervene.
+    private BlockClassification classifyBlock(Customer customer) {
+        if (customer.getStatus() != EntityStatus.BLOCKED) {
+            return new BlockClassification(null, false, false);
+        }
+        boolean noCreditLimit = customer.getCreditLimitAmount() == null
+                || customer.getCreditLimitAmount().compareTo(java.math.BigDecimal.ZERO) <= 0;
+
+        List<CustomerBlockEvent> events = blockEventRepository
+                .findByCustomerIdOrderByCreatedAtDesc(customer.getId());
+        var latestBlocked = events.stream()
+                .filter(e -> "BLOCKED".equals(e.getEventType()))
+                .findFirst();
+        if (latestBlocked.isEmpty()) {
+            return new BlockClassification(null, false, noCreditLimit);
+        }
+        String triggerType = latestBlocked.get().getTriggerType();
+        boolean stickyManual = "MANUAL".equals(triggerType)
+                && !events.isEmpty()
+                && events.get(0).getId().equals(latestBlocked.get().getId());
+        return new BlockClassification(triggerType, stickyManual, noCreditLimit);
+    }
+
+    private static final class BlockClassification {
+        final String triggerType;     // MANUAL | AUTO_SCHEDULED | AUTO_INVOICE | null
+        final boolean stickyManual;   // latest event is a MANUAL BLOCKED — won't auto-unblock
+        final boolean noCreditLimit;  // creditLimitAmount unset — auto-unblock refuses
+        BlockClassification(String triggerType, boolean stickyManual, boolean noCreditLimit) {
+            this.triggerType = triggerType;
+            this.stickyManual = stickyManual;
+            this.noCreditLimit = noCreditLimit;
+        }
     }
 }

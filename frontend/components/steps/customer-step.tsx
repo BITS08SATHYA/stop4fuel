@@ -439,6 +439,25 @@ export function CustomerStep({ data, updateData, errors = {}, clearError }: Cust
                         <option value="BILL_WISE" className="bg-background text-foreground">Bill Wise</option>
                     </select>
                 </div>
+                <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Statement Order
+                    </label>
+                    <input
+                        type="number"
+                        step="1"
+                        value={data.statementOrder ?? ""}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            handleChange("statementOrder", v === "" ? null : parseInt(v, 10));
+                        }}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        placeholder="e.g. 10 (lower = earlier)"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Lower numbers print first when generating bulk statements. Leave blank for unranked. Set to -1 to exclude this customer from auto-generation and bulk PDF.
+                    </p>
+                </div>
             </div>
         </div>
     );

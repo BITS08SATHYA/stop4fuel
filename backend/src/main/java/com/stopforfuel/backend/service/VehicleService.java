@@ -42,10 +42,17 @@ public class VehicleService {
 
     @Transactional(readOnly = true)
     public List<Vehicle> searchVehicles(String query) {
-        if (query == null || query.trim().isEmpty()) {
+        return searchVehicles(query, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Vehicle> searchVehicles(String query, String typeName) {
+        String s = query == null ? "" : query.trim();
+        if (s.isEmpty()) {
             return List.of();
         }
-        return vehicleRepository.findByVehicleNumberContainingIgnoreCaseWithCustomer(query.trim());
+        String type = (typeName == null || typeName.trim().isEmpty()) ? null : typeName.trim();
+        return vehicleRepository.findForSuggestion(s, type);
     }
 
     @Transactional(readOnly = true)

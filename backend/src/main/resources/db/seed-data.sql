@@ -766,12 +766,18 @@ IF (SELECT COUNT(*) FROM role_permissions) = 0 THEN
     END IF;
 
     -- CASHIER role permissions
+    -- Note: PermissionController.patchCashier (admin-triggered) adds a wider set
+    -- at runtime (CUSTOMER_VIEW, PAYMENT_*, FINANCE_VIEW, SHIFT_CREATE/UPDATE, etc).
+    -- The seed below holds only what's needed for /operations/invoices to work
+    -- day-1 in a fresh tenant — VEHICLE_VIEW added so the unified Step-1 search
+    -- (customer + vehicle plate) doesn't 403 before an admin runs the patcher.
     SELECT id INTO v_role_id FROM roles WHERE role_type = 'CASHIER';
     IF v_role_id IS NOT NULL THEN
         FOR v_perm IN SELECT id FROM permissions WHERE code IN (
             'DASHBOARD_VIEW', 'INVOICE_VIEW', 'INVOICE_CREATE',
             'INVENTORY_VIEW', 'SHIFT_VIEW', 'SHIFT_MANAGE',
-            'REPORT_VIEW', 'PRODUCT_VIEW', 'STATION_VIEW'
+            'REPORT_VIEW', 'PRODUCT_VIEW', 'STATION_VIEW',
+            'VEHICLE_VIEW'
         ) LOOP
             INSERT INTO role_permissions (role_id, permission_id) VALUES (v_role_id, v_perm.id);
         END LOOP;

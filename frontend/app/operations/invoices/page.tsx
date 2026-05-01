@@ -100,6 +100,14 @@ export default function InvoicesPage() {
     const [vehicleSearchResults, setVehicleSearchResults] = useState<Vehicle[]>([]);
     const [vehicleSearchTimeout, setVehicleSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
+    // Step-1 unified search: vehicle plate hits run alongside customer name/phone hits.
+    // Lets cashiers find a bus operator by typing the bus number plate (the natural
+    // identifier they get from the driver) — falls into the same code path as picking
+    // the customer manually, just skipping Step 2.
+    const [vehicleSuggestions, setVehicleSuggestions] = useState<Vehicle[]>([]);
+    const [step1SearchTimeout, setStep1SearchTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [vehicleQuickPicked, setVehicleQuickPicked] = useState(false);
+
     // Incentives
     const [incentives, setIncentives] = useState<Incentive[]>([]);
 
@@ -187,14 +195,80 @@ export default function InvoicesPage() {
         loadData();
     }, []);
 
-    // Search customers
-    const searchCustomers = async (val: string) => {
+    // Step-1 unified search: customers (by name/phone) + vehicles (by plate) in parallel.
+    // 300ms debounce so each keystroke doesn't fan out to two endpoints.
+    const searchCustomers = (val: string) => {
         setCustomerSearch(val);
-        if (val.length < 2) { setCustomerSuggestions([]); return; }
-        try {
-            const data = await getCustomers(val);
-            setCustomerSuggestions(data.content || []);
-        } catch (err) { console.error(err); }
+        if (step1SearchTimeout) clearTimeout(step1SearchTimeout);
+        if (val.length < 2) {
+            setCustomerSuggestions([]);
+            setVehicleSuggestions([]);
+            return;
+        }
+        const t = setTimeout(async () => {
+            try {
+                const [custRes, vehRes] = await Promise.all([
+                    getCustomers(val).catch(() => ({ content: [] })),
+                    searchVehicles(val).catch(() => [] as Vehicle[]),
+                ]);
+                setCustomerSuggestions(custRes.content || []);
+                setVehicleSuggestions(vehRes || []);
+            } catch (err) { console.error(err); }
+        }, 300);
+        setStep1SearchTimeout(t);
+    };
+
+    // Picking a vehicle suggestion auto-loads its owning customer (with credit info)
+    // exactly like selectCustomer does, then jumps to Step 3 (skipping the Vehicle step
+    // — same shortcut handleWalkIn uses). Critical: the credit-info merge MUST run, or
+    // every credit-limit gate in getFuelValidationErrors silently returns "no limit"
+    // and cashiers can blow past customer credit caps.
+    const selectVehicleSuggestion = async (v: Vehicle) => {
+        setCustomerSuggestions([]);
+        setVehicleSuggestions([]);
+        setSelectedVehicle(v);
+        setVehicleQuickPicked(true);
+        if (v.customer && v.customer.id) {
+            setCustomerSearch(v.customer.name || v.vehicleNumber);
+            try {
+                const [vehiclesRes, incentivesData, creditInfo] = await Promise.all([
+                    fetchWithAuth(`${API_BASE_URL}/customers/${v.customer.id}/vehicles`),
+                    getIncentivesByCustomer(v.customer.id).catch(() => []),
+                    getCustomerCreditInfo(v.customer.id).catch(() => null),
+                ]);
+                let merged: any = { ...v.customer };
+                if (creditInfo) merged = { ...merged, ...creditInfo };
+                setSelectedCustomer(merged);
+                if (vehiclesRes.ok) {
+                    setCustomerVehicles(await vehiclesRes.json());
+                } else {
+                    setCustomerVehicles([v]);
+                }
+                setIncentives(incentivesData.filter((i: Incentive) => i.active));
+                if (creditInfo) {
+                    const hasCreditLimit = (creditInfo.creditLimitAmount && Number(creditInfo.creditLimitAmount) > 0) ||
+                        (creditInfo.creditLimitLiters && Number(creditInfo.creditLimitLiters) > 0);
+                    if (hasCreditLimit) {
+                        setBillType('CREDIT');
+                    } else {
+                        setBillType('CASH');
+                        setPaymentMode('CASH');
+                    }
+                }
+            } catch (err) { console.error(err); }
+        } else {
+            // Orphan vehicle (no owning customer) — fall through to walk-in CASH semantics
+            // so the wizard still completes. Preserve the plate as the walk-in vehicle no.
+            setIsWalkIn(true);
+            setSelectedCustomer(undefined);
+            setCustomerVehicles([v]);
+            setIncentives([]);
+            setBillType('CASH');
+            setPaymentMode('CASH');
+            setWalkInVehicleNo(v.vehicleNumber || "");
+            setCustomerSearch(v.vehicleNumber || "");
+        }
+        setCurrentStep(3);
     };
 
     // Select customer and load their vehicles + incentives + credit info
@@ -415,6 +489,9 @@ export default function InvoicesPage() {
         setWalkInGST("");
         setVehicleSearchQuery("");
         setVehicleSearchResults([]);
+        setVehicleSuggestions([]);
+        setCustomerSuggestions([]);
+        setVehicleQuickPicked(false);
         setManualDiscount("");
     };
 
@@ -475,7 +552,7 @@ export default function InvoicesPage() {
         (selectedCustomer.creditLimitLiters && Number(selectedCustomer.creditLimitLiters) > 0)
     );
 
-    const stepperSteps = isWalkIn
+    const stepperSteps = (isWalkIn || vehicleQuickPicked)
         ? [
             { step: 1, label: "Customer" },
             { step: 3, label: "Products" },
@@ -516,10 +593,13 @@ export default function InvoicesPage() {
 
     const handleWalkIn = () => {
         setIsWalkIn(true);
+        setVehicleQuickPicked(false);
         setSelectedCustomer(undefined);
         setSelectedVehicle(undefined);
         setCustomerVehicles([]);
         setCustomerSearch("");
+        setCustomerSuggestions([]);
+        setVehicleSuggestions([]);
         setIncentives([]);
         setBillType('CASH');
     };
@@ -551,7 +631,7 @@ export default function InvoicesPage() {
                             </button>
                         ) : (
                             <button
-                                onClick={() => { setIsWalkIn(false); setWalkInCustomerName(""); setWalkInVehicleNo(""); setWalkInGST(""); }}
+                                onClick={() => { setIsWalkIn(false); setVehicleQuickPicked(false); setWalkInCustomerName(""); setWalkInVehicleNo(""); setWalkInGST(""); }}
                                 className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground border border-border rounded-xl transition-colors"
                             >
                                 Cancel
@@ -606,7 +686,7 @@ export default function InvoicesPage() {
 
                 <div className="relative flex items-center gap-4 mb-2">
                     <div className="flex-1 border-t border-border"></div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Or select registered customer</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Or search any customer / vehicle</span>
                     <div className="flex-1 border-t border-border"></div>
                 </div>
 
@@ -614,33 +694,77 @@ export default function InvoicesPage() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
                     <input
                         type="text"
-                        placeholder="Search Customer Name or Phone..."
+                        placeholder="Search by Customer Name, Phone or Vehicle Number..."
                         className="w-full bg-background border border-border rounded-2xl py-4 pl-12 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium text-lg"
                         value={customerSearch}
                         onChange={(e) => searchCustomers(e.target.value)}
                     />
-                    {customerSearch && customerSuggestions.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
-                            {customerSuggestions.map((c: any) => (
-                                <button
-                                    key={c.id}
-                                    className="w-full px-6 py-4 text-left hover:bg-primary/5 text-foreground transition-colors flex items-center justify-between group"
-                                    onClick={() => selectCustomer(c)}
-                                >
-                                    <div>
-                                        <span className="font-bold block group-hover:text-primary transition-colors">{c.name}</span>
-                                        <span className="text-xs text-muted-foreground">{c.phoneNumbers || 'No Phone'}</span>
+                    {customerSearch && (vehicleSuggestions.length > 0 || customerSuggestions.length > 0) && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden max-h-80 overflow-y-auto">
+                            {vehicleSuggestions.length > 0 && (
+                                <>
+                                    <div className="px-4 py-2 text-[9px] font-bold text-muted-foreground uppercase tracking-widest bg-muted/30">
+                                        Vehicles
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {c.status && c.status !== "ACTIVE" && (
-                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                                                c.status === "BLOCKED" ? "bg-red-500/10 text-red-500" : "bg-yellow-500/10 text-yellow-500"
-                                            }`}>{c.status}</span>
-                                        )}
-                                        <Plus size={18} className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all" />
+                                    {vehicleSuggestions.map((v: Vehicle) => (
+                                        <button
+                                            key={`v-${v.id}`}
+                                            className="w-full px-6 py-3 text-left hover:bg-primary/5 text-foreground transition-colors flex items-center justify-between group"
+                                            onClick={() => selectVehicleSuggestion(v)}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <Truck size={16} className="text-muted-foreground shrink-0" />
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-bold font-mono text-sm group-hover:text-primary transition-colors">{v.vehicleNumber}</span>
+                                                        {v.vehicleType?.name && (
+                                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase tracking-wider">
+                                                                {v.vehicleType.name}
+                                                            </span>
+                                                        )}
+                                                        {v.status && v.status !== "ACTIVE" && (
+                                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                                                v.status === "BLOCKED" ? "bg-red-500/10 text-red-500" : "bg-yellow-500/10 text-yellow-500"
+                                                            }`}>{v.status}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs text-muted-foreground truncate block">
+                                                        {v.customer?.name || "Unassigned"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <ArrowRight size={16} className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all shrink-0" />
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                            {customerSuggestions.length > 0 && (
+                                <>
+                                    <div className="px-4 py-2 text-[9px] font-bold text-muted-foreground uppercase tracking-widest bg-muted/30">
+                                        Customers
                                     </div>
-                                </button>
-                            ))}
+                                    {customerSuggestions.map((c: any) => (
+                                        <button
+                                            key={`c-${c.id}`}
+                                            className="w-full px-6 py-3 text-left hover:bg-primary/5 text-foreground transition-colors flex items-center justify-between group"
+                                            onClick={() => selectCustomer(c)}
+                                        >
+                                            <div>
+                                                <span className="font-bold block group-hover:text-primary transition-colors">{c.name}</span>
+                                                <span className="text-xs text-muted-foreground">{c.phoneNumbers || 'No Phone'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {c.status && c.status !== "ACTIVE" && (
+                                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                                        c.status === "BLOCKED" ? "bg-red-500/10 text-red-500" : "bg-yellow-500/10 text-yellow-500"
+                                                    }`}>{c.status}</span>
+                                                )}
+                                                <Plus size={18} className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all" />
+                                            </div>
+                                        </button>
+                                    ))}
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
@@ -679,7 +803,7 @@ export default function InvoicesPage() {
                             <p className="text-sm text-muted-foreground">{selectedCustomer.phoneNumbers}</p>
                         </div>
                         <button
-                            onClick={() => { setSelectedCustomer(undefined); setCustomerSearch(""); setCustomerVehicles([]); setSelectedVehicle(undefined); }}
+                            onClick={() => { setSelectedCustomer(undefined); setCustomerSearch(""); setCustomerVehicles([]); setSelectedVehicle(undefined); setVehicleQuickPicked(false); }}
                             className="text-muted-foreground hover:text-foreground p-2"
                         >
                             <Trash2 size={18} />

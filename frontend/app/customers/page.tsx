@@ -43,6 +43,7 @@ export default function CustomersPage() {
                     gstNumber: formData.gstNumber,
                     statementFrequency: formData.statementFrequency,
                     statementGrouping: formData.statementGrouping,
+                    statementOrder: formData.statementOrder ?? null,
                 }),
             });
             if (res.ok) {

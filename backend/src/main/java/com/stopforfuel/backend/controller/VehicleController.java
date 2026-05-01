@@ -34,8 +34,9 @@ public class VehicleController {
 
     @GetMapping("/search")
     @PreAuthorize("hasPermission(null, 'VEHICLE_VIEW')")
-    public List<VehicleDTO> searchVehicles(@RequestParam String q) {
-        return vehicleService.searchVehicles(q).stream().map(VehicleDTO::from).toList();
+    public List<VehicleDTO> searchVehicles(@RequestParam String q,
+                                           @RequestParam(required = false) String typeName) {
+        return vehicleService.searchVehicles(q, typeName).stream().map(VehicleDTO::from).toList();
     }
 
     @GetMapping("/customer/{customerId}")

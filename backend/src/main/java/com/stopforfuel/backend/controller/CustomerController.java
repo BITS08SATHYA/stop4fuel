@@ -5,6 +5,7 @@ import com.stopforfuel.backend.dto.BlockingStatusResponse;
 import com.stopforfuel.backend.dto.CustomerDetailDTO;
 import com.stopforfuel.backend.dto.CustomerListDTO;
 import com.stopforfuel.backend.dto.CustomerMapDTO;
+import com.stopforfuel.backend.dto.StatementOrderEntry;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.service.CustomerBlockingStatusService;
@@ -52,6 +53,39 @@ public class CustomerController {
         return customerService.getCustomers(search, groupId, status, categoryType, org.springframework.data.domain.PageRequest.of(page, Math.min(size, 1000)))
                 .map(CustomerListDTO::from);
     }
+
+    /**
+     * Bulk statement-order admin page: returns customers eligible for auto-gen sorting.
+     * Same filter as StatementAutoGenerationService.generateDraftsForPeriod.
+     */
+    @GetMapping("/statement-order")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_VIEW')")
+    public List<StatementOrderEntry> getStatementOrderList() {
+        return customerService.getStatementOrderList();
+    }
+
+    /**
+     * Bulk-update statementOrder for many customers in one request. Body shape:
+     * {@code { "updates": [ { "customerId": 1, "statementOrder": 10 }, ... ] } }.
+     * Server validates no duplicate non-negative orders within the scid post-state;
+     * negative values (e.g. -1) are skip sentinels and may repeat.
+     */
+    @PatchMapping("/bulk/statement-order")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
+    public List<StatementOrderEntry> bulkUpdateStatementOrder(@RequestBody BulkStatementOrderRequest request) {
+        java.util.Map<Long, Integer> map = new java.util.LinkedHashMap<>();
+        if (request != null && request.updates() != null) {
+            for (StatementOrderUpdateEntry e : request.updates()) {
+                if (e == null || e.customerId() == null) continue;
+                map.put(e.customerId(), e.statementOrder());
+            }
+        }
+        return customerService.bulkUpdateStatementOrder(map);
+    }
+
+    public record BulkStatementOrderRequest(List<StatementOrderUpdateEntry> updates) {}
+
+    public record StatementOrderUpdateEntry(Long customerId, Integer statementOrder) {}
 
     /** Lightweight endpoint for autocomplete — returns all customers (id, name, phone only). */
     @GetMapping("/autocomplete")

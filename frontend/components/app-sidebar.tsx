@@ -52,6 +52,7 @@ import {
     AlertTriangle,
     Paperclip,
     FileSearch,
+    ListOrdered,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -73,6 +74,7 @@ const customerManagementNav = [
     { name: "Vehicles", href: "/customers/vehicles", icon: Truck },
     { name: "Mappings", href: "/customers/mappings", icon: Map },
     { name: "Incentives", href: "/customers/incentives", icon: Tag },
+    { name: "Statement Order", href: "/customers/statement-order", icon: ListOrdered },
 ];
 
 const employeeManagementNav = [

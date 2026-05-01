@@ -83,10 +83,12 @@ public interface StatementRepository extends ScidRepository<Statement> {
 
     List<Statement> findByCustomerIdAndStatementDateBetween(Long customerId, LocalDate from, LocalDate to);
 
-    @Query("SELECT s FROM Statement s JOIN FETCH s.customer WHERE s.scid = :scid AND s.statementDate BETWEEN :fromDate AND :toDate ORDER BY s.statementDate DESC, s.id DESC")
+    // Negative customer.statementOrder is a skip sentinel — those customers are excluded from
+    // bulk PDF generation as well, matching the auto-gen filter.
+    @Query("SELECT s FROM Statement s JOIN FETCH s.customer c WHERE s.scid = :scid AND s.statementDate BETWEEN :fromDate AND :toDate AND (c.statementOrder IS NULL OR c.statementOrder >= 0) ORDER BY c.statementOrder ASC NULLS LAST, s.statementDate DESC, s.id DESC")
     List<Statement> findByDateRangeAndScid(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate, @Param("scid") Long scid);
 
-    @Query("SELECT s FROM Statement s JOIN FETCH s.customer WHERE s.scid = :scid AND s.statementDate BETWEEN :fromDate AND :toDate AND s.status = :status ORDER BY s.statementDate DESC, s.id DESC")
+    @Query("SELECT s FROM Statement s JOIN FETCH s.customer c WHERE s.scid = :scid AND s.statementDate BETWEEN :fromDate AND :toDate AND s.status = :status AND (c.statementOrder IS NULL OR c.statementOrder >= 0) ORDER BY c.statementOrder ASC NULLS LAST, s.statementDate DESC, s.id DESC")
     List<Statement> findByDateRangeAndStatusAndScid(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate, @Param("status") String status, @Param("scid") Long scid);
 
     // Stats aggregation queries

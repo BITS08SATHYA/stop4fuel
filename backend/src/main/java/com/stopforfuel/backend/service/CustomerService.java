@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.dto.StatementOrderEntry;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.enums.EntityStatus;
@@ -44,6 +45,16 @@ public class CustomerService {
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String categoryType, org.springframework.data.domain.Pageable pageable) {
         String cat = (categoryType != null && !categoryType.isEmpty()) ? categoryType : null;
         EntityStatus statusEnum = (status != null && !status.isEmpty()) ? EntityStatus.valueOf(status) : null;
+        // Default sort: statementOrder ASC NULLS LAST, then name ASC.
+        // Drives /payments/statements processing order via the customer list & autocomplete.
+        if (pageable.getSort().isUnsorted()) {
+            pageable = org.springframework.data.domain.PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    org.springframework.data.domain.Sort.by(
+                            org.springframework.data.domain.Sort.Order.asc("statementOrder").nullsLast(),
+                            org.springframework.data.domain.Sort.Order.asc("name")));
+        }
         if (search != null && !search.isEmpty()) {
             return customerRepository.findBySearchAndFilters(search, groupId, statusEnum, cat, pageable);
         }
@@ -106,6 +117,7 @@ public class CustomerService {
         customer.setLongitude(customerDetails.getLongitude());
         customer.setStatementFrequency(customerDetails.getStatementFrequency());
         customer.setStatementGrouping(customerDetails.getStatementGrouping());
+        customer.setStatementOrder(customerDetails.getStatementOrder());
 
         return customerRepository.save(customer);
     }
@@ -485,5 +497,87 @@ public class CustomerService {
         stats.put("utilization", Math.round(utilization));
 
         return stats;
+    }
+
+    /**
+     * Returns customers eligible for auto-gen statement ordering — i.e. the same set
+     * that {@link com.stopforfuel.backend.service.StatementAutoGenerationService}
+     * iterates over: status=ACTIVE, statementGrouping != BILL_WISE, statementFrequency set.
+     * Sorted by current statementOrder ascending (nulls last) then name.
+     */
+    @Transactional(readOnly = true)
+    public List<StatementOrderEntry> getStatementOrderList() {
+        return customerRepository.findByStatusAndScid(EntityStatus.ACTIVE, SecurityUtils.getScid()).stream()
+                .filter(c -> !"BILL_WISE".equals(c.getStatementGrouping()))
+                .filter(c -> c.getStatementFrequency() != null && !c.getStatementFrequency().isBlank())
+                .sorted(java.util.Comparator
+                        .comparing(Customer::getStatementOrder,
+                                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .thenComparing(c -> c.getName() == null ? "" : c.getName(),
+                                String.CASE_INSENSITIVE_ORDER))
+                .map(StatementOrderEntry::from)
+                .toList();
+    }
+
+    /**
+     * Bulk-updates statementOrder for the given customer ids. Validates that no two
+     * customers within the scid end up with the same non-negative statementOrder
+     * (negative orders are skip sentinels and may repeat). On conflict, throws
+     * BusinessException with conflict details and persists nothing.
+     *
+     * @return updated entries (the same eligible set returned by {@link #getStatementOrderList()})
+     */
+    @Transactional
+    public List<StatementOrderEntry> bulkUpdateStatementOrder(Map<Long, Integer> updates) {
+        if (updates == null || updates.isEmpty()) {
+            return getStatementOrderList();
+        }
+        Long scid = SecurityUtils.getScid();
+        List<Customer> all = customerRepository.findByStatusAndScid(EntityStatus.ACTIVE, scid);
+
+        // Apply updates only to customers that exist in this tenant.
+        Map<Long, Customer> byId = new HashMap<>();
+        for (Customer c : all) byId.put(c.getId(), c);
+
+        List<Long> unknownIds = new java.util.ArrayList<>();
+        for (Long id : updates.keySet()) {
+            if (!byId.containsKey(id)) unknownIds.add(id);
+        }
+        if (!unknownIds.isEmpty()) {
+            throw new BusinessException("Unknown customer ids: " + unknownIds);
+        }
+
+        // Build post-state: existing values overlaid with the payload.
+        Map<Long, Integer> postState = new HashMap<>();
+        for (Customer c : all) postState.put(c.getId(), c.getStatementOrder());
+        postState.putAll(updates);
+
+        // Detect duplicate non-negative orders.
+        Map<Integer, List<Long>> byOrder = new java.util.LinkedHashMap<>();
+        for (var e : postState.entrySet()) {
+            Integer ord = e.getValue();
+            if (ord == null || ord < 0) continue;
+            byOrder.computeIfAbsent(ord, k -> new java.util.ArrayList<>()).add(e.getKey());
+        }
+        List<Map.Entry<Integer, List<Long>>> conflicts = byOrder.entrySet().stream()
+                .filter(en -> en.getValue().size() > 1)
+                .toList();
+        if (!conflicts.isEmpty()) {
+            String detail = conflicts.stream()
+                    .map(en -> "order=" + en.getKey() + " customers=" + en.getValue())
+                    .reduce((a, b) -> a + "; " + b).orElse("");
+            throw new BusinessException("Duplicate statementOrder values: " + detail);
+        }
+
+        // Persist only customers whose order actually changed.
+        for (var e : updates.entrySet()) {
+            Customer c = byId.get(e.getKey());
+            if (!java.util.Objects.equals(c.getStatementOrder(), e.getValue())) {
+                c.setStatementOrder(e.getValue());
+                customerRepository.save(c);
+            }
+        }
+
+        return getStatementOrderList();
     }
 }

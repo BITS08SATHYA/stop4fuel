@@ -37,6 +37,7 @@ interface CustomerDetail {
     ledgerBalance?: number;
     statementGrouping?: string | null;
     statementFrequency?: string | null;
+    statementOrder?: number | null;
     gstNumber?: string | null;
     latitude?: number | string | null;
     longitude?: number | string | null;
@@ -890,6 +891,30 @@ export default function CustomerProfilePage() {
                                     />
                                 ) : (
                                     <span className="text-sm font-medium text-foreground">{customer.statementGrouping?.replace(/_/g, ' ') || "Not set"}</span>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground" title="Lower numbers print first when generating bulk statements. Leave blank for unranked. Set to -1 to exclude this customer from auto-generation and bulk PDF.">Order</span>
+                                {isEditing ? (
+                                    <input
+                                        type="number"
+                                        step="1"
+                                        value={customer.statementOrder ?? ""}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            setCustomer({ ...customer, statementOrder: v === "" ? null : parseInt(v, 10) });
+                                        }}
+                                        placeholder="Not set / -1 to skip"
+                                        className="min-w-[140px] bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                    />
+                                ) : (
+                                    <span className="text-sm font-medium text-foreground">
+                                        {customer.statementOrder == null
+                                            ? "Not set"
+                                            : customer.statementOrder < 0
+                                                ? `${customer.statementOrder} (skipped)`
+                                                : customer.statementOrder}
+                                    </span>
                                 )}
                             </div>
                         </div>

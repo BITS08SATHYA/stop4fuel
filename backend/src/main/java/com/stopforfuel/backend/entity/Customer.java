@@ -70,6 +70,10 @@ public class Customer extends User {
     @Column(name = "statement_grouping", length = 20)
     private String statementGrouping; // CUSTOMER_WISE, VEHICLE_WISE, BILL_WISE
 
+    /** Sort key used by Auto-Generate Drafts and bulk PDF: ascending, nulls last. */
+    @Column(name = "statement_order")
+    private Integer statementOrder;
+
     @OneToMany(mappedBy = "customer")
     @com.fasterxml.jackson.annotation.JsonIgnore
     private java.util.List<Vehicle> vehicles = new java.util.ArrayList<>();

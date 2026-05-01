@@ -27,6 +27,7 @@ export interface Customer {
     phoneNumbers?: string;
     active: boolean;
     statementGrouping?: string;
+    statementOrder?: number | null;
 }
 
 export interface User {
@@ -166,6 +167,29 @@ export interface Incentive {
 export const getCustomersForAutocomplete = (): Promise<any[]> =>
     fetchWithAuth(`${API_BASE_URL}/customers/autocomplete`).then(handleResponse);
 
+// --- Bulk statement-order admin page ---
+export interface StatementOrderEntry {
+    id: number;
+    name: string;
+    groupName: string | null;
+    categoryName: string | null;
+    statementFrequency: string | null;
+    statementGrouping: string | null;
+    statementOrder: number | null;
+}
+
+export const getStatementOrderList = (): Promise<StatementOrderEntry[]> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/statement-order`).then(handleResponse);
+
+export const bulkUpdateStatementOrder = (
+    updates: { customerId: number; statementOrder: number | null }[]
+): Promise<StatementOrderEntry[]> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/bulk/statement-order`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates }),
+    }).then(handleResponse);
+
 // Customers & Vehicles Search
 export const getCustomers = (search?: string, size?: number): Promise<any> => {
     const params = new URLSearchParams();
@@ -184,8 +208,11 @@ export const getVehicles = (search?: string): Promise<Vehicle[]> => {
 export const getVehiclesByCustomer = (customerId: number): Promise<Vehicle[]> =>
     fetchWithAuth(`${API_BASE_URL}/vehicles/customer/${customerId}`).then(handleResponse);
 
-export const searchVehicles = (query: string): Promise<Vehicle[]> =>
-    fetchWithAuth(`${API_BASE_URL}/vehicles/search?q=${encodeURIComponent(query)}`).then(handleResponse);
+export const searchVehicles = (query: string, typeName?: string): Promise<Vehicle[]> => {
+    const params = new URLSearchParams({ q: query });
+    if (typeName) params.set("typeName", typeName);
+    return fetchWithAuth(`${API_BASE_URL}/vehicles/search?${params}`).then(handleResponse);
+};
 
 // Customer Categories
 export const getCustomerCategories = (): Promise<CustomerCategoryType[]> =>

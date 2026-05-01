@@ -119,22 +119,21 @@ public class StatementAutoGenerationService {
 
     /**
      * Generate DRAFT statements for all eligible customers matching the given frequency.
-     * Order: GOVERNMENT first, then NON_GOVERNMENT.
+     * Order: customer.statementOrder ascending (nulls last), then id ascending for stability.
+     * Skip sentinel: any negative statementOrder (e.g. -1) excludes the customer from auto-gen.
      */
     private int generateDraftsForPeriod(LocalDate fromDate, LocalDate toDate, String frequency, Long scid) {
         // Get all active customers with this frequency, excluding BILL_WISE grouping
         List<Customer> customers = customerRepository.findByStatusAndScid(EntityStatus.ACTIVE, scid);
 
-        // Filter by frequency, exclude BILL_WISE, and sort: GOVERNMENT first
         List<Customer> eligible = customers.stream()
                 .filter(c -> frequency.equals(c.getStatementFrequency()))
                 .filter(c -> !"BILL_WISE".equals(c.getStatementGrouping()))
-                .sorted(Comparator.comparing(c -> {
-                    if (c.getCustomerCategory() != null && "GOVERNMENT".equals(c.getCustomerCategory().getCategoryType())) {
-                        return 0;
-                    }
-                    return 1;
-                }))
+                .filter(c -> c.getStatementOrder() == null || c.getStatementOrder() >= 0)
+                .sorted(Comparator
+                        .comparing(Customer::getStatementOrder,
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(Customer::getId))
                 .toList();
 
         int draftsCreated = 0;

@@ -128,7 +128,7 @@ class VehicleControllerTest {
 
     @Test
     void searchVehicles_returnsMatchingVehicles() throws Exception {
-        when(vehicleService.searchVehicles("TN01")).thenReturn(List.of(testVehicle));
+        when(vehicleService.searchVehicles("TN01", null)).thenReturn(List.of(testVehicle));
 
         mockMvc.perform(get("/api/vehicles/search").param("q", "TN01"))
                 .andExpect(status().isOk())
@@ -137,7 +137,7 @@ class VehicleControllerTest {
 
     @Test
     void searchVehicles_emptyResults() throws Exception {
-        when(vehicleService.searchVehicles("XYZ")).thenReturn(List.of());
+        when(vehicleService.searchVehicles("XYZ", null)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/vehicles/search").param("q", "XYZ"))
                 .andExpect(status().isOk())
