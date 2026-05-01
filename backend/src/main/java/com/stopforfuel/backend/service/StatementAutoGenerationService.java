@@ -118,6 +118,42 @@ public class StatementAutoGenerationService {
     }
 
     /**
+     * Manual trigger with caller-supplied date range and frequency selector.
+     * - Both dates null/blank AND frequency null/blank → fall through to the date-deriving overload.
+     * - Otherwise both dates are required; frequency in {MONTHLY, BIWEEKLY, BOTH}; null/blank treated as BOTH.
+     * - Bills are picked via shift-open-time windowing (see InvoiceBillRepository.findUnlinkedCreditBills),
+     *   so callers should usually wait for the last shift in the range to close before running.
+     */
+    @Transactional
+    public int generateDraftsManually(Long scid, LocalDate fromDate, LocalDate toDate, String frequency) {
+        boolean datesEmpty = fromDate == null && toDate == null;
+        boolean freqEmpty = frequency == null || frequency.isBlank();
+        if (datesEmpty && freqEmpty) {
+            return generateDraftsManually(scid);
+        }
+        if (fromDate == null || toDate == null) {
+            throw new IllegalArgumentException("fromDate and toDate must both be supplied (or both omitted)");
+        }
+        if (fromDate.isAfter(toDate)) {
+            throw new IllegalArgumentException("fromDate must be on or before toDate");
+        }
+        String normalized = freqEmpty ? "BOTH" : frequency.trim().toUpperCase();
+        int totalDrafts = 0;
+        if ("MONTHLY".equals(normalized) || "BOTH".equals(normalized)) {
+            totalDrafts += generateDraftsForPeriod(fromDate, toDate, "MONTHLY", scid);
+        }
+        if ("BIWEEKLY".equals(normalized) || "BOTH".equals(normalized)) {
+            totalDrafts += generateDraftsForPeriod(fromDate, toDate, "BIWEEKLY", scid);
+        }
+        if (!"MONTHLY".equals(normalized) && !"BIWEEKLY".equals(normalized) && !"BOTH".equals(normalized)) {
+            throw new IllegalArgumentException("frequency must be MONTHLY, BIWEEKLY, or BOTH; got " + frequency);
+        }
+        log.info("Manual draft generation (custom) {}..{} freq={} → {} drafts created",
+                fromDate, toDate, normalized, totalDrafts);
+        return totalDrafts;
+    }
+
+    /**
      * Generate DRAFT statements for all eligible customers matching the given frequency.
      * Order: customer.statementOrder ascending (nulls last), then id ascending for stability.
      * Skip sentinel: any negative statementOrder (e.g. -1) excludes the customer from auto-gen.

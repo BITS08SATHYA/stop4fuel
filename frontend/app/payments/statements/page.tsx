@@ -349,6 +349,10 @@ export default function StatementsPage() {
 
     const [approvingId, setApprovingId] = useState<number | null>(null);
     const [autoGenerating, setAutoGenerating] = useState(false);
+    const [autoGenPopoverOpen, setAutoGenPopoverOpen] = useState(false);
+    const [autoGenFromDate, setAutoGenFromDate] = useState("");
+    const [autoGenToDate, setAutoGenToDate] = useState("");
+    const [autoGenFreq, setAutoGenFreq] = useState<'MONTHLY' | 'BIWEEKLY' | 'BOTH'>('BOTH');
 
     const handleApprove = async (id: number) => {
         if (!confirm("Approve this draft statement? A PDF will be generated.")) return;
@@ -366,15 +370,31 @@ export default function StatementsPage() {
     };
 
     const handleAutoGenerate = async () => {
-        if (!confirm("Auto-generate draft statements for all eligible customers?")) return;
+        const hasCustom = !!(autoGenFromDate || autoGenToDate);
+        if (hasCustom && (!autoGenFromDate || !autoGenToDate)) {
+            showToast.error("Provide both From and To dates, or leave both empty for the default range.");
+            return;
+        }
+        if (hasCustom && autoGenFromDate > autoGenToDate) {
+            showToast.error("From date must be on or before To date.");
+            return;
+        }
+        const summary = hasCustom
+            ? `Auto-generate ${autoGenFreq} drafts for shifts opened ${autoGenFromDate} → ${autoGenToDate}?`
+            : `Auto-generate draft statements for all eligible customers (default range: previous month MONTHLY + appropriate BIWEEKLY half)?`;
+        if (!confirm(summary)) return;
         setAutoGenerating(true);
         try {
-            const result = await autoGenerateStatementDrafts();
+            const opts = hasCustom
+                ? { fromDate: autoGenFromDate, toDate: autoGenToDate, frequency: autoGenFreq }
+                : undefined;
+            const result = await autoGenerateStatementDrafts(opts);
             if (result.count > 0) {
                 loadStatements();
                 loadStats();
             }
-            showToast.error(`${result.count} draft statement(s) created.`);
+            showToast.success(`${result.count} draft statement(s) created.`);
+            setAutoGenPopoverOpen(false);
         } catch (e: any) {
             setPdfError(e.message || "Failed to auto-generate drafts");
             setTimeout(() => setPdfError(""), 4000);
@@ -545,14 +565,81 @@ export default function StatementsPage() {
                                     <Settings className="w-4 h-4" />
                                 </button>
                             </PermissionGate>
-                            <button
-                                onClick={handleAutoGenerate}
-                                disabled={autoGenerating}
-                                className="px-5 py-3 rounded-xl font-medium flex items-center gap-2 border border-border bg-card hover:bg-muted transition-colors text-foreground disabled:opacity-50"
-                            >
-                                {autoGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                                Auto-Generate Drafts
-                            </button>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setAutoGenPopoverOpen((v) => !v)}
+                                    disabled={autoGenerating}
+                                    className="px-5 py-3 rounded-xl font-medium flex items-center gap-2 border border-border bg-card hover:bg-muted transition-colors text-foreground disabled:opacity-50"
+                                >
+                                    {autoGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                                    Auto-Generate Drafts
+                                </button>
+                                {autoGenPopoverOpen && (
+                                    <div className="absolute right-0 mt-2 w-80 z-30 rounded-xl border border-border bg-popover shadow-xl p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-semibold text-foreground">Auto-Generate Drafts</h4>
+                                            <button
+                                                onClick={() => setAutoGenPopoverOpen(false)}
+                                                className="text-muted-foreground hover:text-foreground text-xs"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground leading-snug">
+                                            Leave dates empty to use defaults: previous month for MONTHLY, current biweekly half for BIWEEKLY. Dates are interpreted as <span className="font-semibold text-foreground">shift opening times</span>.
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">From</label>
+                                                <input
+                                                    type="date"
+                                                    value={autoGenFromDate}
+                                                    onChange={(e) => setAutoGenFromDate(e.target.value)}
+                                                    className="w-full px-2 py-1.5 bg-card border border-border rounded text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">To</label>
+                                                <input
+                                                    type="date"
+                                                    value={autoGenToDate}
+                                                    onChange={(e) => setAutoGenToDate(e.target.value)}
+                                                    className="w-full px-2 py-1.5 bg-card border border-border rounded text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Frequency</label>
+                                            <select
+                                                value={autoGenFreq}
+                                                onChange={(e) => setAutoGenFreq(e.target.value as 'MONTHLY' | 'BIWEEKLY' | 'BOTH')}
+                                                className="w-full px-2 py-1.5 bg-card border border-border rounded text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                            >
+                                                <option value="BOTH">Both (MONTHLY + BIWEEKLY)</option>
+                                                <option value="MONTHLY">MONTHLY only</option>
+                                                <option value="BIWEEKLY">BIWEEKLY only</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex justify-end gap-2 pt-1">
+                                            <button
+                                                onClick={() => { setAutoGenFromDate(""); setAutoGenToDate(""); setAutoGenFreq('BOTH'); }}
+                                                disabled={autoGenerating}
+                                                className="px-3 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground"
+                                            >
+                                                Reset
+                                            </button>
+                                            <button
+                                                onClick={handleAutoGenerate}
+                                                disabled={autoGenerating}
+                                                className="btn-gradient px-4 py-1.5 rounded text-sm font-medium flex items-center gap-1 disabled:opacity-50"
+                                            >
+                                                {autoGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                                                Run
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                             <button
                                 onClick={() => setShowGenerateModal(true)}
                                 className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2"
@@ -935,6 +1022,9 @@ export default function StatementsPage() {
                                 className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
                         </div>
+                        <p className="col-span-2 text-[11px] text-muted-foreground -mt-1">
+                            Includes bills from every shift whose <span className="font-semibold text-foreground">opening time</span> falls in this range. A shift that opens on the To-date and closes the next morning still counts as in-range.
+                        </p>
                     </div>
 
                     {/* Optional Filters */}
@@ -1544,7 +1634,52 @@ export default function StatementsPage() {
                             <div className="rounded-lg border border-border bg-card/50 p-3 text-sm space-y-1">
                                 <div>Last issued: <span className="font-mono font-semibold text-foreground">S-{sequenceData.lastNumber}</span></div>
                                 <div>Next will be: <span className="font-mono font-semibold text-foreground">{sequenceData.nextBillNo}</span></div>
+                                {sequenceData.highestInDb != null && (() => {
+                                    const maxDb = sequenceData.highestInDb;
+                                    const next = sequenceData.nextNumber;
+                                    let pillText = "";
+                                    let pillClass = "";
+                                    if (next === maxDb + 1) {
+                                        pillText = "✓ in sync";
+                                        pillClass = "bg-emerald-500/15 border-emerald-500/40 text-emerald-300";
+                                    } else if (next <= maxDb) {
+                                        pillText = `⚠ behind by ${maxDb - next + 1}`;
+                                        pillClass = "bg-yellow-500/15 border-yellow-500/40 text-yellow-300";
+                                    } else {
+                                        pillText = `gap of ${next - maxDb - 1}`;
+                                        pillClass = "bg-blue-500/15 border-blue-500/40 text-blue-300";
+                                    }
+                                    return (
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span>Highest in DB: <span className="font-mono font-semibold text-foreground">S-{maxDb}</span></span>
+                                            <span className={`text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded border ${pillClass}`}>
+                                                {pillText}
+                                            </span>
+                                        </div>
+                                    );
+                                })()}
+                                {sequenceData.highestInDb == null && (
+                                    <div className="text-muted-foreground text-xs">Highest in DB: <span className="italic">no statements yet</span></div>
+                                )}
                             </div>
+                            {sequenceData.highestInDb != null && sequenceData.nextNumber !== sequenceData.highestInDb + 1 && (
+                                <button
+                                    onClick={() => {
+                                        const target = (sequenceData.highestInDb ?? 0) + 1;
+                                        const jump = Math.abs(target - sequenceData.nextNumber);
+                                        if (jump > 100) {
+                                            const ok = confirm(`Sync will skip ${jump} numbers (${sequenceData.nextBillNo} → S-${target}). Proceed?`);
+                                            if (!ok) return;
+                                        }
+                                        setSequenceInput(String(target));
+                                    }}
+                                    disabled={sequenceSubmitting}
+                                    className="w-full px-3 py-2 rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 text-sm font-medium hover:bg-cyan-500/15 disabled:opacity-50"
+                                    title="Prefill next number with (highest-in-DB + 1)"
+                                >
+                                    Sync to DB → S-{(sequenceData.highestInDb ?? 0) + 1}
+                                </button>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-1">
                                     Set next number

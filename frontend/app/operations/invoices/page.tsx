@@ -99,6 +99,7 @@ export default function InvoicesPage() {
     const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
     const [vehicleSearchResults, setVehicleSearchResults] = useState<Vehicle[]>([]);
     const [vehicleSearchTimeout, setVehicleSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [vehicleSearchError, setVehicleSearchError] = useState<string | null>(null);
 
     // Step-1 unified search: vehicle plate hits run alongside customer name/phone hits.
     // Lets cashiers find a bus operator by typing the bus number plate (the natural
@@ -208,8 +209,8 @@ export default function InvoicesPage() {
         const t = setTimeout(async () => {
             try {
                 const [custRes, vehRes] = await Promise.all([
-                    getCustomers(val).catch(() => ({ content: [] })),
-                    searchVehicles(val).catch(() => [] as Vehicle[]),
+                    getCustomers(val).catch((e) => { console.error("Customer search failed", e); return { content: [] }; }),
+                    searchVehicles(val).catch((e) => { console.error("Vehicle search failed", e); return [] as Vehicle[]; }),
                 ]);
                 setCustomerSuggestions(custRes.content || []);
                 setVehicleSuggestions(vehRes || []);
@@ -312,14 +313,18 @@ export default function InvoicesPage() {
         if (vehicleSearchTimeout) clearTimeout(vehicleSearchTimeout);
         if (query.length < 2) {
             setVehicleSearchResults([]);
+            setVehicleSearchError(null);
             return;
         }
         const timeout = setTimeout(async () => {
             try {
                 const results = await searchVehicles(query);
                 setVehicleSearchResults(results);
-            } catch (err) {
+                setVehicleSearchError(null);
+            } catch (err: any) {
                 console.error("Vehicle search failed", err);
+                setVehicleSearchResults([]);
+                setVehicleSearchError(err?.message || "Search failed — check connection or permissions");
             }
         }, 300);
         setVehicleSearchTimeout(timeout);
@@ -489,6 +494,7 @@ export default function InvoicesPage() {
         setWalkInGST("");
         setVehicleSearchQuery("");
         setVehicleSearchResults([]);
+        setVehicleSearchError(null);
         setVehicleSuggestions([]);
         setCustomerSuggestions([]);
         setVehicleQuickPicked(false);
@@ -847,7 +853,7 @@ export default function InvoicesPage() {
         return (
             <button
                 key={v.id}
-                onClick={() => { selectVehicle(v); setVehicleSearchQuery(""); setVehicleSearchResults([]); }}
+                onClick={() => { selectVehicle(v); setVehicleSearchQuery(""); setVehicleSearchResults([]); setVehicleSearchError(null); }}
                 className={`p-5 rounded-2xl border-2 text-left transition-all ${
                     isSelected
                         ? "border-primary bg-primary/5 shadow-lg"
@@ -931,7 +937,10 @@ export default function InvoicesPage() {
                     </div>
                 )}
 
-                {vehicleSearchQuery.length >= 2 && vehicleSearchResults.length === 0 && (
+                {vehicleSearchQuery.length >= 2 && vehicleSearchError && (
+                    <p className="text-sm text-red-400 mt-3 text-center">⚠ {vehicleSearchError}</p>
+                )}
+                {vehicleSearchQuery.length >= 2 && !vehicleSearchError && vehicleSearchResults.length === 0 && (
                     <p className="text-sm text-muted-foreground mt-3 text-center">No other vehicles found matching &quot;{vehicleSearchQuery}&quot;</p>
                 )}
 

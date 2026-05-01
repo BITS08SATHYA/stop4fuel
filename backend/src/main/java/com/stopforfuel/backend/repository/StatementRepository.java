@@ -23,6 +23,16 @@ public interface StatementRepository extends ScidRepository<Statement> {
     @Query("SELECT s FROM Statement s WHERE s.id = :id")
     Optional<Statement> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
 
+    /**
+     * Highest numeric portion of any well-formed S-NNNNN statement number across all tenants.
+     * Filters via Postgres regex so admin-renamed numbers (e.g. "S-12218A" or "OLDFY/123") are
+     * skipped. Returns null when no matching rows exist. Used by the gear-icon sequence
+     * editor's DB-integrity audit (compares against BillSequence.lastNumber for STMT).
+     */
+    @Query(value = "SELECT MAX(CAST(SUBSTRING(s.statement_no FROM 3) AS INTEGER)) " +
+                   "FROM statement s WHERE s.statement_no ~ '^S-[0-9]+$'", nativeQuery = true)
+    Long findMaxNumericStatementNo();
+
     List<Statement> findByScid(Long scid);
 
     List<Statement> findByCustomerIdAndStatus(Long customerId, String status);

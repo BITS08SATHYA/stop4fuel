@@ -9,12 +9,14 @@ import {
     bulkUpdateStatementOrder,
     StatementOrderEntry,
 } from "@/lib/api/station/customers";
-import { ListOrdered, Save, RotateCcw, AlertTriangle, Search } from "lucide-react";
+import { ListOrdered, Save, RotateCcw, AlertTriangle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Row = StatementOrderEntry & { _draft: number | null };
 
 const FREQS = ["MONTHLY", "BIWEEKLY", "WEEKLY", "CUSTOM"] as const;
 type Freq = typeof FREQS[number];
+
+const PAGE_SIZE = 5;
 
 function compareRows(a: Row, b: Row): number {
     const ao = a._draft;
@@ -33,6 +35,11 @@ export default function StatementOrderPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [search, setSearch] = useState("");
     const [previewFreq, setPreviewFreq] = useState<Freq>("MONTHLY");
+    const [page, setPage] = useState(0);
+
+    useEffect(() => {
+        setPage(0);
+    }, [search]);
 
     const load = async () => {
         setIsLoading(true);
@@ -98,6 +105,10 @@ export default function StatementOrderPage() {
             (r.categoryName || "").toLowerCase().includes(q)
         );
     }, [rows, search]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+    const safePage = Math.min(page, totalPages - 1);
+    const pagedRows = filteredRows.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
     const previewRows = useMemo(() => {
         const eligible = rows.filter((r) => r.statementFrequency === previewFreq);
@@ -258,7 +269,7 @@ export default function StatementOrderPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredRows.map((r, idx) => {
+                                        {pagedRows.map((r, idx) => {
                                             const isDup = r._draft != null && r._draft >= 0 && dupOrders.has(r._draft);
                                             const isSkip = r._draft != null && r._draft < 0;
                                             const isDirty = dirtyIds.has(r.id);
@@ -271,7 +282,7 @@ export default function StatementOrderPage() {
                                                         isSkip ? "bg-red-500/5 opacity-70" : "",
                                                     ].join(" ")}
                                                 >
-                                                    <td className="px-2 py-1.5 text-muted-foreground">{idx + 1}</td>
+                                                    <td className="px-2 py-1.5 text-muted-foreground">{safePage * PAGE_SIZE + idx + 1}</td>
                                                     <td className="px-2 py-1.5 text-foreground font-medium">
                                                         <span className="flex items-center gap-2">
                                                             {r.name}
@@ -320,6 +331,32 @@ export default function StatementOrderPage() {
                                 </table>
                             )}
                         </div>
+                        {filteredRows.length > PAGE_SIZE && (
+                            <div className="flex items-center justify-between mt-3 flex-shrink-0 text-xs text-muted-foreground">
+                                <span>
+                                    Showing {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filteredRows.length)} of {filteredRows.length}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                                        disabled={safePage === 0}
+                                        className="px-2 py-1 rounded border border-white/10 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                        Prev
+                                    </button>
+                                    <span className="text-foreground">Page {safePage + 1} of {totalPages}</span>
+                                    <button
+                                        onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                                        disabled={safePage >= totalPages - 1}
+                                        className="px-2 py-1 rounded border border-white/10 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                                    >
+                                        Next
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </GlassCard>
 
                     {/* Preview */}

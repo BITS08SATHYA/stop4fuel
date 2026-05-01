@@ -55,12 +55,17 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.statement.id = :statementId ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findByStatementId(@Param("statementId") Long statementId);
 
-    // Find unpaid credit bills for a customer in a date range that are not yet linked to a statement
+    // Find unpaid credit bills for a customer in a date range that are not yet linked to a statement.
+    // Window is shift-based: a bill belongs to the period whose Shift.startTime falls between
+    // :fromDate and :toDate. Petrol-station shifts cross midnight, so calendar windowing on
+    // ib.date would split a single shift's bills across two months — the shift IS the
+    // reconciliation unit, so we follow it. Bills with shiftId = null are excluded (they
+    // were created outside the shift workflow and shouldn't be auto-statemented).
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.paymentStatus = 'NOT_PAID' AND ib.independent = false " +
-           "AND ib.date BETWEEN :fromDate AND :toDate " +
+           "AND ib.shiftId IN (SELECT s.id FROM Shift s WHERE s.startTime BETWEEN :fromDate AND :toDate) " +
            "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findUnlinkedCreditBills(
             @Param("customerId") Long customerId,
@@ -72,7 +77,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.paymentStatus = 'NOT_PAID' AND ib.independent = false " +
-           "AND ib.date BETWEEN :fromDate AND :toDate " +
+           "AND ib.shiftId IN (SELECT s.id FROM Shift s WHERE s.startTime BETWEEN :fromDate AND :toDate) " +
            "AND ib.vehicle.id = :vehicleId " +
            "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findUnlinkedCreditBillsByVehicle(
@@ -87,7 +92,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.paymentStatus = 'NOT_PAID' AND ib.independent = false " +
-           "AND ib.date BETWEEN :fromDate AND :toDate " +
+           "AND ib.shiftId IN (SELECT s.id FROM Shift s WHERE s.startTime BETWEEN :fromDate AND :toDate) " +
            "AND ip.product.id = :productId " +
            "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findUnlinkedCreditBillsByProduct(
@@ -102,7 +107,7 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "WHERE ib.customer.id = :customerId " +
            "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
            "AND ib.paymentStatus = 'NOT_PAID' AND ib.independent = false " +
-           "AND ib.date BETWEEN :fromDate AND :toDate " +
+           "AND ib.shiftId IN (SELECT s.id FROM Shift s WHERE s.startTime BETWEEN :fromDate AND :toDate) " +
            "AND ib.vehicle.id = :vehicleId " +
            "AND ip.product.id = :productId " +
            "ORDER BY ib.vehicle.vehicleNumber ASC, ib.date ASC, ib.id ASC")

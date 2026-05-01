@@ -279,9 +279,22 @@ public class StatementController {
 
     @PostMapping("/auto-generate")
     @PreAuthorize("hasPermission(null, 'PAYMENT_CREATE')")
-    public ResponseEntity<Map<String, Integer>> autoGenerate() {
-        int count = statementAutoGenerationService.generateDraftsManually(SecurityUtils.getScid());
+    public ResponseEntity<Map<String, Integer>> autoGenerate(@RequestBody(required = false) AutoGenRequest req) {
+        Long scid = SecurityUtils.getScid();
+        int count = (req == null || req.isEmpty())
+                ? statementAutoGenerationService.generateDraftsManually(scid)
+                : statementAutoGenerationService.generateDraftsManually(scid, req.fromDate(), req.toDate(), req.frequency());
         return ResponseEntity.ok(Map.of("count", count));
+    }
+
+    public record AutoGenRequest(
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate toDate,
+            String frequency
+    ) {
+        public boolean isEmpty() {
+            return fromDate == null && toDate == null && (frequency == null || frequency.isBlank());
+        }
     }
 
     @DeleteMapping("/{id}")

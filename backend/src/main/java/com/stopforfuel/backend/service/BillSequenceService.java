@@ -3,6 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.BillSequence;
 import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.repository.BillSequenceRepository;
+import com.stopforfuel.backend.repository.StatementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import java.util.Map;
 public class BillSequenceService {
 
     private final BillSequenceRepository billSequenceRepository;
+    private final StatementRepository statementRepository;
 
     private static final Map<BillType, String> PREFIX_MAP = Map.of(
             BillType.CASH, "C",
@@ -89,7 +91,8 @@ public class BillSequenceService {
         long next = lastNumber + 1;
         String prefix = PREFIX_MAP.getOrDefault(billType, billType.name().substring(0, 1));
         String formatted = global ? prefix + "-" + next : prefix + fyYear + "/" + next;
-        return new NextBillNoView(lastNumber, next, formatted);
+        Long highestInDb = (billType == BillType.STMT) ? statementRepository.findMaxNumericStatementNo() : null;
+        return new NextBillNoView(lastNumber, next, formatted, highestInDb);
     }
 
     /**
@@ -117,9 +120,14 @@ public class BillSequenceService {
         billSequenceRepository.save(seq);
         String prefix = PREFIX_MAP.getOrDefault(billType, billType.name().substring(0, 1));
         String formatted = global ? prefix + "-" + nextNumber : prefix + fyYear + "/" + nextNumber;
-        return new NextBillNoView(nextNumber - 1, nextNumber, formatted);
+        Long highestInDb = (billType == BillType.STMT) ? statementRepository.findMaxNumericStatementNo() : null;
+        return new NextBillNoView(nextNumber - 1, nextNumber, formatted, highestInDb);
     }
 
-    /** Lightweight view returned by peek/set so the controller has both the raw counter and the formatted next number. */
-    public record NextBillNoView(long lastNumber, long nextNumber, String nextBillNo) {}
+    /**
+     * Lightweight view returned by peek/set. highestInDb is the MAX(numeric portion of statement_no)
+     * for well-formed S-NNNNN rows in the statement table — only populated for BillType.STMT, null
+     * for other types. Lets the gear-icon UI surface drift between the sequence counter and DB reality.
+     */
+    public record NextBillNoView(long lastNumber, long nextNumber, String nextBillNo, Long highestInDb) {}
 }

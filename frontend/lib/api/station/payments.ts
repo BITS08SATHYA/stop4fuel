@@ -227,8 +227,22 @@ export const regenerateStatement = (
     }).then(handleResponse);
 };
 
-export const autoGenerateStatementDrafts = (): Promise<{ count: number }> =>
-    fetchWithAuth(`${API_BASE_URL}/statements/auto-generate`, { method: 'POST' }).then(handleResponse);
+export const autoGenerateStatementDrafts = (
+    opts?: { fromDate?: string; toDate?: string; frequency?: 'MONTHLY' | 'BIWEEKLY' | 'BOTH' }
+): Promise<{ count: number }> => {
+    const body: Record<string, string> = {};
+    if (opts?.fromDate) body.fromDate = opts.fromDate;
+    if (opts?.toDate) body.toDate = opts.toDate;
+    if (opts?.frequency) body.frequency = opts.frequency;
+    const hasBody = Object.keys(body).length > 0;
+    return fetchWithAuth(`${API_BASE_URL}/statements/auto-generate`, {
+        method: 'POST',
+        ...(hasBody && {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        }),
+    }).then(handleResponse);
+};
 
 export const getStatementStats = (): Promise<StatementStats> =>
     fetchWithAuth(`${API_BASE_URL}/statements/stats`).then(handleResponse);
@@ -245,6 +259,7 @@ export interface NextBillNoView {
     lastNumber: number;
     nextNumber: number;
     nextBillNo: string;
+    highestInDb: number | null;
 }
 
 export const getStatementSequence = (): Promise<NextBillNoView> =>
