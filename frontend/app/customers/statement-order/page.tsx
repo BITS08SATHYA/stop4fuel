@@ -171,6 +171,7 @@ export default function StatementOrderPage() {
                         <p className="text-muted-foreground mt-1 text-sm">
                             Set the sequence in which Auto-Generate Drafts and bulk PDF process customers.
                             Lower numbers go first. Use <span className="font-mono text-orange-400">-1</span> to skip a customer.
+                            Blocked customers are shown so you can pre-configure their order — auto-gen still skips them at runtime until they're unblocked.
                         </p>
                     </div>
                     <div className="flex gap-2">
@@ -252,6 +253,7 @@ export default function StatementOrderPage() {
                                             <th className="px-2 py-2">Category</th>
                                             <th className="px-2 py-2">Freq</th>
                                             <th className="px-2 py-2">Grouping</th>
+                                            <th className="px-2 py-2">Status</th>
                                             <th className="px-2 py-2 w-32 text-right">Order</th>
                                         </tr>
                                     </thead>
@@ -282,6 +284,15 @@ export default function StatementOrderPage() {
                                                     <td className="px-2 py-1.5 text-muted-foreground">{r.categoryName || "—"}</td>
                                                     <td className="px-2 py-1.5 text-muted-foreground">{r.statementFrequency || "—"}</td>
                                                     <td className="px-2 py-1.5 text-muted-foreground">{r.statementGrouping?.replace(/_/g, " ") || "—"}</td>
+                                                    <td className="px-2 py-1.5">
+                                                        {r.status === "BLOCKED" ? (
+                                                            <span className="text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">
+                                                                Blocked
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-emerald-300">Active</span>
+                                                        )}
+                                                    </td>
                                                     <td className="px-2 py-1.5 text-right">
                                                         <div className="flex items-center justify-end gap-2">
                                                             {isSkip && (

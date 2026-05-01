@@ -176,6 +176,7 @@ export interface StatementOrderEntry {
     statementFrequency: string | null;
     statementGrouping: string | null;
     statementOrder: number | null;
+    status: string | null; // ACTIVE / BLOCKED
 }
 
 export const getStatementOrderList = (): Promise<StatementOrderEntry[]> =>

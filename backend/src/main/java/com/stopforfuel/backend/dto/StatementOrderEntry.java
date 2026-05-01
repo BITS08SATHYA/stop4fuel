@@ -18,6 +18,7 @@ public class StatementOrderEntry {
     private String statementFrequency;
     private String statementGrouping;
     private Integer statementOrder;
+    private String status; // ACTIVE / BLOCKED — INACTIVE customers are filtered out upstream
 
     public static StatementOrderEntry from(Customer c) {
         return StatementOrderEntry.builder()
@@ -28,6 +29,7 @@ public class StatementOrderEntry {
                 .statementFrequency(c.getStatementFrequency())
                 .statementGrouping(c.getStatementGrouping())
                 .statementOrder(c.getStatementOrder())
+                .status(c.getStatus() != null ? c.getStatus().name() : null)
                 .build();
     }
 }

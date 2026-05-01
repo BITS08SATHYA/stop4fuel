@@ -500,14 +500,19 @@ public class CustomerService {
     }
 
     /**
-     * Returns customers eligible for auto-gen statement ordering — i.e. the same set
-     * that {@link com.stopforfuel.backend.service.StatementAutoGenerationService}
-     * iterates over: status=ACTIVE, statementGrouping != BILL_WISE, statementFrequency set.
+     * Returns customers configured as statement customers (frequency set, grouping
+     * not BILL_WISE) excluding only soft-deleted (INACTIVE) ones. BLOCKED customers
+     * are intentionally included — blocks are usually temporary and the admin still
+     * needs to set their order so it takes effect once they're unblocked.
+     * The auto-gen runtime filter in StatementAutoGenerationService re-checks
+     * status=ACTIVE before actually generating drafts, so BLOCKED rows here are
+     * configuration-only.
      * Sorted by current statementOrder ascending (nulls last) then name.
      */
     @Transactional(readOnly = true)
     public List<StatementOrderEntry> getStatementOrderList() {
-        return customerRepository.findByStatusAndScid(EntityStatus.ACTIVE, SecurityUtils.getScid()).stream()
+        return customerRepository.findAllByScid(SecurityUtils.getScid()).stream()
+                .filter(c -> c.getStatus() != EntityStatus.INACTIVE)
                 .filter(c -> !"BILL_WISE".equals(c.getStatementGrouping()))
                 .filter(c -> c.getStatementFrequency() != null && !c.getStatementFrequency().isBlank())
                 .sorted(java.util.Comparator
@@ -533,7 +538,11 @@ public class CustomerService {
             return getStatementOrderList();
         }
         Long scid = SecurityUtils.getScid();
-        List<Customer> all = customerRepository.findByStatusAndScid(EntityStatus.ACTIVE, scid);
+        // Match the wider set used by getStatementOrderList — BLOCKED customers can
+        // be reordered too. INACTIVE rows are excluded as soft-deleted.
+        List<Customer> all = customerRepository.findAllByScid(scid).stream()
+                .filter(c -> c.getStatus() != EntityStatus.INACTIVE)
+                .toList();
 
         // Apply updates only to customers that exist in this tenant.
         Map<Long, Customer> byId = new HashMap<>();
