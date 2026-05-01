@@ -50,6 +50,7 @@ public class CustomerDetailDTO {
     // Statement preferences
     private String statementFrequency;
     private String statementGrouping;
+    private Integer statementOrder;
 
     // Credit monitoring
     private LocalDateTime lastBlockedAt;
@@ -88,6 +89,7 @@ public class CustomerDetailDTO {
                 .longitude(c.getLongitude())
                 .statementFrequency(c.getStatementFrequency())
                 .statementGrouping(c.getStatementGrouping())
+                .statementOrder(c.getStatementOrder())
                 .lastBlockedAt(c.getLastBlockedAt())
                 .blockCount(c.getBlockCount())
                 .forceUnblocked(c.isForceUnblocked())
