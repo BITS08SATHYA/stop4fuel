@@ -233,6 +233,30 @@ export const autoGenerateStatementDrafts = (): Promise<{ count: number }> =>
 export const getStatementStats = (): Promise<StatementStats> =>
     fetchWithAuth(`${API_BASE_URL}/statements/stats`).then(handleResponse);
 
+// Statement-no rename + sequence config
+export const updateStatementNo = (id: number, statementNo: string): Promise<Statement> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/${id}/statement-no`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statementNo }),
+    }).then(handleResponse);
+
+export interface NextBillNoView {
+    lastNumber: number;
+    nextNumber: number;
+    nextBillNo: string;
+}
+
+export const getStatementSequence = (): Promise<NextBillNoView> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/sequence/peek`).then(handleResponse);
+
+export const setStatementSequence = (nextNumber: number): Promise<NextBillNoView> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/sequence/next`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nextNumber }),
+    }).then(handleResponse);
+
 // Payments
 export const getPayments = (
     page = 0, size = 10, categoryType?: string,

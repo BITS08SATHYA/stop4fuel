@@ -290,6 +290,38 @@ public class StatementService {
     }
 
     /**
+     * Rename a statement's human-readable number (S-XXXXX). Allowed only on DRAFT and
+     * NOT_PAID statements — PAID is frozen because the customer has already received
+     * the document under the original number. Globally unique constraint on
+     * statement_no is enforced both here (friendly 400) and at the DB.
+     */
+    @Transactional
+    public Statement updateStatementNo(Long id, String newNo) {
+        Statement stmt = getStatementById(id);
+        if ("PAID".equals(stmt.getStatus())) {
+            throw new BusinessException("Cannot rename a PAID statement");
+        }
+        if (newNo == null) {
+            throw new BusinessException("Statement number is required");
+        }
+        String trimmed = newNo.trim();
+        if (trimmed.isEmpty()) {
+            throw new BusinessException("Statement number cannot be blank");
+        }
+        if (trimmed.equals(stmt.getStatementNo())) {
+            return stmt; // no-op
+        }
+        // Globally unique — check existing rows.
+        statementRepository.findByStatementNo(trimmed).ifPresent(other -> {
+            if (!Objects.equals(other.getId(), id)) {
+                throw new BusinessException("Statement number already in use: " + trimmed);
+            }
+        });
+        stmt.setStatementNo(trimmed);
+        return statementRepository.save(stmt);
+    }
+
+    /**
      * Preview unlinked credit bills matching the given filters (without creating a statement).
      */
     @Transactional(readOnly = true)

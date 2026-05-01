@@ -11,7 +11,7 @@ import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
     FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight,
-    CheckCircle2, Zap, Pencil, ArrowUpDown, ArrowUp, ArrowDown
+    CheckCircle2, Zap, Pencil, ArrowUpDown, ArrowUp, ArrowDown, Settings, Hash
 } from "lucide-react";
 import {
     getStatements, generateStatement, regenerateStatement, getStatementBills,
@@ -20,8 +20,9 @@ import {
     generateStatementPdf, getStatementPdfUrl, getStatementStats,
     approveStatement, autoGenerateStatementDrafts,
     updateCustomerCreditLimits, updateVehicleLiterLimit,
+    updateStatementNo, getStatementSequence, setStatementSequence,
     type Statement, type InvoiceBill, type Customer, type Vehicle,
-    type Product, type PageResponse, type StatementStats
+    type Product, type PageResponse, type StatementStats, type NextBillNoView
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
 import { showToast } from "@/components/ui/toast";
@@ -80,6 +81,18 @@ export default function StatementsPage() {
     // Edit/Regenerate
     const [editingStatementId, setEditingStatementId] = useState<number | null>(null);
     const [editingStatementNo, setEditingStatementNo] = useState<string>("");
+
+    // Rename statement number (per-row pencil)
+    const [renameTarget, setRenameTarget] = useState<Statement | null>(null);
+    const [renameInput, setRenameInput] = useState("");
+    const [renameSubmitting, setRenameSubmitting] = useState(false);
+
+    // Configure sequence (header gear)
+    const [showSequenceModal, setShowSequenceModal] = useState(false);
+    const [sequenceData, setSequenceData] = useState<NextBillNoView | null>(null);
+    const [sequenceInput, setSequenceInput] = useState("");
+    const [sequenceLoading, setSequenceLoading] = useState(false);
+    const [sequenceSubmitting, setSequenceSubmitting] = useState(false);
 
     // Sort
     const [sortField, setSortField] = useState("statementDate");
@@ -370,6 +383,88 @@ export default function StatementsPage() {
         }
     };
 
+    const openRename = (stmt: Statement) => {
+        setRenameTarget(stmt);
+        setRenameInput(stmt.statementNo || "");
+    };
+
+    const closeRename = () => {
+        setRenameTarget(null);
+        setRenameInput("");
+    };
+
+    const submitRename = async () => {
+        if (!renameTarget) return;
+        const next = renameInput.trim();
+        if (!next) {
+            showToast.error("Statement number cannot be blank");
+            return;
+        }
+        if (next === renameTarget.statementNo) {
+            closeRename();
+            return;
+        }
+        setRenameSubmitting(true);
+        try {
+            await updateStatementNo(renameTarget.id!, next);
+            showToast.success(`Renamed to ${next}`);
+            closeRename();
+            loadStatements();
+        } catch (e: any) {
+            showToast.error(e?.message || "Failed to rename statement");
+        } finally {
+            setRenameSubmitting(false);
+        }
+    };
+
+    const openSequenceModal = async () => {
+        setShowSequenceModal(true);
+        setSequenceLoading(true);
+        try {
+            const data = await getStatementSequence();
+            setSequenceData(data);
+            setSequenceInput(String(data.nextNumber));
+        } catch (e: any) {
+            showToast.error(e?.message || "Failed to load sequence");
+        } finally {
+            setSequenceLoading(false);
+        }
+    };
+
+    const closeSequenceModal = () => {
+        setShowSequenceModal(false);
+        setSequenceData(null);
+        setSequenceInput("");
+    };
+
+    const submitSequence = async () => {
+        const n = Number.parseInt(sequenceInput, 10);
+        if (!Number.isFinite(n) || n < 1) {
+            showToast.error("Next number must be a positive integer");
+            return;
+        }
+        const currentNext = sequenceData?.nextNumber ?? 1;
+        if (n < currentNext) {
+            const ok = confirm(
+                `You're rewinding the sequence from S-${currentNext} to S-${n}.\n` +
+                `If S-${n} (or any number up to S-${currentNext - 1}) already exists, the next ` +
+                `auto-gen will fail with a duplicate-number error.\n\nProceed anyway?`
+            );
+            if (!ok) return;
+        }
+        setSequenceSubmitting(true);
+        try {
+            const updated = await setStatementSequence(n);
+            setSequenceData(updated);
+            showToast.success(`Next statement will be ${updated.nextBillNo}`);
+            closeSequenceModal();
+        } catch (e: any) {
+            showToast.error(e?.message || "Failed to set sequence");
+        } finally {
+            setSequenceSubmitting(false);
+        }
+    };
+
     const handleRemoveBill = async (statementId: number, billId: number) => {
         if (!confirm("Remove this bill from the statement?")) return;
         try {
@@ -441,6 +536,15 @@ export default function StatementsPage() {
                     </div>
                     <PermissionGate permission="PAYMENT_CREATE">
                         <div className="flex items-center gap-3">
+                            <PermissionGate permission="PAYMENT_UPDATE">
+                                <button
+                                    onClick={openSequenceModal}
+                                    title="Configure next statement number (S-XXXX)"
+                                    className="px-3 py-3 rounded-xl border border-border bg-card hover:bg-muted transition-colors text-foreground"
+                                >
+                                    <Settings className="w-4 h-4" />
+                                </button>
+                            </PermissionGate>
                             <button
                                 onClick={handleAutoGenerate}
                                 disabled={autoGenerating}
@@ -560,7 +664,22 @@ export default function StatementsPage() {
                                 ) : (
                                     statements.map((stmt) => (
                                         <tr key={stmt.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                                            <td className="py-3 px-4 font-mono font-semibold">{stmt.statementNo}</td>
+                                            <td className="py-3 px-4 font-mono font-semibold">
+                                                <span className="inline-flex items-center gap-1.5 group">
+                                                    {stmt.statementNo}
+                                                    {stmt.status !== "PAID" && (
+                                                        <PermissionGate permission="PAYMENT_UPDATE">
+                                                            <button
+                                                                onClick={() => openRename(stmt)}
+                                                                title="Rename statement number"
+                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                                                            >
+                                                                <Hash className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                                                            </button>
+                                                        </PermissionGate>
+                                                    )}
+                                                </span>
+                                            </td>
                                             <td className="py-3 px-4">{stmt.customer?.name || "-"}</td>
                                             <td className="py-3 px-4 text-muted-foreground">{stmt.statementDate}</td>
                                             <td className="py-3 px-4 text-right">{stmt.numberOfBills}</td>
@@ -1361,6 +1480,122 @@ export default function StatementsPage() {
                         })()}
                     </div>
                 )}
+            </Modal>
+
+            {/* Rename Statement Number Modal */}
+            <Modal
+                isOpen={renameTarget !== null}
+                onClose={closeRename}
+                title="Rename Statement Number"
+            >
+                <div className="p-6 space-y-4">
+                    <div className="text-sm text-muted-foreground">
+                        Current: <span className="font-mono font-semibold text-foreground">{renameTarget?.statementNo}</span>
+                        {" · "}
+                        Customer: <span className="text-foreground">{renameTarget?.customer?.name || "—"}</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">
+                            New statement number
+                        </label>
+                        <input
+                            type="text"
+                            value={renameInput}
+                            onChange={(e) => setRenameInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") submitRename(); }}
+                            placeholder="e.g. S-13001"
+                            autoFocus
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Globally unique. Server rejects duplicates. PAID statements cannot be renamed.
+                        </p>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button
+                            onClick={closeRename}
+                            disabled={renameSubmitting}
+                            className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={submitRename}
+                            disabled={renameSubmitting || !renameInput.trim()}
+                            className="btn-gradient px-5 py-2 rounded-lg font-medium disabled:opacity-50"
+                        >
+                            {renameSubmitting ? "Saving…" : "Save"}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Configure Sequence Modal */}
+            <Modal
+                isOpen={showSequenceModal}
+                onClose={closeSequenceModal}
+                title="Configure Statement Sequence"
+            >
+                <div className="p-6 space-y-4">
+                    {sequenceLoading || !sequenceData ? (
+                        <div className="text-center py-8 text-muted-foreground">Loading…</div>
+                    ) : (
+                        <>
+                            <div className="rounded-lg border border-border bg-card/50 p-3 text-sm space-y-1">
+                                <div>Last issued: <span className="font-mono font-semibold text-foreground">S-{sequenceData.lastNumber}</span></div>
+                                <div>Next will be: <span className="font-mono font-semibold text-foreground">{sequenceData.nextBillNo}</span></div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                                    Set next number
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={sequenceInput}
+                                    onChange={(e) => setSequenceInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === "Enter") submitSequence(); }}
+                                    autoFocus
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                                />
+                                {(() => {
+                                    const n = Number.parseInt(sequenceInput, 10);
+                                    if (!Number.isFinite(n) || n < 1) {
+                                        return <p className="text-xs text-red-300 mt-1">Must be a positive integer.</p>;
+                                    }
+                                    const rewinding = n < sequenceData.nextNumber;
+                                    return (
+                                        <p className={`text-xs mt-1 ${rewinding ? "text-yellow-300" : "text-muted-foreground"}`}>
+                                            {rewinding && "⚠ "}Next statement will be <span className="font-mono">S-{n}</span>
+                                            {rewinding && " — rewinding may collide with existing numbers"}.
+                                        </p>
+                                    );
+                                })()}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Forward-only by design — existing statement numbers are not renumbered.
+                                Only affects the next Auto-Generate Drafts / Generate Statement run.
+                            </p>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    onClick={closeSequenceModal}
+                                    disabled={sequenceSubmitting}
+                                    className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitSequence}
+                                    disabled={sequenceSubmitting || !sequenceInput.trim()}
+                                    className="btn-gradient px-5 py-2 rounded-lg font-medium disabled:opacity-50"
+                                >
+                                    {sequenceSubmitting ? "Saving…" : "Save"}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </Modal>
         </div>
     );

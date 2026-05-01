@@ -5,7 +5,9 @@ import com.stopforfuel.backend.dto.StatementDTO;
 import com.stopforfuel.backend.dto.StatementStats;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
+import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.repository.StatementRepository;
+import com.stopforfuel.backend.service.BillSequenceService;
 import com.stopforfuel.backend.service.StatementAutoGenerationService;
 import com.stopforfuel.backend.service.StatementExcelService;
 import com.stopforfuel.backend.service.StatementService;
@@ -32,6 +34,7 @@ public class StatementController {
     private final StatementAutoGenerationService statementAutoGenerationService;
     private final StatementExcelService statementExcelService;
     private final StatementRepository statementRepository;
+    private final BillSequenceService billSequenceService;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
@@ -171,6 +174,43 @@ public class StatementController {
         Statement statement = statementService.regenerateStatement(
                 id, fromDate, toDate, vehicleId, productId, billIds, customerId);
         return ResponseEntity.ok(StatementDTO.from(statement));
+    }
+
+    /**
+     * Rename the human-readable statement number (S-XXXXX). Allowed on DRAFT and
+     * NOT_PAID statements only — PAID is frozen because the customer already has the
+     * document under the original number.
+     */
+    @PatchMapping("/{id}/statement-no")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    public StatementDTO renameStatement(@PathVariable Long id,
+                                        @RequestBody Map<String, String> body) {
+        String newNo = body != null ? body.get("statementNo") : null;
+        return StatementDTO.from(statementService.updateStatementNo(id, newNo));
+    }
+
+    /**
+     * Peek the next statement number that Auto-Generate Drafts / Generate Statement
+     * would issue. Read-only — does not consume the sequence.
+     */
+    @GetMapping("/sequence/peek")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    public BillSequenceService.NextBillNoView peekStatementSequence() {
+        return billSequenceService.peekNextBillNo(BillType.STMT);
+    }
+
+    /**
+     * Set the next statement number — admin-controlled sequence reset / fast-forward.
+     * Forward-only by design: existing statement numbers are not renumbered.
+     */
+    @PutMapping("/sequence/next")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    public BillSequenceService.NextBillNoView setStatementSequence(@RequestBody Map<String, Long> body) {
+        Long next = body != null ? body.get("nextNumber") : null;
+        if (next == null) {
+            throw new IllegalArgumentException("nextNumber is required");
+        }
+        return billSequenceService.setNextBillNo(BillType.STMT, next);
     }
 
     /**
