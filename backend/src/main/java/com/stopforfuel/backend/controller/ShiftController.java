@@ -58,6 +58,12 @@ public class ShiftController {
         return active != null ? ShiftDTO.from(active) : null;
     }
 
+    @GetMapping("/postable")
+    @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
+    public List<ShiftDTO> getPostable(@RequestParam(name = "limit", defaultValue = "10") int limit) {
+        return service.getPostableShifts(limit).stream().map(ShiftDTO::from).toList();
+    }
+
     @GetMapping("/cashiers")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
     public List<UserListDTO> getCashiers() {

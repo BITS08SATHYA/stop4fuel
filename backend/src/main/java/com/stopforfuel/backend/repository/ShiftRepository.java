@@ -2,6 +2,7 @@ package com.stopforfuel.backend.repository;
 
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.enums.ShiftStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;
 
@@ -23,4 +24,7 @@ public interface ShiftRepository extends ScidRepository<Shift> {
     // do 1 + 2N selects when mapping to ShiftDTO. Used by service.getAllShifts().
     @EntityGraph(attributePaths = {"attendant", "attendant.role"})
     List<Shift> findByScidOrderByIdDesc(Long scid);
+
+    @EntityGraph(attributePaths = {"attendant", "attendant.role"})
+    List<Shift> findByScidAndStatusInOrderByIdDesc(Long scid, List<ShiftStatus> statuses, Pageable pageable);
 }

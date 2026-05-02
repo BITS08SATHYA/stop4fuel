@@ -27,6 +27,15 @@ import {
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { printInvoice } from "@/lib/invoice-print";
+import { useAuth } from "@/lib/auth/auth-context";
+
+interface PostableShift {
+    id: number;
+    status: string;
+    startTime?: string;
+    endTime?: string | null;
+    attendantName?: string | null;
+}
 
 interface CustomerWithCredit extends Customer {
     creditLimitAmount?: number | null;
@@ -69,6 +78,8 @@ import { PermissionGate } from "@/components/permission-gate";
 
 export default function InvoicesPage() {
     const toast = useToast();
+    const { user } = useAuth();
+    const isShiftPickerAllowed = user?.role === "OWNER" || user?.role === "ADMIN";
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [nozzles, setNozzles] = useState<Nozzle[]>([]);
@@ -79,6 +90,9 @@ export default function InvoicesPage() {
 
     // Shift-scoping
     const [activeShiftId, setActiveShiftId] = useState<number | null>(null);
+    const [postableShifts, setPostableShifts] = useState<PostableShift[]>([]);
+    const [targetShiftId, setTargetShiftId] = useState<number | null>(null);
+    const [showShiftPicker, setShowShiftPicker] = useState(false);
     const [viewMode, setViewMode] = useState<"shift" | "dates">("shift");
     const [historyFromDate, setHistoryFromDate] = useState("");
     const [historyToDate, setHistoryToDate] = useState("");
@@ -195,6 +209,25 @@ export default function InvoicesPage() {
     useEffect(() => {
         loadData();
     }, []);
+
+    // Admin/owner can back-date a new bill to a recent OPEN/REVIEW shift.
+    // Closed/reconciled shifts are intentionally excluded — backend rejects them too.
+    useEffect(() => {
+        if (!isShiftPickerAllowed) return;
+        (async () => {
+            try {
+                const res = await fetchWithAuth(`${API_BASE_URL}/shifts/postable?limit=10`);
+                if (res.ok) setPostableShifts(await res.json());
+            } catch (err) {
+                console.error("Failed to load postable shifts", err);
+            }
+        })();
+    }, [isShiftPickerAllowed]);
+
+    // Default the target shift to the active one as soon as we know it; admin can override.
+    useEffect(() => {
+        if (targetShiftId == null && activeShiftId != null) setTargetShiftId(activeShiftId);
+    }, [activeShiftId, targetShiftId]);
 
     // Step-1 unified search: customers (by name/phone) + vehicles (by plate) in parallel.
     // 300ms debounce so each keystroke doesn't fan out to two endpoints.
@@ -507,6 +540,8 @@ export default function InvoicesPage() {
         try {
             const payload: any = {
                 billType,
+                shiftId: (isShiftPickerAllowed && targetShiftId && targetShiftId !== activeShiftId)
+                    ? targetShiftId : undefined,
                 vehicleKM: vehicleKM ? Number(vehicleKM) : undefined,
                 paymentMode: billType === 'CASH' ? paymentMode : undefined,
                 indentNo: (billType === 'CREDIT' && indentNo) ? indentNo : undefined,
@@ -1572,8 +1607,70 @@ export default function InvoicesPage() {
         </div>
     );
 
+    const formatShiftLabel = (s: PostableShift) => {
+        const dt = s.startTime ? new Date(s.startTime) : null;
+        const date = dt ? dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "—";
+        return `Shift #${s.id} · ${date} · ${s.status}`;
+    };
+
+    const renderShiftTargetPill = () => {
+        const isBackdated = targetShiftId != null && targetShiftId !== activeShiftId;
+        const label = targetShiftId
+            ? `Posting to: Shift #${targetShiftId}${isBackdated ? " (back-dated)" : " (active)"}`
+            : "Posting to: —";
+        return (
+            <div className="mb-6 flex justify-end relative">
+                <button
+                    type="button"
+                    onClick={() => setShowShiftPicker(v => !v)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center gap-2 ${
+                        isBackdated
+                            ? "bg-amber-500/10 border-amber-500/30 text-amber-500"
+                            : "bg-primary/10 border-primary/20 text-primary"
+                    }`}
+                >
+                    {label}
+                    <ArrowRight size={12} className={`transition-transform ${showShiftPicker ? "rotate-90" : ""}`} />
+                </button>
+                {showShiftPicker && (
+                    <div className="absolute top-full right-0 mt-2 bg-background border border-border rounded-xl shadow-2xl z-40 w-80 max-h-80 overflow-y-auto">
+                        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border">
+                            Recent Shifts (OPEN / REVIEW only)
+                        </div>
+                        {postableShifts.length === 0 && (
+                            <div className="px-3 py-3 text-xs text-muted-foreground">No postable shifts.</div>
+                        )}
+                        {postableShifts.map(s => {
+                            const isCurrent = s.id === activeShiftId;
+                            const isSelected = s.id === targetShiftId;
+                            return (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => { setTargetShiftId(s.id); setShowShiftPicker(false); }}
+                                    className={`w-full text-left px-3 py-2 text-sm border-b border-border/50 transition-colors hover:bg-muted/50 ${
+                                        isSelected ? "bg-primary/5 text-primary font-bold" : "text-foreground"
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span>{formatShiftLabel(s)}</span>
+                                        {isCurrent && <span className="text-[9px] uppercase tracking-widest text-green-500">active</span>}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                        <div className="px-3 py-2 text-[10px] text-muted-foreground border-t border-border">
+                            To post to a closed/reconciled shift, reopen it first from its shift report.
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const renderCreateTab = () => (
         <div className="max-w-4xl mx-auto pb-20">
+            {isShiftPickerAllowed && currentStep < 6 && renderShiftTargetPill()}
             {renderStepper()}
             <div className="mt-10">
                 {currentStep === 1 && renderStep1()}

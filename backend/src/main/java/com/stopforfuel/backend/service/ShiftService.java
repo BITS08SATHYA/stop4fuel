@@ -104,6 +104,25 @@ public class ShiftService {
         return repository.findByScidOrderByIdDesc(SecurityUtils.getScid());
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Shift> findById(Long id) {
+        return repository.findById(id);
+    }
+
+    /**
+     * Recent shifts an admin can post a back-dated invoice to: status OPEN or REVIEW only,
+     * since CLOSED/RECONCILED shifts have a finalized closing report and require an explicit
+     * reopen via the shift report page first.
+     */
+    @Transactional(readOnly = true)
+    public List<Shift> getPostableShifts(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+        return repository.findByScidAndStatusInOrderByIdDesc(
+                SecurityUtils.getScid(),
+                List.of(ShiftStatus.OPEN, ShiftStatus.REVIEW),
+                org.springframework.data.domain.PageRequest.of(0, safeLimit));
+    }
+
     @Transactional
     public Shift openShift(Shift shift) {
         repository.findTopByStatusAndScidOrderByIdDesc(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {

@@ -311,13 +311,27 @@ public class InvoiceBillService {
             invoice.setScid(SecurityUtils.getScid());
         }
 
-        // --- Assign active shift ---
+        // --- Assign active shift, or honor an explicit target shift after validation ---
         if (invoice.getShiftId() == null) {
             Shift activeShift = shiftService.getActiveShift();
             if (activeShift == null) {
                 throw new BusinessException("No active shift. Please open a shift before creating an invoice.");
             }
             invoice.setShiftId(activeShift.getId());
+        } else {
+            Long targetShiftId = invoice.getShiftId();
+            Shift targetShift = shiftService.findById(targetShiftId)
+                    .orElseThrow(() -> new BusinessException("Target shift " + targetShiftId + " not found"));
+            if (!java.util.Objects.equals(targetShift.getScid(), SecurityUtils.getScid())) {
+                throw new BusinessException("Target shift does not belong to your company");
+            }
+            com.stopforfuel.backend.enums.ShiftStatus st = targetShift.getStatus();
+            if (st != com.stopforfuel.backend.enums.ShiftStatus.OPEN
+                    && st != com.stopforfuel.backend.enums.ShiftStatus.REVIEW) {
+                throw new BusinessException(
+                        "Cannot post to shift #" + targetShiftId + " — it is " + st +
+                        ". Reopen the shift from its report page first.");
+            }
         }
 
         // --- Generate bill number ---
