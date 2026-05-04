@@ -433,6 +433,62 @@ public class StatementService {
     }
 
     /**
+     * Consolidated customer-wise PDF for VEHICLE_WISE customers. Pulls ALL credit bills for the
+     * customer in the period (regardless of statementGrouping or whether bills are already linked
+     * to per-vehicle statements) and renders one combined preview PDF. Pure read-only — never
+     * touches the DB. Used by the customer detail page's "Download consolidated PDF" button so
+     * the owner can hand a single document to the customer that reflects total April spending,
+     * even though the persisted statements are vehicle-wise.
+     */
+    @Transactional(readOnly = true)
+    public byte[] consolidatedCustomerPdf(Long customerId, LocalDate fromDate, LocalDate toDate) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found with id: " + customerId));
+
+        LocalDateTime fromDateTime = fromDate.atStartOfDay();
+        LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
+
+        List<InvoiceBill> bills = invoiceBillRepository.findCreditBillsByCustomerAndDateRange(
+                customerId, fromDateTime, toDateTime,
+                customer.getScid() != null ? customer.getScid() : SecurityUtils.getScid());
+
+        if (bills.isEmpty()) {
+            throw new BusinessException("No credit bills found for " + customer.getName()
+                    + " between " + fromDate + " and " + toDate);
+        }
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (InvoiceBill bill : bills) {
+            if (bill.getNetAmount() != null) totalAmount = totalAmount.add(bill.getNetAmount());
+        }
+        BigDecimal netAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
+        BigDecimal roundingAmount = netAmount.subtract(totalAmount);
+
+        Statement preview = new Statement();
+        preview.setScid(customer.getScid());
+        preview.setStatementNo("CONSOLIDATED");
+        preview.setCustomer(customer);
+        preview.setFromDate(fromDate);
+        preview.setToDate(toDate);
+        preview.setStatementDate(LocalDate.now());
+        preview.setNumberOfBills(bills.size());
+        preview.setTotalAmount(totalAmount);
+        preview.setRoundingAmount(roundingAmount);
+        preview.setNetAmount(netAmount);
+        preview.setReceivedAmount(BigDecimal.ZERO);
+        preview.setBalanceAmount(netAmount);
+        preview.setStatus("NOT_PAID");
+        List<Long> billIds = bills.stream().map(InvoiceBill::getId).toList();
+        preview.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(billIds));
+
+        List<Company> companies = companyRepository.findByScid(
+                customer.getScid() != null ? customer.getScid() : SecurityUtils.getScid());
+        Company company = !companies.isEmpty() ? companies.get(0) : null;
+
+        return pdfGenerator.generate(preview, bills, company, java.util.Collections.emptyList());
+    }
+
+    /**
      * Build the same statement PDF that {@link #generateStatement} + {@link #generateAndStorePdf}
      * would produce, but never persists a Statement row, never links bills, never uploads to S3,
      * and never consumes a statement-sequence number. Pure read-only — used for the

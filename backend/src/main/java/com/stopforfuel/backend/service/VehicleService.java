@@ -165,6 +165,95 @@ public class VehicleService {
     }
 
     /**
+     * Vehicle list for the inline VEHICLE_WISE order editor on /customers/statement-order.
+     * Returns lightweight maps (id + vehicleNumber + statementOrder) ordered for predictable
+     * rendering. Excludes INACTIVE vehicles.
+     */
+    @Transactional(readOnly = true)
+    public List<java.util.Map<String, Object>> getVehicleStatementOrderList(Long customerId) {
+        return vehicleRepository.findByCustomerIdOrderByStatementOrder(customerId).stream()
+                .filter(v -> v.getStatus() != EntityStatus.INACTIVE)
+                .map(v -> {
+                    java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", v.getId());
+                    m.put("vehicleNumber", v.getVehicleNumber());
+                    m.put("statementOrder", v.getStatementOrder());
+                    m.put("status", v.getStatus() != null ? v.getStatus().name() : null);
+                    return m;
+                })
+                .toList();
+    }
+
+    /**
+     * Bulk-update vehicle statement_order. Validates no duplicate non-negative orders within a
+     * single customer's vehicle set (post-state). Negative values are skip sentinels and may
+     * repeat. On conflict throws BusinessException with details and persists nothing.
+     * Returns the customer's updated vehicle list (same shape as getVehicleStatementOrderList).
+     */
+    @Transactional
+    public List<java.util.Map<String, Object>> bulkUpdateVehicleStatementOrder(java.util.Map<Long, Integer> updates) {
+        if (updates == null || updates.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        List<Vehicle> vehicles = vehicleRepository.findByIdIn(new java.util.ArrayList<>(updates.keySet()));
+        java.util.Map<Long, Vehicle> byId = new java.util.HashMap<>();
+        for (Vehicle v : vehicles) byId.put(v.getId(), v);
+
+        List<Long> unknown = updates.keySet().stream().filter(id -> !byId.containsKey(id)).toList();
+        if (!unknown.isEmpty()) {
+            throw new BusinessException("Unknown vehicle ids: " + unknown);
+        }
+
+        // Group payload vehicles by customer, then check for duplicate non-negative orders
+        // in the post-state for each customer (other vehicles for the same customer that
+        // weren't in the payload retain their existing orders).
+        java.util.Map<Long, List<Vehicle>> byCustomer = new java.util.LinkedHashMap<>();
+        for (Vehicle v : vehicles) {
+            if (v.getCustomer() == null) continue;
+            byCustomer.computeIfAbsent(v.getCustomer().getId(), k -> new java.util.ArrayList<>()).add(v);
+        }
+
+        for (var entry : byCustomer.entrySet()) {
+            Long custId = entry.getKey();
+            List<Vehicle> customerVehiclesAll = vehicleRepository.findByCustomerId(custId);
+            java.util.Map<Long, Integer> postState = new java.util.HashMap<>();
+            for (Vehicle v : customerVehiclesAll) postState.put(v.getId(), v.getStatementOrder());
+            for (var u : updates.entrySet()) {
+                if (postState.containsKey(u.getKey())) postState.put(u.getKey(), u.getValue());
+            }
+            java.util.Map<Integer, List<Long>> byOrder = new java.util.LinkedHashMap<>();
+            for (var ps : postState.entrySet()) {
+                Integer ord = ps.getValue();
+                if (ord == null || ord < 0) continue;
+                byOrder.computeIfAbsent(ord, k -> new java.util.ArrayList<>()).add(ps.getKey());
+            }
+            for (var conflict : byOrder.entrySet()) {
+                if (conflict.getValue().size() > 1) {
+                    throw new BusinessException(
+                            "Duplicate vehicle order " + conflict.getKey() + " within customer "
+                                    + custId + " (vehicles " + conflict.getValue() + ")");
+                }
+            }
+        }
+
+        // Apply
+        for (var u : updates.entrySet()) {
+            Vehicle v = byId.get(u.getKey());
+            v.setStatementOrder(u.getValue());
+            vehicleRepository.save(v);
+        }
+
+        // Return all affected customers' vehicle lists (caller can pick the one it asked about)
+        java.util.Map<Long, java.util.Map<String, Object>> seen = new java.util.LinkedHashMap<>();
+        for (Long custId : byCustomer.keySet()) {
+            for (var row : getVehicleStatementOrderList(custId)) {
+                seen.put((Long) row.get("id"), row);
+            }
+        }
+        return new java.util.ArrayList<>(seen.values());
+    }
+
+    /**
      * Validates that the sum of all vehicle liter limits for a customer
      * does not exceed the customer's creditLimitLiters.
      */

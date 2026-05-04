@@ -270,6 +270,25 @@ public class StatementController {
         return ResponseEntity.ok(Map.of("url", url));
     }
 
+    /**
+     * Consolidated customer-wise PDF for the period — useful when the customer is configured
+     * VEHICLE_WISE but the owner wants a single combined document. Pure read-only: no DB write,
+     * no S3 upload, no statement number consumed. Pulls all credit bills regardless of grouping.
+     */
+    @GetMapping("/customer/{customerId}/consolidated-pdf")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public ResponseEntity<byte[]> consolidatedCustomerPdf(
+            @PathVariable Long customerId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] pdf = statementService.consolidatedCustomerPdf(customerId, fromDate, toDate);
+        String filename = "Consolidated_Statement_" + customerId + "_" + fromDate + "_" + toDate + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+                .body(pdf);
+    }
+
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
     public ResponseEntity<StatementDTO> approve(@PathVariable Long id) {

@@ -247,6 +247,23 @@ export const autoGenerateStatementDrafts = (
 export const getStatementStats = (): Promise<StatementStats> =>
     fetchWithAuth(`${API_BASE_URL}/statements/stats`).then(handleResponse);
 
+// Scheduled auto-gen + override (#4) — fires daily at 02:00 IST, runs only on 1st/16th
+// or on a pinned override date. GET returns the next scheduled date + any override.
+export interface AutoGenNextRun {
+    nextScheduledDate: string;
+    overrideDate: string | null;
+}
+
+export const getAutoGenNextRun = (): Promise<AutoGenNextRun> =>
+    fetchWithAuth(`${API_BASE_URL}/admin/auto-gen/next-run`).then(handleResponse);
+
+export const setAutoGenNextRun = (date: string | null): Promise<AutoGenNextRun> =>
+    fetchWithAuth(`${API_BASE_URL}/admin/auto-gen/next-run`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: date ?? '' }),
+    }).then(handleResponse);
+
 // Statement-no rename + sequence config
 export const updateStatementNo = (id: number, statementNo: string): Promise<Statement> =>
     fetchWithAuth(`${API_BASE_URL}/statements/${id}/statement-no`, {

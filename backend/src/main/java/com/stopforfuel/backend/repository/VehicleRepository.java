@@ -81,5 +81,11 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     List<Vehicle> findByCustomerIsNull();
     List<Vehicle> findByIdIn(List<Long> ids);
 
+    /** Vehicles for a customer in statement-order ASC (nulls last), then id ASC for stability.
+     *  Used by VEHICLE_WISE auto-gen and the inline order UI on /customers/statement-order. */
+    @Query("SELECT v FROM Vehicle v WHERE v.customer.id = :customerId " +
+           "ORDER BY CASE WHEN v.statementOrder IS NULL THEN 1 ELSE 0 END, v.statementOrder ASC, v.id ASC")
+    List<Vehicle> findByCustomerIdOrderByStatementOrder(@Param("customerId") Long customerId);
+
     // Vehicle extends SimpleBaseEntity (no scid field) — use count() instead
 }

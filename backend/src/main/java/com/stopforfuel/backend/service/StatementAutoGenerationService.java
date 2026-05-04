@@ -1,5 +1,7 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.controller.AutoGenSettingsController;
+import com.stopforfuel.backend.entity.ApplicationSetting;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Shift;
@@ -7,12 +9,14 @@ import com.stopforfuel.backend.entity.Statement;
 import com.stopforfuel.backend.entity.Vehicle;
 import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.enums.EntityStatus;
+import com.stopforfuel.backend.repository.ApplicationSettingRepository;
 import com.stopforfuel.backend.repository.CustomerRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.backend.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +29,7 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +41,7 @@ public class StatementAutoGenerationService {
     private final StatementRepository statementRepository;
     private final VehicleRepository vehicleRepository;
     private final BillSequenceService billSequenceService;
+    private final ApplicationSettingRepository applicationSettingRepository;
 
     /**
      * Called from ShiftService.approveAndClose() after a shift is closed.
@@ -87,6 +93,66 @@ public class StatementAutoGenerationService {
         }
 
         return totalDrafts;
+    }
+
+    /**
+     * Scheduled auto-generation. Fires daily at 02:00 IST. Today's behaviour depends on the
+     * date and the optional next-run override:
+     *   - If override is set and matches today: fire for "current" period (monthly + biweekly
+     *     for the period containing today.minus(1)) and clear the override.
+     *   - Else if today is the 1st: previous month MONTHLY + BIWEEKLY second-half.
+     *   - Else if today is the 16th: current month BIWEEKLY first-half.
+     *   - Else: skip.
+     * Iterates per-tenant via the distinct scid set on customer.
+     */
+    @Scheduled(cron = "0 0 2 * * ?")  // every day at 02:00 server-local
+    @Transactional
+    public void runScheduledAutoGen() {
+        LocalDate today = LocalDate.now();
+        Optional<ApplicationSetting> override = applicationSettingRepository
+                .findById(AutoGenSettingsController.NEXT_RUN_OVERRIDE_KEY);
+        boolean overrideMatchesToday = override.isPresent()
+                && today.toString().equals(override.get().getValue());
+
+        if (!overrideMatchesToday && today.getDayOfMonth() != 1 && today.getDayOfMonth() != 16) {
+            return;
+        }
+
+        // Per-tenant: enumerate distinct scids from existing customers (matches the per-scid
+        // pattern used elsewhere; cheap because customer table is small).
+        java.util.Set<Long> scids = customerRepository.findAll().stream()
+                .map(Customer::getScid)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+
+        log.info("runScheduledAutoGen: today={} override={} scids={}",
+                today, override.map(ApplicationSetting::getValue).orElse("none"), scids.size());
+
+        for (Long scid : scids) {
+            try {
+                if (overrideMatchesToday) {
+                    // Treat override as "fire monthly+biweekly for last completed period".
+                    YearMonth pm = YearMonth.from(today).minusMonths(1);
+                    generateDraftsForPeriod(pm.atDay(1), pm.atEndOfMonth(), "MONTHLY", scid);
+                    generateDraftsForPeriod(pm.atDay(16), pm.atEndOfMonth(), "BIWEEKLY", scid);
+                } else if (today.getDayOfMonth() == 1) {
+                    YearMonth pm = YearMonth.from(today).minusMonths(1);
+                    generateDraftsForPeriod(pm.atDay(1), pm.atEndOfMonth(), "MONTHLY", scid);
+                    generateDraftsForPeriod(pm.atDay(16), pm.atEndOfMonth(), "BIWEEKLY", scid);
+                } else if (today.getDayOfMonth() == 16) {
+                    YearMonth cm = YearMonth.from(today);
+                    generateDraftsForPeriod(cm.atDay(1), cm.atDay(15), "BIWEEKLY", scid);
+                }
+            } catch (Exception e) {
+                log.error("runScheduledAutoGen failed for scid {}: {}", scid, e.getMessage(), e);
+            }
+        }
+
+        // Consume override if it matched (regardless of per-tenant errors).
+        if (overrideMatchesToday) {
+            applicationSettingRepository.deleteById(AutoGenSettingsController.NEXT_RUN_OVERRIDE_KEY);
+            log.info("runScheduledAutoGen: cleared next-run override after firing");
+        }
     }
 
     /**
@@ -159,10 +225,15 @@ public class StatementAutoGenerationService {
      * Skip sentinel: any negative statementOrder (e.g. -1) excludes the customer from auto-gen.
      */
     private int generateDraftsForPeriod(LocalDate fromDate, LocalDate toDate, String frequency, Long scid) {
-        // Get all active customers with this frequency, excluding BILL_WISE grouping
-        List<Customer> customers = customerRepository.findByStatusAndScid(EntityStatus.ACTIVE, scid);
+        // Get all customers (active + blocked) with this frequency, excluding BILL_WISE grouping.
+        // Blocked customers still need DRAFT statements created — the bills are real outstanding
+        // amounts, the customer is just temporarily ungated for new sales. Delivery flows gate on
+        // status separately. Soft-deleted (INACTIVE) customers are excluded. Mirrors the same
+        // filter used by the /customers/statement-order list query.
+        List<Customer> customers = customerRepository.findAllByScid(scid);
 
         List<Customer> eligible = customers.stream()
+                .filter(c -> c.getStatus() != EntityStatus.INACTIVE)
                 .filter(c -> frequency.equals(c.getStatementFrequency()))
                 .filter(c -> !"BILL_WISE".equals(c.getStatementGrouping()))
                 .filter(c -> c.getStatementOrder() == null || c.getStatementOrder() >= 0)
@@ -215,7 +286,13 @@ public class StatementAutoGenerationService {
     }
 
     private int generateVehicleWiseDrafts(Customer customer, LocalDate fromDate, LocalDate toDate) {
-        List<Vehicle> vehicles = vehicleRepository.findByCustomerId(customer.getId());
+        // Order by vehicle.statementOrder ASC nulls last so admins can control the per-vehicle
+        // statement creation sequence (set inline on /customers/statement-order). Vehicles with
+        // statementOrder = -1 are skip-sentinels and excluded — same semantics as customer.
+        List<Vehicle> vehicles = vehicleRepository.findByCustomerIdOrderByStatementOrder(customer.getId())
+                .stream()
+                .filter(v -> v.getStatementOrder() == null || v.getStatementOrder() >= 0)
+                .toList();
         int draftsCreated = 0;
 
         LocalDateTime fromDateTime = fromDate.atStartOfDay();

@@ -19,6 +19,7 @@ import {
     getVehiclesByCustomer, getProducts, previewStatementBills, previewStatementPdf,
     generateStatementPdf, getStatementPdfUrl, getStatementStats,
     approveStatement, autoGenerateStatementDrafts,
+    getAutoGenNextRun, setAutoGenNextRun,
     updateCustomerCreditLimits, updateVehicleLiterLimit,
     updateStatementNo, getStatementSequence, setStatementSequence,
     type Statement, type InvoiceBill, type Customer, type Vehicle,
@@ -353,6 +354,53 @@ export default function StatementsPage() {
     const [autoGenFromDate, setAutoGenFromDate] = useState("");
     const [autoGenToDate, setAutoGenToDate] = useState("");
     const [autoGenFreq, setAutoGenFreq] = useState<'MONTHLY' | 'BIWEEKLY' | 'BOTH'>('BOTH');
+    // #4 — scheduled auto-gen + override
+    const [nextRunInfo, setNextRunInfo] = useState<{ nextScheduledDate: string; overrideDate: string | null } | null>(null);
+    const [overrideDateInput, setOverrideDateInput] = useState<string>("");
+    const [savingNextRun, setSavingNextRun] = useState(false);
+
+    const loadNextRunInfo = async () => {
+        try {
+            const info = await getAutoGenNextRun();
+            setNextRunInfo(info);
+            if (info.overrideDate) setOverrideDateInput(info.overrideDate);
+        } catch (e) {
+            console.error("Failed to load auto-gen next run", e);
+        }
+    };
+
+    useEffect(() => {
+        if (autoGenPopoverOpen) loadNextRunInfo();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [autoGenPopoverOpen]);
+
+    const savePinnedDate = async () => {
+        if (!overrideDateInput) return;
+        setSavingNextRun(true);
+        try {
+            const updated = await setAutoGenNextRun(overrideDateInput);
+            setNextRunInfo(updated);
+            showToast.success(`Next run pinned to ${overrideDateInput}`);
+        } catch (e: any) {
+            showToast.error(e?.message || "Failed to pin date");
+        } finally {
+            setSavingNextRun(false);
+        }
+    };
+
+    const clearPinnedDate = async () => {
+        setSavingNextRun(true);
+        try {
+            const updated = await setAutoGenNextRun(null);
+            setNextRunInfo(updated);
+            setOverrideDateInput("");
+            showToast.success("Override cleared");
+        } catch (e: any) {
+            showToast.error(e?.message || "Failed to clear override");
+        } finally {
+            setSavingNextRun(false);
+        }
+    };
 
     const handleApprove = async (id: number) => {
         if (!confirm("Approve this draft statement? A PDF will be generated.")) return;
@@ -636,6 +684,43 @@ export default function StatementsPage() {
                                                 {autoGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
                                                 Run
                                             </button>
+                                        </div>
+
+                                        {/* Scheduled run + override (#4) */}
+                                        <div className="pt-3 mt-3 border-t border-border">
+                                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Scheduled run</div>
+                                            <div className="text-xs text-foreground">
+                                                Auto-fires on the 1st & 16th at 02:00 IST. Next: <span className="font-semibold">{nextRunInfo?.nextScheduledDate ?? "—"}</span>
+                                            </div>
+                                            {nextRunInfo?.overrideDate && (
+                                                <div className="text-xs text-amber-500 mt-0.5">
+                                                    Override pinned: <span className="font-semibold">{nextRunInfo.overrideDate}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <input
+                                                    type="date"
+                                                    value={overrideDateInput}
+                                                    onChange={(e) => setOverrideDateInput(e.target.value)}
+                                                    className="flex-1 px-2 py-1 bg-card border border-border rounded text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                />
+                                                <button
+                                                    onClick={savePinnedDate}
+                                                    disabled={!overrideDateInput || savingNextRun}
+                                                    className="px-3 py-1 rounded text-xs font-medium bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors disabled:opacity-50"
+                                                >
+                                                    {savingNextRun ? "…" : "Pin"}
+                                                </button>
+                                                {nextRunInfo?.overrideDate && (
+                                                    <button
+                                                        onClick={clearPinnedDate}
+                                                        disabled={savingNextRun}
+                                                        className="px-3 py-1 rounded text-xs font-medium text-muted-foreground border border-border hover:bg-muted transition-colors disabled:opacity-50"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )}

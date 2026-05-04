@@ -191,6 +191,26 @@ export const bulkUpdateStatementOrder = (
         body: JSON.stringify({ updates }),
     }).then(handleResponse);
 
+// --- Per-vehicle statement order (inline on statement-order page for VEHICLE_WISE customers) ---
+export interface VehicleStatementOrderEntry {
+    id: number;
+    vehicleNumber: string;
+    statementOrder: number | null;
+    status: string | null;
+}
+
+export const getVehicleStatementOrderList = (customerId: number): Promise<VehicleStatementOrderEntry[]> =>
+    fetchWithAuth(`${API_BASE_URL}/vehicles/customer/${customerId}/statement-order`).then(handleResponse);
+
+export const bulkUpdateVehicleStatementOrder = (
+    updates: { vehicleId: number; statementOrder: number | null }[]
+): Promise<VehicleStatementOrderEntry[]> =>
+    fetchWithAuth(`${API_BASE_URL}/vehicles/bulk/statement-order`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates }),
+    }).then(handleResponse);
+
 // Customers & Vehicles Search
 export const getCustomers = (search?: string, size?: number): Promise<any> => {
     const params = new URLSearchParams();

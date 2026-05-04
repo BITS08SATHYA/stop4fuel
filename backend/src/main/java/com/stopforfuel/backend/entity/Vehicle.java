@@ -54,6 +54,11 @@ public class Vehicle extends SimpleBaseEntity {
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Customer customer;
 
+    /** Sort order for VEHICLE_WISE auto-gen. NULL = unranked (sorts last). -1 = skip sentinel
+     * (matches customer.statementOrder semantics). */
+    @Column(name = "statement_order")
+    private Integer statementOrder;
+
     // Convenience methods
     @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     public boolean isActive() {

@@ -108,6 +108,40 @@ export default function CustomerProfilePage() {
     });
     const [vehicleError, setVehicleError] = useState("");
 
+    // #5 Consolidated statement PDF (read-only download for VEHICLE_WISE customers)
+    const [showConsolidatedPicker, setShowConsolidatedPicker] = useState(false);
+    const [consolidatedFrom, setConsolidatedFrom] = useState("");
+    const [consolidatedTo, setConsolidatedTo] = useState("");
+    const [downloadingConsolidated, setDownloadingConsolidated] = useState(false);
+
+    const downloadConsolidatedPdf = async () => {
+        if (!consolidatedFrom || !consolidatedTo || !customer) return;
+        setDownloadingConsolidated(true);
+        try {
+            const url = `${API}/statements/customer/${customer.id}/consolidated-pdf?fromDate=${consolidatedFrom}&toDate=${consolidatedTo}`;
+            const res = await fetchWithAuth(url);
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || `HTTP ${res.status}`);
+            }
+            const blob = await res.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobUrl;
+            const safeName = (customer.name || "customer").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+            a.download = `consolidated-${safeName}-${consolidatedFrom}-to-${consolidatedTo}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(blobUrl);
+            setShowConsolidatedPicker(false);
+        } catch (e: any) {
+            showToast.error(e?.message || "Failed to download PDF");
+        } finally {
+            setDownloadingConsolidated(false);
+        }
+    };
+
     const fetchData = async () => {
         try {
             const [customerRes, vehiclesRes, limitsRes] = await Promise.all([
@@ -933,7 +967,7 @@ export default function CustomerProfilePage() {
                             </p>
                         )}
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 items-start">
                         <button
                             onClick={() => {
                                 const link = document.createElement("a");
@@ -947,6 +981,59 @@ export default function CustomerProfilePage() {
                             <Download className="w-4 h-4" />
                             Vehicle Report
                         </button>
+                        <PermissionGate permission="PAYMENT_VIEW">
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowConsolidatedPicker(v => !v)}
+                                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 transition-colors flex items-center gap-2"
+                                    title="Combined customer-wise PDF for VEHICLE_WISE customers — not saved as a statement"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Consolidated PDF
+                                </button>
+                                {showConsolidatedPicker && (
+                                    <div className="absolute right-0 mt-2 w-72 z-30 rounded-xl border border-border bg-popover shadow-xl p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-semibold text-foreground">Consolidated Statement PDF</h4>
+                                            <button onClick={() => setShowConsolidatedPicker(false)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground leading-snug">
+                                            Combined customer-wise PDF across all vehicles in the period. Read-only — no statement is created.
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">From</label>
+                                                <input
+                                                    type="date"
+                                                    value={consolidatedFrom}
+                                                    onChange={(e) => setConsolidatedFrom(e.target.value)}
+                                                    className="w-full px-2 py-1.5 bg-card border border-border rounded text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">To</label>
+                                                <input
+                                                    type="date"
+                                                    value={consolidatedTo}
+                                                    onChange={(e) => setConsolidatedTo(e.target.value)}
+                                                    className="w-full px-2 py-1.5 bg-card border border-border rounded text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <button
+                                                onClick={downloadConsolidatedPdf}
+                                                disabled={!consolidatedFrom || !consolidatedTo || downloadingConsolidated}
+                                                className="btn-gradient px-4 py-1.5 rounded text-sm font-medium flex items-center gap-1 disabled:opacity-50"
+                                            >
+                                                <Download className="w-3.5 h-3.5" />
+                                                {downloadingConsolidated ? "Building…" : "Download"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </PermissionGate>
                         <button
                             onClick={() => { setShowAddVehicle(true); setVehicleError(""); }}
                             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
