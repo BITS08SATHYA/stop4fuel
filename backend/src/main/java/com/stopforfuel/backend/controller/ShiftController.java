@@ -64,6 +64,12 @@ public class ShiftController {
         return service.getPostableShifts(limit).stream().map(ShiftDTO::from).toList();
     }
 
+    @GetMapping("/movable")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    public List<ShiftDTO> getMovable(@RequestParam(name = "limit", defaultValue = "20") int limit) {
+        return service.getMovableShifts(limit).stream().map(ShiftDTO::from).toList();
+    }
+
     @GetMapping("/cashiers")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
     public List<UserListDTO> getCashiers() {

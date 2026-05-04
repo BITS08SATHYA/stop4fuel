@@ -244,6 +244,16 @@ export const finalizeShiftReport = (reportId: number, finalizedBy?: string): Pro
 export const recomputeShiftReport = (reportId: number): Promise<ShiftClosingReport> =>
     fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/recompute`, { method: 'POST' }).then(handleResponse);
 
+export const unfinalizeShiftReport = (reportId: number, performedBy?: string): Promise<ShiftClosingReport> =>
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/unfinalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ performedBy }),
+    }).then(handleResponse);
+
+export const getMovableShifts = (limit = 20): Promise<Shift[]> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/movable?limit=${limit}`).then(handleResponse);
+
 export const getReportAuditLog = (reportId: number): Promise<ReportAuditLog[]> =>
     fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/audit-log`).then(handleResponse);
 

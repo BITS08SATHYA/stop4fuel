@@ -71,6 +71,14 @@ public class ShiftClosingReportController {
         return reportService.finalizeReport(reportId, finalizedBy);
     }
 
+    @PostMapping("/{reportId}/unfinalize")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    public ShiftClosingReport unfinalizeReport(@PathVariable Long reportId,
+                                               @RequestBody(required = false) Map<String, String> body) {
+        String performedBy = body != null ? body.get("performedBy") : null;
+        return reportService.unfinalizeReport(reportId, performedBy);
+    }
+
     @PostMapping("/{reportId}/recompute")
     @PreAuthorize("hasPermission(null, 'REPORT_GENERATE')")
     public ShiftClosingReport recomputeReport(@PathVariable Long reportId) {

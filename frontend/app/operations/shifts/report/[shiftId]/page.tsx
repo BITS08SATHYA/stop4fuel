@@ -10,6 +10,7 @@ import {
     editReportLineItem,
     finalizeShiftReport,
     recomputeShiftReport,
+    unfinalizeShiftReport,
     getReportAuditLog,
     transferReportEntry,
     getAllShiftReports,
@@ -20,11 +21,13 @@ import {
     ReportAuditLog,
     ShiftReportPrintData,
 } from "@/lib/api/station";
+import { useAuth } from "@/lib/auth/auth-context";
 import { showToast } from "@/components/ui/toast";
 import {
     FileText,
     RefreshCw,
     Lock,
+    Unlock,
     CheckCircle2,
     Edit3,
     ArrowRightLeft,
@@ -83,6 +86,9 @@ export default function ShiftReportPage() {
     const [transferReason, setTransferReason] = useState("");
     const [draftReports, setDraftReports] = useState<ShiftClosingReport[]>([]);
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+    const [showUnfinalizeConfirm, setShowUnfinalizeConfirm] = useState(false);
+    const { user } = useAuth();
+    const isAdmin = user?.role === "OWNER" || user?.role === "ADMIN";
 
     const loadData = useCallback(async () => {
         try {
@@ -112,6 +118,18 @@ export default function ShiftReportPage() {
     const handleFinalize = async () => {
         if (!report) return;
         try { await finalizeShiftReport(report.id, "manager"); setShowFinalizeConfirm(false); router.push("/operations/shifts"); } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
+    };
+    const handleUnfinalize = async () => {
+        if (!report) return;
+        try {
+            const u = await unfinalizeShiftReport(report.id, user?.name || "admin");
+            setReport(u);
+            setShowUnfinalizeConfirm(false);
+            await loadData();
+            showToast.success("Report un-finalized — you can now Recompute and edit it.");
+        } catch (e: unknown) {
+            showToast.error(e instanceof Error ? e.message : "Failed to un-finalize");
+        }
     };
     const handleEditSave = async () => {
         if (!report || editingItemId == null) return;
@@ -167,6 +185,9 @@ export default function ShiftReportPage() {
                         <button onClick={handleRecompute} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"><RefreshCw className="w-4 h-4" />Recompute</button>
                         <button onClick={() => setShowFinalizeConfirm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-green-500/10 text-green-600 hover:bg-green-500/20"><Lock className="w-4 h-4" />Finalize</button>
                     </>)}
+                    {!isDraft && isAdmin && (
+                        <button onClick={() => setShowUnfinalizeConfirm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20" title="Revert FINALIZED → DRAFT to allow edits/recompute"><Unlock className="w-4 h-4" />Un-finalize</button>
+                    )}
                     <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-muted text-muted-foreground hover:bg-muted/80"><Printer className="w-4 h-4" />Print</button>
                     <button onClick={async () => { try { await downloadShiftReportPdf(shiftId); } catch { showToast.error("Failed to download PDF"); } }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-primary/10 text-primary hover:bg-primary/20"><Download className="w-4 h-4" />Download PDF</button>
                 </div>
@@ -613,6 +634,19 @@ export default function ShiftReportPage() {
                     <div className="flex justify-end gap-2">
                         <button onClick={() => setShowFinalizeConfirm(false)} className="px-4 py-2 text-sm rounded-lg bg-muted text-muted-foreground">Cancel</button>
                         <button onClick={handleFinalize} className="px-4 py-2 text-sm rounded-lg bg-green-600 text-white"><CheckCircle2 className="w-4 h-4 inline mr-1" />Finalize</button>
+                    </div>
+                </div>
+            </div>
+        )}
+        {showUnfinalizeConfirm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 print:hidden">
+                <div className="bg-card rounded-xl p-6 w-full max-w-md shadow-2xl">
+                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Unlock className="w-5 h-5 text-amber-500" />Un-finalize Report?</h3>
+                    <p className="text-sm text-muted-foreground mb-2">This reverts the report to <span className="font-semibold text-amber-500">DRAFT</span> and the shift back to <span className="font-semibold">CLOSED</span>, so you can edit, recompute, or move invoices in/out of it.</p>
+                    <p className="text-xs text-muted-foreground mb-5">The action is audit-logged. Auto-generated cash bills are kept (the shift is not being reopened to the cashier).</p>
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setShowUnfinalizeConfirm(false)} className="px-4 py-2 text-sm rounded-lg bg-muted text-muted-foreground">Cancel</button>
+                        <button onClick={handleUnfinalize} className="px-4 py-2 text-sm rounded-lg bg-amber-500 text-white"><Unlock className="w-4 h-4 inline mr-1" />Un-finalize</button>
                     </div>
                 </div>
             </div>

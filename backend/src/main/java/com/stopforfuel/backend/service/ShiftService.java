@@ -123,6 +123,20 @@ public class ShiftService {
                 org.springframework.data.domain.PageRequest.of(0, safeLimit));
     }
 
+    /**
+     * Recent shifts an existing invoice can be moved into. Broader than postable: also includes
+     * CLOSED shifts whose closing report is still DRAFT (so Recompute on the target picks the
+     * moved bill up cleanly). RECONCILED / FINALIZED-report shifts are excluded — un-finalize
+     * the target report from its page first.
+     */
+    @Transactional(readOnly = true)
+    public List<Shift> getMovableShifts(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+        return repository.findMovable(
+                SecurityUtils.getScid(),
+                org.springframework.data.domain.PageRequest.of(0, safeLimit));
+    }
+
     @Transactional
     public Shift openShift(Shift shift) {
         repository.findTopByStatusAndScidOrderByIdDesc(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {

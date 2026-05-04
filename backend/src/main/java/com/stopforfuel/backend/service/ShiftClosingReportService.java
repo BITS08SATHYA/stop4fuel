@@ -242,6 +242,46 @@ public class ShiftClosingReportService {
         return reportRepository.save(report);
     }
 
+    /**
+     * Admin-only: revert a FINALIZED report back to DRAFT so it can be edited and recomputed.
+     * Mirrors finalizeReport() in reverse:
+     *   - report.status FINALIZED → DRAFT, clears finalizedAt + finalizedBy
+     *   - if shift is RECONCILED → CLOSED (the closing PDF and bills stay on disk; the shift
+     *     itself is still considered closed, only the report becomes editable again)
+     *
+     * Unlike ShiftService.reopenForReview() (CLOSED→REVIEW), this method does NOT wipe
+     * auto-generated synthetic cash bills, because the shift is not being re-opened to the
+     * cashier — the close already ran, and the auto-bills it produced remain valid.
+     */
+    @Transactional
+    public ShiftClosingReport unfinalizeReport(Long reportId, String performedBy) {
+        ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+
+        if (!"FINALIZED".equals(report.getStatus())) {
+            throw new BusinessException("Only a FINALIZED report can be un-finalized (current: " + report.getStatus() + ")");
+        }
+
+        report.setStatus("DRAFT");
+        report.setFinalizedAt(null);
+        report.setFinalizedBy(null);
+
+        Shift shift = report.getShift();
+        if (shift != null && shift.getStatus() == com.stopforfuel.backend.enums.ShiftStatus.RECONCILED) {
+            shift.setStatus(com.stopforfuel.backend.enums.ShiftStatus.CLOSED);
+            shiftRepository.save(shift);
+        }
+
+        ReportAuditLog log = new ReportAuditLog();
+        log.setReport(report);
+        log.setAction("UNFINALIZED");
+        log.setDescription("Report un-finalized (FINALIZED → DRAFT) by " + (performedBy != null ? performedBy : "admin"));
+        log.setPerformedBy(performedBy != null ? performedBy : "admin");
+        auditLogRepository.save(log);
+
+        return reportRepository.save(report);
+    }
+
     @Transactional
     public ShiftClosingReport recomputeReport(Long reportId) {
         ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())

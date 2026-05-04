@@ -100,6 +100,22 @@ public class InvoiceBillController {
         return InvoiceBillDTO.from(service.updateInvoice(id, invoice));
     }
 
+    @PutMapping("/{id}/move")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    public InvoiceBillDTO move(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Object targetRaw = body.get("targetShiftId");
+        Object dateRaw = body.get("newBillDate");
+        if (targetRaw == null) {
+            throw new IllegalArgumentException("targetShiftId is required");
+        }
+        if (dateRaw == null) {
+            throw new IllegalArgumentException("newBillDate is required");
+        }
+        Long targetShiftId = Long.parseLong(targetRaw.toString());
+        LocalDateTime newBillDate = LocalDateTime.parse(dateRaw.toString());
+        return InvoiceBillDTO.from(service.moveInvoice(id, targetShiftId, newBillDate));
+    }
+
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
     public Page<InvoiceBillDTO> getByCustomer(
