@@ -212,6 +212,28 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "ORDER BY ib.customer.name ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findAllUnpaidLocalCreditWithCustomer();
 
+    // Orphan bills for the admin recovery UI. A bill is "orphan" when either:
+    //   (1) shift_id IS NULL — always a data anomaly (the bulk-import bypassed createInvoice's
+    //       shift auto-assign on 2026-04-03 03:49:13; see project_orphan_bills_bug memory),
+    //   OR (2) the customer is a Statement-party customer but the bill isn't linked to any
+    //       statement and isn't marked independent — the orange "awaiting statement" banner
+    //       case in the explorer. Both share the same recovery flow (assign covering shift,
+    //       optionally attach to a covering DRAFT statement, recompute totals).
+    // Filter: only NOT_PAID + non-independent (matches the recovery scope used on prod 2026-05-04).
+    // Caller passes :cutoffDate — typically 2026-01-01 to hide the 501 legacy MySQL-import bills.
+    @EntityGraph(attributePaths = {"customer", "statement"})
+    @Query("SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer.party p " +
+           "WHERE ib.scid = :scid " +
+           "AND ib.billType = 'CREDIT' " +
+           "AND ib.paymentStatus = 'NOT_PAID' " +
+           "AND ib.independent = false " +
+           "AND (ib.shiftId IS NULL OR (LOWER(p.partyType) = 'statement' AND ib.statement IS NULL)) " +
+           "AND ib.date >= :cutoffDate " +
+           "ORDER BY ib.customer.id ASC, ib.date ASC, ib.id ASC")
+    List<InvoiceBill> findOrphanBills(
+            @Param("scid") Long scid,
+            @Param("cutoffDate") LocalDateTime cutoffDate);
+
     // Detect skipped bills: has customer paid any bill newer than their oldest unpaid bill?
     @Query("SELECT CASE WHEN COUNT(ib) > 0 THEN true ELSE false END FROM InvoiceBill ib " +
            "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' AND ib.paymentStatus = 'PAID' " +

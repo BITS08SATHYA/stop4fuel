@@ -116,6 +116,22 @@ public class InvoiceBillController {
         return InvoiceBillDTO.from(service.moveInvoice(id, targetShiftId, newBillDate));
     }
 
+    /**
+     * Admin-only: set an invoice's shift_id without changing its bill_date. Used by the
+     * orphan-bill recovery UI to attach a NULL-shift bill to its covering shift. Different
+     * from /move, which also rewrites bill_date.
+     */
+    @PatchMapping("/{id}/shift")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    public InvoiceBillDTO setShift(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Object raw = body.get("shiftId");
+        if (raw == null) {
+            throw new IllegalArgumentException("shiftId is required");
+        }
+        Long shiftId = Long.parseLong(raw.toString());
+        return InvoiceBillDTO.from(service.setShift(id, shiftId));
+    }
+
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
     public Page<InvoiceBillDTO> getByCustomer(

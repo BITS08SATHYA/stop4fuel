@@ -8,6 +8,8 @@ import {
     getInvoiceHistory,
     getInvoicesByShift,
     createInvoice,
+    moveInvoice,
+    getMovableShifts,
     getActiveProducts,
     getNozzles,
     getCustomers,
@@ -52,6 +54,7 @@ interface CustomerWithCredit extends Customer {
 }
 import { FileUploadField } from "@/components/ui/file-upload-field";
 import { BlockingGatePanel } from "@/components/customers/BlockingGatePanel";
+import { ShiftPicker } from "@/components/ShiftPicker";
 import {
     Receipt,
     Plus,
@@ -71,7 +74,8 @@ import {
     Trash2,
     ShieldAlert,
     Ban,
-    Info
+    Info,
+    Move,
 } from "lucide-react";
 import Link from "next/link";
 import { PermissionGate } from "@/components/permission-gate";
@@ -90,9 +94,14 @@ export default function InvoicesPage() {
 
     // Shift-scoping
     const [activeShiftId, setActiveShiftId] = useState<number | null>(null);
-    const [postableShifts, setPostableShifts] = useState<PostableShift[]>([]);
     const [targetShiftId, setTargetShiftId] = useState<number | null>(null);
-    const [showShiftPicker, setShowShiftPicker] = useState(false);
+
+    // Admin: move existing invoice to a different shift
+    const [moveInvoiceTarget, setMoveInvoiceTarget] = useState<InvoiceBill | null>(null);
+    const [movableShifts, setMovableShifts] = useState<PostableShift[]>([]);
+    const [moveTargetShiftId, setMoveTargetShiftId] = useState<number | null>(null);
+    const [moveBillDate, setMoveBillDate] = useState<string>("");
+    const [moveSubmitting, setMoveSubmitting] = useState(false);
     const [viewMode, setViewMode] = useState<"shift" | "dates">("shift");
     const [historyFromDate, setHistoryFromDate] = useState("");
     const [historyToDate, setHistoryToDate] = useState("");
@@ -137,6 +146,52 @@ export default function InvoicesPage() {
     const [lastCreatedInvoice, setLastCreatedInvoice] = useState<InvoiceBill | null>(null);
     const [manualDiscount, setManualDiscount] = useState("");
     const [companyInfo, setCompanyInfo] = useState<{ name: string; address: string; phone: string; gstNo: string; site?: string } | null>(null);
+
+    const openMoveInvoice = async (inv: InvoiceBill) => {
+        setMoveInvoiceTarget(inv);
+        setMoveTargetShiftId(null);
+        setMoveBillDate("");
+        try {
+            const shifts = await getMovableShifts(20);
+            setMovableShifts(shifts.map(s => ({
+                id: s.id,
+                status: s.status,
+                startTime: s.startTime,
+                endTime: s.endTime ?? null,
+                attendantName: s.attendant?.name ?? null,
+            })));
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to load movable shifts");
+            setMovableShifts([]);
+        }
+    };
+
+    const closeMoveInvoice = () => {
+        setMoveInvoiceTarget(null);
+        setMoveTargetShiftId(null);
+        setMoveBillDate("");
+        setMovableShifts([]);
+    };
+
+    const submitMoveInvoice = async () => {
+        if (!moveInvoiceTarget || !moveTargetShiftId || !moveBillDate) return;
+        setMoveSubmitting(true);
+        try {
+            await moveInvoice(moveInvoiceTarget.id!, moveTargetShiftId, moveBillDate);
+            toast.success(`Moved ${moveInvoiceTarget.billNo || `#${moveInvoiceTarget.id}`} to Shift #${moveTargetShiftId}.`);
+            closeMoveInvoice();
+            // Refresh the current view so the moved bill leaves this shift's list
+            if (viewMode === "shift" && activeShiftId) {
+                await loadInvoices("shift", activeShiftId);
+            } else if (viewMode === "dates" && historyFromDate && historyToDate) {
+                await loadInvoices("dates", null, historyFromDate, historyToDate);
+            }
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to move invoice");
+        } finally {
+            setMoveSubmitting(false);
+        }
+    };
 
     const loadInvoices = async (mode: "shift" | "dates", shiftId?: number | null, from?: string, to?: string) => {
         setIsLoading(true);
@@ -209,20 +264,6 @@ export default function InvoicesPage() {
     useEffect(() => {
         loadData();
     }, []);
-
-    // Admin/owner can back-date a new bill to a recent OPEN/REVIEW shift.
-    // Closed/reconciled shifts are intentionally excluded — backend rejects them too.
-    useEffect(() => {
-        if (!isShiftPickerAllowed) return;
-        (async () => {
-            try {
-                const res = await fetchWithAuth(`${API_BASE_URL}/shifts/postable?limit=10`);
-                if (res.ok) setPostableShifts(await res.json());
-            } catch (err) {
-                console.error("Failed to load postable shifts", err);
-            }
-        })();
-    }, [isShiftPickerAllowed]);
 
     // Default the target shift to the active one as soon as we know it; admin can override.
     useEffect(() => {
@@ -1607,66 +1648,15 @@ export default function InvoicesPage() {
         </div>
     );
 
-    const formatShiftLabel = (s: PostableShift) => {
-        const dt = s.startTime ? new Date(s.startTime) : null;
-        const date = dt ? dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "—";
-        return `Shift #${s.id} · ${date} · ${s.status}`;
-    };
-
-    const renderShiftTargetPill = () => {
-        const isBackdated = targetShiftId != null && targetShiftId !== activeShiftId;
-        const label = targetShiftId
-            ? `Posting to: Shift #${targetShiftId}${isBackdated ? " (back-dated)" : " (active)"}`
-            : "Posting to: —";
-        return (
-            <div className="mb-6 flex justify-end relative">
-                <button
-                    type="button"
-                    onClick={() => setShowShiftPicker(v => !v)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center gap-2 ${
-                        isBackdated
-                            ? "bg-amber-500/10 border-amber-500/30 text-amber-500"
-                            : "bg-primary/10 border-primary/20 text-primary"
-                    }`}
-                >
-                    {label}
-                    <ArrowRight size={12} className={`transition-transform ${showShiftPicker ? "rotate-90" : ""}`} />
-                </button>
-                {showShiftPicker && (
-                    <div className="absolute top-full right-0 mt-2 bg-background border border-border rounded-xl shadow-2xl z-40 w-80 max-h-80 overflow-y-auto">
-                        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border">
-                            Recent Shifts (OPEN / REVIEW only)
-                        </div>
-                        {postableShifts.length === 0 && (
-                            <div className="px-3 py-3 text-xs text-muted-foreground">No postable shifts.</div>
-                        )}
-                        {postableShifts.map(s => {
-                            const isCurrent = s.id === activeShiftId;
-                            const isSelected = s.id === targetShiftId;
-                            return (
-                                <button
-                                    key={s.id}
-                                    type="button"
-                                    onClick={() => { setTargetShiftId(s.id); setShowShiftPicker(false); }}
-                                    className={`w-full text-left px-3 py-2 text-sm border-b border-border/50 transition-colors hover:bg-muted/50 ${
-                                        isSelected ? "bg-primary/5 text-primary font-bold" : "text-foreground"
-                                    }`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <span>{formatShiftLabel(s)}</span>
-                                        {isCurrent && <span className="text-[9px] uppercase tracking-widest text-green-500">active</span>}
-                                    </div>
-                                </button>
-                            );
-                        })}
-                        <div className="px-3 py-2 text-[10px] text-muted-foreground border-t border-border">
-                            To post to a closed/reconciled shift, reopen it first from its shift report.
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    };
+    const renderShiftTargetPill = () => (
+        <div className="mb-6">
+            <ShiftPicker
+                value={targetShiftId}
+                onChange={setTargetShiftId}
+                activeShiftId={activeShiftId}
+            />
+        </div>
+    );
 
     const renderCreateTab = () => (
         <div className="max-w-4xl mx-auto pb-20">
@@ -1958,9 +1948,21 @@ export default function InvoicesPage() {
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="text-right">
-                                            <span className="font-bold text-foreground">₹{(inv.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                            <div className="text-[10px] text-muted-foreground">{new Date(inv.date).toLocaleDateString()}</div>
+                                        <div className="flex items-center gap-3">
+                                            {isShiftPickerAllowed && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openMoveInvoice(inv)}
+                                                    title="Move this invoice to a different shift (admin)"
+                                                    className="p-1.5 rounded-lg text-amber-500 hover:bg-amber-500/10 transition-colors"
+                                                >
+                                                    <Move className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            <div className="text-right">
+                                                <span className="font-bold text-foreground">₹{(inv.netAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                <div className="text-[10px] text-muted-foreground">{new Date(inv.date).toLocaleDateString()}</div>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -1976,6 +1978,102 @@ export default function InvoicesPage() {
                     </GlassCard>
                 )}
             </div>
+
+            {moveInvoiceTarget && (() => {
+                const selected = movableShifts.find(s => s.id === moveTargetShiftId);
+                const selectedStart = selected?.startTime ? new Date(selected.startTime) : null;
+                const selectedEndRaw = selected?.endTime ? new Date(selected.endTime) : null;
+                const selectedEnd = selectedEndRaw ?? new Date();
+                const toLocalInput = (d: Date) => {
+                    const tzOffsetMs = d.getTimezoneOffset() * 60_000;
+                    return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+                };
+                const minAttr = selectedStart ? toLocalInput(selectedStart) : undefined;
+                const maxAttr = toLocalInput(selectedEnd);
+                const billDateValid = (() => {
+                    if (!moveBillDate || !selectedStart) return false;
+                    const d = new Date(moveBillDate);
+                    if (Number.isNaN(d.getTime())) return false;
+                    if (d < selectedStart) return false;
+                    if (d > selectedEnd) return false;
+                    return true;
+                })();
+                return (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 print:hidden">
+                        <div className="bg-card rounded-xl p-6 w-full max-w-lg shadow-2xl">
+                            <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                                <Move className="w-5 h-5 text-amber-500" />
+                                Move Invoice {moveInvoiceTarget.billNo || `#${moveInvoiceTarget.id}`}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mb-4">
+                                Currently on Shift #{moveInvoiceTarget.shiftId ?? "—"}. Pick the correct shift and a bill date inside its window. Audit-logged.
+                            </p>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Target shift</label>
+                                    <StyledSelect
+                                        value={moveTargetShiftId != null ? String(moveTargetShiftId) : ""}
+                                        onChange={(v) => {
+                                            const id = v ? Number(v) : null;
+                                            setMoveTargetShiftId(id);
+                                            setMoveBillDate("");
+                                        }}
+                                        options={[
+                                            { value: "", label: "— Select shift —" },
+                                            ...movableShifts
+                                                .filter(s => s.id !== moveInvoiceTarget.shiftId)
+                                                .map(s => ({
+                                                    value: String(s.id),
+                                                    label: `Shift #${s.id} · ${s.startTime ? new Date(s.startTime).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"} · ${s.status}`,
+                                                })),
+                                        ]}
+                                        className="mt-1"
+                                    />
+                                    {movableShifts.length === 0 && (
+                                        <p className="text-xs text-amber-500 mt-2">
+                                            No movable shifts. RECONCILED shifts must be un-finalized from their report page first.
+                                        </p>
+                                    )}
+                                </div>
+                                {selected && (
+                                    <div>
+                                        <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">New bill date/time</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={moveBillDate}
+                                            min={minAttr}
+                                            max={maxAttr}
+                                            onChange={(e) => setMoveBillDate(e.target.value)}
+                                            className="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                            Window: {selectedStart?.toLocaleString("en-IN") ?? "—"} → {selectedEndRaw?.toLocaleString("en-IN") ?? "now"}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex justify-end gap-2 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={closeMoveInvoice}
+                                    className="px-4 py-2 text-sm rounded-lg bg-muted text-muted-foreground"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={submitMoveInvoice}
+                                    disabled={moveSubmitting || !moveTargetShiftId || !billDateValid}
+                                    className="px-4 py-2 text-sm rounded-lg bg-amber-500 text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                >
+                                    <Move className="w-4 h-4" />
+                                    {moveSubmitting ? "Moving…" : "Move invoice"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

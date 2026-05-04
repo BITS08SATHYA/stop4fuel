@@ -91,6 +91,21 @@ public interface StatementRepository extends ScidRepository<Statement> {
 
     boolean existsByCustomerIdAndFromDateAndToDateAndScid(Long customerId, LocalDate fromDate, LocalDate toDate, Long scid);
 
+    /**
+     * Find a customer's DRAFT/NOT_PAID statement whose [from_date, to_date] window contains :date.
+     * Used by orphan-bill auto-fix to pick the right statement to attach a bill to. Returns at most
+     * one — periods don't overlap by design. PAID statements are excluded because attaching to
+     * them would silently change a settled total (caller must un-finalize first if needed).
+     */
+    @Query("SELECT s FROM Statement s WHERE s.customer.id = :customerId AND s.scid = :scid " +
+           "AND s.status IN ('DRAFT', 'NOT_PAID') " +
+           "AND s.fromDate <= :date AND s.toDate >= :date " +
+           "ORDER BY s.id ASC")
+    List<Statement> findCoveringStatements(
+            @Param("customerId") Long customerId,
+            @Param("scid") Long scid,
+            @Param("date") LocalDate date);
+
     List<Statement> findByCustomerIdAndStatementDateBetween(Long customerId, LocalDate from, LocalDate to);
 
     // Negative customer.statementOrder is a skip sentinel — those customers are excluded from

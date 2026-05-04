@@ -234,9 +234,41 @@ public class StatementService {
             throw new BusinessException("No unlinked credit bills found for the selected filters");
         }
 
-        // Recalculate totals
-        BigDecimal totalAmount = BigDecimal.ZERO;
+        // Update statement in-place (keep statementNo). Regenerate semantics: received resets,
+        // status flips back to NOT_PAID. Totals come from recomputeStatementTotals after re-link.
+        statement.setFromDate(fromDate);
+        statement.setToDate(toDate);
+        statement.setStatementDate(LocalDate.now());
+        statement.setReceivedAmount(BigDecimal.ZERO);
+        statement.setStatus("NOT_PAID");
+
+        // Persist intermediate state, link new bills, then recompute totals from DB.
+        Statement saved = statementRepository.save(statement);
         for (InvoiceBill bill : newBills) {
+            bill.setStatement(saved);
+            invoiceBillRepository.save(bill);
+        }
+        recomputeStatementTotals(saved);
+        saved = statementRepository.save(saved);
+
+        // Auto-generate PDF with updated data
+        generateAndStorePdf(saved.getId());
+
+        return saved;
+    }
+
+    /**
+     * Recompute number_of_bills, total_amount, net_amount (rounded), rounding_amount,
+     * total_quantity, and balance_amount = net - received from currently-linked bills.
+     * Caller must persist the statement after. Does NOT touch status, statementNo, dates,
+     * or received_amount — those are caller decisions. Used by regenerate flow and by
+     * OrphanBillService.autoFix.
+     */
+    public void recomputeStatementTotals(Statement statement) {
+        List<InvoiceBill> bills = invoiceBillRepository.findByStatementId(statement.getId());
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (InvoiceBill bill : bills) {
             if (bill.getNetAmount() != null) {
                 totalAmount = totalAmount.add(bill.getNetAmount());
             }
@@ -244,34 +276,20 @@ public class StatementService {
         BigDecimal netAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
         BigDecimal roundingAmount = netAmount.subtract(totalAmount);
 
-        // Update statement in-place (keep statementNo)
-        statement.setFromDate(fromDate);
-        statement.setToDate(toDate);
-        statement.setStatementDate(LocalDate.now());
-        statement.setNumberOfBills(newBills.size());
+        statement.setNumberOfBills(bills.size());
         statement.setTotalAmount(totalAmount);
-        statement.setRoundingAmount(roundingAmount);
         statement.setNetAmount(netAmount);
-        statement.setReceivedAmount(BigDecimal.ZERO);
-        statement.setBalanceAmount(netAmount);
-        statement.setStatus("NOT_PAID");
+        statement.setRoundingAmount(roundingAmount);
+        BigDecimal received = statement.getReceivedAmount() != null
+                ? statement.getReceivedAmount() : BigDecimal.ZERO;
+        statement.setBalanceAmount(netAmount.subtract(received));
 
-        // Compute total quantity from invoice products
-        List<Long> newBillIds = newBills.stream().map(InvoiceBill::getId).toList();
-        statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(newBillIds));
-
-        Statement saved = statementRepository.save(statement);
-
-        // Link new bills
-        for (InvoiceBill bill : newBills) {
-            bill.setStatement(saved);
-            invoiceBillRepository.save(bill);
+        if (!bills.isEmpty()) {
+            List<Long> ids = bills.stream().map(InvoiceBill::getId).toList();
+            statement.setTotalQuantity(invoiceBillRepository.sumQuantityByBillIds(ids));
+        } else {
+            statement.setTotalQuantity(BigDecimal.ZERO);
         }
-
-        // Auto-generate PDF with updated data
-        generateAndStorePdf(saved.getId());
-
-        return saved;
     }
 
     /**

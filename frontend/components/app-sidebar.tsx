@@ -59,6 +59,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useSidebar } from "@/components/sidebar-context";
 import { usePendingApprovalCount } from "@/lib/hooks/use-pending-approval-count";
+import { useOrphanBillCount } from "@/lib/hooks/use-orphan-bill-count";
 import { Inbox, CheckSquare } from "lucide-react";
 
 const mainNav = [
@@ -133,6 +134,7 @@ const paymentManagementNav = [
     { name: "Credit Monitoring", href: "/payments/credit-monitoring", icon: AlertTriangle },
     { name: "Watchlist", href: "/payments/credit/watchlist", icon: Shield },
     { name: "Statements", href: "/payments/statements", icon: Receipt },
+    { name: "Orphan Bills", href: "/payments/statements/orphans", icon: AlertTriangle, badgeKey: "orphanBills" as const },
     { name: "Statement Reports", href: "/payments/statements/reports", icon: FileText },
     { name: "Bank Statements", href: "/payments/bank-statements", icon: FileSearch },
     { name: "Explorer", href: "/payments/explorer", icon: Search },
@@ -269,7 +271,7 @@ const employeeSections: NavSection[] = [
 type NavSection = {
     label: string;
     permission: string;
-    items: { name: string; href: string; icon: React.ComponentType<{ className?: string }>; badgeKey?: "pendingApprovals" }[];
+    items: { name: string; href: string; icon: React.ComponentType<{ className?: string }>; badgeKey?: "pendingApprovals" | "orphanBills" }[];
 };
 
 const sections: NavSection[] = [
@@ -307,7 +309,12 @@ export function AppSidebar() {
     const activeSections = isCustomer ? customerSections : isCashier ? cashierSections : isEmployee ? employeeSections : sections;
     const filteredSections = activeSections.filter(section => hasPermission(section.permission));
     const pendingApprovals = usePendingApprovalCount();
-    const badgeValue = (key?: "pendingApprovals") => key === "pendingApprovals" ? pendingApprovals : 0;
+    const orphanBills = useOrphanBillCount();
+    const badgeValue = (key?: "pendingApprovals" | "orphanBills") => {
+        if (key === "pendingApprovals") return pendingApprovals;
+        if (key === "orphanBills") return orphanBills;
+        return 0;
+    };
 
     return (
         <aside

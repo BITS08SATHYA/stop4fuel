@@ -47,4 +47,23 @@ public interface ShiftRepository extends ScidRepository<Shift> {
             ORDER BY s.id DESC
             """)
     List<Shift> findMovable(@Param("scid") Long scid, Pageable pageable);
+
+    /**
+     * Find the shift whose [start_time, end_time] window contains :timestamp. Used by orphan-bill
+     * auto-fix to pick a covering shift by bill_date. Returns Optional.empty() if no shift covers
+     * the timestamp (e.g. a created-at falling in the gap between two shifts — the original cause
+     * of the 2026-04-03 NULL-shift bills). Active shifts have end_time IS NULL — for those the
+     * upper bound is open-ended (NOW()).
+     */
+    @Query("""
+            SELECT s FROM Shift s
+            WHERE s.scid = :scid
+              AND s.startTime <= :timestamp
+              AND (s.endTime IS NULL OR s.endTime >= :timestamp)
+            ORDER BY s.startTime DESC
+            """)
+    List<Shift> findCoveringShifts(
+            @Param("scid") Long scid,
+            @Param("timestamp") LocalDateTime timestamp,
+            Pageable pageable);
 }

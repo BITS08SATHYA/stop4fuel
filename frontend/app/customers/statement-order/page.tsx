@@ -16,7 +16,7 @@ type Row = StatementOrderEntry & { _draft: number | null };
 const FREQS = ["MONTHLY", "BIWEEKLY", "WEEKLY", "CUSTOM"] as const;
 type Freq = typeof FREQS[number];
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 13;
 
 function compareRows(a: Row, b: Row): number {
     const ao = a._draft;
