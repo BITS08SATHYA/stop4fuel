@@ -3,9 +3,11 @@ package com.stopforfuel.backend.controller;
 import com.stopforfuel.backend.dto.InvoiceBillDTO;
 import com.stopforfuel.backend.dto.StatementDTO;
 import com.stopforfuel.backend.dto.StatementStats;
+import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
 import com.stopforfuel.backend.enums.BillType;
+import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.backend.service.BillSequenceService;
 import com.stopforfuel.backend.service.StatementAutoGenerationService;
@@ -35,6 +37,7 @@ public class StatementController {
     private final StatementExcelService statementExcelService;
     private final StatementRepository statementRepository;
     private final BillSequenceService billSequenceService;
+    private final CompanyRepository companyRepository;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
@@ -332,7 +335,9 @@ public class StatementController {
         List<Statement> statements = (status != null && !status.isBlank())
                 ? statementRepository.findByDateRangeAndStatusAndScid(fromDate, toDate, status, scid)
                 : statementRepository.findByDateRangeAndScid(fromDate, toDate, scid);
-        byte[] bytes = statementExcelService.generateExcel(statements);
+        String companyName = companyRepository.findByScid(scid).stream()
+                .findFirst().map(Company::getName).orElse("");
+        byte[] bytes = statementExcelService.generateExcel(statements, companyName, fromDate, toDate);
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=statements_" + fromDate + "_" + toDate + ".xlsx");
         headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
