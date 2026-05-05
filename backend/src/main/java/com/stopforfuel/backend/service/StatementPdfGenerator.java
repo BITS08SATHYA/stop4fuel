@@ -203,7 +203,7 @@ public class StatementPdfGenerator {
     // Rows render as one sub-table per vehicle (group header + column header repeat on page break),
     // followed by a single grand-total sub-table. All sub-tables share the same widths so they
     // visually align as one continuous table.
-    private static final float[] BILL_WIDTHS = {0.35f, 0.6f, 0.8f, 0.7f, 0.55f, 0.65f, 0.6f, 0.8f, 0.85f};
+    private static final float[] BILL_WIDTHS = {0.35f, 0.6f, 0.8f, 0.5f, 0.95f, 0.65f, 0.6f, 0.8f, 0.85f};
     private static final String[] BILL_HEADERS = {"#", "DATE", "BILL NO", "INDENT", "PROD", "QTY (L)", "RATE", "GROSS", "NET AMT"};
     private static final Set<Integer> BILL_RIGHT_ALIGN = new HashSet<>(Arrays.asList(5, 6, 7, 8));
     private static final Color GROUP_HEADER_BG = new Color(225, 230, 240);
@@ -257,35 +257,42 @@ public class StatementPdfGenerator {
         for (InvoiceBill bill : vehicleBills) {
             Color bg = (index % 2 == 0) ? ALT_ROW : Color.WHITE;
 
-            String prodName = "-";
-            BigDecimal qty = BigDecimal.ZERO;
-            BigDecimal rate = BigDecimal.ZERO;
-            if (bill.getProducts() != null && !bill.getProducts().isEmpty()) {
-                InvoiceProduct ip = bill.getProducts().get(0);
-                if (ip.getProduct() != null) {
-                    prodName = shortProductName(ip.getProduct().getName());
+            List<InvoiceProduct> products = bill.getProducts();
+            int productRowCount = (products == null || products.isEmpty()) ? 1 : products.size();
+
+            for (int pi = 0; pi < productRowCount; pi++) {
+                boolean firstRow = (pi == 0);
+                InvoiceProduct ip = (products != null && !products.isEmpty()) ? products.get(pi) : null;
+
+                String prodName = "-";
+                BigDecimal qty = BigDecimal.ZERO;
+                BigDecimal rate = BigDecimal.ZERO;
+                BigDecimal gross = BigDecimal.ZERO;
+                BigDecimal net = BigDecimal.ZERO;
+                if (ip != null) {
+                    if (ip.getProduct() != null) {
+                        prodName = shortProductName(ip.getProduct().getName());
+                    }
+                    qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
+                    rate = ip.getUnitPrice() != null ? ip.getUnitPrice() : BigDecimal.ZERO;
+                    gross = qty.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+                    net = ip.getAmount() != null ? ip.getAmount() : BigDecimal.ZERO;
                 }
-                qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
-                rate = ip.getUnitPrice() != null ? ip.getUnitPrice() : BigDecimal.ZERO;
+
+                addCell(table, firstRow ? String.valueOf(index) : "", bg, Element.ALIGN_CENTER, false);
+                addCell(table, firstRow && bill.getDate() != null ? bill.getDate().format(SHORT_DATE) : (firstRow ? "-" : ""), bg, Element.ALIGN_LEFT, false);
+                addCell(table, firstRow ? (bill.getBillNo() != null ? bill.getBillNo() : "-") : "", bg, Element.ALIGN_LEFT, true);
+                addCell(table, firstRow ? (bill.getIndentNo() != null ? bill.getIndentNo() : "-") : "", bg, Element.ALIGN_LEFT, false);
+                addCell(table, prodName, bg, Element.ALIGN_LEFT, false);
+                addCell(table, qty.compareTo(BigDecimal.ZERO) > 0 ? fmtQty(qty) : "-", bg, Element.ALIGN_RIGHT, false);
+                addCell(table, rate.compareTo(BigDecimal.ZERO) > 0 ? fmtRate(rate) : "-", bg, Element.ALIGN_RIGHT, false);
+                addCell(table, fmtAmt(gross), bg, Element.ALIGN_RIGHT, false);
+                addCell(table, fmtAmt(net), bg, Element.ALIGN_RIGHT, true);
+
+                sub.qty = sub.qty.add(qty);
+                sub.gross = sub.gross.add(gross);
+                sub.net = sub.net.add(net);
             }
-
-            BigDecimal gross = bill.getGrossAmount() != null ? bill.getGrossAmount()
-                    : (bill.getNetAmount() != null ? bill.getNetAmount() : BigDecimal.ZERO);
-            BigDecimal net = bill.getNetAmount() != null ? bill.getNetAmount() : BigDecimal.ZERO;
-
-            addCell(table, String.valueOf(index), bg, Element.ALIGN_CENTER, false);
-            addCell(table, bill.getDate() != null ? bill.getDate().format(SHORT_DATE) : "-", bg, Element.ALIGN_LEFT, false);
-            addCell(table, bill.getBillNo() != null ? bill.getBillNo() : "-", bg, Element.ALIGN_LEFT, true);
-            addCell(table, bill.getIndentNo() != null ? bill.getIndentNo() : "-", bg, Element.ALIGN_LEFT, false);
-            addCell(table, prodName, bg, Element.ALIGN_LEFT, false);
-            addCell(table, qty.compareTo(BigDecimal.ZERO) > 0 ? fmt0(qty) : "-", bg, Element.ALIGN_RIGHT, false);
-            addCell(table, rate.compareTo(BigDecimal.ZERO) > 0 ? fmtRate(rate) : "-", bg, Element.ALIGN_RIGHT, false);
-            addCell(table, fmtAmt(gross), bg, Element.ALIGN_RIGHT, false);
-            addCell(table, fmtAmt(net), bg, Element.ALIGN_RIGHT, true);
-
-            sub.qty = sub.qty.add(qty);
-            sub.gross = sub.gross.add(gross);
-            sub.net = sub.net.add(net);
             index++;
         }
 
@@ -295,7 +302,7 @@ public class StatementPdfGenerator {
         addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
         addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
         addCell(table, "Subtotal", SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
-        addCell(table, fmt0(sub.qty), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, fmtQty(sub.qty), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
         addCell(table, "", SUBTOTAL_BG, Element.ALIGN_RIGHT, false);
         addCell(table, fmtAmt(sub.gross), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
         addCell(table, fmtAmt(sub.net), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
@@ -316,7 +323,7 @@ public class StatementPdfGenerator {
         addCell(table, "TOTAL (" + billCount + " bills)", GRAND_TOTAL_BG, Element.ALIGN_LEFT, true);
         addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
         addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
-        addCell(table, fmt0(grand.qty), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, fmtQty(grand.qty), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
         addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_RIGHT, false);
         addCell(table, fmtAmt(grand.gross), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
         addCell(table, fmtAmt(grand.net), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
@@ -398,7 +405,7 @@ public class StatementPdfGenerator {
             BigDecimal[] v = e.getValue();
             addSummaryCell(table, e.getKey(), Element.ALIGN_LEFT, false);
             addSummaryCell(table, fmt0(v[0]), Element.ALIGN_RIGHT, false);
-            addSummaryCell(table, fmt0(v[1]), Element.ALIGN_RIGHT, false);
+            addSummaryCell(table, fmtQty(v[1]), Element.ALIGN_RIGHT, false);
             addSummaryCell(table, fmtAmt(v[2]), Element.ALIGN_RIGHT, false);
             addSummaryCell(table, fmtAmt(v[3]), Element.ALIGN_RIGHT, false);
             totalBills = totalBills.add(v[0]);
@@ -410,7 +417,7 @@ public class StatementPdfGenerator {
         // Total row
         addSummaryCell(table, "Total", Element.ALIGN_LEFT, true);
         addSummaryCell(table, fmt0(totalBills), Element.ALIGN_RIGHT, true);
-        addSummaryCell(table, fmt0(totalQty), Element.ALIGN_RIGHT, true);
+        addSummaryCell(table, fmtQty(totalQty), Element.ALIGN_RIGHT, true);
         addSummaryCell(table, fmtAmt(totalDisc), Element.ALIGN_RIGHT, true);
         addSummaryCell(table, fmtAmt(totalNet), Element.ALIGN_RIGHT, true);
 
@@ -464,7 +471,7 @@ public class StatementPdfGenerator {
             BigDecimal[] v = e.getValue();
             addSummaryCell(table, e.getKey(), Element.ALIGN_LEFT, false);
             addSummaryCell(table, fmt0(v[0]), Element.ALIGN_RIGHT, false);
-            addSummaryCell(table, fmt0(v[1]), Element.ALIGN_RIGHT, false);
+            addSummaryCell(table, fmtQty(v[1]), Element.ALIGN_RIGHT, false);
             addSummaryCell(table, fmtAmt(v[2]), Element.ALIGN_RIGHT, false);
         }
 
@@ -641,10 +648,7 @@ public class StatementPdfGenerator {
 
     private String shortProductName(String name) {
         if (name == null) return "-";
-        // Common abbreviations
         if (name.toLowerCase().contains("diesel")) return "HSD";
-        if (name.toLowerCase().contains("petrol")) return "P";
-        if (name.length() > 6) return name.substring(0, 6);
         return name;
     }
 
@@ -656,6 +660,11 @@ public class StatementPdfGenerator {
     private String fmt0(BigDecimal amount) {
         if (amount == null) return "0";
         return amount.setScale(0, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    private String fmtQty(BigDecimal qty) {
+        if (qty == null) return "0.00";
+        return qty.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 
     private String fmtRate(BigDecimal rate) {
