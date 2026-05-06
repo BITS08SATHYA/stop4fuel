@@ -343,33 +343,38 @@ public class StatementPdfGenerator {
     }
 
     // ========== BOTTOM SECTION ==========
+    // Vehicle Summary used to live nested in the LEFT cell of a 2-col PdfPTable, but
+    // PdfPCell can't paginate — once the cell exceeded one page it pushed the entire
+    // 2-col block to a fresh page (whole previous page wasted) and orphaned the
+    // "VEHICLE SUMMARY" title from its rows. So: keep only the small sections in the
+    // 2-col compact wrapper; render Vehicle Summary as a top-level table that flows
+    // and breaks naturally with header-row repetition.
     private void addBottomSection(Document doc, List<InvoiceBill> bills, List<Payment> payments, Statement statement, Company company) throws DocumentException {
-        PdfPTable bottom = new PdfPTable(2);
-        bottom.setWidthPercentage(100);
-        bottom.setWidths(new float[]{50f, 50f});
-        bottom.setSpacingBefore(6);
+        PdfPTable summaryRow = new PdfPTable(2);
+        summaryRow.setWidthPercentage(100);
+        summaryRow.setWidths(new float[]{50f, 50f});
+        summaryRow.setSpacingBefore(6);
+        summaryRow.setKeepTogether(false);
 
-        // LEFT: Product Summary + Vehicle Summary
         PdfPCell leftCell = new PdfPCell();
         leftCell.setBorder(Rectangle.BOX);
         leftCell.setBorderColor(BORDER);
         leftCell.setPadding(4);
         leftCell.addElement(buildProductSummary(bills));
-        leftCell.addElement(buildVehicleSummary(bills));
-        bottom.addCell(leftCell);
+        summaryRow.addCell(leftCell);
 
-        // RIGHT: Payments Received + Balance
         PdfPCell rightCell = new PdfPCell();
         rightCell.setBorder(Rectangle.BOX);
         rightCell.setBorderColor(BORDER);
         rightCell.setPadding(4);
         rightCell.addElement(buildPaymentsReceived(payments));
         rightCell.addElement(buildBalance(statement));
-        bottom.addCell(rightCell);
+        summaryRow.addCell(rightCell);
 
-        doc.add(bottom);
+        doc.add(summaryRow);
 
-        // Terms and signatory
+        addVehicleSummarySection(doc, bills);
+
         addTermsAndSignatory(doc, company);
     }
 
@@ -438,13 +443,16 @@ public class StatementPdfGenerator {
     }
 
     // ========== VEHICLE SUMMARY ==========
-    private PdfPTable buildVehicleSummary(List<InvoiceBill> bills) throws DocumentException {
+    // Rendered as a top-level table on the document so it flows and breaks across
+    // pages naturally; setHeaderRows(1) makes the column header reappear on each
+    // page break instead of leaving cold rows on a fresh page.
+    private void addVehicleSummarySection(Document doc, List<InvoiceBill> bills) throws DocumentException {
         Paragraph title = new Paragraph("VEHICLE SUMMARY", F_SECTION);
-        title.setSpacingBefore(5);
+        title.setSpacingBefore(8);
         title.setSpacingAfter(3);
+        doc.add(title);
 
-        // Aggregate by vehicle
-        Map<String, BigDecimal[]> vehicleMap = new LinkedHashMap<>(); // vehicleNo -> [billCount, qty, netAmt]
+        Map<String, BigDecimal[]> vehicleMap = new LinkedHashMap<>();
         for (InvoiceBill bill : bills) {
             String veh = bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "N/A";
             BigDecimal[] agg = vehicleMap.computeIfAbsent(veh, k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO});
@@ -461,6 +469,8 @@ public class StatementPdfGenerator {
 
         PdfPTable table = new PdfPTable(new float[]{1.8f, 0.6f, 0.8f, 1f});
         table.setWidthPercentage(100);
+        table.setHeaderRows(1);
+        table.setKeepTogether(false);
 
         String[] headers = {"VEHICLE", "BILLS", "QTY", "NET AMT"};
         for (String h : headers) {
@@ -480,15 +490,7 @@ public class StatementPdfGenerator {
             addSummaryCell(table, fmtAmt(v[2]), Element.ALIGN_RIGHT, false);
         }
 
-        PdfPTable wrapper = new PdfPTable(1);
-        wrapper.setWidthPercentage(100);
-        PdfPCell titleCell = new PdfPCell(title);
-        titleCell.setBorder(Rectangle.NO_BORDER);
-        wrapper.addCell(titleCell);
-        PdfPCell tableCell = new PdfPCell(table);
-        tableCell.setBorder(Rectangle.NO_BORDER);
-        wrapper.addCell(tableCell);
-        return wrapper;
+        doc.add(table);
     }
 
     // ========== PAYMENTS RECEIVED ==========
