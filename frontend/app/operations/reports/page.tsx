@@ -10,6 +10,7 @@ import {
     downloadAllPartyLocalReport,
     downloadOpeningBalanceLocalReport,
     downloadOpeningBalanceStatementReport,
+    downloadVatReport,
 } from "@/lib/api/station";
 import { showToast } from "@/components/ui/toast";
 import {
@@ -25,6 +26,7 @@ import {
     Receipt,
     Wallet,
     Landmark,
+    ShieldCheck,
 } from "lucide-react";
 
 function getCurrentMonthRange() {
@@ -55,7 +57,10 @@ type ReportType =
     | "all-party-statement"
     | "all-party-local"
     | "opening-balance-local"
-    | "opening-balance-statement";
+    | "opening-balance-statement"
+    | "vat";
+
+type ReportTab = "operations" | "auditor";
 
 interface ReportConfig {
     key: ReportType;
@@ -64,6 +69,7 @@ interface ReportConfig {
     icon: typeof BarChart3;
     color: string;
     needsDates: boolean;
+    tab: ReportTab;
 }
 
 const reports: ReportConfig[] = [
@@ -75,6 +81,7 @@ const reports: ReportConfig[] = [
         icon: BarChart3,
         color: "text-orange-500",
         needsDates: true,
+        tab: "operations",
     },
     {
         key: "tank-inventory",
@@ -84,24 +91,7 @@ const reports: ReportConfig[] = [
         icon: Droplets,
         color: "text-blue-500",
         needsDates: true,
-    },
-    {
-        key: "customer-balance",
-        title: "Customer Balance Report",
-        description:
-            "All credit customers with outstanding balances, credit limits, utilization, aging analysis, and account status.",
-        icon: Users,
-        color: "text-green-500",
-        needsDates: false,
-    },
-    {
-        key: "all-party-statement",
-        title: "All Party Statement Report",
-        description:
-            "Every statement customer with their unpaid statements since inception — grouped by customer with Date, Net, Received, Balance and subtotals.",
-        icon: FileSignature,
-        color: "text-purple-500",
-        needsDates: false,
+        tab: "operations",
     },
     {
         key: "all-party-local",
@@ -111,6 +101,37 @@ const reports: ReportConfig[] = [
         icon: Receipt,
         color: "text-amber-500",
         needsDates: false,
+        tab: "operations",
+    },
+    {
+        key: "vat",
+        title: "VAT Report",
+        description:
+            "Monthly VAT/GST sheet for the auditor: purchase register (XP/MS/HSD by invoice), GST computation on lubricants (18% split into SGST/CGST), daily lubricant sales, and daily fuel sales per product with TEST and net sale.",
+        icon: ShieldCheck,
+        color: "text-emerald-500",
+        needsDates: true,
+        tab: "auditor",
+    },
+    {
+        key: "customer-balance",
+        title: "Customer Balance Report",
+        description:
+            "All credit customers with outstanding balances, credit limits, utilization, aging analysis, and account status.",
+        icon: Users,
+        color: "text-green-500",
+        needsDates: false,
+        tab: "auditor",
+    },
+    {
+        key: "all-party-statement",
+        title: "All Party Statement Report",
+        description:
+            "Every statement customer with their unpaid statements since inception — grouped by customer with Date, Net, Received, Balance and subtotals.",
+        icon: FileSignature,
+        color: "text-purple-500",
+        needsDates: false,
+        tab: "auditor",
     },
     {
         key: "opening-balance-local",
@@ -120,6 +141,7 @@ const reports: ReportConfig[] = [
         icon: Wallet,
         color: "text-cyan-500",
         needsDates: true,
+        tab: "auditor",
     },
     {
         key: "opening-balance-statement",
@@ -129,6 +151,7 @@ const reports: ReportConfig[] = [
         icon: Landmark,
         color: "text-rose-500",
         needsDates: true,
+        tab: "auditor",
     },
 ];
 
@@ -137,6 +160,7 @@ export default function ReportsPage() {
     const [fromDate, setFromDate] = useState(defaultFrom);
     const [toDate, setToDate] = useState(defaultTo);
     const [downloading, setDownloading] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<ReportTab>("operations");
 
     const handleDownload = async (
         report: ReportType,
@@ -186,6 +210,10 @@ export default function ReportsPage() {
                     blob = await downloadOpeningBalanceStatementReport(fromDate, toDate, format);
                     triggerDownload(blob, `StatementOpeningBalance_${fromDate}_to_${toDate}.${ext}`);
                     break;
+                case "vat":
+                    blob = await downloadVatReport(fromDate, toDate, format);
+                    triggerDownload(blob, `VAT_${fromDate}_to_${toDate}.${ext}`);
+                    break;
             }
         } catch {
             showToast.error("Failed to generate report. Please try again.");
@@ -203,6 +231,30 @@ export default function ReportsPage() {
                         Generate and download business reports in PDF or Excel format
                     </p>
                 </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex items-center gap-2 border-b border-border">
+                <button
+                    onClick={() => setActiveTab("operations")}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                        activeTab === "operations"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                    Operations
+                </button>
+                <button
+                    onClick={() => setActiveTab("auditor")}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                        activeTab === "auditor"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                    Auditor
+                </button>
             </div>
 
             {/* Date range selector */}
@@ -250,7 +302,7 @@ export default function ReportsPage() {
 
             {/* Report cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {reports.map((report) => {
+                {reports.filter(r => r.tab === activeTab).map((report) => {
                     const Icon = report.icon;
                     const pdfKey = `${report.key}-pdf`;
                     const excelKey = `${report.key}-excel`;

@@ -35,6 +35,7 @@ import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.stopforfuel.backend.service.pdf.PageFooterEvent;
 
 @Service
 @RequiredArgsConstructor
@@ -183,7 +184,8 @@ public class PaymentReportService {
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             Document doc = new Document(PageSize.A5);
-            PdfWriter.getInstance(doc, out);
+            PdfWriter writer = PdfWriter.getInstance(doc, out);
+            writer.setPageEvent(new PageFooterEvent());
             doc.open();
 
             Font titleFont = new Font(Font.HELVETICA, 14, Font.BOLD);

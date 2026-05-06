@@ -1,16 +1,13 @@
 package com.stopforfuel.backend.service;
 
 import com.lowagie.text.*;
-import com.lowagie.text.pdf.BaseFont;
-import com.lowagie.text.pdf.PdfContentByte;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
-import com.lowagie.text.pdf.PdfPageEventHelper;
-import com.lowagie.text.pdf.PdfTemplate;
 import com.lowagie.text.pdf.PdfWriter;
 import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.IncentivePayment;
 import com.stopforfuel.backend.exception.ReportGenerationException;
+import com.stopforfuel.backend.service.pdf.PageFooterEvent;
 import org.springframework.stereotype.Component;
 
 import java.awt.Color;
@@ -74,7 +71,7 @@ public class IncentivePaymentPdfGenerator {
 
         try {
             PdfWriter writer = PdfWriter.getInstance(doc, baos);
-            writer.setPageEvent(new PageFooter());
+            writer.setPageEvent(new PageFooterEvent());
             doc.open();
 
             addHeader(doc, company, fromDate, toDate);
@@ -274,52 +271,4 @@ public class IncentivePaymentPdfGenerator {
         return null;
     }
 
-    // ========== PAGE FOOTER (Page X of Y) ==========
-    private static class PageFooter extends PdfPageEventHelper {
-        private static final float FONT_SIZE = 8f;
-        private static final float TEMPLATE_WIDTH = 22f;
-        private PdfTemplate totalPagesTemplate;
-        private BaseFont baseFont;
-
-        @Override
-        public void onOpenDocument(PdfWriter writer, Document document) {
-            try {
-                baseFont = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
-                totalPagesTemplate = writer.getDirectContent().createTemplate(TEMPLATE_WIDTH, FONT_SIZE + 2);
-            } catch (Exception e) {
-                throw new ReportGenerationException("Failed to init PDF page footer", e);
-            }
-        }
-
-        @Override
-        public void onEndPage(PdfWriter writer, Document document) {
-            PdfContentByte cb = writer.getDirectContent();
-            String prefix = "Page " + writer.getPageNumber() + " of ";
-            float prefixWidth = baseFont.getWidthPoint(prefix, FONT_SIZE);
-            float totalWidth = prefixWidth + TEMPLATE_WIDTH;
-            float pageWidth = document.right() - document.left();
-            float x = document.left() + (pageWidth - totalWidth) / 2f;
-            float y = document.bottom() - 15;
-
-            cb.saveState();
-            cb.beginText();
-            cb.setFontAndSize(baseFont, FONT_SIZE);
-            cb.setColorFill(MUTED);
-            cb.setTextMatrix(x, y);
-            cb.showText(prefix);
-            cb.endText();
-            cb.addTemplate(totalPagesTemplate, x + prefixWidth, y);
-            cb.restoreState();
-        }
-
-        @Override
-        public void onCloseDocument(PdfWriter writer, Document document) {
-            totalPagesTemplate.beginText();
-            totalPagesTemplate.setFontAndSize(baseFont, FONT_SIZE);
-            totalPagesTemplate.setColorFill(MUTED);
-            totalPagesTemplate.setTextMatrix(0, 0);
-            totalPagesTemplate.showText(String.valueOf(writer.getPageNumber() - 1));
-            totalPagesTemplate.endText();
-        }
-    }
 }

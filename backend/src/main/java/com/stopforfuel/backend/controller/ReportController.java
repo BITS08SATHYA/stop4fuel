@@ -5,6 +5,7 @@ import com.stopforfuel.backend.service.CustomerBalanceReportService;
 import com.stopforfuel.backend.service.DailySalesReportService;
 import com.stopforfuel.backend.service.OpeningBalanceReportService;
 import com.stopforfuel.backend.service.TankInventorySummaryReportService;
+import com.stopforfuel.backend.service.VatReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +26,7 @@ public class ReportController {
     private final CustomerBalanceReportService customerBalanceReportService;
     private final AllPartyUnpaidReportService allPartyUnpaidReportService;
     private final OpeningBalanceReportService openingBalanceReportService;
+    private final VatReportService vatReportService;
 
     // ======================== Daily Sales ========================
 
@@ -204,6 +206,34 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         byte[] excel = openingBalanceReportService.generateStatementExcel(fromDate, toDate);
         String filename = "StatementOpeningBalance_" + fromDate + "_to_" + toDate + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    // ======================== VAT Report ========================
+
+    @GetMapping("/vat/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> vatPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] pdf = vatReportService.generatePdf(fromDate, toDate);
+        String filename = "VAT_" + fromDate + "_to_" + toDate + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/vat/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> vatExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] excel = vatReportService.generateExcel(fromDate, toDate);
+        String filename = "VAT_" + fromDate + "_to_" + toDate + ".xlsx";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))

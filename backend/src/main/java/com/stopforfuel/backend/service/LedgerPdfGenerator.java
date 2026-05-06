@@ -4,6 +4,7 @@ import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.stopforfuel.backend.service.pdf.PageFooterEvent;
 import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.exception.ReportGenerationException;
@@ -66,7 +67,8 @@ public class LedgerPdfGenerator {
         Document doc = new Document(PageSize.A4, 25, 25, 20, 20);
 
         try {
-            PdfWriter.getInstance(doc, baos);
+            PdfWriter writer = PdfWriter.getInstance(doc, baos);
+            writer.setPageEvent(new PageFooterEvent());
             doc.open();
 
             addHeader(doc, ledger, customer, company);

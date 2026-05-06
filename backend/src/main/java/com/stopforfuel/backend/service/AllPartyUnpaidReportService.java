@@ -11,6 +11,7 @@ import com.lowagie.text.pdf.MultiColumnText;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.stopforfuel.backend.service.pdf.PageFooterEvent;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
@@ -276,7 +277,8 @@ public class AllPartyUnpaidReportService {
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             Document doc = new Document(PageSize.A4, 24, 24, 28, 32);
-            PdfWriter.getInstance(doc, out);
+            PdfWriter writer = PdfWriter.getInstance(doc, out);
+            writer.setPageEvent(new PageFooterEvent());
             doc.open();
 
             Font titleFont = new Font(Font.HELVETICA, 14, Font.BOLD, new Color(51, 51, 51));
