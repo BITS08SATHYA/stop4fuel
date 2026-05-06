@@ -15,12 +15,16 @@ import {
     TrendingDown,
     Hash,
     Calendar,
+    FileSpreadsheet,
+    FileText,
 } from "lucide-react";
 import {
     API_BASE_URL,
     IncentivePayment,
     createIncentivePayment,
     deleteIncentivePayment,
+    exportIncentivePaymentsExcel,
+    exportIncentivePaymentsPdf,
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
@@ -249,6 +253,34 @@ export default function IncentivePaymentsPage() {
         }
     };
 
+    const [isExporting, setIsExporting] = useState<"excel" | "pdf" | null>(null);
+
+    const handleExport = async (kind: "excel" | "pdf") => {
+        if (!fromDate || !toDate) {
+            toast.error("Pick a from-date and to-date first");
+            return;
+        }
+        setIsExporting(kind);
+        try {
+            const blob = kind === "excel"
+                ? await exportIncentivePaymentsExcel(fromDate, toDate)
+                : await exportIncentivePaymentsPdf(fromDate, toDate);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `incentive_payments_${fromDate}_to_${toDate}.${kind === "excel" ? "xlsx" : "pdf"}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success(`${kind === "excel" ? "Excel" : "PDF"} downloaded`);
+        } catch (err: any) {
+            toast.error(err?.message || `Failed to export ${kind}`);
+        } finally {
+            setIsExporting(null);
+        }
+    };
+
     const handleDelete = async (id: number) => {
         if (!confirm("Delete this incentive payment?")) return;
         try {
@@ -277,15 +309,35 @@ export default function IncentivePaymentsPage() {
                             Track discount and incentive payments given to customers.
                         </p>
                     </div>
-                    <PermissionGate permission="SHIFT_CREATE">
+                    <div className="flex items-center gap-2">
                         <button
-                            onClick={handleOpenAdd}
-                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                            onClick={() => handleExport("pdf")}
+                            disabled={!fromDate || !toDate || isExporting !== null}
+                            title={!fromDate || !toDate ? "Pick a from/to date to enable export" : "Download PDF for the selected date range"}
+                            className="px-4 py-3 bg-card border border-border rounded-xl font-medium text-foreground flex items-center gap-2 hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Plus className="w-5 h-5" />
-                            Add Payment
+                            <FileText className="w-4 h-4" />
+                            {isExporting === "pdf" ? "Exporting..." : "PDF"}
                         </button>
-                    </PermissionGate>
+                        <button
+                            onClick={() => handleExport("excel")}
+                            disabled={!fromDate || !toDate || isExporting !== null}
+                            title={!fromDate || !toDate ? "Pick a from/to date to enable export" : "Download Excel for the selected date range"}
+                            className="px-4 py-3 bg-card border border-border rounded-xl font-medium text-foreground flex items-center gap-2 hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <FileSpreadsheet className="w-4 h-4" />
+                            {isExporting === "excel" ? "Exporting..." : "Excel"}
+                        </button>
+                        <PermissionGate permission="SHIFT_CREATE">
+                            <button
+                                onClick={handleOpenAdd}
+                                className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Add Payment
+                            </button>
+                        </PermissionGate>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}

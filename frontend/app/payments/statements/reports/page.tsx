@@ -51,6 +51,10 @@ export default function StatementReportsPage() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
 
+    // Multi-select for bulk PDF download
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [bulkDownloadProgress, setBulkDownloadProgress] = useState<{ current: number; total: number } | null>(null);
+
     // Sorting
     const [sortKey, setSortKey] = useState<SortKey>("statementNo");
     const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -98,10 +102,87 @@ export default function StatementReportsPage() {
             const statusParam = status === "ALL" ? undefined : status;
             const res = await getStatements(0, 10000, undefined, statusParam, fromDate, toDate);
             setStatements(res.content || []);
+            setSelectedIds(new Set());
         } catch {
             showToast.error("Failed to load statements");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const allVisibleIds = useMemo(
+        () => sortedStatements.map(s => s.id).filter((id): id is number => typeof id === "number"),
+        [sortedStatements]
+    );
+    const allVisibleSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedIds.has(id));
+    const someVisibleSelected = allVisibleIds.some(id => selectedIds.has(id)) && !allVisibleSelected;
+
+    const toggleSelectAll = () => {
+        if (allVisibleSelected) {
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                allVisibleIds.forEach(id => next.delete(id));
+                return next;
+            });
+        } else {
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                allVisibleIds.forEach(id => next.add(id));
+                return next;
+            });
+        }
+    };
+
+    const handleBulkDownloadSelected = async () => {
+        if (selectedIds.size === 0) return;
+        const targets = sortedStatements.filter(s => s.id != null && selectedIds.has(s.id));
+        setBulkDownloadProgress({ current: 0, total: targets.length });
+        let success = 0;
+        let failed = 0;
+        try {
+            for (let i = 0; i < targets.length; i++) {
+                const stmt = targets[i];
+                setBulkDownloadProgress({ current: i + 1, total: targets.length });
+                try {
+                    if (!stmt.statementPdfUrl || stmt.statementPdfUrl.trim() === "") {
+                        await generateStatementPdf(stmt.id!);
+                    }
+                    const url = await getStatementPdfUrl(stmt.id!);
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const blob = await res.blob();
+                    const objectUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = objectUrl;
+                    a.download = `${stmt.statementNo || `Statement_${stmt.id}`}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(objectUrl);
+                    success++;
+                    // Small gap so the browser doesn't drop concurrent downloads.
+                    await new Promise(r => setTimeout(r, 250));
+                } catch {
+                    failed++;
+                }
+            }
+            if (failed === 0) {
+                showToast.success(`Downloaded ${success} PDF${success === 1 ? "" : "s"}`);
+            } else if (success === 0) {
+                showToast.error(`All ${failed} download${failed === 1 ? "" : "s"} failed`);
+            } else {
+                showToast.error(`Downloaded ${success}, failed ${failed}`);
+            }
+        } finally {
+            setBulkDownloadProgress(null);
         }
     };
 
@@ -264,6 +345,17 @@ export default function StatementReportsPage() {
                 </button>
 
                 <div className="ml-auto flex gap-2">
+                    {selectedIds.size > 0 && (
+                        <button
+                            onClick={handleBulkDownloadSelected}
+                            disabled={bulkDownloadProgress !== null}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500/15 text-blue-500 hover:bg-blue-500/25 transition-colors disabled:opacity-50"
+                        >
+                            {bulkDownloadProgress !== null
+                                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {bulkDownloadProgress.current}/{bulkDownloadProgress.total}</>
+                                : <><Download className="w-3.5 h-3.5" /> Download Selected ({selectedIds.size})</>}
+                        </button>
+                    )}
                     <button
                         onClick={handleBulkGenerate}
                         disabled={isGenerating || isRefreshing}
@@ -347,6 +439,16 @@ export default function StatementReportsPage() {
                         <table className="w-full text-sm">
                             <thead className="sticky top-0 bg-card z-10">
                                 <tr className="border-b border-border">
+                                    <th className="px-3 py-2.5 text-center w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={allVisibleSelected}
+                                            ref={el => { if (el) el.indeterminate = someVisibleSelected; }}
+                                            onChange={toggleSelectAll}
+                                            aria-label="Select all visible statements"
+                                            className="w-4 h-4 cursor-pointer accent-blue-500"
+                                        />
+                                    </th>
                                     <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center w-10">#</th>
                                     <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-pointer select-none" onClick={() => handleSort("statementNo")}>
                                         <span className="flex items-center gap-1">Statement No <SortIcon col="statementNo" /></span>
@@ -370,7 +472,16 @@ export default function StatementReportsPage() {
                             </thead>
                             <tbody className="divide-y divide-border/30">
                                 {sortedStatements.map((stmt, idx) => (
-                                    <tr key={stmt.id} className="hover:bg-white/5 transition-colors">
+                                    <tr key={stmt.id} className={`hover:bg-white/5 transition-colors ${stmt.id != null && selectedIds.has(stmt.id) ? "bg-blue-500/5" : ""}`}>
+                                        <td className="px-3 py-2 text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={stmt.id != null && selectedIds.has(stmt.id)}
+                                                onChange={() => stmt.id != null && toggleSelect(stmt.id)}
+                                                aria-label={`Select ${stmt.statementNo}`}
+                                                className="w-4 h-4 cursor-pointer accent-blue-500"
+                                            />
+                                        </td>
                                         <td className="px-3 py-2 text-xs text-muted-foreground text-center">{idx + 1}</td>
                                         <td className="px-3 py-2 font-mono font-bold text-sm">{stmt.statementNo}</td>
                                         <td className="px-3 py-2 text-sm">{stmt.customer?.name || "-"}</td>

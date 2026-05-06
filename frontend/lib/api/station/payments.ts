@@ -437,6 +437,20 @@ export const updatePaymentDate = (id: number, paymentDate: string): Promise<Paym
 export const deleteIncentivePayment = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/incentive-payments/${id}`, { method: 'DELETE' }).then(handleResponse);
 
+export const exportIncentivePaymentsExcel = (fromDate: string, toDate: string): Promise<Blob> =>
+    fetchWithAuth(`${API_BASE_URL}/incentive-payments/export/excel?fromDate=${fromDate}&toDate=${toDate}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Excel export failed');
+            return res.blob();
+        });
+
+export const exportIncentivePaymentsPdf = (fromDate: string, toDate: string): Promise<Blob> =>
+    fetchWithAuth(`${API_BASE_URL}/incentive-payments/export/pdf?fromDate=${fromDate}&toDate=${toDate}`)
+        .then(res => {
+            if (!res.ok) throw new Error('PDF export failed');
+            return res.blob();
+        });
+
 // Statement Reports
 export const exportStatementsExcel = (fromDate: string, toDate: string, status?: string): Promise<Blob> => {
     const params = new URLSearchParams({ fromDate, toDate });
