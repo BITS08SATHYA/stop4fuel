@@ -23,6 +23,19 @@ resource "aws_s3_bucket_versioning" "main" {
   }
 }
 
+resource "aws_s3_bucket_cors_configuration" "main" {
+  count  = length(var.allowed_cors_origins) > 0 ? 1 : 0
+  bucket = aws_s3_bucket.main.id
+
+  cors_rule {
+    allowed_origins = var.allowed_cors_origins
+    allowed_methods = ["GET", "HEAD"]
+    allowed_headers = ["*"]
+    expose_headers  = ["Content-Disposition", "Content-Length", "Content-Type", "ETag", "Accept-Ranges"]
+    max_age_seconds = 3000
+  }
+}
+
 # Document folder structure
 locals {
   folder_prefixes = [
