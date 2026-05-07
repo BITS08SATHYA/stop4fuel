@@ -236,6 +236,11 @@ public class IncentivePaymentPdfGenerator {
             if (p.getInvoiceBill().getCustomer() != null && p.getInvoiceBill().getCustomer().getName() != null) {
                 return p.getInvoiceBill().getCustomer().getName();
             }
+            if (p.getInvoiceBill().getVehicle() != null
+                    && p.getInvoiceBill().getVehicle().getCustomer() != null
+                    && p.getInvoiceBill().getVehicle().getCustomer().getName() != null) {
+                return p.getInvoiceBill().getVehicle().getCustomer().getName();
+            }
             if (p.getInvoiceBill().getSignatoryName() != null) {
                 return p.getInvoiceBill().getSignatoryName();
             }
