@@ -80,6 +80,8 @@ export default function ShiftReportPage() {
 
     const [editingItemId, setEditingItemId] = useState<number | null>(null);
     const [editAmount, setEditAmount] = useState("");
+    const [editQty, setEditQty] = useState("");
+    const [editRate, setEditRate] = useState("");
     const [editReason, setEditReason] = useState("");
     const [transferItemId, setTransferItemId] = useState<number | null>(null);
     const [targetReportId, setTargetReportId] = useState("");
@@ -133,7 +135,13 @@ export default function ShiftReportPage() {
     };
     const handleEditSave = async () => {
         if (!report || editingItemId == null) return;
-        try { const u = await editReportLineItem(report.id, editingItemId, parseFloat(editAmount), editReason || undefined); setReport(u); setEditingItemId(null); setEditAmount(""); setEditReason(""); } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
+        try {
+            const qty = editQty !== "" ? parseFloat(editQty) : undefined;
+            const rate = editRate !== "" ? parseFloat(editRate) : undefined;
+            const u = await editReportLineItem(report.id, editingItemId, parseFloat(editAmount), editReason || undefined, qty, rate);
+            setReport(u);
+            setEditingItemId(null); setEditAmount(""); setEditQty(""); setEditRate(""); setEditReason("");
+        } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
     };
     const handleTransfer = async () => {
         if (!report || transferItemId == null || !targetReportId) return;
@@ -211,7 +219,7 @@ export default function ShiftReportPage() {
                         <th className="text-left py-1.5 px-2">Item</th><th className="text-right py-1.5 px-2">Litres</th><th className="text-right py-1.5 px-2">Rate</th><th className="text-right py-1.5 px-2">Amount</th>
                         {isDraft && <th className="w-16"/>}
                     </tr></thead><tbody>
-                        {revenueItems.map(item => <EditableRow key={item.id} item={item} isDraft={isDraft} editingItemId={editingItemId} editAmount={editAmount} editReason={editReason} setEditingItemId={setEditingItemId} setEditAmount={setEditAmount} setEditReason={setEditReason} onSave={handleEditSave} onTransfer={openTransferModal} showQty />)}
+                        {revenueItems.map(item => <EditableRow key={item.id} item={item} isDraft={isDraft} editingItemId={editingItemId} editAmount={editAmount} editQty={editQty} editRate={editRate} editReason={editReason} setEditingItemId={setEditingItemId} setEditAmount={setEditAmount} setEditQty={setEditQty} setEditRate={setEditRate} setEditReason={setEditReason} onSave={handleEditSave} onTransfer={openTransferModal} showQty />)}
                         <tr className="border-t-2 border-border font-bold"><td className="py-1.5 px-2" colSpan={3}>TOTAL</td><td className="py-1.5 px-2 text-right text-green-500">{fmtCur(report.totalRevenue)}</td>{isDraft && <td/>}</tr>
                     </tbody></table>
                 </div></GlassCard>
@@ -223,7 +231,7 @@ export default function ShiftReportPage() {
                         <th className="text-left py-1.5 px-2">Item</th><th className="text-right py-1.5 px-2">Amount</th>
                         {isDraft && <th className="w-16"/>}
                     </tr></thead><tbody>
-                        {advanceItems.map(item => <EditableRow key={item.id} item={item} isDraft={isDraft} editingItemId={editingItemId} editAmount={editAmount} editReason={editReason} setEditingItemId={setEditingItemId} setEditAmount={setEditAmount} setEditReason={setEditReason} onSave={handleEditSave} onTransfer={openTransferModal} />)}
+                        {advanceItems.map(item => <EditableRow key={item.id} item={item} isDraft={isDraft} editingItemId={editingItemId} editAmount={editAmount} editQty={editQty} editRate={editRate} editReason={editReason} setEditingItemId={setEditingItemId} setEditAmount={setEditAmount} setEditQty={setEditQty} setEditRate={setEditRate} setEditReason={setEditReason} onSave={handleEditSave} onTransfer={openTransferModal} />)}
                         <tr className="border-t-2 border-border font-bold"><td className="py-1.5 px-2">TOTAL</td><td className="py-1.5 px-2 text-right text-red-500">{fmtCur(report.totalAdvances)}</td>{isDraft && <td/>}</tr>
                     </tbody></table>
                 </div></GlassCard>
@@ -659,31 +667,64 @@ function SummaryCard({ label, value, color }: { label: string; value: number; co
     return <GlassCard><div className="p-3"><p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{label}</p><p className={`text-xl font-bold mt-0.5 ${color}`}>{fmtCur(value)}</p></div></GlassCard>;
 }
 
-function EditableRow({ item, isDraft, editingItemId, editAmount, editReason, setEditingItemId, setEditAmount, setEditReason, onSave, onTransfer, showQty }: {
-    item: ReportLineItem; isDraft: boolean; editingItemId: number | null; editAmount: string; editReason: string;
-    setEditingItemId: (id: number | null) => void; setEditAmount: (v: string) => void; setEditReason: (v: string) => void;
+function EditableRow({ item, isDraft, editingItemId, editAmount, editQty, editRate, editReason, setEditingItemId, setEditAmount, setEditQty, setEditRate, setEditReason, onSave, onTransfer, showQty }: {
+    item: ReportLineItem; isDraft: boolean; editingItemId: number | null;
+    editAmount: string; editQty: string; editRate: string; editReason: string;
+    setEditingItemId: (id: number | null) => void;
+    setEditAmount: (v: string) => void; setEditQty: (v: string) => void; setEditRate: (v: string) => void; setEditReason: (v: string) => void;
     onSave: () => void; onTransfer: (id: number) => void; showQty?: boolean;
 }) {
     const isEditing = editingItemId === item.id;
+    const onQtyChange = (v: string) => {
+        setEditQty(v);
+        const r = parseFloat(editRate);
+        const q = parseFloat(v);
+        if (!isNaN(q) && !isNaN(r)) setEditAmount(String(+(q * r).toFixed(4)));
+    };
+    const onRateChange = (v: string) => {
+        setEditRate(v);
+        const q = parseFloat(editQty);
+        const r = parseFloat(v);
+        if (!isNaN(q) && !isNaN(r)) setEditAmount(String(+(q * r).toFixed(4)));
+    };
+    const beginEdit = () => {
+        setEditingItemId(item.id);
+        setEditAmount(String(item.amount));
+        if (showQty) {
+            setEditQty(item.quantity != null ? String(item.quantity) : "");
+            setEditRate(item.rate != null ? String(item.rate) : "");
+        } else {
+            setEditQty("");
+            setEditRate("");
+        }
+    };
     return (
         <tr className="border-b border-border/50 hover:bg-muted/30">
             <td className="py-1.5 px-2 text-sm">
                 {item.label || CATEGORY_LABELS[item.category] || item.category}
                 {item.originalAmount != null && <span className="text-xs text-amber-500 ml-1">(was {fmtCur(item.originalAmount)})</span>}
             </td>
-            {showQty && <td className="py-1.5 px-2 text-right text-sm">{fmtQty(item.quantity)}</td>}
-            {showQty && <td className="py-1.5 px-2 text-right text-sm">{item.rate != null ? fmtCur(item.rate) : "-"}</td>}
+            {showQty && <td className="py-1.5 px-2 text-right text-sm">
+                {isEditing ? (
+                    <input type="number" step="0.01" value={editQty} onChange={e => onQtyChange(e.target.value)} className="w-20 px-2 py-1 border rounded text-right text-sm bg-background" />
+                ) : fmtQty(item.quantity)}
+            </td>}
+            {showQty && <td className="py-1.5 px-2 text-right text-sm">
+                {isEditing ? (
+                    <input type="number" step="0.01" value={editRate} onChange={e => onRateChange(e.target.value)} className="w-20 px-2 py-1 border rounded text-right text-sm bg-background" />
+                ) : item.rate != null ? fmtCur(item.rate) : "-"}
+            </td>}
             <td className="py-1.5 px-2 text-right text-sm">
                 {isEditing ? (
                     <div className="flex flex-col items-end gap-1">
-                        <input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-28 px-2 py-1 border rounded text-right text-sm bg-background" />
+                        <input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-28 px-2 py-1 border rounded text-right text-sm bg-background" />
                         <input type="text" value={editReason} placeholder="Reason" onChange={e => setEditReason(e.target.value)} className="w-40 px-2 py-1 border rounded text-sm bg-background" />
                         <div className="flex gap-1"><button onClick={onSave} className="text-xs px-2 py-0.5 rounded bg-green-500/10 text-green-500">Save</button><button onClick={() => setEditingItemId(null)} className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">Cancel</button></div>
                     </div>
                 ) : fmtCur(item.amount)}
             </td>
             {isDraft && <td className="py-1.5 px-2 text-center"><div className="flex items-center justify-center gap-0.5">
-                <button onClick={() => { setEditingItemId(item.id); setEditAmount(String(item.amount)); }} className="p-1 rounded hover:bg-muted" title="Edit"><Edit3 className="w-3.5 h-3.5 text-blue-500" /></button>
+                <button onClick={beginEdit} className="p-1 rounded hover:bg-muted" title="Edit"><Edit3 className="w-3.5 h-3.5 text-blue-500" /></button>
                 <button onClick={() => onTransfer(item.id)} className="p-1 rounded hover:bg-muted" title="Transfer"><ArrowRightLeft className="w-3.5 h-3.5 text-amber-500" /></button>
             </div></td>}
         </tr>

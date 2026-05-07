@@ -50,7 +50,11 @@ public class ShiftClosingReportController {
                                             @RequestBody Map<String, Object> body) {
         BigDecimal newAmount = new BigDecimal(body.get("amount").toString());
         String reason = body.get("reason") != null ? body.get("reason").toString() : null;
-        return reportService.editLineItem(reportId, lineItemId, newAmount, reason);
+        Double newQuantity = body.get("quantity") != null
+                ? Double.valueOf(body.get("quantity").toString()) : null;
+        BigDecimal newRate = body.get("rate") != null
+                ? new BigDecimal(body.get("rate").toString()) : null;
+        return reportService.editLineItem(reportId, lineItemId, newAmount, newQuantity, newRate, reason);
     }
 
     @PostMapping("/{reportId}/transfer")

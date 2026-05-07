@@ -86,6 +86,12 @@ public class ShiftClosingReportService {
 
     @Transactional
     public ShiftClosingReport editLineItem(Long reportId, Long lineItemId, BigDecimal newAmount, String reason) {
+        return editLineItem(reportId, lineItemId, newAmount, null, null, reason);
+    }
+
+    @Transactional
+    public ShiftClosingReport editLineItem(Long reportId, Long lineItemId, BigDecimal newAmount,
+                                            Double newQuantity, BigDecimal newRate, String reason) {
         ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
@@ -103,6 +109,8 @@ public class ShiftClosingReportService {
         BigDecimal oldAmount = lineItem.getAmount();
         lineItem.setOriginalAmount(oldAmount);
         lineItem.setAmount(newAmount);
+        if (newQuantity != null) lineItem.setQuantity(newQuantity);
+        if (newRate != null) lineItem.setRate(newRate);
         lineItemRepository.save(lineItem);
 
         // Cascade: update source entity

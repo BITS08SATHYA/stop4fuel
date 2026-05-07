@@ -220,11 +220,18 @@ export const getAllShiftReports = (status?: string): Promise<ShiftClosingReport[
     return fetchWithAuth(`${API_BASE_URL}/shift-reports${qs}`).then(handleResponse);
 };
 
-export const editReportLineItem = (reportId: number, lineItemId: number, amount: number, reason?: string): Promise<ShiftClosingReport> =>
+export const editReportLineItem = (
+    reportId: number,
+    lineItemId: number,
+    amount: number,
+    reason?: string,
+    quantity?: number,
+    rate?: number,
+): Promise<ShiftClosingReport> =>
     fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/line-items/${lineItemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, reason }),
+        body: JSON.stringify({ amount, reason, quantity, rate }),
     }).then(handleResponse);
 
 export const transferReportEntry = (reportId: number, lineItemId: number, targetReportId: number, reason?: string): Promise<ShiftClosingReport> =>
