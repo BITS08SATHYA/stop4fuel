@@ -15,11 +15,13 @@ import java.util.stream.Collectors;
 public class PurchaseInvoiceDTO {
     private Long id;
     private String invoiceNumber;
+    private String sapEntryNumber;
     private LocalDate invoiceDate;
     private LocalDate deliveryDate;
     private String invoiceType;
     private String status;
     private BigDecimal totalAmount;
+    private BigDecimal roundingAdjustment;
     private String remarks;
     private String pdfFilePath;
     private SupplierSummary supplier;
@@ -33,11 +35,13 @@ public class PurchaseInvoiceDTO {
         return PurchaseInvoiceDTO.builder()
                 .id(pi.getId())
                 .invoiceNumber(pi.getInvoiceNumber())
+                .sapEntryNumber(pi.getSapEntryNumber())
                 .invoiceDate(pi.getInvoiceDate())
                 .deliveryDate(pi.getDeliveryDate())
                 .invoiceType(pi.getInvoiceType())
                 .status(pi.getStatus())
                 .totalAmount(pi.getTotalAmount())
+                .roundingAdjustment(pi.getRoundingAdjustment())
                 .remarks(pi.getRemarks())
                 .pdfFilePath(pi.getPdfFilePath())
                 .supplier(SupplierSummary.from(pi.getSupplier()))

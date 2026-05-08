@@ -34,6 +34,9 @@ public class PurchaseInvoice extends BaseEntity {
     @Column(nullable = false)
     private String invoiceNumber;
 
+    @Column(name = "sap_entry_number")
+    private String sapEntryNumber;
+
     @Column(nullable = false)
     private LocalDate invoiceDate;
 
@@ -46,6 +49,10 @@ public class PurchaseInvoice extends BaseEntity {
     private String status = "PENDING"; // PENDING, VERIFIED, PAID
 
     private BigDecimal totalAmount;
+
+    /** Supplier-side rounding adjustment line (e.g. IOCL ZRND). Added to items subtotal to reach the printed grand total. */
+    @Column(name = "rounding_adjustment", precision = 10, scale = 2)
+    private BigDecimal roundingAdjustment;
 
     private String remarks;
 

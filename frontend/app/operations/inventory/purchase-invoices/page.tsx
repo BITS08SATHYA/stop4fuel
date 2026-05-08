@@ -83,10 +83,12 @@ export default function PurchaseInvoicesPage() {
     const [invoiceType, setInvoiceType] = useState<"FUEL" | "NON_FUEL">("FUEL");
     const [supplierId, setSupplierId] = useState("");
     const [invoiceNumber, setInvoiceNumber] = useState("");
+    const [sapEntryNumber, setSapEntryNumber] = useState("");
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0]);
     const [deliveryDate, setDeliveryDate] = useState("");
     const [purchaseOrderId, setPurchaseOrderId] = useState("");
     const [remarks, setRemarks] = useState("");
+    const [roundingAdjustment, setRoundingAdjustment] = useState("");
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE_ITEM }]);
     const [apiError, setApiError] = useState("");
@@ -173,8 +175,12 @@ export default function PurchaseInvoicesPage() {
         setLineItems(updated);
     };
 
-    const calcTotal = () => {
+    const calcItemsSubtotal = () => {
         return lineItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0);
+    };
+
+    const calcTotal = () => {
+        return calcItemsSubtotal() + (Number(roundingAdjustment) || 0);
     };
 
     const buildItemsPayload = (items: LineItem[]) =>
@@ -206,23 +212,29 @@ export default function PurchaseInvoicesPage() {
         items: LineItem[],
         currentSupplierId: string,
         currentInvoiceNumber: string,
+        currentSapEntryNumber: string,
         currentInvoiceDate: string,
         currentDeliveryDate: string,
         currentInvoiceType: "FUEL" | "NON_FUEL",
         currentRemarks: string,
         currentPurchaseOrderId: string,
+        currentRoundingAdjustment: string,
         currentPdfFile: File | null,
     ) => {
         const itemsPayload = buildItemsPayload(items);
-        const total = items.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0);
+        const itemsSubtotal = items.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0);
+        const rounding = Number(currentRoundingAdjustment) || 0;
+        const total = itemsSubtotal + rounding;
         const payload: any = {
             supplier: { id: Number(currentSupplierId) },
             invoiceNumber: currentInvoiceNumber,
+            sapEntryNumber: currentSapEntryNumber || null,
             invoiceDate: currentInvoiceDate,
             deliveryDate: currentDeliveryDate || null,
             invoiceType: currentInvoiceType,
             status: "PENDING",
             totalAmount: total,
+            roundingAdjustment: currentRoundingAdjustment ? rounding : null,
             remarks: currentRemarks || null,
             items: itemsPayload,
         };
@@ -246,7 +258,7 @@ export default function PurchaseInvoicesPage() {
         setApiError("");
         if (!validate({ supplierId, invoiceNumber, invoiceDate })) return;
         try {
-            await submitInvoice(lineItems, supplierId, invoiceNumber, invoiceDate, deliveryDate, invoiceType, remarks, purchaseOrderId, pdfFile);
+            await submitInvoice(lineItems, supplierId, invoiceNumber, sapEntryNumber, invoiceDate, deliveryDate, invoiceType, remarks, purchaseOrderId, roundingAdjustment, pdfFile);
             setIsModalOpen(false);
             resetForm();
             loadData();
@@ -281,11 +293,13 @@ export default function PurchaseInvoicesPage() {
                         newLineItems,
                         String(result.supplier.matchedId),
                         result.invoiceNumber!,
+                        result.sapEntryNumber || "",
                         result.invoiceDate!,
                         result.deliveryDate || "",
                         result.invoiceType || invoiceType,
                         result.remarks || "",
                         "",
+                        result.roundingAdjustment != null ? String(result.roundingAdjustment) : "",
                         file,
                     );
                     setIsModalOpen(false);
@@ -309,9 +323,11 @@ export default function PurchaseInvoicesPage() {
         if (r.invoiceType) setInvoiceType(r.invoiceType);
         setSupplierId(r.supplier.matchedId ? String(r.supplier.matchedId) : "");
         if (r.invoiceNumber) setInvoiceNumber(r.invoiceNumber);
+        if (r.sapEntryNumber) setSapEntryNumber(r.sapEntryNumber);
         if (r.invoiceDate) setInvoiceDate(r.invoiceDate);
         if (r.deliveryDate) setDeliveryDate(r.deliveryDate);
         if (r.remarks) setRemarks(r.remarks);
+        setRoundingAdjustment(r.roundingAdjustment != null ? String(r.roundingAdjustment) : "");
         clearAllErrors();
 
         if (!r.supplier.matchedId && r.supplier.extractedName) {
@@ -403,10 +419,12 @@ export default function PurchaseInvoicesPage() {
         setInvoiceType(invoice.invoiceType);
         setSupplierId(String(invoice.supplier.id));
         setInvoiceNumber(invoice.invoiceNumber);
+        setSapEntryNumber(invoice.sapEntryNumber || "");
         setInvoiceDate(invoice.invoiceDate);
         setDeliveryDate(invoice.deliveryDate || "");
         setPurchaseOrderId(invoice.purchaseOrder?.id ? String(invoice.purchaseOrder.id) : "");
         setRemarks(invoice.remarks || "");
+        setRoundingAdjustment(invoice.roundingAdjustment != null ? String(invoice.roundingAdjustment) : "");
         setPdfFile(null);
         setExtractionWarnings([]);
         setExtractionInfo(null);
@@ -435,10 +453,12 @@ export default function PurchaseInvoicesPage() {
         setInvoiceType("FUEL");
         setSupplierId("");
         setInvoiceNumber("");
+        setSapEntryNumber("");
         setInvoiceDate(new Date().toISOString().split("T")[0]);
         setDeliveryDate("");
         setPurchaseOrderId("");
         setRemarks("");
+        setRoundingAdjustment("");
         setPdfFile(null);
         setExtractionWarnings([]);
         setExtractionInfo(null);
@@ -590,7 +610,12 @@ export default function PurchaseInvoicesPage() {
                                         {paginatedData.map((inv, idx) => (
                                             <tr key={inv.id} className="hover:bg-white/5 transition-colors">
                                                 <td className="px-4 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
-                                                <td className="px-4 py-4 text-sm font-medium text-foreground">{inv.invoiceNumber}</td>
+                                                <td className="px-4 py-4">
+                                                    <div className="text-sm font-medium text-foreground">{inv.invoiceNumber}</div>
+                                                    {inv.sapEntryNumber && (
+                                                        <div className="text-[10px] text-muted-foreground font-mono">SAP {inv.sapEntryNumber}</div>
+                                                    )}
+                                                </td>
                                                 <td className="px-4 py-4 text-center">
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${TYPE_COLORS[inv.invoiceType] || ''}`}>
                                                         {inv.invoiceType === "NON_FUEL" ? "Non-Fuel" : "Fuel"}
@@ -746,7 +771,7 @@ export default function PurchaseInvoicesPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1.5">Supplier</label>
                             <StyledSelect
@@ -768,9 +793,21 @@ export default function PurchaseInvoicesPage() {
                                 value={invoiceNumber}
                                 onChange={(e) => { setInvoiceNumber(e.target.value); clearError("invoiceNumber"); }}
                                 className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.invoiceNumber)}`}
-                                placeholder="e.g. INV-2026-001"
+                                placeholder="e.g. 20274150B000997"
                             />
                             <FieldError error={errors.invoiceNumber} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
+                                SAP Entry No <span className="text-muted-foreground text-xs">(optional)</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={sapEntryNumber}
+                                onChange={(e) => setSapEntryNumber(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                placeholder="e.g. 7005192190"
+                            />
                         </div>
                     </div>
 
@@ -874,8 +911,27 @@ export default function PurchaseInvoicesPage() {
                                 );
                             })}
                         </div>
-                        <div className="text-right mt-3 text-sm font-bold text-foreground">
-                            Total: ₹{calcTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <div className="mt-3 flex flex-col items-end gap-1.5 text-sm">
+                            <div className="flex items-center gap-3 text-muted-foreground">
+                                <span>Items Subtotal:</span>
+                                <span className="font-mono w-32 text-right">₹{calcItemsSubtotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-muted-foreground">
+                                <label htmlFor="rounding-input" className="cursor-pointer" title="ZRND / Rounding Off line on supplier invoices">Rounding Adjustment:</label>
+                                <input
+                                    id="rounding-input"
+                                    type="number"
+                                    value={roundingAdjustment}
+                                    onChange={(e) => setRoundingAdjustment(e.target.value)}
+                                    placeholder="0.00"
+                                    step="any"
+                                    className="w-32 bg-background border border-border rounded-lg px-2 py-1.5 text-foreground text-right font-mono text-sm"
+                                />
+                            </div>
+                            <div className="flex items-center gap-3 font-bold text-foreground border-t border-border pt-1.5">
+                                <span>Total:</span>
+                                <span className="font-mono w-32 text-right">₹{calcTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -929,6 +985,7 @@ export default function PurchaseInvoicesPage() {
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div><span className="text-muted-foreground">Invoice #:</span> <span className="font-medium text-foreground">{viewInvoice.invoiceNumber}</span></div>
+                            <div><span className="text-muted-foreground">SAP Entry #:</span> <span className="font-medium text-foreground">{viewInvoice.sapEntryNumber || '-'}</span></div>
                             <div><span className="text-muted-foreground">Type:</span> <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${TYPE_COLORS[viewInvoice.invoiceType]}`}>{viewInvoice.invoiceType === "NON_FUEL" ? "Non-Fuel" : "Fuel"}</span></div>
                             <div><span className="text-muted-foreground">Supplier:</span> <span className="font-medium text-foreground">{viewInvoice.supplier?.name}</span></div>
                             <div><span className="text-muted-foreground">Status:</span> <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${STATUS_COLORS[viewInvoice.status]}`}>{viewInvoice.status}</span></div>
@@ -974,9 +1031,15 @@ export default function PurchaseInvoicesPage() {
                                 ))}
                             </tbody>
                             <tfoot>
+                                {viewInvoice.roundingAdjustment != null && Number(viewInvoice.roundingAdjustment) !== 0 && (
+                                    <tr className="text-muted-foreground">
+                                        <td colSpan={viewInvoice.invoiceType === "FUEL" ? 4 : 3} className="py-1.5 text-right">Rounding Adjustment:</td>
+                                        <td className="py-1.5 text-right font-mono">₹{Number(viewInvoice.roundingAdjustment).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    </tr>
+                                )}
                                 <tr className="border-t border-border">
                                     <td colSpan={viewInvoice.invoiceType === "FUEL" ? 4 : 3} className="py-2 text-right font-bold text-foreground">Total:</td>
-                                    <td className="py-2 text-right font-mono font-bold text-primary">₹{Number(viewInvoice.totalAmount || 0).toLocaleString()}</td>
+                                    <td className="py-2 text-right font-mono font-bold text-primary">₹{Number(viewInvoice.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 </tr>
                             </tfoot>
                         </table>

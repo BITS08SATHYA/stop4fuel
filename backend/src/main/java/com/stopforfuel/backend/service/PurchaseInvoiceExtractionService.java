@@ -41,6 +41,17 @@ public class PurchaseInvoiceExtractionService {
             - basicAmount, taxAmount, totalAmount as rupees for that line.
             - taxPercent as the percentage on the VAT/GST line (e.g. 13.0 for "13.000 %").
 
+            Top-level fields:
+            - invoiceNumber: the document/tax invoice number (e.g. "20274150B000997").
+            - sapEntryNumber: the SAP Entry no printed in the header (e.g. "7005192190"),
+              null if absent. This is separate from invoiceNumber.
+            - roundingAdjustment: the rupee value on any "ZRND Rounding Difference" /
+              "Rounding Off" line at the bottom of the invoice, signed (positive if it
+              raises the total, negative if it lowers). Null if the invoice has no
+              rounding line.
+            - totalAmount: the printed grand total at the bottom of the invoice,
+              including any rounding adjustment.
+
             Map invoiceType:
             - "FUEL" if any item's HSN starts with 2710.
             - "NON_FUEL" otherwise.
@@ -112,10 +123,12 @@ public class PurchaseInvoiceExtractionService {
         return new ExtractionResult(
                 supplierMatch,
                 extracted.invoiceNumber(),
+                extracted.sapEntryNumber(),
                 parseDate(extracted.invoiceDate()),
                 parseDate(extracted.deliveryDate()),
                 normalizeInvoiceType(extracted.invoiceType()),
                 extracted.totalAmount(),
+                extracted.roundingAdjustment(),
                 extracted.remarks(),
                 itemMatches
         );
@@ -257,10 +270,12 @@ public class PurchaseInvoiceExtractionService {
             String supplierName,
             String supplierGstin,
             String invoiceNumber,
+            String sapEntryNumber,
             String invoiceDate,
             String deliveryDate,
             String invoiceType,
             BigDecimal totalAmount,
+            BigDecimal roundingAdjustment,
             String remarks,
             List<ExtractedItem> items
     ) {

@@ -7,10 +7,12 @@ import java.util.List;
 public record ExtractionResult(
         SupplierMatch supplier,
         String invoiceNumber,
+        String sapEntryNumber,
         LocalDate invoiceDate,
         LocalDate deliveryDate,
         String invoiceType,
         BigDecimal totalAmount,
+        BigDecimal roundingAdjustment,
         String remarks,
         List<ItemMatch> items
 ) {

@@ -116,10 +116,12 @@ export interface ExtractionResult {
         matchReason: 'GSTIN' | 'NAME' | null;
     };
     invoiceNumber: string | null;
+    sapEntryNumber: string | null;
     invoiceDate: string | null;
     deliveryDate: string | null;
     invoiceType: 'FUEL' | 'NON_FUEL' | null;
     totalAmount: number | null;
+    roundingAdjustment: number | null;
     remarks: string | null;
     items: Array<{
         matchedProductId: number | null;
@@ -142,11 +144,13 @@ export interface PurchaseInvoice {
     supplier: Supplier;
     purchaseOrder?: PurchaseOrder;
     invoiceNumber: string;
+    sapEntryNumber?: string;
     invoiceDate: string;
     deliveryDate?: string;
     invoiceType: 'FUEL' | 'NON_FUEL';
     status: 'PENDING' | 'VERIFIED' | 'PAID';
     totalAmount: number;
+    roundingAdjustment?: number;
     remarks?: string;
     pdfFilePath?: string;
     items: PurchaseInvoiceItem[];
