@@ -29,4 +29,19 @@ public class PurchaseInvoiceItem extends SimpleBaseEntity {
     private BigDecimal unitPrice;
 
     private BigDecimal totalPrice;
+
+    @Column(name = "basic_price", precision = 19, scale = 4)
+    private BigDecimal basicPrice;
+
+    @Column(name = "basic_amount", precision = 19, scale = 2)
+    private BigDecimal basicAmount;
+
+    @Column(name = "tax_percent", precision = 6, scale = 3)
+    private BigDecimal taxPercent;
+
+    @Column(name = "tax_amount", precision = 19, scale = 2)
+    private BigDecimal taxAmount;
+
+    @Column(name = "additional_tax_amount", precision = 19, scale = 2)
+    private BigDecimal additionalTaxAmount;
 }

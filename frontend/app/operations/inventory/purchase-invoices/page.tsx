@@ -17,12 +17,14 @@ import {
     uploadPurchaseInvoicePdf,
     getPurchaseInvoicePdfUrl,
     downloadPurchaseInvoiceReport,
+    extractPurchaseInvoicePdf,
+    ExtractionResult,
     PurchaseInvoice,
     Product,
     Supplier,
     PurchaseOrder,
 } from "@/lib/api/station";
-import { FileText, Plus, Search, Trash2, Eye, Edit3, Upload, ExternalLink, Download, Calendar } from "lucide-react";
+import { FileText, Plus, Search, Trash2, Eye, Edit3, Upload, ExternalLink, Download, Calendar, Sparkles, AlertTriangle } from "lucide-react";
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
@@ -42,7 +44,23 @@ interface LineItem {
     productId: string;
     quantity: string;
     unitPrice: string;
+    basicPrice: string;
+    taxPercent: string;
+    taxAmount: string;
+    additionalTaxAmount: string;
+    totalPrice: string;
 }
+
+const EMPTY_LINE_ITEM: LineItem = {
+    productId: "",
+    quantity: "",
+    unitPrice: "",
+    basicPrice: "",
+    taxPercent: "",
+    taxAmount: "",
+    additionalTaxAmount: "",
+    totalPrice: "",
+};
 
 export default function PurchaseInvoicesPage() {
     const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
@@ -70,8 +88,12 @@ export default function PurchaseInvoicesPage() {
     const [purchaseOrderId, setPurchaseOrderId] = useState("");
     const [remarks, setRemarks] = useState("");
     const [pdfFile, setPdfFile] = useState<File | null>(null);
-    const [lineItems, setLineItems] = useState<LineItem[]>([{ productId: "", quantity: "", unitPrice: "" }]);
+    const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE_ITEM }]);
     const [apiError, setApiError] = useState("");
+    const [extracting, setExtracting] = useState(false);
+    const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
+    const [extractionInfo, setExtractionInfo] = useState<string | null>(null);
+    const [autoCreateOnExtract, setAutoCreateOnExtract] = useState(false);
 
     const validationRules = useMemo(() => ({
         supplierId: [required("Supplier is required")],
@@ -118,23 +140,105 @@ export default function PurchaseInvoicesPage() {
     }, [purchaseOrders, supplierId]);
 
     const addLineItem = () => {
-        setLineItems([...lineItems, { productId: "", quantity: "", unitPrice: "" }]);
+        setLineItems([...lineItems, { ...EMPTY_LINE_ITEM }]);
     };
 
     const removeLineItem = (idx: number) => {
         setLineItems(lineItems.filter((_, i) => i !== idx));
     };
 
+    const recalcLineItem = (li: LineItem): LineItem => {
+        const qty = Number(li.quantity) || 0;
+        const basicPrice = Number(li.basicPrice) || 0;
+        const basicAmount = qty * basicPrice;
+        let taxAmount = Number(li.taxAmount) || 0;
+        const taxPercent = Number(li.taxPercent) || 0;
+        // Only auto-derive taxAmount from percent if user hasn't explicitly typed taxAmount.
+        if (li.taxPercent !== "" && li.taxAmount === "" && basicAmount > 0) {
+            taxAmount = basicAmount * taxPercent / 100;
+        }
+        const addVat = Number(li.additionalTaxAmount) || 0;
+        const totalPrice = basicAmount + taxAmount + addVat;
+        const unitPrice = qty > 0 ? totalPrice / qty : 0;
+        return {
+            ...li,
+            totalPrice: totalPrice ? totalPrice.toFixed(2) : "",
+            unitPrice: unitPrice ? unitPrice.toFixed(4) : "",
+        };
+    };
+
     const updateLineItem = (idx: number, field: keyof LineItem, value: string) => {
         const updated = [...lineItems];
-        updated[idx] = { ...updated[idx], [field]: value };
+        updated[idx] = recalcLineItem({ ...updated[idx], [field]: value });
         setLineItems(updated);
     };
 
     const calcTotal = () => {
-        return lineItems.reduce((sum, item) => {
-            return sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
-        }, 0);
+        return lineItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0);
+    };
+
+    const buildItemsPayload = (items: LineItem[]) =>
+        items
+            .filter((li) => li.productId && li.quantity)
+            .map((li) => {
+                const qty = Number(li.quantity) || 0;
+                const basicPrice = Number(li.basicPrice) || 0;
+                const basicAmount = li.basicPrice ? qty * basicPrice : null;
+                const taxPercent = li.taxPercent ? Number(li.taxPercent) : null;
+                const taxAmount = li.taxAmount ? Number(li.taxAmount) : null;
+                const additionalTaxAmount = li.additionalTaxAmount ? Number(li.additionalTaxAmount) : null;
+                const totalPrice = Number(li.totalPrice) || 0;
+                const unitPrice = qty > 0 ? totalPrice / qty : 0;
+                return {
+                    product: { id: Number(li.productId) },
+                    quantity: qty,
+                    unitPrice,
+                    totalPrice,
+                    basicPrice: li.basicPrice ? basicPrice : null,
+                    basicAmount,
+                    taxPercent,
+                    taxAmount,
+                    additionalTaxAmount,
+                };
+            });
+
+    const submitInvoice = async (
+        items: LineItem[],
+        currentSupplierId: string,
+        currentInvoiceNumber: string,
+        currentInvoiceDate: string,
+        currentDeliveryDate: string,
+        currentInvoiceType: "FUEL" | "NON_FUEL",
+        currentRemarks: string,
+        currentPurchaseOrderId: string,
+        currentPdfFile: File | null,
+    ) => {
+        const itemsPayload = buildItemsPayload(items);
+        const total = items.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0);
+        const payload: any = {
+            supplier: { id: Number(currentSupplierId) },
+            invoiceNumber: currentInvoiceNumber,
+            invoiceDate: currentInvoiceDate,
+            deliveryDate: currentDeliveryDate || null,
+            invoiceType: currentInvoiceType,
+            status: "PENDING",
+            totalAmount: total,
+            remarks: currentRemarks || null,
+            items: itemsPayload,
+        };
+        if (currentPurchaseOrderId) {
+            payload.purchaseOrder = { id: Number(currentPurchaseOrderId) };
+        }
+        let saved: PurchaseInvoice;
+        if (editingId) {
+            saved = await updatePurchaseInvoice(editingId, payload);
+        } else {
+            saved = await createPurchaseInvoice(payload);
+        }
+        if (currentPdfFile && saved.id) {
+            await uploadPurchaseInvoicePdf(saved.id, currentPdfFile);
+        }
+        return saved;
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -142,43 +246,7 @@ export default function PurchaseInvoicesPage() {
         setApiError("");
         if (!validate({ supplierId, invoiceNumber, invoiceDate })) return;
         try {
-            const items = lineItems
-                .filter((li) => li.productId && li.quantity)
-                .map((li) => ({
-                    product: { id: Number(li.productId) },
-                    quantity: Number(li.quantity),
-                    unitPrice: Number(li.unitPrice) || 0,
-                    totalPrice: (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0),
-                }));
-
-            const payload: any = {
-                supplier: { id: Number(supplierId) },
-                invoiceNumber,
-                invoiceDate,
-                deliveryDate: deliveryDate || null,
-                invoiceType,
-                status: "PENDING",
-                totalAmount: calcTotal(),
-                remarks: remarks || null,
-                items,
-            };
-
-            if (purchaseOrderId) {
-                payload.purchaseOrder = { id: Number(purchaseOrderId) };
-            }
-
-            let saved: PurchaseInvoice;
-            if (editingId) {
-                saved = await updatePurchaseInvoice(editingId, payload);
-            } else {
-                saved = await createPurchaseInvoice(payload);
-            }
-
-            // Upload PDF if selected
-            if (pdfFile && saved.id) {
-                await uploadPurchaseInvoicePdf(saved.id, pdfFile);
-            }
-
+            await submitInvoice(lineItems, supplierId, invoiceNumber, invoiceDate, deliveryDate, invoiceType, remarks, purchaseOrderId, pdfFile);
             setIsModalOpen(false);
             resetForm();
             loadData();
@@ -186,6 +254,101 @@ export default function PurchaseInvoicesPage() {
             console.error("Failed to save invoice", err);
             setApiError(err.message || "Error saving purchase invoice");
         }
+    };
+
+    const handlePdfPick = async (file: File | null) => {
+        setPdfFile(file);
+        setExtractionWarnings([]);
+        setExtractionInfo(null);
+        if (!file) return;
+        setExtracting(true);
+        try {
+            const result = await extractPurchaseInvoicePdf(file);
+            const { newLineItems, warnings, info } = applyExtractionToForm(result);
+            setExtractionWarnings(warnings);
+            setExtractionInfo(info);
+
+            // Auto-create flow: only if user opted in AND nothing is ambiguous AND we have required fields.
+            const supplierMatched = result.supplier.matchedId != null;
+            const allItemsMatched = newLineItems.length > 0
+                && newLineItems.every((li) => li.productId && li.quantity);
+            const hasInvoiceNumber = !!result.invoiceNumber;
+            const hasDate = !!result.invoiceDate;
+
+            if (autoCreateOnExtract && supplierMatched && allItemsMatched && hasInvoiceNumber && hasDate && !editingId) {
+                try {
+                    await submitInvoice(
+                        newLineItems,
+                        String(result.supplier.matchedId),
+                        result.invoiceNumber!,
+                        result.invoiceDate!,
+                        result.deliveryDate || "",
+                        result.invoiceType || invoiceType,
+                        result.remarks || "",
+                        "",
+                        file,
+                    );
+                    setIsModalOpen(false);
+                    resetForm();
+                    loadData();
+                } catch (err: any) {
+                    console.error("Auto-create failed", err);
+                    setApiError(err.message || "Auto-create failed; please review and click Create Invoice");
+                }
+            }
+        } catch (err: any) {
+            console.error("PDF extraction failed", err);
+            setExtractionWarnings([err.message || "PDF extraction failed"]);
+        } finally {
+            setExtracting(false);
+        }
+    };
+
+    const applyExtractionToForm = (r: ExtractionResult): { newLineItems: LineItem[]; warnings: string[]; info: string | null } => {
+        const warnings: string[] = [];
+        if (r.invoiceType) setInvoiceType(r.invoiceType);
+        setSupplierId(r.supplier.matchedId ? String(r.supplier.matchedId) : "");
+        if (r.invoiceNumber) setInvoiceNumber(r.invoiceNumber);
+        if (r.invoiceDate) setInvoiceDate(r.invoiceDate);
+        if (r.deliveryDate) setDeliveryDate(r.deliveryDate);
+        if (r.remarks) setRemarks(r.remarks);
+        clearAllErrors();
+
+        if (!r.supplier.matchedId && r.supplier.extractedName) {
+            const gst = r.supplier.extractedGstin ? ` (GSTIN ${r.supplier.extractedGstin})` : "";
+            warnings.push(`Supplier from PDF: "${r.supplier.extractedName}"${gst} — no match in your suppliers list. Pick one from the dropdown.`);
+        }
+
+        const items: LineItem[] = (r.items || []).map((it) => {
+            if (!it.matchedProductId && it.extractedDescription) {
+                const hsn = it.extractedHsn ? ` (HSN ${it.extractedHsn})` : "";
+                warnings.push(`Line "${it.extractedDescription}"${hsn} — no product match. Pick a product manually.`);
+            }
+            const qty = it.quantityLitres ?? 0;
+            const basicPrice = it.basicPricePerLitre ?? 0;
+            const basicAmount = it.basicAmount ?? (qty * basicPrice);
+            const taxAmount = it.taxAmount ?? 0;
+            const addVat = it.additionalTaxAmount ?? 0;
+            const totalPrice = it.totalAmount ?? (basicAmount + taxAmount + addVat);
+            const unitPrice = qty > 0 ? totalPrice / qty : 0;
+            return {
+                productId: it.matchedProductId ? String(it.matchedProductId) : "",
+                quantity: qty ? String(qty) : "",
+                basicPrice: basicPrice ? String(basicPrice) : "",
+                taxPercent: it.taxPercent != null ? String(it.taxPercent) : "",
+                taxAmount: taxAmount ? String(taxAmount) : "",
+                additionalTaxAmount: addVat ? String(addVat) : "",
+                totalPrice: totalPrice ? totalPrice.toFixed(2) : "",
+                unitPrice: unitPrice ? unitPrice.toFixed(4) : "",
+            };
+        });
+        const newLineItems = items.length > 0 ? items : [{ ...EMPTY_LINE_ITEM }];
+        setLineItems(newLineItems);
+
+        const info = r.items?.length
+            ? `Extracted ${r.items.length} item${r.items.length > 1 ? "s" : ""} from PDF.`
+            : "PDF parsed but no line items found.";
+        return { newLineItems, warnings, info };
     };
 
     const handleDelete = async (id: number) => {
@@ -245,12 +408,24 @@ export default function PurchaseInvoicesPage() {
         setPurchaseOrderId(invoice.purchaseOrder?.id ? String(invoice.purchaseOrder.id) : "");
         setRemarks(invoice.remarks || "");
         setPdfFile(null);
+        setExtractionWarnings([]);
+        setExtractionInfo(null);
         setLineItems(
-            invoice.items.map((item) => ({
-                productId: String(item.product.id),
-                quantity: String(item.quantity),
-                unitPrice: String(item.unitPrice || ""),
-            }))
+            invoice.items.map((item) => {
+                const qty = item.quantity ?? 0;
+                const totalPrice = Number(item.totalPrice ?? 0);
+                const unitPrice = qty > 0 && totalPrice > 0 ? totalPrice / qty : Number(item.unitPrice ?? 0);
+                return {
+                    productId: String(item.product.id),
+                    quantity: String(qty),
+                    unitPrice: unitPrice ? unitPrice.toFixed(4) : "",
+                    basicPrice: item.basicPrice != null ? String(item.basicPrice) : "",
+                    taxPercent: item.taxPercent != null ? String(item.taxPercent) : "",
+                    taxAmount: item.taxAmount != null ? String(item.taxAmount) : "",
+                    additionalTaxAmount: item.additionalTaxAmount != null ? String(item.additionalTaxAmount) : "",
+                    totalPrice: totalPrice ? totalPrice.toFixed(2) : "",
+                };
+            })
         );
         setIsModalOpen(true);
     };
@@ -265,7 +440,9 @@ export default function PurchaseInvoicesPage() {
         setPurchaseOrderId("");
         setRemarks("");
         setPdfFile(null);
-        setLineItems([{ productId: "", quantity: "", unitPrice: "" }]);
+        setExtractionWarnings([]);
+        setExtractionInfo(null);
+        setLineItems([{ ...EMPTY_LINE_ITEM }]);
     };
 
     const filtered = invoices.filter((inv) => {
@@ -492,9 +669,61 @@ export default function PurchaseInvoicesPage() {
             </div>
 
             {/* Create/Edit Invoice Modal */}
-            <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title={editingId ? "Edit Purchase Invoice" : "New Purchase Invoice"}>
+            <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title={editingId ? "Edit Purchase Invoice" : "New Purchase Invoice"} size="xl">
                 <form onSubmit={handleSave} className="space-y-4">
                     <FormErrorBanner message={apiError} />
+
+                    {/* PDF Auto-Extract banner */}
+                    {!editingId && (
+                        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-primary" />
+                                    <div>
+                                        <div className="text-sm font-medium text-foreground">Skip the typing — drop the supplier PDF</div>
+                                        <div className="text-xs text-muted-foreground">We&apos;ll auto-fill supplier, items, qty, rate &amp; tax. Review and click Create.</div>
+                                    </div>
+                                </div>
+                                <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoCreateOnExtract}
+                                        onChange={(e) => setAutoCreateOnExtract(e.target.checked)}
+                                        className="w-4 h-4 accent-primary"
+                                    />
+                                    <span>Auto-create on upload <span className="text-muted-foreground">(only if everything matches)</span></span>
+                                </label>
+                            </div>
+                        </div>
+                    )}
+
+                    {extracting && (
+                        <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 flex items-center gap-3">
+                            <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                            <span className="text-sm text-foreground">Reading PDF and extracting fields…</span>
+                        </div>
+                    )}
+
+                    {extractionInfo && !extracting && (
+                        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-foreground flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-emerald-500" />
+                            {extractionInfo}
+                        </div>
+                    )}
+
+                    {extractionWarnings.length > 0 && (
+                        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
+                            <div className="flex items-center gap-2 text-sm font-medium text-amber-500">
+                                <AlertTriangle className="w-4 h-4" />
+                                Review needed before saving
+                            </div>
+                            <ul className="text-xs text-foreground list-disc list-inside space-y-0.5">
+                                {extractionWarnings.map((w, i) => (
+                                    <li key={i}>{w}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
                     {/* Invoice Type Toggle */}
                     <div>
@@ -502,14 +731,14 @@ export default function PurchaseInvoicesPage() {
                         <div className="flex gap-2">
                             <button
                                 type="button"
-                                onClick={() => { setInvoiceType("FUEL"); setLineItems([{ productId: "", quantity: "", unitPrice: "" }]); }}
+                                onClick={() => { setInvoiceType("FUEL"); setLineItems([{ ...EMPTY_LINE_ITEM }]); }}
                                 className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${invoiceType === "FUEL" ? "bg-orange-500/10 text-orange-500 border-orange-500/30" : "bg-background border-border text-muted-foreground hover:bg-muted"}`}
                             >
                                 Fuel
                             </button>
                             <button
                                 type="button"
-                                onClick={() => { setInvoiceType("NON_FUEL"); setLineItems([{ productId: "", quantity: "", unitPrice: "" }]); }}
+                                onClick={() => { setInvoiceType("NON_FUEL"); setLineItems([{ ...EMPTY_LINE_ITEM }]); }}
                                 className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${invoiceType === "NON_FUEL" ? "bg-purple-500/10 text-purple-500 border-purple-500/30" : "bg-background border-border text-muted-foreground hover:bg-muted"}`}
                             >
                                 Non-Fuel
@@ -586,12 +815,22 @@ export default function PurchaseInvoicesPage() {
                             <label className="text-sm font-medium text-foreground">Items</label>
                             <button type="button" onClick={addLineItem} className="text-xs text-primary hover:underline">+ Add Item</button>
                         </div>
+                        <div className="hidden md:grid gap-2 items-center text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1 px-1" style={{ gridTemplateColumns: "2.4fr 1fr 1fr 0.6fr 1fr 1fr 1.2fr 0.3fr" }}>
+                            <div>Product</div>
+                            <div className="text-right">Qty (L)</div>
+                            <div className="text-right">Basic ₹/L</div>
+                            <div className="text-right">Tax %</div>
+                            <div className="text-right">Tax ₹</div>
+                            <div className="text-right">Add&apos;l VAT ₹</div>
+                            <div className="text-right">Landed Total ₹</div>
+                            <div></div>
+                        </div>
                         <div className="space-y-2">
                             {lineItems.map((li, idx) => {
-                                const selectedProduct = filteredProducts.find((p) => String(p.id) === li.productId);
+                                const landedRate = Number(li.unitPrice) || 0;
                                 return (
-                                    <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                                        <div className={invoiceType === "FUEL" ? "col-span-4" : "col-span-5"}>
+                                    <div key={idx} className="grid gap-2 items-center" style={{ gridTemplateColumns: "2.4fr 1fr 1fr 0.6fr 1fr 1fr 1.2fr 0.3fr" }}>
+                                        <div>
                                             <StyledSelect
                                                 value={li.productId}
                                                 onChange={(val) => updateLineItem(idx, "productId", val)}
@@ -603,23 +842,28 @@ export default function PurchaseInvoicesPage() {
                                                 className="w-full"
                                             />
                                         </div>
-                                        {invoiceType === "FUEL" && (
-                                            <div className="col-span-1">
-                                                <div className="text-xs text-muted-foreground bg-black/5 dark:bg-white/5 rounded-lg px-2 py-2.5 text-center truncate" title={selectedProduct?.gradeType?.name || "-"}>
-                                                    {selectedProduct?.gradeType?.name || "-"}
-                                                </div>
-                                            </div>
-                                        )}
-                                        <div className="col-span-2">
-                                            <input type="number" placeholder="Qty" value={li.quantity} onChange={(e) => updateLineItem(idx, "quantity", e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm" required min="0.01" step="any" />
+                                        <div>
+                                            <input type="number" placeholder="Qty" value={li.quantity} onChange={(e) => updateLineItem(idx, "quantity", e.target.value)} className="w-full bg-background border border-border rounded-lg px-2 py-2 text-foreground text-xs text-right" required min="0.01" step="any" />
                                         </div>
-                                        <div className="col-span-2">
-                                            <input type="number" placeholder="Rate" value={li.unitPrice} onChange={(e) => updateLineItem(idx, "unitPrice", e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm" min="0" step="any" />
+                                        <div>
+                                            <input type="number" placeholder="0.00" value={li.basicPrice} onChange={(e) => updateLineItem(idx, "basicPrice", e.target.value)} className="w-full bg-background border border-border rounded-lg px-2 py-2 text-foreground text-xs text-right" min="0" step="any" />
                                         </div>
-                                        <div className="col-span-2 text-right text-sm font-mono font-medium text-foreground">
-                                            ₹{((Number(li.quantity) || 0) * (Number(li.unitPrice) || 0)).toLocaleString()}
+                                        <div>
+                                            <input type="number" placeholder="%" value={li.taxPercent} onChange={(e) => updateLineItem(idx, "taxPercent", e.target.value)} className="w-full bg-background border border-border rounded-lg px-2 py-2 text-foreground text-xs text-right" min="0" step="any" />
                                         </div>
-                                        <div className="col-span-1 text-center">
+                                        <div>
+                                            <input type="number" placeholder="0.00" value={li.taxAmount} onChange={(e) => updateLineItem(idx, "taxAmount", e.target.value)} className="w-full bg-background border border-border rounded-lg px-2 py-2 text-foreground text-xs text-right" min="0" step="any" />
+                                        </div>
+                                        <div>
+                                            <input type="number" placeholder="0.00" value={li.additionalTaxAmount} onChange={(e) => updateLineItem(idx, "additionalTaxAmount", e.target.value)} className="w-full bg-background border border-border rounded-lg px-2 py-2 text-foreground text-xs text-right" min="0" step="any" />
+                                        </div>
+                                        <div className="text-right pr-1">
+                                            <div className="text-sm font-mono font-medium text-foreground">₹{(Number(li.totalPrice) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                            {landedRate > 0 && (
+                                                <div className="text-[10px] text-muted-foreground font-mono">₹{landedRate.toFixed(4)}/L landed</div>
+                                            )}
+                                        </div>
+                                        <div className="text-center">
                                             {lineItems.length > 1 && (
                                                 <button type="button" onClick={() => removeLineItem(idx)} className="text-muted-foreground hover:text-red-500">
                                                     <Trash2 className="w-3.5 h-3.5" />
@@ -631,7 +875,7 @@ export default function PurchaseInvoicesPage() {
                             })}
                         </div>
                         <div className="text-right mt-3 text-sm font-bold text-foreground">
-                            Total: ₹{calcTotal().toLocaleString()}
+                            Total: ₹{calcTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                     </div>
 
@@ -643,21 +887,29 @@ export default function PurchaseInvoicesPage() {
                     {/* PDF Upload */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-1.5">
-                            Invoice PDF <span className="text-muted-foreground text-xs">(optional)</span>
+                            Invoice PDF <span className="text-muted-foreground text-xs">{editingId ? "(optional — replace attached PDF)" : "(drop here to auto-fill)"}</span>
                         </label>
                         <div className="flex items-center gap-3">
-                            <label className="flex items-center gap-2 px-4 py-2.5 bg-background border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted cursor-pointer transition-colors">
+                            <label className={`flex items-center gap-2 px-4 py-2.5 bg-background border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted cursor-pointer transition-colors ${extracting ? "pointer-events-none opacity-60" : ""}`}>
                                 <Upload className="w-4 h-4" />
                                 {pdfFile ? pdfFile.name : "Choose file..."}
                                 <input
                                     type="file"
                                     accept=".pdf"
-                                    onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                                    onChange={(e) => {
+                                        const f = e.target.files?.[0] || null;
+                                        if (editingId) {
+                                            // In edit mode, just attach the PDF; don't re-extract.
+                                            setPdfFile(f);
+                                        } else {
+                                            handlePdfPick(f);
+                                        }
+                                    }}
                                     className="hidden"
                                 />
                             </label>
-                            {pdfFile && (
-                                <button type="button" onClick={() => setPdfFile(null)} className="text-xs text-muted-foreground hover:text-red-500">Remove</button>
+                            {pdfFile && !extracting && (
+                                <button type="button" onClick={() => { setPdfFile(null); setExtractionWarnings([]); setExtractionInfo(null); }} className="text-xs text-muted-foreground hover:text-red-500">Remove</button>
                             )}
                         </div>
                     </div>

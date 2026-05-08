@@ -100,6 +100,41 @@ export interface PurchaseInvoiceItem {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    basicPrice?: number;
+    basicAmount?: number;
+    taxPercent?: number;
+    taxAmount?: number;
+    additionalTaxAmount?: number;
+}
+
+export interface ExtractionResult {
+    supplier: {
+        matchedId: number | null;
+        matchedName: string | null;
+        extractedName: string | null;
+        extractedGstin: string | null;
+        matchReason: 'GSTIN' | 'NAME' | null;
+    };
+    invoiceNumber: string | null;
+    invoiceDate: string | null;
+    deliveryDate: string | null;
+    invoiceType: 'FUEL' | 'NON_FUEL' | null;
+    totalAmount: number | null;
+    remarks: string | null;
+    items: Array<{
+        matchedProductId: number | null;
+        matchedProductName: string | null;
+        extractedDescription: string | null;
+        extractedHsn: string | null;
+        matchReason: 'HSN' | 'NAME' | null;
+        quantityLitres: number | null;
+        basicPricePerLitre: number | null;
+        basicAmount: number | null;
+        taxPercent: number | null;
+        taxAmount: number | null;
+        additionalTaxAmount: number | null;
+        totalAmount: number | null;
+    }>;
 }
 
 export interface PurchaseInvoice {
@@ -395,6 +430,15 @@ export const uploadPurchaseInvoicePdf = (id: number, file: File): Promise<Purcha
     const formData = new FormData();
     formData.append('file', file);
     return fetchWithAuth(`${API_BASE_URL}/purchase-invoices/${id}/upload-pdf`, {
+        method: 'POST',
+        body: formData,
+    }).then(handleResponse);
+};
+
+export const extractPurchaseInvoicePdf = (file: File): Promise<ExtractionResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchWithAuth(`${API_BASE_URL}/purchase-invoices/extract-pdf`, {
         method: 'POST',
         body: formData,
     }).then(handleResponse);

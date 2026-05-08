@@ -84,6 +84,11 @@ public class PurchaseInvoiceDTO {
         private Double quantity;
         private BigDecimal unitPrice;
         private BigDecimal totalPrice;
+        private BigDecimal basicPrice;
+        private BigDecimal basicAmount;
+        private BigDecimal taxPercent;
+        private BigDecimal taxAmount;
+        private BigDecimal additionalTaxAmount;
 
         public static ItemDTO from(PurchaseInvoiceItem item) {
             if (item == null) return null;
@@ -94,6 +99,11 @@ public class PurchaseInvoiceDTO {
                     .quantity(item.getQuantity())
                     .unitPrice(item.getUnitPrice())
                     .totalPrice(item.getTotalPrice())
+                    .basicPrice(item.getBasicPrice())
+                    .basicAmount(item.getBasicAmount())
+                    .taxPercent(item.getTaxPercent())
+                    .taxAmount(item.getTaxAmount())
+                    .additionalTaxAmount(item.getAdditionalTaxAmount())
                     .build();
         }
     }

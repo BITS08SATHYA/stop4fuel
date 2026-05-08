@@ -1,8 +1,10 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.ExtractionResult;
 import com.stopforfuel.backend.dto.PurchaseInvoiceDTO;
 import com.stopforfuel.backend.entity.PurchaseInvoice;
+import com.stopforfuel.backend.service.PurchaseInvoiceExtractionService;
 import com.stopforfuel.backend.service.PurchaseInvoiceService;
 import com.stopforfuel.backend.service.PurchaseInvoiceReportService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class PurchaseInvoiceController {
 
     private final PurchaseInvoiceService service;
     private final PurchaseInvoiceReportService reportService;
+    private final PurchaseInvoiceExtractionService extractionService;
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'PURCHASE_VIEW')")
@@ -110,6 +113,12 @@ public class PurchaseInvoiceController {
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @PostMapping("/extract-pdf")
+    @PreAuthorize("hasPermission(null, 'PURCHASE_CREATE')")
+    public ResponseEntity<ExtractionResult> extractPdf(@RequestParam("file") MultipartFile file) throws IOException {
+        return ResponseEntity.ok(extractionService.extract(file));
     }
 
     @GetMapping("/{id}/pdf-url")
