@@ -73,9 +73,13 @@ public class VatReportPdfGenerator {
 
             addHeader(doc, data);
             addPurchaseRegister(doc, data);
+            doc.newPage();
             addProductSummary(doc, data);
+            doc.newPage();
             addGstComputation(doc, data);
+            doc.newPage();
             addDailyLubeSales(doc, data);
+            doc.newPage();
             addDailyFuelSales(doc, data);
 
             doc.close();
@@ -179,7 +183,6 @@ public class VatReportPdfGenerator {
 
     private void addProductSummary(Document doc, VatReportData d) throws DocumentException {
         Paragraph title = new Paragraph("PRODUCT SUMMARY", F_SECTION);
-        title.setSpacingBefore(8);
         title.setSpacingAfter(4);
         doc.add(title);
 
@@ -247,7 +250,6 @@ public class VatReportPdfGenerator {
 
     private void addGstComputation(Document doc, VatReportData d) throws DocumentException {
         Paragraph title = new Paragraph("GST COMPUTATION (LUBRICANTS @ 18%)", F_SECTION);
-        title.setSpacingBefore(10);
         title.setSpacingAfter(4);
         doc.add(title);
 
@@ -280,7 +282,6 @@ public class VatReportPdfGenerator {
 
     private void addDailyLubeSales(Document doc, VatReportData d) throws DocumentException {
         Paragraph title = new Paragraph("DAILY LUBRICANT SALES", F_SECTION);
-        title.setSpacingBefore(10);
         title.setSpacingAfter(4);
         doc.add(title);
 
@@ -294,13 +295,13 @@ public class VatReportPdfGenerator {
 
         BigDecimal total = BigDecimal.ZERO;
         int idx = 0;
-        if (d.lubricantDailySales != null) {
-            for (Map.Entry<LocalDate, BigDecimal> e : d.lubricantDailySales.entrySet()) {
-                Color bg = (idx++ % 2 == 0) ? Color.WHITE : ALT_ROW;
-                addBody(table, DATE_FMT.format(e.getKey()), bg, Element.ALIGN_CENTER);
-                addBody(table, INR.format(e.getValue()), bg, Element.ALIGN_RIGHT);
-                total = total.add(e.getValue());
-            }
+        Map<LocalDate, BigDecimal> lubeMap = d.lubricantDailySales != null ? d.lubricantDailySales : Map.of();
+        for (LocalDate date : (Iterable<LocalDate>) d.fromDate.datesUntil(d.toDate.plusDays(1))::iterator) {
+            BigDecimal amt = lubeMap.getOrDefault(date, BigDecimal.ZERO);
+            Color bg = (idx++ % 2 == 0) ? Color.WHITE : ALT_ROW;
+            addBody(table, DATE_FMT.format(date), bg, Element.ALIGN_CENTER);
+            addBody(table, INR.format(amt), bg, Element.ALIGN_RIGHT);
+            total = total.add(amt);
         }
         addBody(table, "TOTAL", TOTAL_BG, Element.ALIGN_LEFT, true);
         addBody(table, INR.format(total), TOTAL_BG, Element.ALIGN_RIGHT, true);
@@ -312,7 +313,6 @@ public class VatReportPdfGenerator {
 
     private void addDailyFuelSales(Document doc, VatReportData d) throws DocumentException {
         Paragraph title = new Paragraph("DAILY FUEL SALES", F_SECTION);
-        title.setSpacingBefore(10);
         title.setSpacingAfter(4);
         doc.add(title);
 
@@ -328,56 +328,105 @@ public class VatReportPdfGenerator {
             }
         }
 
-        for (Map.Entry<String, FuelProductDaily> entry : ordered.entrySet()) {
-            String label = entry.getKey();
-            FuelProductDaily fpd = entry.getValue();
+        // Iterate every date in the requested period — a day with zero sales for every fuel still gets a row.
+        Iterable<LocalDate> allDates = (Iterable<LocalDate>) d.fromDate.datesUntil(d.toDate.plusDays(1))::iterator;
 
-            Paragraph subTitle = new Paragraph(label + (fpd != null && fpd.product != null ? " — " + fpd.product.getName() : ""), F_LABEL_BOLD);
-            subTitle.setSpacingBefore(6);
-            subTitle.setSpacingAfter(2);
-            doc.add(subTitle);
-
-            PdfPTable t = new PdfPTable(new float[]{1f, 0.8f, 0.7f, 0.9f, 0.8f, 1.1f});
-            t.setWidthPercentage(100);
-            t.setHeaderRows(1);
-            t.setKeepTogether(false);
-
-            addHeaderCell(t, "DATE", 1, 1);
-            addHeaderCell(t, "LTRS", 1, 1);
-            addHeaderCell(t, "TEST", 1, 1);
-            addHeaderCell(t, "NET SALE", 1, 1);
-            addHeaderCell(t, "RATE", 1, 1);
-            addHeaderCell(t, "AMOUNT", 1, 1);
-
-            BigDecimal totLitres = BigDecimal.ZERO, totTest = BigDecimal.ZERO,
-                    totNet = BigDecimal.ZERO, totAmt = BigDecimal.ZERO;
-            int idx = 0;
+        // Representative rate per fuel = last non-zero rate seen.
+        Map<String, BigDecimal> rateByLabel = new LinkedHashMap<>();
+        for (Map.Entry<String, FuelProductDaily> e : ordered.entrySet()) {
+            BigDecimal rate = BigDecimal.ZERO;
+            FuelProductDaily fpd = e.getValue();
             if (fpd != null && fpd.dailyTotals != null) {
-                for (Map.Entry<LocalDate, DailyFuelRow> de : fpd.dailyTotals.entrySet()) {
-                    Color bg = (idx++ % 2 == 0) ? Color.WHITE : ALT_ROW;
-                    DailyFuelRow r = de.getValue();
-                    addBody(t, DATE_FMT.format(de.getKey()), bg, Element.ALIGN_CENTER);
-                    addBody(t, fmtQty(r.litres), bg, Element.ALIGN_RIGHT);
-                    addBody(t, fmtQty(r.test), bg, Element.ALIGN_RIGHT);
-                    addBody(t, fmtQty(r.netSale), bg, Element.ALIGN_RIGHT);
-                    addBody(t, INR.format(r.rate), bg, Element.ALIGN_RIGHT);
-                    addBody(t, INR.format(r.amount), bg, Element.ALIGN_RIGHT);
-                    totLitres = totLitres.add(r.litres);
-                    totTest = totTest.add(r.test);
-                    totNet = totNet.add(r.netSale);
-                    totAmt = totAmt.add(r.amount);
+                for (DailyFuelRow row : fpd.dailyTotals.values()) {
+                    if (row.rate != null && row.rate.compareTo(BigDecimal.ZERO) > 0) rate = row.rate;
                 }
             }
-
-            addBody(t, "TOTAL", TOTAL_BG, Element.ALIGN_LEFT, true);
-            addBody(t, fmtQty(totLitres), TOTAL_BG, Element.ALIGN_RIGHT, true);
-            addBody(t, fmtQty(totTest), TOTAL_BG, Element.ALIGN_RIGHT, true);
-            addBody(t, fmtQty(totNet), TOTAL_BG, Element.ALIGN_RIGHT, true);
-            addBody(t, "", TOTAL_BG, Element.ALIGN_RIGHT, true);
-            addBody(t, INR.format(totAmt), TOTAL_BG, Element.ALIGN_RIGHT, true);
-
-            doc.add(t);
+            rateByLabel.put(e.getKey(), rate);
         }
+
+        PdfPTable t = new PdfPTable(new float[]{
+                1.0f,
+                0.8f, 0.5f, 0.8f, 1.1f,
+                0.8f, 0.5f, 0.8f, 1.1f,
+                0.8f, 0.5f, 0.8f, 1.1f
+        });
+        t.setWidthPercentage(100);
+        t.setHeaderRows(2);
+        t.setKeepTogether(false);
+
+        // Header row 1: DATE (rowspan 2) + 3 group headers (colspan 4 each).
+        addHeaderCell(t, "DATE", 2, 1);
+        for (Map.Entry<String, FuelProductDaily> e : ordered.entrySet()) {
+            String label = e.getKey();
+            FuelProductDaily fpd = e.getValue();
+            String fullLabel = label + (fpd != null && fpd.product != null ? " — " + fpd.product.getName() : "");
+            BigDecimal rate = rateByLabel.get(label);
+            String rateLine = rate.compareTo(BigDecimal.ZERO) > 0 ? "Rate ₹" + INR.format(rate) + "/L" : "Rate —";
+            addGroupHeaderCell(t, fullLabel, rateLine, 4);
+        }
+
+        // Header row 2: LTRS / TEST / NET / AMOUNT × 3.
+        for (int i = 0; i < 3; i++) {
+            addHeaderCell(t, "LTRS", 1, 1);
+            addHeaderCell(t, "TEST", 1, 1);
+            addHeaderCell(t, "NET", 1, 1);
+            addHeaderCell(t, "AMOUNT", 1, 1);
+        }
+
+        BigDecimal[] totLitres = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+        BigDecimal[] totTest = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+        BigDecimal[] totNet = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+        BigDecimal[] totAmt = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+
+        int idx = 0;
+        for (LocalDate date : allDates) {
+            Color bg = (idx++ % 2 == 0) ? Color.WHITE : ALT_ROW;
+            addBody(t, DATE_FMT.format(date), bg, Element.ALIGN_CENTER);
+            int col = 0;
+            for (FuelProductDaily fpd : ordered.values()) {
+                DailyFuelRow r = (fpd != null && fpd.dailyTotals != null) ? fpd.dailyTotals.get(date) : null;
+                BigDecimal litres = r != null ? r.litres : BigDecimal.ZERO;
+                BigDecimal test = r != null ? r.test : BigDecimal.ZERO;
+                BigDecimal net = r != null ? r.netSale : BigDecimal.ZERO;
+                BigDecimal amt = r != null ? r.amount : BigDecimal.ZERO;
+                addBody(t, fmtQty(litres), bg, Element.ALIGN_RIGHT);
+                addBody(t, fmtQty(test), bg, Element.ALIGN_RIGHT);
+                addBody(t, fmtQty(net), bg, Element.ALIGN_RIGHT);
+                addBody(t, INR.format(amt), bg, Element.ALIGN_RIGHT);
+                totLitres[col] = totLitres[col].add(litres);
+                totTest[col] = totTest[col].add(test);
+                totNet[col] = totNet[col].add(net);
+                totAmt[col] = totAmt[col].add(amt);
+                col++;
+            }
+        }
+
+        addBody(t, "TOTAL", TOTAL_BG, Element.ALIGN_LEFT, true);
+        for (int i = 0; i < 3; i++) {
+            addBody(t, fmtQty(totLitres[i]), TOTAL_BG, Element.ALIGN_RIGHT, true);
+            addBody(t, fmtQty(totTest[i]), TOTAL_BG, Element.ALIGN_RIGHT, true);
+            addBody(t, fmtQty(totNet[i]), TOTAL_BG, Element.ALIGN_RIGHT, true);
+            addBody(t, INR.format(totAmt[i]), TOTAL_BG, Element.ALIGN_RIGHT, true);
+        }
+
+        doc.add(t);
+    }
+
+    private void addGroupHeaderCell(PdfPTable table, String label, String subLine, int colspan) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBackgroundColor(HEADER_BG);
+        cell.setBorderColor(HEADER_BG);
+        cell.setPadding(4);
+        cell.setColspan(colspan);
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        Paragraph p1 = new Paragraph(label, F_TH);
+        p1.setAlignment(Element.ALIGN_CENTER);
+        Paragraph p2 = new Paragraph(subLine, F_TH);
+        p2.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(p1);
+        cell.addElement(p2);
+        table.addCell(cell);
     }
 
     // ===================== HELPERS =====================
