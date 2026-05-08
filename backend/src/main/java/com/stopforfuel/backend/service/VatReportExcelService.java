@@ -51,6 +51,16 @@ public class VatReportExcelService {
 
     // ============================== SHEET 1: PURCHASE REGISTER ==============================
 
+    /** Purchase Register INVOICE NO column: "{sapEntryNumber}/({invoiceNumber})" when SAP # is set, else just invoiceNumber. */
+    private static String formatInvoiceCell(PurchaseInvoice pi) {
+        String inv = pi.getInvoiceNumber();
+        String sap = pi.getSapEntryNumber();
+        if (sap != null && !sap.isBlank()) {
+            return sap + "/(" + (inv != null ? inv : "-") + ")";
+        }
+        return inv != null ? inv : "";
+    }
+
     private void writePurchaseRegister(XSSFWorkbook wb, Styles s, VatReportData d) {
         XSSFSheet sheet = wb.createSheet("Purchase Register");
         configurePageSetup(sheet);
@@ -104,7 +114,7 @@ public class VatReportExcelService {
                 XSSFRow row = sheet.createRow(rowIdx++);
                 row.setHeightInPoints(20f);
                 setCell(row, 0, pi.getInvoiceDate() != null ? DATE_FMT.format(pi.getInvoiceDate()) : "", s.center);
-                setCell(row, 1, pi.getInvoiceNumber() != null ? pi.getInvoiceNumber() : "", s.center);
+                setCell(row, 1, formatInvoiceCell(pi), s.center);
 
                 BigDecimal xpKL = BigDecimal.ZERO, xpAmt = BigDecimal.ZERO;
                 BigDecimal msKL = BigDecimal.ZERO, msAmt = BigDecimal.ZERO;
@@ -218,7 +228,7 @@ public class VatReportExcelService {
         // Column widths
         int u = 256;
         sheet.setColumnWidth(0, 13 * u);
-        sheet.setColumnWidth(1, 16 * u);
+        sheet.setColumnWidth(1, 30 * u);
         sheet.setColumnWidth(2, 9 * u);
         sheet.setColumnWidth(3, 14 * u);
         sheet.setColumnWidth(4, 9 * u);

@@ -118,13 +118,23 @@ public class VatReportPdfGenerator {
 
     // ===================== Section 1: Purchase Register =====================
 
+    /** Purchase Register INVOICE NO column: shows "{sapEntryNumber}/({invoiceNumber})" when SAP # is set, else just invoiceNumber. */
+    private static String formatInvoiceCell(PurchaseInvoice pi) {
+        String inv = pi.getInvoiceNumber();
+        String sap = pi.getSapEntryNumber();
+        if (sap != null && !sap.isBlank()) {
+            return sap + "/(" + (inv != null ? inv : "-") + ")";
+        }
+        return inv != null ? inv : "-";
+    }
+
     private void addPurchaseRegister(Document doc, VatReportData d) throws DocumentException {
         Paragraph title = new Paragraph("PURCHASE REGISTER", F_SECTION);
         title.setSpacingBefore(10);
         title.setSpacingAfter(4);
         doc.add(title);
 
-        PdfPTable table = new PdfPTable(new float[]{1.1f, 1.4f, 0.7f, 1.2f, 0.7f, 1.2f, 0.7f, 1.2f});
+        PdfPTable table = new PdfPTable(new float[]{1.0f, 2.4f, 0.6f, 1.1f, 0.6f, 1.1f, 0.6f, 1.1f});
         table.setWidthPercentage(100);
         table.setHeaderRows(2);
         table.setKeepTogether(false);
@@ -153,7 +163,7 @@ public class VatReportPdfGenerator {
                 Color bg = (idx++ % 2 == 0) ? Color.WHITE : ALT_ROW;
                 BigDecimal[] perRow = splitByLabel(pi);
                 addBody(table, pi.getInvoiceDate() != null ? DATE_FMT.format(pi.getInvoiceDate()) : "-", bg, Element.ALIGN_CENTER);
-                addBody(table, pi.getInvoiceNumber() != null ? pi.getInvoiceNumber() : "-", bg, Element.ALIGN_CENTER);
+                addBody(table, formatInvoiceCell(pi), bg, Element.ALIGN_CENTER);
                 for (int i = 0; i < 3; i++) {
                     BigDecimal kl = perRow[i * 2];
                     BigDecimal amt = perRow[i * 2 + 1];
