@@ -131,9 +131,9 @@ public class ShiftReportPdfGenerator {
                         + " — Cashier: " + (data.getEmployeeName() != null ? data.getEmployeeName() : "-");
                 // Left: company | Right: shift + cashier
                 ColumnText.showTextAligned(cb, Element.ALIGN_LEFT,
-                        new Phrase(company, new Font(baseBold, 9)), left, top, 0);
+                        new Phrase(company, new Font(baseBold, 11)), left, top, 0);
                 ColumnText.showTextAligned(cb, Element.ALIGN_RIGHT,
-                        new Phrase(shift, new Font(baseFont, 8)), right, top, 0);
+                        new Phrase(shift, new Font(baseFont, 10)), right, top, 0);
                 // Thin separator under the header
                 cb.setLineWidth(0.5f);
                 cb.moveTo(left, top - 4);
@@ -143,13 +143,13 @@ public class ShiftReportPdfGenerator {
 
             // Footer: left = Generated, right = "Page X of [template]"
             ColumnText.showTextAligned(cb, Element.ALIGN_LEFT,
-                    new Phrase("Generated: " + generatedAt, new Font(baseFont, 7.5f)),
+                    new Phrase("Generated: " + generatedAt, new Font(baseFont, 9.5f)),
                     left, bottom, 0);
 
             String pageLabel = "Page " + writer.getPageNumber() + " of ";
-            float labelWidth = baseFont.getWidthPoint(pageLabel, 8);
+            float labelWidth = baseFont.getWidthPoint(pageLabel, 10);
             ColumnText.showTextAligned(cb, Element.ALIGN_LEFT,
-                    new Phrase(pageLabel, new Font(baseFont, 8)),
+                    new Phrase(pageLabel, new Font(baseFont, 10)),
                     right - labelWidth - 20, bottom, 0);
             cb.addTemplate(totalPagesPh, right - 20, bottom - 2);
 
@@ -168,7 +168,7 @@ public class ShiftReportPdfGenerator {
             // time is the next page to be written, hence -1 for the last actual page count.
             int total = writer.getPageNumber() - 1;
             totalPagesPh.beginText();
-            totalPagesPh.setFontAndSize(baseFont, 8);
+            totalPagesPh.setFontAndSize(baseFont, 10);
             totalPagesPh.showText(String.valueOf(total));
             totalPagesPh.endText();
         }

@@ -19,19 +19,19 @@ public final class ShiftReportPdfUtils {
 
     private ShiftReportPdfUtils() {}
 
-    // Fonts — +2pt over prior ultra-compact baseline for legibility on printed output.
-    public static final Font COMPANY_FONT = new Font(Font.HELVETICA, 11, Font.BOLD);
-    public static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 7.5f, Font.NORMAL);
-    public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 10, Font.BOLD);
-    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 9, Font.BOLD, Color.WHITE);
-    public static final Font HEADER_FONT = new Font(Font.HELVETICA, 8, Font.BOLD);
-    public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 9, Font.NORMAL);
-    public static final Font BOLD_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
-    public static final Font SMALL_FONT = new Font(Font.HELVETICA, 8.5f, Font.NORMAL);
-    public static final Font SMALL_BOLD = new Font(Font.HELVETICA, 8.5f, Font.BOLD);
-    public static final Font TOTAL_FONT = new Font(Font.HELVETICA, 9, Font.BOLD);
-    public static final Font FOOTER_FONT = new Font(Font.HELVETICA, 7.5f, Font.NORMAL);
-    public static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 7.5f, Font.BOLD);
+    // Fonts — +2pt bump on top of the prior +2pt baseline for cashier-readability complaints.
+    public static final Font COMPANY_FONT = new Font(Font.HELVETICA, 13, Font.BOLD);
+    public static final Font ADDRESS_FONT = new Font(Font.HELVETICA, 9.5f, Font.NORMAL);
+    public static final Font REPORT_TITLE_FONT = new Font(Font.HELVETICA, 12, Font.BOLD);
+    public static final Font SECTION_FONT = new Font(Font.HELVETICA, 11, Font.BOLD, Color.WHITE);
+    public static final Font HEADER_FONT = new Font(Font.HELVETICA, 10, Font.BOLD);
+    public static final Font NORMAL_FONT = new Font(Font.HELVETICA, 11, Font.NORMAL);
+    public static final Font BOLD_FONT = new Font(Font.HELVETICA, 11, Font.BOLD);
+    public static final Font SMALL_FONT = new Font(Font.HELVETICA, 10.5f, Font.NORMAL);
+    public static final Font SMALL_BOLD = new Font(Font.HELVETICA, 10.5f, Font.BOLD);
+    public static final Font TOTAL_FONT = new Font(Font.HELVETICA, 11, Font.BOLD);
+    public static final Font FOOTER_FONT = new Font(Font.HELVETICA, 9.5f, Font.NORMAL);
+    public static final Font FOOTER_BOLD = new Font(Font.HELVETICA, 9.5f, Font.BOLD);
 
     public static final Color HEADER_BG = new Color(224, 224, 224);   // #e0e0e0
     public static final Color LIGHT_BG = new Color(245, 245, 245);

@@ -229,7 +229,7 @@ public class ShiftReportSalesSection {
             double variance = sr.getVariance() != null ? sr.getVariance() : 0;
             if (Math.abs(variance) > 0.5) {
                 com.lowagie.text.Font redBold = new com.lowagie.text.Font(
-                        com.lowagie.text.Font.HELVETICA, 8.5f, com.lowagie.text.Font.BOLD, DIFF_RED);
+                        com.lowagie.text.Font.HELVETICA, 10.5f, com.lowagie.text.Font.BOLD, DIFF_RED);
                 addCellRight(table, fmt2(variance), redBold);
             } else {
                 addCellRight(table, fmt2(variance), SMALL_BOLD);
@@ -257,7 +257,7 @@ public class ShiftReportSalesSection {
             addCellRight(table, fmt0(sd.getTankSale()), SMALL_FONT);
             addCellRight(table, fmt0(sd.getMeterSale()), SMALL_FONT);
             if (sd.getDifference() != null && sd.getDifference() < 0) {
-                com.lowagie.text.Font redBold = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 5, com.lowagie.text.Font.BOLD, DIFF_RED);
+                com.lowagie.text.Font redBold = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 10.5f, com.lowagie.text.Font.BOLD, DIFF_RED);
                 addCellRight(table, fmt0(sd.getDifference()), redBold);
             } else {
                 addCellRight(table, fmt0(sd.getDifference()), SMALL_BOLD);

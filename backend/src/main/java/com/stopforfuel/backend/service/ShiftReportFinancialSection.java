@@ -184,8 +184,8 @@ public class ShiftReportFinancialSection {
     }
 
     public void addTurnoverBalanceBox(Document doc, ShiftClosingReport report) throws DocumentException {
-        Font BOX_LABEL = new Font(Font.HELVETICA, 5.5f, Font.BOLD);
-        Font BOX_VALUE = new Font(Font.HELVETICA, 9, Font.BOLD);
+        Font BOX_LABEL = new Font(Font.HELVETICA, 7.5f, Font.BOLD);
+        Font BOX_VALUE = new Font(Font.HELVETICA, 11, Font.BOLD);
 
         PdfPTable box = new PdfPTable(3);
         box.setWidthPercentage(100);
