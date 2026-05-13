@@ -29,15 +29,17 @@ function formatCurrency(val: number | undefined | null): string {
     return val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Dot-matrix drivers (TVS MSP 250) can only render CP437/ASCII. Strip anything
-// else and replace common typographic chars with ASCII equivalents.
+// Thermal print drivers render UTF-8 via the OS print pipeline, but ₹ glyph
+// is missing from some Courier fallbacks so we still substitute "Rs.".
+// Smart-quotes / em-dashes get normalized for consistent rendering on the
+// monochrome printhead.
 function asciiSafe(s: string | undefined | null): string {
     if (!s) return "";
     return s
-        .replace(/[\u2013\u2014]/g, "-")
-        .replace(/[\u2018\u2019]/g, "'")
-        .replace(/[\u201C\u201D]/g, '"')
-        .replace(/\u20B9/g, "Rs.")
+        .replace(/[–—]/g, "-")
+        .replace(/[‘’]/g, "'")
+        .replace(/[“”]/g, '"')
+        .replace(/₹/g, "Rs.")
         .replace(/[^\x20-\x7E]/g, "");
 }
 
@@ -61,29 +63,33 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     const isCash = invoice.billType === "CASH";
     const billBadge = isCash ? "CASH" : "CREDIT";
 
-    // Customer info
     const customerName = invoice.customer?.name || invoice.signatoryName || "Walk-in Customer";
     const customerPhone = invoice.signatoryCellNo || "";
     const customerGST = invoice.customer?.partyType === "COMPANY" ? invoice.customerGST : "";
 
-    // Vehicle info
     const vehicleNo = invoice.vehicle?.vehicleNumber || invoice.billDesc || "";
 
-    // Products
     const products = invoice.products || [];
     const totalDiscount = invoice.totalDiscount || 0;
     const subTotal = invoice.grossAmount || ((invoice.netAmount || 0) + totalDiscount);
+    const netAmount = invoice.netAmount || 0;
+    const paymentMode = invoice.paymentMode || (isCash ? "CASH" : "CREDIT");
 
-    // Items HTML — compact, no nozzle line, discount inline
+    // Two-line item block: name + amount on row 1, qty/rate/nozzle on row 2.
+    // Single-column for 72mm printable width.
     const itemsHtml = products.map((p) => {
+        const name = asciiSafe(p.productName) || "Product";
+        const qty = (p.quantity ?? 0).toFixed(2);
+        const rate = (p.unitPrice ?? 0).toFixed(2);
+        const amt = formatCurrency(p.amount);
+        const nozzle = p.nozzleName ? ` | Nozzle: ${asciiSafe(p.nozzleName)}` : "";
         const disc = (p.discountAmount && p.discountAmount > 0)
-            ? ` (-${formatCurrency(p.discountAmount)})` : "";
-        return `<tr>
-            <td style="padding:1px 0;">${asciiSafe(p.productName) || "Product"}${disc}</td>
-            <td style="text-align:center;padding:1px 0;">${p.quantity?.toFixed(2) || "0"}</td>
-            <td style="text-align:center;padding:1px 0;">${p.unitPrice?.toFixed(2) || "0"}</td>
-            <td style="text-align:right;font-weight:bold;padding:1px 0;">${formatCurrency(p.amount)}</td>
-        </tr>`;
+            ? `<div class="item-sub">Discount: -${formatCurrency(p.discountAmount)}</div>` : "";
+        return `<div class="item">
+            <div class="item-row"><span class="item-name">${name}</span><span class="item-amt">${amt}</span></div>
+            <div class="item-sub">${qty} x ${rate}${nozzle}</div>
+            ${disc}
+        </div>`;
     }).join("");
 
     return `<!DOCTYPE html>
@@ -92,98 +98,134 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 <meta charset="UTF-8">
 <title>Invoice ${invoice.billNo || ""}</title>
 <style>
-    @page { size: 6in 4.5in; margin: 2mm 3mm; }
+    /* TVS RP3150 STAR — 80mm thermal roll, ~72mm printable width, 203 dpi continuous.
+       Page width pinned to 72mm; height left as 'auto' so the receipt grows with content
+       and the auto-cutter advances correctly on the next bill. */
+    @page { size: 72mm auto; margin: 0; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', Courier, monospace; font-size: 12pt; font-weight: 900; line-height: 1.15; color: #000; background: #fff; width: 5.3in; margin: 0 auto; -webkit-text-stroke: 0.4px #000; }
-    table { width: 100%; border-collapse: collapse; }
-    td { vertical-align: top; font-size: 12pt; font-weight: 900; }
+    html, body { width: 72mm; }
+    body {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 9pt;
+        font-weight: 700;
+        line-height: 1.25;
+        color: #000;
+        background: #fff;
+        padding: 2mm 3mm 4mm 3mm;
+    }
     .center { text-align: center; }
     .right { text-align: right; }
-    .big { font-size: 16pt; font-weight: 900; }
-    .xs { font-size: 10pt; font-weight: 900; color: #000; }
-    hr { border: none; border-top: 2px solid #000; margin: 2px 0; }
-    hr.solid { border-top: 3px solid #000; }
-    .badge { display: inline-block; border: 2px solid #000; padding: 0 8px; font-size: 12pt; font-weight: 900; letter-spacing: 1px; }
-    .info td:first-child { font-size: 11pt; font-weight: 900; width: 22%; padding: 0; }
-    .info td:last-child { font-weight: 900; padding: 0; }
-    .items th { font-size: 11pt; font-weight: 900; border-bottom: 2px solid #000; padding: 2px 0; text-transform: uppercase; }
-    .items td { padding: 1px 0; }
-    .totals { margin-top: 2px; }
-    .totals td { font-size: 12pt; font-weight: 900; padding: 0; }
-    .totals .label { text-align: right; padding-right: 8px; }
-    .totals .val { text-align: right; width: 28%; }
-    .totals .grand td { font-size: 14pt; border-top: 2px solid #000; border-bottom: 3px double #000; padding: 2px 0; }
-    .sign-line { margin-top: 14px; border-top: 1px solid #000; text-align: center; }
-    .audit { margin-top: 6px; font-size: 10pt; font-weight: 900; display: flex; justify-content: space-between; gap: 6px; }
-    .audit span { border-bottom: 1px dotted #000; flex: 1; padding: 0 2px; }
+    .row { display: flex; justify-content: space-between; gap: 4px; }
+    .row span:last-child { text-align: right; }
+
+    /* Header */
+    .company { font-size: 12pt; font-weight: 900; letter-spacing: 0.3px; line-height: 1.15; margin-bottom: 1mm; }
+    .addr { font-size: 8pt; font-weight: 700; line-height: 1.3; }
+
+    /* Dividers */
+    .rule-d { border-top: 1px dashed #000; margin: 1.2mm 0; }
+    .rule-s { border-top: 1px solid #000; margin: 1.2mm 0; }
+    .rule-h { border-top: 2px solid #000; margin: 1.2mm 0; }
+
+    /* Title strip */
+    .title { font-size: 11pt; font-weight: 900; letter-spacing: 1.5px; margin: 0.5mm 0; }
+    .badge { display: inline-block; border: 1.5px solid #000; padding: 0.3mm 2mm; font-size: 9pt; font-weight: 900; letter-spacing: 1px; margin-top: 0.6mm; }
+
+    /* Label : value pairs */
+    .meta .row { font-size: 9pt; font-weight: 700; }
+    .meta .lbl { white-space: nowrap; }
+    .meta .val { font-weight: 900; word-break: break-word; }
+
+    /* Item block */
+    .items-head { font-size: 8pt; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; }
+    .item { margin: 0.6mm 0; }
+    .item-row { display: flex; justify-content: space-between; gap: 4px; font-size: 9.5pt; font-weight: 900; }
+    .item-name { flex: 1; }
+    .item-amt { white-space: nowrap; }
+    .item-sub { font-size: 8pt; font-weight: 700; padding-left: 2mm; }
+
+    /* Totals */
+    .tot .row { font-size: 9.5pt; font-weight: 700; }
+    .tot .row.bold { font-weight: 900; }
+    .grand-wrap { margin: 1mm 0; padding: 1mm 0; border-top: 2px solid #000; border-bottom: 3px double #000; }
+    .grand { display: flex; justify-content: space-between; gap: 6px; font-size: 12pt; font-weight: 900; letter-spacing: 0.3px; }
+    .in-words { font-size: 8pt; font-weight: 700; line-height: 1.3; margin-top: 0.8mm; font-style: italic; }
+
+    /* Signature & footer */
+    .pay-row { font-size: 9pt; font-weight: 900; }
+    .sign { margin-top: 6mm; border-top: 1px solid #000; padding-top: 0.6mm; text-align: center; font-size: 8pt; font-weight: 700; }
+    .thanks { margin-top: 2mm; font-size: 9.5pt; font-weight: 900; letter-spacing: 1.5px; }
+    .gen { font-size: 7.5pt; font-weight: 700; margin-top: 0.6mm; }
 </style>
 </head>
 <body>
 
-<!-- Header -->
+<!-- ===== HEADER ===== -->
 <div class="center">
-    <div class="big">${asciiSafe(company.name)}</div>
-    <div class="xs">${asciiSafe(company.address)} | Ph: ${asciiSafe(company.phone)} | GSTIN: ${asciiSafe(company.gstNo)}</div>
+    <div class="company">${asciiSafe(company.name)}</div>
+    <div class="addr">${asciiSafe(company.address)}</div>
+    <div class="addr">Ph: ${asciiSafe(company.phone)}</div>
+    <div class="addr">GSTIN: ${asciiSafe(company.gstNo)}</div>
 </div>
-<hr class="solid">
-<div class="center"><span style="font-size:13pt;font-weight:900;">TAX INVOICE</span> <span class="badge">${billBadge}</span></div>
-<hr>
 
-<!-- Customer on its own full-width line -->
-<table class="info"><tr>
-    <td style="width:14%;">Customer:</td>
-    <td style="text-align:left;">${asciiSafe(customerName)}${customerPhone ? ` (${asciiSafe(customerPhone)})` : ""}${customerGST ? ` | GST: ${asciiSafe(customerGST)}` : ""}</td>
-</tr></table>
+<div class="rule-h"></div>
+<div class="center title">TAX INVOICE</div>
+<div class="center"><span class="badge">${billBadge}</span></div>
+<div class="rule-d"></div>
 
-<!-- Bill / Vehicle two-column strip -->
-<table><tr>
-<td style="width:48%;">
-    <table class="info">
-        <tr><td>Bill:</td><td>${asciiSafe(invoice.billNo) || "-"}</td></tr>
-        <tr><td>Date:</td><td>${invoice.date ? formatDate(invoice.date) : "-"}</td></tr>
-        <tr><td>Shift:</td><td>#${invoice.shiftId || "-"}</td></tr>
-    </table>
-</td>
-<td style="width:4%;"></td>
-<td style="width:48%;">
-    <table class="info">
-        ${vehicleNo ? `<tr><td>Vehicle:</td><td>${asciiSafe(vehicleNo)}</td></tr>` : ""}
-        ${invoice.driverName ? `<tr><td>Driver:</td><td>${asciiSafe(invoice.driverName)}</td></tr>` : ""}
-        ${invoice.indentNo ? `<tr><td>Indent:</td><td>${asciiSafe(invoice.indentNo)}</td></tr>` : ""}
-        <tr><td>Cashier:</td><td>${asciiSafe(invoice.raisedBy?.name) || "-"}</td></tr>
-    </table>
-</td>
-</tr></table>
-${invoice.vehicleKM ? `<div class="xs right">KM: ${invoice.vehicleKM.toLocaleString("en-IN")}</div>` : ""}
-<hr class="solid">
-
-<!-- Items -->
-<table class="items">
-    <thead><tr>
-        <th style="text-align:left;">Product</th>
-        <th style="text-align:center;">Qty</th>
-        <th style="text-align:center;">Rate</th>
-        <th style="text-align:right;">Amount</th>
-    </tr></thead>
-    <tbody>${itemsHtml}</tbody>
-</table>
-
-<!-- Right-aligned totals stack -->
-<table class="totals">
-    <tr><td class="label">Sub Total</td><td class="val">${formatCurrency(subTotal)}</td></tr>
-    ${totalDiscount > 0 ? `<tr><td class="label">Discount</td><td class="val">-${formatCurrency(totalDiscount)}</td></tr>` : ""}
-    <tr class="grand"><td class="label">Total (Rs.)</td><td class="val">${formatCurrency(invoice.netAmount)}</td></tr>
-</table>
-
-${!isCash ? `<div class="sign-line"><span class="xs">Party Signature</span></div>` : ""}
-
-<div class="audit">
-    <span>Pump Reading: </span>
-    <span>Nozzle: </span>
-    <span>Attendant: </span>
+<!-- ===== BILL META ===== -->
+<div class="meta">
+    <div class="row"><span class="lbl">Bill No</span><span class="val">${asciiSafe(invoice.billNo) || "-"}</span></div>
+    <div class="row"><span class="lbl">Date</span><span class="val">${invoice.date ? formatDate(invoice.date) : "-"}</span></div>
+    <div class="row"><span class="lbl">Shift</span><span class="val">#${invoice.shiftId || "-"}</span></div>
+    <div class="row"><span class="lbl">Cashier</span><span class="val">${asciiSafe(invoice.raisedBy?.name) || "-"}</span></div>
 </div>
-<div class="xs center" style="margin-top:2px;">Computer-generated invoice.</div>
+
+<div class="rule-d"></div>
+
+<!-- ===== CUSTOMER / VEHICLE ===== -->
+<div class="meta">
+    <div class="row"><span class="lbl">Customer</span><span class="val">${asciiSafe(customerName)}</span></div>
+    ${customerPhone ? `<div class="row"><span class="lbl">Phone</span><span class="val">${asciiSafe(customerPhone)}</span></div>` : ""}
+    ${customerGST ? `<div class="row"><span class="lbl">GST</span><span class="val">${asciiSafe(customerGST)}</span></div>` : ""}
+    ${vehicleNo ? `<div class="row"><span class="lbl">Vehicle</span><span class="val">${asciiSafe(vehicleNo)}</span></div>` : ""}
+    ${invoice.driverName ? `<div class="row"><span class="lbl">Driver</span><span class="val">${asciiSafe(invoice.driverName)}</span></div>` : ""}
+    ${invoice.indentNo ? `<div class="row"><span class="lbl">Indent</span><span class="val">${asciiSafe(invoice.indentNo)}</span></div>` : ""}
+    ${!isCash && invoice.vehicleKM ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${invoice.vehicleKM.toLocaleString("en-IN")} km</span></div>` : ""}
+</div>
+
+<div class="rule-h"></div>
+
+<!-- ===== ITEMS ===== -->
+<div class="row items-head">
+    <span>Item</span>
+    <span>Amount</span>
+</div>
+<div class="rule-d"></div>
+${itemsHtml}
+<div class="rule-d"></div>
+
+<!-- ===== TOTALS ===== -->
+<div class="tot">
+    <div class="row"><span>Sub Total</span><span>${formatCurrency(subTotal)}</span></div>
+    ${totalDiscount > 0 ? `<div class="row"><span>Discount</span><span>-${formatCurrency(totalDiscount)}</span></div>` : ""}
+</div>
+
+<div class="grand-wrap">
+    <div class="grand"><span>TOTAL Rs.</span><span>${formatCurrency(netAmount)}</span></div>
+</div>
+
+<div class="in-words">${asciiSafe(numberToWords(netAmount))}</div>
+
+<div class="rule-d"></div>
+<div class="row pay-row"><span>Payment</span><span>${asciiSafe(paymentMode)}</span></div>
+<div class="rule-d"></div>
+
+${!isCash ? `<div class="sign">Customer Signature</div>` : ""}
+
+<div class="center thanks">* THANK YOU *</div>
+<div class="center gen">Computer-generated invoice</div>
 
 </body>
 </html>`;
@@ -191,7 +233,7 @@ ${!isCash ? `<div class="sign-line"><span class="xs">Party Signature</span></div
 
 export function printInvoice(invoice: InvoiceBill, company: CompanyInfo): void {
     const html = generateInvoiceHTML(invoice, company);
-    const printWindow = window.open("", "_blank", "width=700,height=900");
+    const printWindow = window.open("", "_blank", "width=420,height=900");
     if (!printWindow) {
         alert("Please allow popups to print invoices.");
         return;
@@ -199,11 +241,9 @@ export function printInvoice(invoice: InvoiceBill, company: CompanyInfo): void {
     printWindow.document.write(html);
     printWindow.document.close();
 
-    // Wait for content to render, then auto-print
     printWindow.onload = () => {
         printWindow.print();
     };
-    // Fallback if onload doesn't fire
     setTimeout(() => {
         try { printWindow.print(); } catch (_) { /* already printed or closed */ }
     }, 500);
