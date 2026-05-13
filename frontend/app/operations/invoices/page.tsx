@@ -124,11 +124,6 @@ export default function InvoicesPage() {
     const [vehicleSearchTimeout, setVehicleSearchTimeout] = useState<NodeJS.Timeout | null>(null);
     const [vehicleSearchError, setVehicleSearchError] = useState<string | null>(null);
 
-    // Step-1 unified search: vehicle plate hits run alongside customer name/phone hits.
-    // Lets cashiers find a bus operator by typing the bus number plate (the natural
-    // identifier they get from the driver) — falls into the same code path as picking
-    // the customer manually, just skipping Step 2.
-    const [vehicleSuggestions, setVehicleSuggestions] = useState<Vehicle[]>([]);
     const [step1SearchTimeout, setStep1SearchTimeout] = useState<NodeJS.Timeout | null>(null);
     const [vehicleQuickPicked, setVehicleQuickPicked] = useState(false);
 
@@ -270,80 +265,20 @@ export default function InvoicesPage() {
         if (targetShiftId == null && activeShiftId != null) setTargetShiftId(activeShiftId);
     }, [activeShiftId, targetShiftId]);
 
-    // Step-1 unified search: customers (by name/phone) + vehicles (by plate) in parallel.
-    // 300ms debounce so each keystroke doesn't fan out to two endpoints.
     const searchCustomers = (val: string) => {
         setCustomerSearch(val);
         if (step1SearchTimeout) clearTimeout(step1SearchTimeout);
         if (val.length < 2) {
             setCustomerSuggestions([]);
-            setVehicleSuggestions([]);
             return;
         }
         const t = setTimeout(async () => {
             try {
-                const [custRes, vehRes] = await Promise.all([
-                    getCustomers(val).catch((e) => { console.error("Customer search failed", e); return { content: [] }; }),
-                    searchVehicles(val).catch((e) => { console.error("Vehicle search failed", e); return [] as Vehicle[]; }),
-                ]);
+                const custRes = await getCustomers(val).catch((e) => { console.error("Customer search failed", e); return { content: [] }; });
                 setCustomerSuggestions(custRes.content || []);
-                setVehicleSuggestions(vehRes || []);
             } catch (err) { console.error(err); }
         }, 300);
         setStep1SearchTimeout(t);
-    };
-
-    // Picking a vehicle suggestion auto-loads its owning customer (with credit info)
-    // exactly like selectCustomer does, then jumps to Step 3 (skipping the Vehicle step
-    // — same shortcut handleWalkIn uses). Critical: the credit-info merge MUST run, or
-    // every credit-limit gate in getFuelValidationErrors silently returns "no limit"
-    // and cashiers can blow past customer credit caps.
-    const selectVehicleSuggestion = async (v: Vehicle) => {
-        setCustomerSuggestions([]);
-        setVehicleSuggestions([]);
-        setSelectedVehicle(v);
-        setVehicleQuickPicked(true);
-        if (v.customer && v.customer.id) {
-            setCustomerSearch(v.customer.name || v.vehicleNumber);
-            try {
-                const [vehiclesRes, incentivesData, creditInfo] = await Promise.all([
-                    fetchWithAuth(`${API_BASE_URL}/customers/${v.customer.id}/vehicles`),
-                    getIncentivesByCustomer(v.customer.id).catch(() => []),
-                    getCustomerCreditInfo(v.customer.id).catch(() => null),
-                ]);
-                let merged: any = { ...v.customer };
-                if (creditInfo) merged = { ...merged, ...creditInfo };
-                setSelectedCustomer(merged);
-                if (vehiclesRes.ok) {
-                    setCustomerVehicles(await vehiclesRes.json());
-                } else {
-                    setCustomerVehicles([v]);
-                }
-                setIncentives(incentivesData.filter((i: Incentive) => i.active));
-                if (creditInfo) {
-                    const hasCreditLimit = (creditInfo.creditLimitAmount && Number(creditInfo.creditLimitAmount) > 0) ||
-                        (creditInfo.creditLimitLiters && Number(creditInfo.creditLimitLiters) > 0);
-                    if (hasCreditLimit) {
-                        setBillType('CREDIT');
-                    } else {
-                        setBillType('CASH');
-                        setPaymentMode('CASH');
-                    }
-                }
-            } catch (err) { console.error(err); }
-        } else {
-            // Orphan vehicle (no owning customer) — fall through to walk-in CASH semantics
-            // so the wizard still completes. Preserve the plate as the walk-in vehicle no.
-            setIsWalkIn(true);
-            setSelectedCustomer(undefined);
-            setCustomerVehicles([v]);
-            setIncentives([]);
-            setBillType('CASH');
-            setPaymentMode('CASH');
-            setWalkInVehicleNo(v.vehicleNumber || "");
-            setCustomerSearch(v.vehicleNumber || "");
-        }
-        setCurrentStep(3);
     };
 
     // Select customer and load their vehicles + incentives + credit info
@@ -569,7 +504,6 @@ export default function InvoicesPage() {
         setVehicleSearchQuery("");
         setVehicleSearchResults([]);
         setVehicleSearchError(null);
-        setVehicleSuggestions([]);
         setCustomerSuggestions([]);
         setVehicleQuickPicked(false);
         setManualDiscount("");
@@ -681,7 +615,6 @@ export default function InvoicesPage() {
         setCustomerVehicles([]);
         setCustomerSearch("");
         setCustomerSuggestions([]);
-        setVehicleSuggestions([]);
         setIncentives([]);
         setBillType('CASH');
     };
@@ -768,7 +701,7 @@ export default function InvoicesPage() {
 
                 <div className="relative flex items-center gap-4 mb-2">
                     <div className="flex-1 border-t border-border"></div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Or search any customer / vehicle</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Or search any customer</span>
                     <div className="flex-1 border-t border-border"></div>
                 </div>
 
@@ -776,55 +709,15 @@ export default function InvoicesPage() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
                     <input
                         type="text"
-                        placeholder="Search by Customer Name, Phone or Vehicle Number..."
+                        placeholder="Search by Customer Name or Phone..."
                         className="w-full bg-background border border-border rounded-2xl py-4 pl-12 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium text-lg"
                         value={customerSearch}
                         onChange={(e) => searchCustomers(e.target.value)}
                     />
-                    {customerSearch && (vehicleSuggestions.length > 0 || customerSuggestions.length > 0) && (
+                    {customerSearch && customerSuggestions.length > 0 && (
                         <div className="absolute top-full left-0 right-0 mt-2 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden max-h-80 overflow-y-auto">
-                            {vehicleSuggestions.length > 0 && (
-                                <>
-                                    <div className="px-4 py-2 text-[9px] font-bold text-muted-foreground uppercase tracking-widest bg-muted/30">
-                                        Vehicles
-                                    </div>
-                                    {vehicleSuggestions.map((v: Vehicle) => (
-                                        <button
-                                            key={`v-${v.id}`}
-                                            className="w-full px-6 py-3 text-left hover:bg-primary/5 text-foreground transition-colors flex items-center justify-between group"
-                                            onClick={() => selectVehicleSuggestion(v)}
-                                        >
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <Truck size={16} className="text-muted-foreground shrink-0" />
-                                                <div className="min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-bold font-mono text-sm group-hover:text-primary transition-colors">{v.vehicleNumber}</span>
-                                                        {v.vehicleType?.name && (
-                                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase tracking-wider">
-                                                                {v.vehicleType.name}
-                                                            </span>
-                                                        )}
-                                                        {v.status && v.status !== "ACTIVE" && (
-                                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                                                v.status === "BLOCKED" ? "bg-red-500/10 text-red-500" : "bg-yellow-500/10 text-yellow-500"
-                                                            }`}>{v.status}</span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-xs text-muted-foreground truncate block">
-                                                        {v.customer?.name || "Unassigned"}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <ArrowRight size={16} className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all shrink-0" />
-                                        </button>
-                                    ))}
-                                </>
-                            )}
                             {customerSuggestions.length > 0 && (
                                 <>
-                                    <div className="px-4 py-2 text-[9px] font-bold text-muted-foreground uppercase tracking-widest bg-muted/30">
-                                        Customers
-                                    </div>
                                     {customerSuggestions.map((c: any) => (
                                         <button
                                             key={`c-${c.id}`}
