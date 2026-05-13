@@ -66,6 +66,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     const customerName = invoice.customer?.name || invoice.signatoryName || "Walk-in Customer";
     const customerPhone = invoice.signatoryCellNo || "";
     const customerGST = invoice.customer?.partyType === "COMPANY" ? invoice.customerGST : "";
+    const isNamedCustomer = !!invoice.customer?.id;
 
     const vehicleNo = invoice.vehicle?.vehicleNumber || invoice.billDesc || "";
 
@@ -179,7 +180,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     <div class="row"><span class="lbl">Bill No</span><span class="val">${asciiSafe(invoice.billNo) || "-"}</span></div>
     <div class="row"><span class="lbl">Date</span><span class="val">${invoice.date ? formatDate(invoice.date) : "-"}</span></div>
     <div class="row"><span class="lbl">Shift</span><span class="val">#${invoice.shiftId || "-"}</span></div>
-    <div class="row"><span class="lbl">Cashier</span><span class="val">${asciiSafe(invoice.raisedBy?.name) || "-"}</span></div>
+    <div class="row"><span class="lbl">Cashier</span><span class="val">${asciiSafe(invoice.raisedBy?.name) || asciiSafe(invoice.raisedBy?.username) || "-"}</span></div>
 </div>
 
 <div class="rule-d"></div>
@@ -192,7 +193,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     ${vehicleNo ? `<div class="row"><span class="lbl">Vehicle</span><span class="val">${asciiSafe(vehicleNo)}</span></div>` : ""}
     ${invoice.driverName ? `<div class="row"><span class="lbl">Driver</span><span class="val">${asciiSafe(invoice.driverName)}</span></div>` : ""}
     ${invoice.indentNo ? `<div class="row"><span class="lbl">Indent</span><span class="val">${asciiSafe(invoice.indentNo)}</span></div>` : ""}
-    ${!isCash && invoice.vehicleKM ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${invoice.vehicleKM.toLocaleString("en-IN")} km</span></div>` : ""}
+    ${isNamedCustomer && invoice.vehicleKM ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${invoice.vehicleKM.toLocaleString("en-IN")} km</span></div>` : ""}
 </div>
 
 <div class="rule-h"></div>
@@ -222,7 +223,7 @@ ${itemsHtml}
 <div class="row pay-row"><span>Payment</span><span>${asciiSafe(paymentMode)}</span></div>
 <div class="rule-d"></div>
 
-${!isCash ? `<div class="sign">Customer Signature</div>` : ""}
+${isNamedCustomer ? `<div class="sign">Customer Signature</div>` : ""}
 
 <div class="center thanks">* THANK YOU *</div>
 <div class="center gen">Computer-generated invoice</div>
