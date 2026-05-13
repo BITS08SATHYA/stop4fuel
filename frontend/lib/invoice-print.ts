@@ -74,23 +74,37 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     const totalDiscount = invoice.totalDiscount || 0;
     const subTotal = invoice.grossAmount || ((invoice.netAmount || 0) + totalDiscount);
     const netAmount = invoice.netAmount || 0;
-    const paymentMode = invoice.paymentMode || (isCash ? "CASH" : "CREDIT");
 
-    // Two-line item block: name + amount on row 1, qty/rate/nozzle on row 2.
-    // Single-column for 72mm printable width.
+    // Cashier display cascade: name -> username -> "#<id>" -> "-".
+    // Hits the "#<id>" branch when a User exists but PersonEntity.name and User.username
+    // are both blank (seeded cashier rows from the early passcode-auth flow).
+    const cashierLabel = asciiSafe(invoice.raisedBy?.name)
+        || asciiSafe(invoice.raisedBy?.username)
+        || (invoice.raisedBy?.id ? `#${invoice.raisedBy.id}` : "-");
+
+    // Odometer is shown on every named-customer bill; "-" when vehicleKM unset/0.
+    const odometerDisplay = invoice.vehicleKM ? `${invoice.vehicleKM.toLocaleString("en-IN")} km` : "-";
+
+    // Indent only shows when it has a real value — cashiers sometimes type "0" or
+    // leave the default, so filter those out instead of printing "Indent  0".
+    const indentTrim = (invoice.indentNo || "").trim();
+    const showIndent = indentTrim !== "" && indentTrim !== "0";
+
+    // 4-column item row: Item / Qty / Rate / Amount.
     const itemsHtml = products.map((p) => {
         const name = asciiSafe(p.productName) || "Product";
         const qty = (p.quantity ?? 0).toFixed(2);
         const rate = (p.unitPrice ?? 0).toFixed(2);
         const amt = formatCurrency(p.amount);
-        const nozzle = p.nozzleName ? ` | Nozzle: ${asciiSafe(p.nozzleName)}` : "";
-        const disc = (p.discountAmount && p.discountAmount > 0)
-            ? `<div class="item-sub">Discount: -${formatCurrency(p.discountAmount)}</div>` : "";
-        return `<div class="item">
-            <div class="item-row"><span class="item-name">${name}</span><span class="item-amt">${amt}</span></div>
-            <div class="item-sub">${qty} x ${rate}${nozzle}</div>
-            ${disc}
-        </div>`;
+        const nozzleSub = p.nozzleName ? `<div class="isub">Nozzle: ${asciiSafe(p.nozzleName)}</div>` : "";
+        const discSub = (p.discountAmount && p.discountAmount > 0)
+            ? `<div class="isub">Discount: -${formatCurrency(p.discountAmount)}</div>` : "";
+        return `<div class="irow">
+            <span class="ic-name">${name}</span>
+            <span class="ic-qty">${qty}</span>
+            <span class="ic-rate">${rate}</span>
+            <span class="ic-amt">${amt}</span>
+        </div>${nozzleSub}${discSub}`;
     }).join("");
 
     return `<!DOCTYPE html>
@@ -138,13 +152,15 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     .meta .lbl { white-space: nowrap; }
     .meta .val { font-weight: 900; word-break: break-word; }
 
-    /* Item block */
-    .items-head { font-size: 8pt; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; }
-    .item { margin: 0.6mm 0; }
-    .item-row { display: flex; justify-content: space-between; gap: 4px; font-size: 9.5pt; font-weight: 900; }
-    .item-name { flex: 1; }
-    .item-amt { white-space: nowrap; }
-    .item-sub { font-size: 8pt; font-weight: 700; padding-left: 2mm; }
+    /* Item block — 4-column row: name (flex) / qty / rate / amount */
+    .ihdr, .irow { display: flex; align-items: baseline; gap: 1mm; }
+    .ihdr { font-size: 8pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3px; }
+    .irow { font-size: 9pt; font-weight: 900; margin: 0.4mm 0; }
+    .ic-name { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+    .ic-qty { width: 11mm; text-align: right; flex-shrink: 0; }
+    .ic-rate { width: 14mm; text-align: right; flex-shrink: 0; }
+    .ic-amt { width: 18mm; text-align: right; flex-shrink: 0; }
+    .isub { font-size: 7.5pt; font-weight: 700; padding-left: 2mm; }
 
     /* Totals */
     .tot .row { font-size: 9.5pt; font-weight: 700; }
@@ -154,8 +170,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     .in-words { font-size: 8pt; font-weight: 700; line-height: 1.3; margin-top: 0.8mm; font-style: italic; }
 
     /* Signature & footer */
-    .pay-row { font-size: 9pt; font-weight: 900; }
-    .sign { margin-top: 6mm; border-top: 1px solid #000; padding-top: 0.6mm; text-align: center; font-size: 8pt; font-weight: 700; }
+    .sign { margin-top: 15mm; border-top: 1px solid #000; padding-top: 0.6mm; text-align: center; font-size: 8pt; font-weight: 700; }
     .thanks { margin-top: 2mm; font-size: 9.5pt; font-weight: 900; letter-spacing: 1.5px; }
     .gen { font-size: 7.5pt; font-weight: 700; margin-top: 0.6mm; }
 </style>
@@ -180,7 +195,7 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     <div class="row"><span class="lbl">Bill No</span><span class="val">${asciiSafe(invoice.billNo) || "-"}</span></div>
     <div class="row"><span class="lbl">Date</span><span class="val">${invoice.date ? formatDate(invoice.date) : "-"}</span></div>
     <div class="row"><span class="lbl">Shift</span><span class="val">#${invoice.shiftId || "-"}</span></div>
-    <div class="row"><span class="lbl">Cashier</span><span class="val">${asciiSafe(invoice.raisedBy?.name) || asciiSafe(invoice.raisedBy?.username) || "-"}</span></div>
+    <div class="row"><span class="lbl">Cashier</span><span class="val">${cashierLabel}</span></div>
 </div>
 
 <div class="rule-d"></div>
@@ -191,17 +206,18 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     ${customerPhone ? `<div class="row"><span class="lbl">Phone</span><span class="val">${asciiSafe(customerPhone)}</span></div>` : ""}
     ${customerGST ? `<div class="row"><span class="lbl">GST</span><span class="val">${asciiSafe(customerGST)}</span></div>` : ""}
     ${vehicleNo ? `<div class="row"><span class="lbl">Vehicle</span><span class="val">${asciiSafe(vehicleNo)}</span></div>` : ""}
-    ${invoice.driverName ? `<div class="row"><span class="lbl">Driver</span><span class="val">${asciiSafe(invoice.driverName)}</span></div>` : ""}
-    ${invoice.indentNo ? `<div class="row"><span class="lbl">Indent</span><span class="val">${asciiSafe(invoice.indentNo)}</span></div>` : ""}
-    ${isNamedCustomer && invoice.vehicleKM ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${invoice.vehicleKM.toLocaleString("en-IN")} km</span></div>` : ""}
+    ${isNamedCustomer ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${odometerDisplay}</span></div>` : ""}
+    ${showIndent ? `<div class="row"><span class="lbl">Indent</span><span class="val">${asciiSafe(invoice.indentNo)}</span></div>` : ""}
 </div>
 
 <div class="rule-h"></div>
 
 <!-- ===== ITEMS ===== -->
-<div class="row items-head">
-    <span>Item</span>
-    <span>Amount</span>
+<div class="ihdr">
+    <span class="ic-name">Item</span>
+    <span class="ic-qty">Qty</span>
+    <span class="ic-rate">Rate</span>
+    <span class="ic-amt">Amount</span>
 </div>
 <div class="rule-d"></div>
 ${itemsHtml}
@@ -218,10 +234,6 @@ ${itemsHtml}
 </div>
 
 <div class="in-words">${asciiSafe(numberToWords(netAmount))}</div>
-
-<div class="rule-d"></div>
-<div class="row pay-row"><span>Payment</span><span>${asciiSafe(paymentMode)}</span></div>
-<div class="rule-d"></div>
 
 ${isNamedCustomer ? `<div class="sign">Customer Signature</div>` : ""}
 
