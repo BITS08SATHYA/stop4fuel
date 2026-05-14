@@ -44,6 +44,7 @@ public class InvoiceBillService {
     private final BillSequenceService billSequenceService;
     private final StatementRepository statementRepository;
     private final InvoiceBillPhotoRepository invoiceBillPhotoRepository;
+    private final UserRepository userRepository;
     private final TextractValidationService textractValidationService;
     private final com.stopforfuel.config.BusinessMetrics metrics;
     private final WeightedAverageCostService wacService;
@@ -312,6 +313,13 @@ public class InvoiceBillService {
 
         if (invoice.getScid() == null) {
             invoice.setScid(SecurityUtils.getScid());
+        }
+
+        if (invoice.getRaisedBy() == null) {
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            if (currentUserId != null) {
+                userRepository.findById(currentUserId).ifPresent(invoice::setRaisedBy);
+            }
         }
 
         // --- Assign active shift, or honor an explicit target shift after validation ---

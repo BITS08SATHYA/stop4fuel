@@ -1023,8 +1023,8 @@ export default function InvoicesPage() {
 
                 <div className="space-y-4">
                     {selectedProducts.map((line: any, idx: number) => (
-                        <div key={idx} className="p-5 bg-background border border-border rounded-2xl space-y-4 relative border-l-4 border-l-primary">
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+                        <div key={idx} className="p-3 bg-background border border-border rounded-2xl space-y-2 relative border-l-4 border-l-primary">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
                                 <div className="xl:col-span-2 relative">
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Product</label>
                                     <input
@@ -1154,54 +1154,57 @@ export default function InvoicesPage() {
 
                                 <div>
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Rate</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
+                                        value={line.unitPrice}
+                                        onChange={(e) => updateProductLine(idx, { unitPrice: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 block">Amount</label>
                                     <div className="flex items-center gap-2">
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            className="w-full bg-muted border border-border rounded-xl p-3 text-foreground font-bold text-sm"
-                                            value={line.unitPrice}
-                                            onChange={(e) => updateProductLine(idx, { unitPrice: e.target.value })}
-                                        />
+                                        <div className="flex-1 min-w-0 text-right">
+                                            <div className="text-primary font-black text-base leading-tight">
+                                                ₹{(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </div>
+                                            {line.discountRate > 0 && (
+                                                <div className="text-muted-foreground line-through text-[10px] leading-tight">
+                                                    ₹{(line.grossAmount || 0).toFixed(2)}
+                                                </div>
+                                            )}
+                                        </div>
                                         <button
                                             onClick={() => removeProductLine(idx)}
-                                            className="p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors shrink-0"
+                                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors shrink-0"
                                         >
                                             <Trash2 size={18} />
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                {/* Product discount toggle (only when no customer incentive) */}
-                                {line.product?.discountRate > 0 && line.discountSource !== 'incentive' && (
-                                    <div className="flex items-center justify-end gap-2 mb-1">
-                                        <label className="flex items-center gap-2 cursor-pointer">
+                            {(line.discountRate > 0 || (line.product?.discountRate > 0 && line.discountSource !== 'incentive')) && (
+                                <div className="flex items-center justify-end gap-3 flex-wrap text-[10px] font-bold">
+                                    {line.product?.discountRate > 0 && line.discountSource !== 'incentive' && (
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-emerald-600 dark:text-emerald-400">
                                             <input
                                                 type="checkbox"
                                                 checked={line.applyProductDiscount !== false}
                                                 onChange={(e) => updateProductLine(idx, { applyProductDiscount: e.target.checked })}
                                                 className="rounded border-border accent-emerald-500"
                                             />
-                                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                                                Apply Discount (₹{line.product.discountRate}/{line.product.unit || 'unit'})
-                                            </span>
+                                            Apply Discount (₹{line.product.discountRate}/{line.product.unit || 'unit'})
                                         </label>
-                                    </div>
-                                )}
-                                {line.discountRate > 0 && (
-                                    <div className="text-[10px] text-emerald-500 font-bold mb-0.5">
-                                        {line.discountSource === 'incentive' ? 'Incentive' : 'Discount'}: ₹{line.discountRate}/unit &times; {parseFloat(line.quantity) || 0} = -₹{(line.discountAmount || 0).toFixed(2)}
-                                    </div>
-                                )}
-                                <span className="text-primary font-black text-lg">
-                                    ₹{(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                </span>
-                                {line.discountRate > 0 && (
-                                    <span className="text-muted-foreground line-through text-xs ml-2">
-                                        ₹{(line.grossAmount || 0).toFixed(2)}
-                                    </span>
-                                )}
-                            </div>
+                                    )}
+                                    {line.discountRate > 0 && (
+                                        <span className="text-emerald-500">
+                                            {line.discountSource === 'incentive' ? 'Incentive' : 'Discount'}: ₹{line.discountRate}/unit &times; {parseFloat(line.quantity) || 0} = -₹{(line.discountAmount || 0).toFixed(2)}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -1691,17 +1694,21 @@ export default function InvoicesPage() {
                     const latestCredit = allInvs.find(i => i.billType === 'CREDIT');
                     if (!latestCash && !latestCredit) return null;
 
-                    const renderBill = (bill: any, color: string, bgClass: string, borderClass: string) => (
-                        <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${bgClass} ${color} border ${borderClass}`}>{bill.billType}</span>
-                            <span className="font-mono font-bold text-sm text-foreground">{bill.billNo}</span>
-                            {bill.vehicle?.vehicleNumber && (
-                                <span className="font-mono text-xs text-primary">{bill.vehicle.vehicleNumber}</span>
-                            )}
-                            <span className="text-xs text-muted-foreground">{bill.customer?.name || "Walk-in"}</span>
-                            <span className="font-bold text-foreground text-sm">₹{bill.netAmount?.toFixed(2)}</span>
-                        </div>
-                    );
+                    const renderBill = (bill: any, color: string, bgClass: string, borderClass: string) => {
+                        const vehicleLabel = bill.vehicle?.vehicleNumber || bill.billDesc;
+                        const customerLabel = bill.customer?.name || bill.signatoryName || "Walk-in";
+                        return (
+                            <div className="flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${bgClass} ${color} border ${borderClass}`}>{bill.billType}</span>
+                                <span className="font-mono font-bold text-sm text-foreground">{bill.billNo}</span>
+                                {vehicleLabel && (
+                                    <span className="font-mono text-xs text-primary">{vehicleLabel}</span>
+                                )}
+                                <span className="text-xs text-muted-foreground">{customerLabel}</span>
+                                <span className="font-bold text-foreground text-sm">₹{bill.netAmount?.toFixed(2)}</span>
+                            </div>
+                        );
+                    };
 
                     return (
                         <div className="mb-4 p-3 bg-card border border-border rounded-xl flex items-center gap-4 flex-wrap">
@@ -1827,10 +1834,10 @@ export default function InvoicesPage() {
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                                                 inv.billType === 'CASH' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                                             }`}>{inv.billType}</span>
-                                            {inv.vehicle?.vehicleNumber && (
-                                                <span className="font-mono text-xs text-primary">{inv.vehicle.vehicleNumber}</span>
+                                            {(inv.vehicle?.vehicleNumber || inv.billDesc) && (
+                                                <span className="font-mono text-xs text-primary">{inv.vehicle?.vehicleNumber || inv.billDesc}</span>
                                             )}
-                                            <span className="text-sm text-muted-foreground">{inv.customer?.name || "Walk-in"}</span>
+                                            <span className="text-sm text-muted-foreground">{inv.customer?.name || inv.signatoryName || "Walk-in"}</span>
                                             {inv.products && inv.products.length > 0 && (
                                                 <span className="text-xs text-muted-foreground">
                                                     {inv.products.length === 1

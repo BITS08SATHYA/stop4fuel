@@ -96,7 +96,11 @@ public class LedgerService {
                 LedgerEntry entry = new LedgerEntry();
                 entry.date = bill.getDate();
                 entry.type = "DEBIT";
-                entry.description = "Credit Bill " + (bill.getBillNo() != null ? bill.getBillNo() : "#" + bill.getId());
+                String billLabel = "Credit Bill " + (bill.getBillNo() != null ? bill.getBillNo() : "#" + bill.getId());
+                String vehicleNo = bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : null;
+                entry.description = (vehicleNo != null && !vehicleNo.isBlank())
+                        ? billLabel + " — " + vehicleNo
+                        : billLabel;
                 entry.referenceId = bill.getId();
                 entry.debitAmount = bill.getNetAmount();
                 entry.creditAmount = BigDecimal.ZERO;
@@ -116,6 +120,12 @@ public class LedgerService {
             } else if (payment.getInvoiceBill() != null) {
                 InvoiceBill b = payment.getInvoiceBill();
                 target = " for Bill " + (b.getBillNo() != null ? b.getBillNo() : "#" + b.getId());
+                if (!isStatementCustomer) {
+                    String vehicleNo = b.getVehicle() != null ? b.getVehicle().getVehicleNumber() : null;
+                    if (vehicleNo != null && !vehicleNo.isBlank()) {
+                        target = target + " — " + vehicleNo;
+                    }
+                }
             }
 
             entry.description = "Payment"
