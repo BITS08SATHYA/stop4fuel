@@ -130,9 +130,9 @@ export default function PurchaseInvoicesPage() {
     // Filter products based on invoice type
     const filteredProducts = useMemo(() => {
         if (invoiceType === "FUEL") {
-            return products.filter((p) => p.category === "FUEL");
+            return products.filter((p) => (p.category || "").toLowerCase() === "fuel");
         }
-        return products.filter((p) => p.category === "LUBRICANT" || p.category === "ACCESSORY");
+        return products.filter((p) => (p.category || "").toLowerCase() !== "fuel");
     }, [products, invoiceType]);
 
     // Filter POs by selected supplier

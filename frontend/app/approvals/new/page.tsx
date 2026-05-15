@@ -54,7 +54,7 @@ function NewRequestInner() {
                     const d = await pRes.json();
                     const list: Array<{ id: number; name: string; category?: string }> =
                         Array.isArray(d) ? d : d.content || [];
-                    setFuelProducts(list.filter(p => p.category === "FUEL"));
+                    setFuelProducts(list.filter(p => (p.category || "").toLowerCase() === "fuel"));
                 }
             } catch { /* ignore */ }
         })();

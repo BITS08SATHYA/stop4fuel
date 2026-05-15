@@ -1331,7 +1331,7 @@ export default function CustomerProfilePage() {
                                     onChange={(val) => setNewVehicle({ ...newVehicle, fuelType: val })}
                                     options={[
                                         { value: "", label: "Select Fuel" },
-                                        ...products.filter((p: any) => p.category === "FUEL").map(p => ({ value: String(p.id), label: p.name })),
+                                        ...products.filter((p: any) => (p.category || "").toLowerCase() === "fuel").map(p => ({ value: String(p.id), label: p.name })),
                                     ]}
                                     placeholder="Select Fuel"
                                     className="w-full"
