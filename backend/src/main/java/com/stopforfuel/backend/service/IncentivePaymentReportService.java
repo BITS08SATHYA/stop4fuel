@@ -36,8 +36,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -58,9 +60,23 @@ public class IncentivePaymentReportService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy, hh:mm a");
+    private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("MMMM yyyy");
     private static final java.text.DecimalFormat NUM_FMT = new java.text.DecimalFormat("#,##0.00");
 
     private record DayRow(LocalDate date, BigDecimal amount) {}
+
+    /** Group the date-ascending day rows into months, preserving ascending month order. */
+    private static Map<YearMonth, List<DayRow>> groupByMonth(List<DayRow> rows) {
+        Map<YearMonth, List<DayRow>> byMonth = new LinkedHashMap<>();
+        for (DayRow r : rows) {
+            byMonth.computeIfAbsent(YearMonth.from(r.date()), k -> new ArrayList<>()).add(r);
+        }
+        return byMonth;
+    }
+
+    private static String monthLabel(YearMonth ym) {
+        return ym.atDay(1).format(MONTH_FMT).toUpperCase();
+    }
 
     public byte[] generatePdf(LocalDate fromDate, LocalDate toDate) {
         return renderPdf("Incentive Payment Report",
@@ -148,26 +164,47 @@ public class IncentivePaymentReportService {
                 table.setWidthPercentage(100);
                 Color headerBg = new Color(230, 81, 0);
                 Color border = new Color(221, 221, 221);
+                Color monthBg = new Color(55, 71, 79);
+                Color totBg = new Color(230, 81, 0);
 
-                table.addCell(headerCell("S.No", headerFont, headerBg, Element.ALIGN_CENTER));
-                table.addCell(headerCell("Date", headerFont, headerBg, Element.ALIGN_LEFT));
-                table.addCell(headerCell("Amount (₹)", headerFont, headerBg, Element.ALIGN_RIGHT));
+                Map<YearMonth, List<DayRow>> byMonth = groupByMonth(rows);
+                BigDecimal grandTotal = BigDecimal.ZERO;
+                for (Map.Entry<YearMonth, List<DayRow>> e : byMonth.entrySet()) {
+                    List<DayRow> monthRows = e.getValue();
 
-                BigDecimal totAmount = BigDecimal.ZERO;
-                int n = 0;
-                for (DayRow r : rows) {
-                    Color bg = (n++ % 2 == 0) ? Color.WHITE : new Color(250, 250, 250);
-                    table.addCell(cell(String.valueOf(n), cellFont, bg, border, Element.ALIGN_CENTER));
-                    table.addCell(cell(r.date().format(DATE_FMT), cellFont, bg, border, Element.ALIGN_LEFT));
-                    table.addCell(cell(NUM_FMT.format(r.amount()), cellFont, bg, border, Element.ALIGN_RIGHT));
-                    totAmount = totAmount.add(r.amount());
+                    PdfPCell monthCell = cell(monthLabel(e.getKey()), totalFont, monthBg, monthBg, Element.ALIGN_LEFT);
+                    monthCell.setColspan(3);
+                    monthCell.setPadding(5f);
+                    table.addCell(monthCell);
+
+                    table.addCell(headerCell("S.No", headerFont, headerBg, Element.ALIGN_CENTER));
+                    table.addCell(headerCell("Date", headerFont, headerBg, Element.ALIGN_LEFT));
+                    table.addCell(headerCell("Amount (₹)", headerFont, headerBg, Element.ALIGN_RIGHT));
+
+                    BigDecimal monthTotal = BigDecimal.ZERO;
+                    int n = 0;
+                    for (DayRow r : monthRows) {
+                        Color bg = (n++ % 2 == 0) ? Color.WHITE : new Color(250, 250, 250);
+                        table.addCell(cell(String.valueOf(n), cellFont, bg, border, Element.ALIGN_CENTER));
+                        table.addCell(cell(r.date().format(DATE_FMT), cellFont, bg, border, Element.ALIGN_LEFT));
+                        table.addCell(cell(NUM_FMT.format(r.amount()), cellFont, bg, border, Element.ALIGN_RIGHT));
+                        monthTotal = monthTotal.add(r.amount());
+                    }
+
+                    PdfPCell monthTotLabel = cell(monthLabel(e.getKey()) + " TOTAL (" + monthRows.size() + " days)",
+                            totalFont, totBg, totBg, Element.ALIGN_LEFT);
+                    monthTotLabel.setColspan(2);
+                    table.addCell(monthTotLabel);
+                    table.addCell(cell(NUM_FMT.format(monthTotal), totalFont, totBg, totBg, Element.ALIGN_RIGHT));
+
+                    grandTotal = grandTotal.add(monthTotal);
                 }
 
-                Color totBg = new Color(230, 81, 0);
-                PdfPCell totalLabel = cell("TOTAL (" + rows.size() + " days)", totalFont, totBg, totBg, Element.ALIGN_LEFT);
-                totalLabel.setColspan(2);
-                table.addCell(totalLabel);
-                table.addCell(cell(NUM_FMT.format(totAmount), totalFont, totBg, totBg, Element.ALIGN_RIGHT));
+                PdfPCell grandLabel = cell("GRAND TOTAL (" + rows.size() + " days, " + byMonth.size() + " months)",
+                        totalFont, monthBg, monthBg, Element.ALIGN_LEFT);
+                grandLabel.setColspan(2);
+                table.addCell(grandLabel);
+                table.addCell(cell(NUM_FMT.format(grandTotal), totalFont, monthBg, monthBg, Element.ALIGN_RIGHT));
 
                 doc.add(table);
             }
@@ -205,6 +242,12 @@ public class IncentivePaymentReportService {
             ((XSSFFont) totalText.getFont()).setColor(new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 255}, null));
             XSSFCellStyle totalNum = borderedNumStyle(wb, true, new byte[]{(byte) 230, (byte) 81, 0});
             ((XSSFFont) totalNum.getFont()).setColor(new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 255}, null));
+            XSSFCellStyle monthText = borderedStyle(wb, true, HorizontalAlignment.LEFT, new byte[]{(byte) 55, (byte) 71, (byte) 79});
+            ((XSSFFont) monthText.getFont()).setColor(new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 255}, null));
+            XSSFCellStyle grandText = borderedStyle(wb, true, HorizontalAlignment.LEFT, new byte[]{(byte) 55, (byte) 71, (byte) 79});
+            ((XSSFFont) grandText.getFont()).setColor(new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 255}, null));
+            XSSFCellStyle grandNum = borderedNumStyle(wb, true, new byte[]{(byte) 55, (byte) 71, (byte) 79});
+            ((XSSFFont) grandNum.getFont()).setColor(new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 255}, null));
 
             XSSFSheet sheet = wb.createSheet(sheetName);
             int r = 0;
@@ -233,31 +276,56 @@ public class IncentivePaymentReportService {
 
             r++; // blank row
 
-            XSSFRow hdr = sheet.createRow(r++);
-            String[] headers = {"S.No", "Date", "Amount"};
-            for (int i = 0; i < headers.length; i++) {
-                hdr.createCell(i).setCellValue(headers[i]);
-                hdr.getCell(i).setCellStyle(headerStyle);
+            Map<YearMonth, List<DayRow>> byMonth = groupByMonth(rows);
+            BigDecimal grandTotal = BigDecimal.ZERO;
+            for (Map.Entry<YearMonth, List<DayRow>> e : byMonth.entrySet()) {
+                List<DayRow> monthRows = e.getValue();
+
+                XSSFRow monthRow = sheet.createRow(r);
+                monthRow.createCell(0).setCellValue(monthLabel(e.getKey()));
+                for (int i = 0; i < cols; i++) {
+                    if (monthRow.getCell(i) == null) monthRow.createCell(i);
+                    monthRow.getCell(i).setCellStyle(monthText);
+                }
+                sheet.addMergedRegion(new CellRangeAddress(r, r, 0, cols - 1));
+                r++;
+
+                XSSFRow hdr = sheet.createRow(r++);
+                String[] headers = {"S.No", "Date", "Amount"};
+                for (int i = 0; i < headers.length; i++) {
+                    hdr.createCell(i).setCellValue(headers[i]);
+                    hdr.getCell(i).setCellStyle(headerStyle);
+                }
+
+                BigDecimal monthTotal = BigDecimal.ZERO;
+                int n = 0;
+                for (DayRow row : monthRows) {
+                    XSSFRow xr = sheet.createRow(r++);
+                    xr.createCell(0).setCellValue(++n);
+                    xr.getCell(0).setCellStyle(textCell);
+                    xr.createCell(1).setCellValue(row.date().format(DATE_FMT));
+                    xr.getCell(1).setCellStyle(textCell);
+                    setNum(xr, 2, row.amount(), numCell);
+                    monthTotal = monthTotal.add(row.amount());
+                }
+
+                XSSFRow mTot = sheet.createRow(r++);
+                mTot.createCell(0).setCellValue("");
+                mTot.getCell(0).setCellStyle(totalText);
+                mTot.createCell(1).setCellValue(monthLabel(e.getKey()) + " TOTAL (" + monthRows.size() + " days)");
+                mTot.getCell(1).setCellStyle(totalText);
+                setNum(mTot, 2, monthTotal, totalNum);
+
+                grandTotal = grandTotal.add(monthTotal);
+                r++; // blank spacer between months
             }
 
-            BigDecimal totAmount = BigDecimal.ZERO;
-            int n = 0;
-            for (DayRow row : rows) {
-                XSSFRow xr = sheet.createRow(r++);
-                xr.createCell(0).setCellValue(++n);
-                xr.getCell(0).setCellStyle(textCell);
-                xr.createCell(1).setCellValue(row.date().format(DATE_FMT));
-                xr.getCell(1).setCellStyle(textCell);
-                setNum(xr, 2, row.amount(), numCell);
-                totAmount = totAmount.add(row.amount());
-            }
-
-            XSSFRow totalRow = sheet.createRow(r++);
-            totalRow.createCell(0).setCellValue("");
-            totalRow.getCell(0).setCellStyle(totalText);
-            totalRow.createCell(1).setCellValue("TOTAL (" + rows.size() + " days)");
-            totalRow.getCell(1).setCellStyle(totalText);
-            setNum(totalRow, 2, totAmount, totalNum);
+            XSSFRow grandRow = sheet.createRow(r++);
+            grandRow.createCell(0).setCellValue("");
+            grandRow.getCell(0).setCellStyle(grandText);
+            grandRow.createCell(1).setCellValue("GRAND TOTAL (" + rows.size() + " days, " + byMonth.size() + " months)");
+            grandRow.getCell(1).setCellStyle(grandText);
+            setNum(grandRow, 2, grandTotal, grandNum);
 
             for (int i = 0; i < cols; i++) sheet.autoSizeColumn(i);
 

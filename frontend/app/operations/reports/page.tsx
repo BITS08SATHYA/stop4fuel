@@ -150,7 +150,7 @@ const reports: ReportConfig[] = [
         key: "incentive-payment",
         title: "Incentive Payment Report",
         description:
-            "Day-wise incentive payouts across the date range — one row per date with that day's total incentive amount, sorted by date ascending, with a grand total.",
+            "Day-wise incentive payouts grouped into separate monthly sections (March, April, May…) — one row per date with that day's total, a per-month subtotal, and a grand total.",
         icon: Coins,
         color: "text-yellow-500",
         needsDates: true,
