@@ -10,6 +10,7 @@ import {
     downloadAllPartyLocalReport,
     downloadOpeningBalanceLocalReport,
     downloadOpeningBalanceStatementReport,
+    downloadIncentivePaymentReport,
     downloadVatReport,
 } from "@/lib/api/station";
 import { showToast } from "@/components/ui/toast";
@@ -27,6 +28,7 @@ import {
     Wallet,
     Landmark,
     ShieldCheck,
+    Coins,
 } from "lucide-react";
 
 function getCurrentMonthRange() {
@@ -58,6 +60,7 @@ type ReportType =
     | "all-party-local"
     | "opening-balance-local"
     | "opening-balance-statement"
+    | "incentive-payment"
     | "vat";
 
 type ReportTab = "operations" | "auditor";
@@ -144,6 +147,16 @@ const reports: ReportConfig[] = [
         tab: "auditor",
     },
     {
+        key: "incentive-payment",
+        title: "Incentive Payment Report",
+        description:
+            "Day-wise incentive payouts across the date range — one row per date with that day's total incentive amount, sorted by date ascending, with a grand total.",
+        icon: Coins,
+        color: "text-yellow-500",
+        needsDates: true,
+        tab: "auditor",
+    },
+    {
         key: "opening-balance-statement",
         title: "Statement Opening Balance Report",
         description:
@@ -209,6 +222,10 @@ export default function ReportsPage() {
                 case "opening-balance-statement":
                     blob = await downloadOpeningBalanceStatementReport(fromDate, toDate, format);
                     triggerDownload(blob, `StatementOpeningBalance_${fromDate}_to_${toDate}.${ext}`);
+                    break;
+                case "incentive-payment":
+                    blob = await downloadIncentivePaymentReport(fromDate, toDate, format);
+                    triggerDownload(blob, `IncentivePayment_${fromDate}_to_${toDate}.${ext}`);
                     break;
                 case "vat":
                     blob = await downloadVatReport(fromDate, toDate, format);

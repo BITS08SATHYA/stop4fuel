@@ -59,6 +59,14 @@ export const downloadOpeningBalanceStatementReport = (fromDate: string, toDate: 
     });
 };
 
+export const downloadIncentivePaymentReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> => {
+    const endpoint = format === 'pdf' ? 'pdf' : 'excel';
+    return fetchWithAuth(`${API_BASE_URL}/reports/incentive-payment/${endpoint}?fromDate=${fromDate}&toDate=${toDate}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};
+
 export const downloadVatReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> => {
     const endpoint = format === 'pdf' ? 'pdf' : 'excel';
     return fetchWithAuth(`${API_BASE_URL}/reports/vat/${endpoint}?fromDate=${fromDate}&toDate=${toDate}`).then(res => {

@@ -3,6 +3,7 @@ package com.stopforfuel.backend.controller;
 import com.stopforfuel.backend.service.AllPartyUnpaidReportService;
 import com.stopforfuel.backend.service.CustomerBalanceReportService;
 import com.stopforfuel.backend.service.DailySalesReportService;
+import com.stopforfuel.backend.service.IncentivePaymentReportService;
 import com.stopforfuel.backend.service.OpeningBalanceReportService;
 import com.stopforfuel.backend.service.TankInventorySummaryReportService;
 import com.stopforfuel.backend.service.VatReportService;
@@ -26,6 +27,7 @@ public class ReportController {
     private final CustomerBalanceReportService customerBalanceReportService;
     private final AllPartyUnpaidReportService allPartyUnpaidReportService;
     private final OpeningBalanceReportService openingBalanceReportService;
+    private final IncentivePaymentReportService incentivePaymentReportService;
     private final VatReportService vatReportService;
 
     // ======================== Daily Sales ========================
@@ -206,6 +208,34 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         byte[] excel = openingBalanceReportService.generateStatementExcel(fromDate, toDate);
         String filename = "StatementOpeningBalance_" + fromDate + "_to_" + toDate + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    // ======================== Incentive Payment ========================
+
+    @GetMapping("/incentive-payment/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> incentivePaymentPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] pdf = incentivePaymentReportService.generatePdf(fromDate, toDate);
+        String filename = "IncentivePayment_" + fromDate + "_to_" + toDate + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/incentive-payment/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> incentivePaymentExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        byte[] excel = incentivePaymentReportService.generateExcel(fromDate, toDate);
+        String filename = "IncentivePayment_" + fromDate + "_to_" + toDate + ".xlsx";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
