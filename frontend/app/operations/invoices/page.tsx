@@ -140,6 +140,12 @@ export default function InvoicesPage() {
     const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
     const [lastCreatedInvoice, setLastCreatedInvoice] = useState<InvoiceBill | null>(null);
     const [manualDiscount, setManualDiscount] = useState("");
+    // GST tax-invoice optional fields (mirror the IOC-dealer manual book)
+    const [reverseCharge, setReverseCharge] = useState(false);
+    const [buyersOrderNo, setBuyersOrderNo] = useState("");
+    const [buyersOrderDate, setBuyersOrderDate] = useState("");
+    const [supplierRefNo, setSupplierRefNo] = useState("");
+    const [paymentDetails, setPaymentDetails] = useState("");
     const [companyInfo, setCompanyInfo] = useState<{ name: string; address: string; phone: string; gstNo: string; site?: string } | null>(null);
 
     const openMoveInvoice = async (inv: InvoiceBill) => {
@@ -507,6 +513,11 @@ export default function InvoicesPage() {
         setCustomerSuggestions([]);
         setVehicleQuickPicked(false);
         setManualDiscount("");
+        setReverseCharge(false);
+        setBuyersOrderNo("");
+        setBuyersOrderDate("");
+        setSupplierRefNo("");
+        setPaymentDetails("");
     };
 
     const handleSave = async () => {
@@ -540,6 +551,11 @@ export default function InvoicesPage() {
                 signatoryName: walkInCustomerName || undefined,
                 billDesc: walkInVehicleNo || undefined,
                 customerGST: walkInGST || undefined,
+                reverseCharge,
+                buyersOrderNo: buyersOrderNo || undefined,
+                buyersOrderDate: buyersOrderDate || undefined,
+                supplierRefNo: supplierRefNo || undefined,
+                paymentDetails: paymentDetails || undefined,
                 date: new Date().toISOString()
             };
 
@@ -1366,6 +1382,62 @@ export default function InvoicesPage() {
                                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
                                 placeholder="Mobile number"
                             />
+                        </div>
+
+                        <div className="sm:col-span-2 pt-2 mt-2 border-t border-border/60">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3">Tax Invoice <span className="font-normal normal-case tracking-normal">(Optional — B2B / GST)</span></p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Reverse Charge</label>
+                                    <select
+                                        value={reverseCharge ? "YES" : "NO"}
+                                        onChange={(e) => setReverseCharge(e.target.value === "YES")}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-bold"
+                                    >
+                                        <option value="NO">No</option>
+                                        <option value="YES">Yes</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Supplier Ref No.</label>
+                                    <input
+                                        type="text"
+                                        value={supplierRefNo}
+                                        onChange={(e) => setSupplierRefNo(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                        placeholder="Supplier reference"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Buyer's Order No.</label>
+                                    <input
+                                        type="text"
+                                        value={buyersOrderNo}
+                                        onChange={(e) => setBuyersOrderNo(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                        placeholder="Buyer's order / PO number"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Buyer's Order Date</label>
+                                    <input
+                                        type="date"
+                                        value={buyersOrderDate}
+                                        onChange={(e) => setBuyersOrderDate(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                    />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Payment Details</label>
+                                    <input
+                                        type="text"
+                                        value={paymentDetails}
+                                        onChange={(e) => setPaymentDetails(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                                        placeholder="e.g. Cheque 004512 / UPI ref / Card last4"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 

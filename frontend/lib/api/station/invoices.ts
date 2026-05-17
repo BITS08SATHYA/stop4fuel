@@ -6,6 +6,9 @@ export interface InvoiceProduct {
     id?: number;
     productId: number;
     productName: string;
+    hsnCode?: string;
+    gstRate?: number;
+    category?: string;
     nozzleId?: number;
     nozzleName?: string;
     quantity: number;
@@ -28,6 +31,11 @@ export interface InvoiceBill {
     readingOpen?: number;
     readingClose?: number;
     customerGST?: string;
+    reverseCharge?: boolean;
+    buyersOrderNo?: string;
+    buyersOrderDate?: string;
+    supplierRefNo?: string;
+    paymentDetails?: string;
     grossAmount?: number;
     totalDiscount?: number;
     netAmount: number;

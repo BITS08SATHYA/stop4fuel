@@ -32,7 +32,7 @@ public interface IncentivePaymentRepository extends ScidRepository<IncentivePaym
     List<IncentivePayment> findAllByScidOrderByPaymentDateDesc(Long scid);
 
     @EntityGraph(attributePaths = {"customer", "invoiceBill", "invoiceBill.customer", "statement"})
-    @Query("SELECT ip FROM IncentivePayment ip WHERE ip.scid = :scid AND ip.paymentDate BETWEEN :from AND :to ORDER BY ip.paymentDate DESC")
+    @Query("SELECT ip FROM IncentivePayment ip WHERE ip.scid = :scid AND ip.paymentDate BETWEEN :from AND :to ORDER BY ip.paymentDate ASC, ip.id ASC")
     List<IncentivePayment> findByDateRange(@Param("scid") Long scid, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("SELECT COALESCE(SUM(ip.amount), 0) FROM IncentivePayment ip WHERE ip.shiftId = :shiftId")

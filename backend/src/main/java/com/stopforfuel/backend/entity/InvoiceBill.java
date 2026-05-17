@@ -7,6 +7,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,22 @@ public class InvoiceBill extends BaseEntity {
 
     @Column(name = "customer_gst")
     private String customerGST;
+
+    /** GST reverse-charge flag printed on the tax invoice (Yes/No). Defaults to false for retail fuel. */
+    @Column(name = "reverse_charge", nullable = false, columnDefinition = "boolean not null default false")
+    private boolean reverseCharge = false;
+
+    @Column(name = "buyers_order_no")
+    private String buyersOrderNo;
+
+    @Column(name = "buyers_order_date")
+    private LocalDate buyersOrderDate;
+
+    @Column(name = "supplier_ref_no")
+    private String supplierRefNo;
+
+    @Column(name = "payment_details")
+    private String paymentDetails;
 
     @PositiveOrZero(message = "Gross amount must be zero or positive")
     @Column(name = "gross_amount", precision = 19, scale = 4)

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +24,11 @@ public class InvoiceBillDTO {
     private Long readingOpen;
     private Long readingClose;
     private String customerGST;
+    private boolean reverseCharge;
+    private String buyersOrderNo;
+    private LocalDate buyersOrderDate;
+    private String supplierRefNo;
+    private String paymentDetails;
     private BigDecimal grossAmount;
     private BigDecimal totalDiscount;
     private BigDecimal netAmount;
@@ -60,6 +66,11 @@ public class InvoiceBillDTO {
                 .readingOpen(b.getReadingOpen())
                 .readingClose(b.getReadingClose())
                 .customerGST(b.getCustomerGST())
+                .reverseCharge(b.isReverseCharge())
+                .buyersOrderNo(b.getBuyersOrderNo())
+                .buyersOrderDate(b.getBuyersOrderDate())
+                .supplierRefNo(b.getSupplierRefNo())
+                .paymentDetails(b.getPaymentDetails())
                 .grossAmount(b.getGrossAmount())
                 .totalDiscount(b.getTotalDiscount())
                 .netAmount(b.getNetAmount())
@@ -177,6 +188,9 @@ public class InvoiceBillDTO {
         private Long id;
         private Long productId;
         private String productName;
+        private String hsnCode;
+        private BigDecimal gstRate;
+        private String category;
         private Long nozzleId;
         private String nozzleName;
         private BigDecimal quantity;
@@ -192,6 +206,9 @@ public class InvoiceBillDTO {
                     .id(ip.getId())
                     .productId(ip.getProduct() != null ? ip.getProduct().getId() : null)
                     .productName(ip.getProduct() != null ? ip.getProduct().getName() : null)
+                    .hsnCode(ip.getProduct() != null ? ip.getProduct().getHsnCode() : null)
+                    .gstRate(ip.getProduct() != null ? ip.getProduct().getGstRate() : null)
+                    .category(ip.getProduct() != null ? ip.getProduct().getCategory() : null)
                     .nozzleId(ip.getNozzle() != null ? ip.getNozzle().getId() : null)
                     .nozzleName(ip.getNozzle() != null ? ip.getNozzle().getNozzleName() : null)
                     .quantity(ip.getQuantity())
