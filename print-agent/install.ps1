@@ -39,6 +39,13 @@ if (-not $srcExe) {
 
 Write-Host "`n=== StopForFuel Print Agent installer ===`n" -ForegroundColor Cyan
 
+# --- stop any running agent FIRST -----------------------------------------
+# On a reinstall/upgrade the previous agent still holds the target .exe open,
+# so it must be stopped before we can overwrite it.
+Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
+Get-Process StopForFuelPrintAgent -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 2
+
 # --- copy files -----------------------------------------------------------
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 Copy-Item -Force $srcExe (Join-Path $InstallDir $ExeName)
