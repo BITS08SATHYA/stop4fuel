@@ -108,7 +108,8 @@ public class DailySalesRegisterService {
             if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
                     || ni.getNozzle().getTank().getProduct() == null || ni.getDate() == null) continue;
             Product p = ni.getNozzle().getTank().getProduct();
-            if (!"FUEL".equalsIgnoreCase(p.getCategory())) continue;
+            // Classify by name/fuel-family (FuelClassifier), NOT the brittle category
+            // string — products created via different paths carry "Fuel"/"FUEL"/null.
             String section = FuelClassifier.classify(p).section();
             if (section == null) continue;
             productBySection.putIfAbsent(section, p);
@@ -128,7 +129,10 @@ public class DailySalesRegisterService {
             String custName = customerName(b);
             for (InvoiceProduct ip : b.getProducts()) {
                 Product p = ip.getProduct();
-                if (p == null || !"FUEL".equalsIgnoreCase(p.getCategory())) continue;
+                if (p == null) continue;
+                // Fuel membership is decided by FuelClassifier (name/fuel-family),
+                // not Product.category — category casing/nulls were dropping valid
+                // diesel/petrol credit bills off the register.
                 String section = FuelClassifier.classify(p).section();
                 if (section == null) continue;
                 productBySection.putIfAbsent(section, p);
@@ -236,7 +240,9 @@ public class DailySalesRegisterService {
             String custName = customerName(b);
             for (InvoiceProduct ip : b.getProducts()) {
                 Product p = ip.getProduct();
-                if (p == null || "FUEL".equalsIgnoreCase(p.getCategory())) continue;
+                // Non-fuel = anything FuelClassifier does NOT map to a fuel section.
+                // Mirrors the fuel side so a diesel/petrol line can never leak here.
+                if (p == null || FuelClassifier.classify(p).section() != null) continue;
                 BigDecimal amt = nz(ip.getAmount());
                 totalByDay.merge(day, amt, BigDecimal::add);
                 if (isCredit) {
