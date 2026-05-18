@@ -459,24 +459,8 @@ public class VatReportExcelService {
         return r;
     }
 
-    private FuelLabel classify(Product p) {
-        if (p == null) return FuelLabel.OTHER;
-        String fuelFamily = p.getFuelFamily() != null ? p.getFuelFamily().toUpperCase() : "";
-        String name = p.getName() != null ? p.getName().toUpperCase() : "";
-        String gradeName = p.getGrade() != null && p.getGrade().getName() != null ? p.getGrade().getName().toUpperCase() : "";
-        if (fuelFamily.equals("DIESEL") || name.contains("DIESEL") || name.equals("HSD")) return FuelLabel.HSD;
-        boolean petrol = fuelFamily.equals("PETROL") || name.contains("PETROL") || name.equals("MS") || name.contains("XTRA");
-        if (!petrol) return FuelLabel.OTHER;
-        boolean isPremium = name.contains("XTRA") || name.contains("PREMIUM") || name.equals("XP")
-                || gradeName.contains("XTRA") || gradeName.contains("PREMIUM");
-        return isPremium ? FuelLabel.XP : FuelLabel.MS;
-    }
-
-    private enum FuelLabel {
-        XP("XP"), MS("MS"), HSD("HSD"), OTHER("OTHER");
-        private final String label;
-        FuelLabel(String l) { this.label = l; }
-        String label() { return label; }
+    private FuelClassifier.FuelLabel classify(Product p) {
+        return FuelClassifier.classify(p);
     }
 
     private void configurePageSetup(XSSFSheet sheet) {

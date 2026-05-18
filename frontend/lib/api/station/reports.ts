@@ -74,3 +74,26 @@ export const downloadVatReport = (fromDate: string, toDate: string, format: 'pdf
         return res.blob();
     });
 };
+
+const downloadDailyRegister = (segment: string, fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> => {
+    const endpoint = format === 'pdf' ? 'pdf' : 'excel';
+    return fetchWithAuth(`${API_BASE_URL}/reports/daily-register-${segment}/${endpoint}?fromDate=${fromDate}&toDate=${toDate}`).then(res => {
+        if (!res.ok) throw new Error('Report generation failed');
+        return res.blob();
+    });
+};
+
+export const downloadDieselRegisterReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> =>
+    downloadDailyRegister('diesel', fromDate, toDate, format);
+
+export const downloadPetrolRegisterReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> =>
+    downloadDailyRegister('petrol', fromDate, toDate, format);
+
+export const downloadXtraPremiumRegisterReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> =>
+    downloadDailyRegister('xtra-premium', fromDate, toDate, format);
+
+export const downloadLubricantRegisterReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> =>
+    downloadDailyRegister('lubricants', fromDate, toDate, format);
+
+export const downloadPurchaseRegisterReport = (fromDate: string, toDate: string, format: 'pdf' | 'excel'): Promise<Blob> =>
+    downloadDailyRegister('purchase', fromDate, toDate, format);

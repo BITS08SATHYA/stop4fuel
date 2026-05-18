@@ -2,6 +2,7 @@ package com.stopforfuel.backend.controller;
 
 import com.stopforfuel.backend.service.AllPartyUnpaidReportService;
 import com.stopforfuel.backend.service.CustomerBalanceReportService;
+import com.stopforfuel.backend.service.DailySalesRegisterService;
 import com.stopforfuel.backend.service.DailySalesReportService;
 import com.stopforfuel.backend.service.IncentivePaymentReportService;
 import com.stopforfuel.backend.service.OpeningBalanceReportService;
@@ -29,6 +30,7 @@ public class ReportController {
     private final OpeningBalanceReportService openingBalanceReportService;
     private final IncentivePaymentReportService incentivePaymentReportService;
     private final VatReportService vatReportService;
+    private final DailySalesRegisterService dailySalesRegisterService;
 
     // ======================== Daily Sales ========================
 
@@ -268,5 +270,111 @@ public class ReportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excel);
+    }
+
+    // ======================== Daily Sales Register (auditor) ========================
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    private ResponseEntity<byte[]> excelResponse(byte[] excel, String filename) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + ".xlsx\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
+
+    @GetMapping("/daily-register-diesel/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> dieselRegisterPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return pdfResponse(dailySalesRegisterService.generateFuelPdf(DailySalesRegisterService.DIESEL, fromDate, toDate),
+                "DieselRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-diesel/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> dieselRegisterExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return excelResponse(dailySalesRegisterService.generateFuelExcel(DailySalesRegisterService.DIESEL, fromDate, toDate),
+                "DieselRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-petrol/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> petrolRegisterPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return pdfResponse(dailySalesRegisterService.generateFuelPdf(DailySalesRegisterService.PETROL, fromDate, toDate),
+                "PetrolRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-petrol/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> petrolRegisterExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return excelResponse(dailySalesRegisterService.generateFuelExcel(DailySalesRegisterService.PETROL, fromDate, toDate),
+                "PetrolRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-xtra-premium/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> xtraPremiumRegisterPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return pdfResponse(dailySalesRegisterService.generateFuelPdf(DailySalesRegisterService.XTRA_PREMIUM, fromDate, toDate),
+                "XtraPremiumRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-xtra-premium/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> xtraPremiumRegisterExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return excelResponse(dailySalesRegisterService.generateFuelExcel(DailySalesRegisterService.XTRA_PREMIUM, fromDate, toDate),
+                "XtraPremiumRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-lubricants/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> lubricantRegisterPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return pdfResponse(dailySalesRegisterService.generateLubricantPdf(fromDate, toDate),
+                "LubricantRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-lubricants/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> lubricantRegisterExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return excelResponse(dailySalesRegisterService.generateLubricantExcel(fromDate, toDate),
+                "LubricantRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-purchase/pdf")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> purchaseRegisterPdf(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return pdfResponse(dailySalesRegisterService.generatePurchasePdf(fromDate, toDate),
+                "PurchaseRegister_" + fromDate + "_to_" + toDate);
+    }
+
+    @GetMapping("/daily-register-purchase/excel")
+    @PreAuthorize("hasPermission(null, 'REPORT_VIEW')")
+    public ResponseEntity<byte[]> purchaseRegisterExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return excelResponse(dailySalesRegisterService.generatePurchaseExcel(fromDate, toDate),
+                "PurchaseRegister_" + fromDate + "_to_" + toDate);
     }
 }

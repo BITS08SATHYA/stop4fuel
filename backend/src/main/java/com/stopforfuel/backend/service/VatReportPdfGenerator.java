@@ -528,16 +528,7 @@ public class VatReportPdfGenerator {
     }
 
     private String classify(Product p) {
-        if (p == null) return "OTHER";
-        String fuelFamily = p.getFuelFamily() != null ? p.getFuelFamily().toUpperCase() : "";
-        String name = p.getName() != null ? p.getName().toUpperCase() : "";
-        String gradeName = p.getGrade() != null && p.getGrade().getName() != null ? p.getGrade().getName().toUpperCase() : "";
-        if (fuelFamily.equals("DIESEL") || name.contains("DIESEL") || name.equals("HSD")) return "HSD";
-        boolean petrol = fuelFamily.equals("PETROL") || name.contains("PETROL") || name.equals("MS") || name.contains("XTRA");
-        if (!petrol) return "OTHER";
-        boolean isPremium = name.contains("XTRA") || name.contains("PREMIUM") || name.equals("XP")
-                || gradeName.contains("XTRA") || gradeName.contains("PREMIUM");
-        return isPremium ? "XP" : "MS";
+        return FuelClassifier.classify(p).label();
     }
 
     private String headerPeriod(LocalDate from, LocalDate to) {

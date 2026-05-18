@@ -12,6 +12,11 @@ import {
     downloadOpeningBalanceStatementReport,
     downloadIncentivePaymentReport,
     downloadVatReport,
+    downloadDieselRegisterReport,
+    downloadPetrolRegisterReport,
+    downloadXtraPremiumRegisterReport,
+    downloadLubricantRegisterReport,
+    downloadPurchaseRegisterReport,
 } from "@/lib/api/station";
 import { showToast } from "@/components/ui/toast";
 import {
@@ -29,6 +34,10 @@ import {
     Landmark,
     ShieldCheck,
     Coins,
+    Fuel,
+    Flame,
+    Sparkles,
+    Truck,
 } from "lucide-react";
 
 function getCurrentMonthRange() {
@@ -61,7 +70,12 @@ type ReportType =
     | "opening-balance-local"
     | "opening-balance-statement"
     | "incentive-payment"
-    | "vat";
+    | "vat"
+    | "register-diesel"
+    | "register-petrol"
+    | "register-xtra-premium"
+    | "register-lubricants"
+    | "register-purchase";
 
 type ReportTab = "operations" | "auditor";
 
@@ -113,6 +127,56 @@ const reports: ReportConfig[] = [
             "Monthly VAT/GST sheet for the auditor: purchase register (XP/MS/HSD by invoice), GST computation on lubricants (18% split into SGST/CGST), daily lubricant sales, and daily fuel sales per product with TEST and net sale.",
         icon: ShieldCheck,
         color: "text-emerald-500",
+        needsDates: true,
+        tab: "auditor",
+    },
+    {
+        key: "register-diesel",
+        title: "Daily Diesel Sales Register",
+        description:
+            "Day-wise diesel: total sale litres & amount, the per-credit-customer breakdown with subtotal, and cash sale (total − credit) for the chosen period.",
+        icon: Fuel,
+        color: "text-orange-500",
+        needsDates: true,
+        tab: "auditor",
+    },
+    {
+        key: "register-petrol",
+        title: "Daily Petrol Sales Register",
+        description:
+            "Day-wise petrol (MS): total sale litres & amount, per-credit-customer breakdown with subtotal, and cash sale for the chosen period.",
+        icon: Flame,
+        color: "text-orange-500",
+        needsDates: true,
+        tab: "auditor",
+    },
+    {
+        key: "register-xtra-premium",
+        title: "Daily Xtra Premium Register",
+        description:
+            "Day-wise Xtra Premium: total sale litres & amount and cash sale per day (typically all-cash, no credit customers).",
+        icon: Sparkles,
+        color: "text-orange-500",
+        needsDates: true,
+        tab: "auditor",
+    },
+    {
+        key: "register-lubricants",
+        title: "Daily Lubricant Register",
+        description:
+            "Day-wise lubricant/non-fuel: total amount, per-credit-customer lines (qty, rate, product) and cash amount — a row for every day in the period.",
+        icon: Droplets,
+        color: "text-orange-500",
+        needsDates: true,
+        tab: "auditor",
+    },
+    {
+        key: "register-purchase",
+        title: "Purchase Register",
+        description:
+            "Uploaded IOC purchase invoices, one row per line: party, GSTIN, state, product, HSN, qty, taxable and SGST/CGST split with net total.",
+        icon: Truck,
+        color: "text-orange-500",
         needsDates: true,
         tab: "auditor",
     },
@@ -230,6 +294,26 @@ export default function ReportsPage() {
                 case "vat":
                     blob = await downloadVatReport(fromDate, toDate, format);
                     triggerDownload(blob, `VAT_${fromDate}_to_${toDate}.${ext}`);
+                    break;
+                case "register-diesel":
+                    blob = await downloadDieselRegisterReport(fromDate, toDate, format);
+                    triggerDownload(blob, `DieselRegister_${fromDate}_to_${toDate}.${ext}`);
+                    break;
+                case "register-petrol":
+                    blob = await downloadPetrolRegisterReport(fromDate, toDate, format);
+                    triggerDownload(blob, `PetrolRegister_${fromDate}_to_${toDate}.${ext}`);
+                    break;
+                case "register-xtra-premium":
+                    blob = await downloadXtraPremiumRegisterReport(fromDate, toDate, format);
+                    triggerDownload(blob, `XtraPremiumRegister_${fromDate}_to_${toDate}.${ext}`);
+                    break;
+                case "register-lubricants":
+                    blob = await downloadLubricantRegisterReport(fromDate, toDate, format);
+                    triggerDownload(blob, `LubricantRegister_${fromDate}_to_${toDate}.${ext}`);
+                    break;
+                case "register-purchase":
+                    blob = await downloadPurchaseRegisterReport(fromDate, toDate, format);
+                    triggerDownload(blob, `PurchaseRegister_${fromDate}_to_${toDate}.${ext}`);
                     break;
             }
         } catch {
