@@ -1,5 +1,5 @@
 import { InvoiceBill } from "@/lib/api/station";
-import { buildInvoiceEscPos } from "@/lib/escpos-invoice";
+import { buildInvoiceRaster } from "@/lib/escpos-raster";
 import { sendToPrintAgent, probePrintAgent } from "@/lib/print-agent";
 
 // Number to words (Indian system)
@@ -282,7 +282,7 @@ export function buildReceiptModel(invoice: InvoiceBill, company: CompanyInfo): R
     };
 }
 
-function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string {
+export function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string {
     const m = buildReceiptModel(invoice, company);
 
     // 4-column item row: Item / Qty / Rate / Amount, with an HSN + GST-rate sub-line.
@@ -506,8 +506,9 @@ if (typeof window !== "undefined") {
 /**
  * Print an invoice.
  *
- * Steady state on a counter PC with the print agent installed: ESC/POS bytes
- * are pushed straight to the TVS RP3150 thermal printer — one click, no dialog.
+ * Steady state on a counter PC with the print agent installed: the HTML
+ * receipt is rasterized in-browser and pushed to the TVS RP3150 as an ESC/POS
+ * image — same look as the browser print, one click, no dialog.
  *
  * Anywhere the agent is not reachable (dev laptop, machine without the agent,
  * agent stopped) it transparently falls back to the browser print popup.
@@ -520,11 +521,11 @@ export async function printInvoice(invoice: InvoiceBill, company: CompanyInfo): 
     // Agent known up → go direct, no popup, no flicker.
     if (agentKnownUp === true) {
         try {
-            const bytes = buildInvoiceEscPos(buildReceiptModel(invoice, company));
+            const bytes = await buildInvoiceRaster(generateInvoiceHTML(invoice, company));
             await sendToPrintAgent(bytes, `Invoice ${invoice.billNo || ""}`);
             return;
         } catch (_) {
-            // Agent went away since the probe. Fall through to browser print.
+            // Agent went away (or raster failed). Fall through to browser print.
             agentKnownUp = false;
         }
     }
@@ -535,7 +536,7 @@ export async function printInvoice(invoice: InvoiceBill, company: CompanyInfo): 
         const up = await probePrintAgent();
         if (up) {
             agentKnownUp = true;
-            const bytes = buildInvoiceEscPos(buildReceiptModel(invoice, company));
+            const bytes = await buildInvoiceRaster(generateInvoiceHTML(invoice, company));
             await sendToPrintAgent(bytes, `Invoice ${invoice.billNo || ""}`);
             try { preOpened?.close(); } catch (_) { /* ignore */ }
             return;
