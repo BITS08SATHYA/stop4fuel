@@ -19,8 +19,13 @@ import html2canvas from "html2canvas";
 // raise it (576). This is the single knob for "fits the paper".
 const PRINTER_DOTS = 512;
 const BYTES_PER_ROW = PRINTER_DOTS / 8;          // 72
+// Supersample factor: render the receipt this many times larger than the
+// printer's dot width, then downscale with smoothing before thresholding.
+// This is what makes the text crisp (vs the earlier fuzzy low-res capture) —
+// it mimics the Windows driver rendering fonts at full device resolution.
+const SUPERSAMPLE = 4;
 // Pixels below this luminance print as a black dot. Higher = darker/bolder.
-const THRESHOLD = 160;
+const THRESHOLD = 176;
 // Rows per GS v 0 command — keep bands small so the print buffer never
 // overflows on a long receipt.
 const BAND_ROWS = 128;
@@ -52,8 +57,10 @@ async function htmlToCanvas(html: string): Promise<HTMLCanvasElement> {
         const wPx = Math.max(body.scrollWidth, body.offsetWidth);
         const hPx = Math.max(body.scrollHeight, body.offsetHeight);
 
-        // Scale so the captured bitmap is exactly PRINTER_DOTS wide.
-        const scale = PRINTER_DOTS / wPx;
+        // Render SUPERSAMPLE× the final dot width so glyph edges are
+        // resolved at high resolution; canvasToBits() then downsamples
+        // smoothly to PRINTER_DOTS for a crisp 1-bit result.
+        const scale = (PRINTER_DOTS * SUPERSAMPLE) / wPx;
         return await html2canvas(body, {
             backgroundColor: "#ffffff",
             width: wPx,
@@ -76,6 +83,10 @@ function canvasToBits(src: HTMLCanvasElement): { rows: number; data: Uint8Array 
     const ctx = norm.getContext("2d")!;
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, PRINTER_DOTS, h);
+    // High-quality downsample of the supersampled capture → clean anti-aliased
+    // greyscale, which thresholds into sharp (not jagged) 1-bit strokes.
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.drawImage(src, 0, 0, PRINTER_DOTS, h);
 
     const px = ctx.getImageData(0, 0, PRINTER_DOTS, h).data;
