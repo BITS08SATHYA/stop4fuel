@@ -548,7 +548,9 @@ public class DashboardService {
         dashboard.setStatementPaymentTotal(stmtPayments != null ? stmtPayments : BigDecimal.ZERO);
 
         // Operational advances
-        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(sid);
+        List<OperationalAdvance> opAdvances = operationalAdvanceRepository.findByShiftIdOrderByIdDesc(sid).stream()
+                .filter(oa -> oa.getStatus() != com.stopforfuel.backend.enums.AdvanceStatus.CANCELLED)
+                .toList();
         BigDecimal opAdvanceTotal = opAdvances.stream()
                 .map(oa -> oa.getAmount() != null ? oa.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

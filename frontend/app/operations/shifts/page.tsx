@@ -443,7 +443,8 @@ export default function ShiftsPage() {
     const creditBillTotal = creditInvoices.reduce((sum, inv) => sum + (inv.netAmount || 0), 0);
 
     const eAdvanceTotal = eAdvanceSummary?.total || 0;
-    const opAdvanceTotal = opAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
+    const activeOpAdvances = opAdvances.filter(a => a.status !== "CANCELLED");
+    const opAdvanceTotal = activeOpAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
     const incentiveTotal = incentivePayments.reduce((sum, ip) => sum + (ip.amount || 0), 0);
     const totalAdvances = eAdvanceTotal + opAdvanceTotal + expenseTotal + incentiveTotal;
 
@@ -713,10 +714,10 @@ export default function ShiftsPage() {
                                 {/* Operational Advances */}
                                 <GlassCard className="p-4">
                                     <div className="flex justify-between items-center mb-3">
-                                        <h3 className="text-sm font-semibold text-muted-foreground">OPERATIONAL ADVANCES ({opAdvances.length})</h3>
+                                        <h3 className="text-sm font-semibold text-muted-foreground">OPERATIONAL ADVANCES ({activeOpAdvances.length})</h3>
                                         <span className="text-sm font-bold text-purple-500">{formatCurrency(opAdvanceTotal)}</span>
                                     </div>
-                                    {opAdvances.length === 0 ? (
+                                    {activeOpAdvances.length === 0 ? (
                                         <p className="text-xs text-muted-foreground py-2">No operational advances</p>
                                     ) : (
                                         <div className="overflow-x-auto">
@@ -729,7 +730,7 @@ export default function ShiftsPage() {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border/20">
-                                                    {opAdvances.map(oa => (
+                                                    {activeOpAdvances.map(oa => (
                                                         <tr key={oa.id} className="hover:bg-white/5">
                                                             <td className="py-1.5">
                                                                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-500 font-medium">
