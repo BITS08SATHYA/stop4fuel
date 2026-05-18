@@ -1,7 +1,9 @@
 import { InvoiceBill } from "@/lib/api/station";
+import { buildInvoiceEscPos } from "@/lib/escpos-invoice";
+import { sendToPrintAgent, probePrintAgent } from "@/lib/print-agent";
 
 // Number to words (Indian system)
-function numberToWords(num: number): string {
+export function numberToWords(num: number): string {
     if (num === 0) return "Zero";
     const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
         "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
@@ -24,7 +26,7 @@ function numberToWords(num: number): string {
     return result + " Only";
 }
 
-function formatCurrency(val: number | undefined | null): string {
+export function formatCurrency(val: number | undefined | null): string {
     if (val == null) return "0.00";
     return val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -32,8 +34,9 @@ function formatCurrency(val: number | undefined | null): string {
 // Thermal print drivers render UTF-8 via the OS print pipeline, but ₹ glyph
 // is missing from some Courier fallbacks so we still substitute "Rs.".
 // Smart-quotes / em-dashes get normalized for consistent rendering on the
-// monochrome printhead.
-function asciiSafe(s: string | undefined | null): string {
+// monochrome printhead. The ESC/POS path also relies on this — the TVS RP3150
+// printhead is a strict single-byte ASCII codepage.
+export function asciiSafe(s: string | undefined | null): string {
     if (!s) return "";
     return s
         .replace(/[–—]/g, "-")
@@ -81,12 +84,12 @@ function computeLineTax(amount: number, category: string | undefined, gstRate: n
     return { isFuel, rate, taxable, tax, cgst, sgst };
 }
 
-function halfRateLabel(rate: number): string {
+export function halfRateLabel(rate: number): string {
     const h = rate / 2;
     return Number.isInteger(h) ? String(h) : h.toFixed(2);
 }
 
-interface CompanyInfo {
+export interface CompanyInfo {
     name: string;
     address: string;
     phone: string;
@@ -94,9 +97,74 @@ interface CompanyInfo {
     site?: string;
 }
 
-function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string {
+// ---------------------------------------------------------------------------
+// Shared receipt view-model.
+//
+// Single source of truth for what goes on a printed bill. BOTH the HTML
+// renderer (browser fallback) and the ESC/POS renderer (thermal print agent)
+// consume this — so a tax invoice can never differ between the two media.
+// Pure data only; no markup, no escaping, no ESC/POS here.
+// ---------------------------------------------------------------------------
+export interface ReceiptItem {
+    name: string;
+    qty: string;        // 2-decimal string
+    unitRate: string;   // 2-decimal string
+    amt: string;        // formatted currency
+    hsn: string;
+    gstTag: string;
+    nozzleName: string;
+    discount: string;   // formatted currency, "" when none
+}
+
+export interface ReceiptTaxBucket {
+    label: string;
+    isFuel: boolean;
+    rate: number;
+    taxable: string;
+    cgst: string;
+    sgst: string;
+}
+
+export interface ReceiptModel {
+    company: CompanyInfo;
+    billBadge: string;          // CASH | CREDIT
+    // meta
+    billNo: string;
+    dateStr: string;
+    shiftId: string;
+    cashierLabel: string;
+    reverseChargeLabel: string;
+    // customer / vehicle
+    customerName: string;
+    customerPhone: string;
+    customerGST: string;
+    vehicleNo: string;
+    isNamedCustomer: boolean;
+    odometerDisplay: string;
+    showIndent: boolean;
+    indentNo: string;
+    // B2B refs
+    buyersOrder: string;
+    buyersOrderDate: string;
+    supplierRef: string;
+    paymentDetails: string;
+    hasB2B: boolean;
+    // items + money
+    items: ReceiptItem[];
+    subTotal: string;
+    totalDiscount: number;
+    totalDiscountStr: string;
+    taxBuckets: ReceiptTaxBucket[];
+    hasGst: boolean;
+    totalTaxable: string;
+    totalGst: string;
+    netAmount: number;
+    netAmountStr: string;
+    inWords: string;
+}
+
+export function buildReceiptModel(invoice: InvoiceBill, company: CompanyInfo): ReceiptModel {
     const isCash = invoice.billType === "CASH";
-    const billBadge = isCash ? "CASH" : "CREDIT";
 
     const customerName = invoice.customer?.name || invoice.signatoryName || "Walk-in Customer";
     const customerPhone = invoice.signatoryCellNo || "";
@@ -111,17 +179,12 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     const netAmount = invoice.netAmount || 0;
 
     // Cashier display cascade: name -> username -> "#<id>" -> "-".
-    // Hits the "#<id>" branch when a User exists but PersonEntity.name and User.username
-    // are both blank (seeded cashier rows from the early passcode-auth flow).
     const cashierLabel = asciiSafe(invoice.raisedBy?.name)
         || asciiSafe(invoice.raisedBy?.username)
         || (invoice.raisedBy?.id ? `#${invoice.raisedBy.id}` : "-");
 
-    // Odometer is shown on every named-customer bill; "-" when vehicleKM unset/0.
     const odometerDisplay = invoice.vehicleKM ? `${invoice.vehicleKM.toLocaleString("en-IN")} km` : "-";
 
-    // Indent only shows when it has a real value — cashiers sometimes type "0" or
-    // leave the default, so filter those out instead of printing "Indent  0".
     const indentTrim = (invoice.indentNo || "").trim();
     const showIndent = indentTrim !== "" && indentTrim !== "0";
 
@@ -153,44 +216,98 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
     const totalGst = r2(buckets.reduce((s, b) => s + b.cgst + b.sgst, 0));
     const hasGst = buckets.some((b) => !b.isFuel && (b.cgst + b.sgst) > 0);
 
-    // 4-column item row: Item / Qty / Rate / Amount, with an HSN + GST-rate sub-line.
-    const itemsHtml = lines.map(({ p, isFuel, rate }) => {
-        const name = asciiSafe(p.productName) || "Product";
-        const qty = (p.quantity ?? 0).toFixed(2);
-        const unitRate = (p.unitPrice ?? 0).toFixed(2);
-        const amt = formatCurrency(p.amount);
-        const hsn = asciiSafe(p.hsnCode) || "-";
-        const gstTag = isFuel ? "Nil (Fuel)" : (rate > 0 ? `${rate}%` : "Nil");
-        const hsnSub = `<div class="isub">HSN: ${hsn} | GST: ${gstTag}</div>`;
-        const nozzleSub = p.nozzleName ? `<div class="isub">Nozzle: ${asciiSafe(p.nozzleName)}</div>` : "";
-        const discSub = (p.discountAmount && p.discountAmount > 0)
-            ? `<div class="isub">Discount: -${formatCurrency(p.discountAmount)}</div>` : "";
-        return `<div class="irow">
-            <span class="ic-name">${name}</span>
-            <span class="ic-qty">${qty}</span>
-            <span class="ic-rate">${unitRate}</span>
-            <span class="ic-amt">${amt}</span>
-        </div>${hsnSub}${nozzleSub}${discSub}`;
-    }).join("");
+    const items: ReceiptItem[] = lines.map(({ p, isFuel, rate }) => ({
+        name: asciiSafe(p.productName) || "Product",
+        qty: (p.quantity ?? 0).toFixed(2),
+        unitRate: (p.unitPrice ?? 0).toFixed(2),
+        amt: formatCurrency(p.amount),
+        hsn: asciiSafe(p.hsnCode) || "-",
+        gstTag: isFuel ? "Nil (Fuel)" : (rate > 0 ? `${rate}%` : "Nil"),
+        nozzleName: p.nozzleName ? asciiSafe(p.nozzleName) : "",
+        discount: (p.discountAmount && p.discountAmount > 0) ? formatCurrency(p.discountAmount) : "",
+    }));
 
-    // Reverse-charge is statutory on a tax invoice — always print Yes/No.
-    const reverseChargeLabel = invoice.reverseCharge ? "Yes" : "No";
     const buyersOrder = asciiSafe(invoice.buyersOrderNo || "").trim();
     const buyersOrderDate = invoice.buyersOrderDate ? formatDateOnly(invoice.buyersOrderDate) : "";
     const supplierRef = asciiSafe(invoice.supplierRefNo || "").trim();
     const paymentDetails = asciiSafe(invoice.paymentDetails || "").trim();
-    const hasB2B = !!(buyersOrder || supplierRef || paymentDetails);
 
-    const taxSummaryHtml = hasGst
-        ? buckets.map((b) => {
+    const taxBuckets: ReceiptTaxBucket[] = buckets.map((b) => ({
+        label: b.label,
+        isFuel: b.isFuel,
+        rate: b.rate,
+        taxable: formatCurrency(b.taxable),
+        cgst: formatCurrency(b.cgst),
+        sgst: formatCurrency(b.sgst),
+    }));
+
+    return {
+        company: {
+            name: asciiSafe(company.name),
+            address: asciiSafe(company.address),
+            phone: asciiSafe(company.phone),
+            gstNo: asciiSafe(company.gstNo),
+            site: company.site,
+        },
+        billBadge: isCash ? "CASH" : "CREDIT",
+        billNo: asciiSafe(invoice.billNo) || "-",
+        dateStr: invoice.date ? formatDate(invoice.date) : "-",
+        shiftId: `#${invoice.shiftId || "-"}`,
+        cashierLabel,
+        reverseChargeLabel: invoice.reverseCharge ? "Yes" : "No",
+        customerName: asciiSafe(customerName),
+        customerPhone: asciiSafe(customerPhone),
+        customerGST: asciiSafe(customerGST),
+        vehicleNo: asciiSafe(vehicleNo),
+        isNamedCustomer,
+        odometerDisplay,
+        showIndent,
+        indentNo: asciiSafe(invoice.indentNo),
+        buyersOrder,
+        buyersOrderDate,
+        supplierRef,
+        paymentDetails,
+        hasB2B: !!(buyersOrder || supplierRef || paymentDetails),
+        items,
+        subTotal: formatCurrency(subTotal),
+        totalDiscount,
+        totalDiscountStr: formatCurrency(totalDiscount),
+        taxBuckets,
+        hasGst,
+        totalTaxable: formatCurrency(totalTaxable),
+        totalGst: formatCurrency(totalGst),
+        netAmount,
+        netAmountStr: formatCurrency(netAmount),
+        inWords: asciiSafe(numberToWords(netAmount)),
+    };
+}
+
+function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string {
+    const m = buildReceiptModel(invoice, company);
+
+    // 4-column item row: Item / Qty / Rate / Amount, with an HSN + GST-rate sub-line.
+    const itemsHtml = m.items.map((it) => {
+        const hsnSub = `<div class="isub">HSN: ${it.hsn} | GST: ${it.gstTag}</div>`;
+        const nozzleSub = it.nozzleName ? `<div class="isub">Nozzle: ${it.nozzleName}</div>` : "";
+        const discSub = it.discount ? `<div class="isub">Discount: -${it.discount}</div>` : "";
+        return `<div class="irow">
+            <span class="ic-name">${it.name}</span>
+            <span class="ic-qty">${it.qty}</span>
+            <span class="ic-rate">${it.unitRate}</span>
+            <span class="ic-amt">${it.amt}</span>
+        </div>${hsnSub}${nozzleSub}${discSub}`;
+    }).join("");
+
+    const taxSummaryHtml = m.hasGst
+        ? m.taxBuckets.map((b) => {
             if (b.isFuel) {
-                return `<div class="row"><span>${b.label}</span><span>${formatCurrency(b.taxable)}</span></div>`;
+                return `<div class="row"><span>${b.label}</span><span>${b.taxable}</span></div>`;
             }
-            return `<div class="row"><span>${b.label}</span><span>${formatCurrency(b.taxable)}</span></div>
-        <div class="row sub"><span>CGST ${halfRateLabel(b.rate)}%</span><span>${formatCurrency(b.cgst)}</span></div>
-        <div class="row sub"><span>SGST ${halfRateLabel(b.rate)}%</span><span>${formatCurrency(b.sgst)}</span></div>`;
+            return `<div class="row"><span>${b.label}</span><span>${b.taxable}</span></div>
+        <div class="row sub"><span>CGST ${halfRateLabel(b.rate)}%</span><span>${b.cgst}</span></div>
+        <div class="row sub"><span>SGST ${halfRateLabel(b.rate)}%</span><span>${b.sgst}</span></div>`;
         }).join("")
-        : `<div class="row"><span>Taxable Value (Outside GST/Fuel)</span><span>${formatCurrency(totalTaxable)}</span></div>`;
+        : `<div class="row"><span>Taxable Value (Outside GST/Fuel)</span><span>${m.totalTaxable}</span></div>`;
 
     return `<!DOCTYPE html>
 <html>
@@ -266,43 +383,43 @@ function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo): string
 
 <!-- ===== HEADER ===== -->
 <div class="center">
-    <div class="company">${asciiSafe(company.name)}</div>
-    <div class="addr">${asciiSafe(company.address)}</div>
-    <div class="addr">Ph: ${asciiSafe(company.phone)}</div>
-    <div class="addr">GSTIN: ${asciiSafe(company.gstNo)}</div>
+    <div class="company">${m.company.name}</div>
+    <div class="addr">${m.company.address}</div>
+    <div class="addr">Ph: ${m.company.phone}</div>
+    <div class="addr">GSTIN: ${m.company.gstNo}</div>
 </div>
 
 <div class="rule-h"></div>
 <div class="center title">TAX INVOICE</div>
-<div class="center"><span class="badge">${billBadge}</span></div>
+<div class="center"><span class="badge">${m.billBadge}</span></div>
 <div class="rule-d"></div>
 
 <!-- ===== BILL META ===== -->
 <div class="meta">
-    <div class="row"><span class="lbl">Bill No</span><span class="val">${asciiSafe(invoice.billNo) || "-"}</span></div>
-    <div class="row"><span class="lbl">Date</span><span class="val">${invoice.date ? formatDate(invoice.date) : "-"}</span></div>
-    <div class="row"><span class="lbl">Shift</span><span class="val">#${invoice.shiftId || "-"}</span></div>
-    <div class="row"><span class="lbl">Cashier</span><span class="val">${cashierLabel}</span></div>
-    <div class="row"><span class="lbl">Reverse Charge</span><span class="val">${reverseChargeLabel}</span></div>
+    <div class="row"><span class="lbl">Bill No</span><span class="val">${m.billNo}</span></div>
+    <div class="row"><span class="lbl">Date</span><span class="val">${m.dateStr}</span></div>
+    <div class="row"><span class="lbl">Shift</span><span class="val">${m.shiftId}</span></div>
+    <div class="row"><span class="lbl">Cashier</span><span class="val">${m.cashierLabel}</span></div>
+    <div class="row"><span class="lbl">Reverse Charge</span><span class="val">${m.reverseChargeLabel}</span></div>
 </div>
 
 <div class="rule-d"></div>
 
 <!-- ===== CUSTOMER / VEHICLE ===== -->
 <div class="meta">
-    <div class="row"><span class="lbl">Customer</span><span class="val">${asciiSafe(customerName)}</span></div>
-    ${customerPhone ? `<div class="row"><span class="lbl">Phone</span><span class="val">${asciiSafe(customerPhone)}</span></div>` : ""}
-    ${customerGST ? `<div class="row"><span class="lbl">GST</span><span class="val">${asciiSafe(customerGST)}</span></div>` : ""}
-    ${vehicleNo ? `<div class="row"><span class="lbl">Vehicle</span><span class="val">${asciiSafe(vehicleNo)}</span></div>` : ""}
-    ${isNamedCustomer ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${odometerDisplay}</span></div>` : ""}
-    ${showIndent ? `<div class="row"><span class="lbl">Indent</span><span class="val">${asciiSafe(invoice.indentNo)}</span></div>` : ""}
+    <div class="row"><span class="lbl">Customer</span><span class="val">${m.customerName}</span></div>
+    ${m.customerPhone ? `<div class="row"><span class="lbl">Phone</span><span class="val">${m.customerPhone}</span></div>` : ""}
+    ${m.customerGST ? `<div class="row"><span class="lbl">GST</span><span class="val">${m.customerGST}</span></div>` : ""}
+    ${m.vehicleNo ? `<div class="row"><span class="lbl">Vehicle</span><span class="val">${m.vehicleNo}</span></div>` : ""}
+    ${m.isNamedCustomer ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${m.odometerDisplay}</span></div>` : ""}
+    ${m.showIndent ? `<div class="row"><span class="lbl">Indent</span><span class="val">${m.indentNo}</span></div>` : ""}
 </div>
 
-${hasB2B ? `<div class="rule-d"></div>
+${m.hasB2B ? `<div class="rule-d"></div>
 <div class="meta">
-    ${buyersOrder ? `<div class="row"><span class="lbl">Buyer Order</span><span class="val">${buyersOrder}${buyersOrderDate ? " / " + buyersOrderDate : ""}</span></div>` : ""}
-    ${supplierRef ? `<div class="row"><span class="lbl">Supplier Ref</span><span class="val">${supplierRef}</span></div>` : ""}
-    ${paymentDetails ? `<div class="row"><span class="lbl">Payment</span><span class="val">${paymentDetails}</span></div>` : ""}
+    ${m.buyersOrder ? `<div class="row"><span class="lbl">Buyer Order</span><span class="val">${m.buyersOrder}${m.buyersOrderDate ? " / " + m.buyersOrderDate : ""}</span></div>` : ""}
+    ${m.supplierRef ? `<div class="row"><span class="lbl">Supplier Ref</span><span class="val">${m.supplierRef}</span></div>` : ""}
+    ${m.paymentDetails ? `<div class="row"><span class="lbl">Payment</span><span class="val">${m.paymentDetails}</span></div>` : ""}
 </div>` : ""}
 
 <div class="rule-h"></div>
@@ -320,8 +437,8 @@ ${itemsHtml}
 
 <!-- ===== TOTALS ===== -->
 <div class="tot">
-    <div class="row"><span>Sub Total</span><span>${formatCurrency(subTotal)}</span></div>
-    ${totalDiscount > 0 ? `<div class="row"><span>Discount</span><span>-${formatCurrency(totalDiscount)}</span></div>` : ""}
+    <div class="row"><span>Sub Total</span><span>${m.subTotal}</span></div>
+    ${m.totalDiscount > 0 ? `<div class="row"><span>Discount</span><span>-${m.totalDiscountStr}</span></div>` : ""}
 </div>
 
 <div class="rule-d"></div>
@@ -329,17 +446,17 @@ ${itemsHtml}
 <div class="tot">
     ${taxSummaryHtml}
     <div class="rule-s"></div>
-    <div class="row bold"><span>Total Taxable</span><span>${formatCurrency(totalTaxable)}</span></div>
-    <div class="row bold"><span>Total GST</span><span>${formatCurrency(totalGst)}</span></div>
+    <div class="row bold"><span>Total Taxable</span><span>${m.totalTaxable}</span></div>
+    <div class="row bold"><span>Total GST</span><span>${m.totalGst}</span></div>
 </div>
 
 <div class="grand-wrap">
-    <div class="grand"><span>TOTAL Rs.</span><span>${formatCurrency(netAmount)}</span></div>
+    <div class="grand"><span>TOTAL Rs.</span><span>${m.netAmountStr}</span></div>
 </div>
 
-<div class="in-words">${asciiSafe(numberToWords(netAmount))}</div>
+<div class="in-words">${m.inWords}</div>
 
-${isNamedCustomer ? `<div class="sign">Customer Signature</div>` : ""}
+${m.isNamedCustomer ? `<div class="sign">Customer Signature</div>` : ""}
 
 <div class="center thanks">* THANK YOU *</div>
 <div class="center gen">Computer-generated invoice</div>
@@ -348,9 +465,13 @@ ${isNamedCustomer ? `<div class="sign">Customer Signature</div>` : ""}
 </html>`;
 }
 
-export function printInvoice(invoice: InvoiceBill, company: CompanyInfo): void {
+// Browser-print fallback: used when the local thermal print agent is not
+// reachable (machine without the agent installed, or agent stopped). Opens a
+// popup sized for the thermal roll and triggers the OS print dialog — the
+// original behaviour, preserved verbatim so nothing regresses.
+function browserPrintFallback(invoice: InvoiceBill, company: CompanyInfo, preOpened?: Window | null): void {
     const html = generateInvoiceHTML(invoice, company);
-    const printWindow = window.open("", "_blank", "width=420,height=900");
+    const printWindow = preOpened || window.open("", "_blank", "width=420,height=900");
     if (!printWindow) {
         alert("Please allow popups to print invoices.");
         return;
@@ -358,10 +479,70 @@ export function printInvoice(invoice: InvoiceBill, company: CompanyInfo): void {
     printWindow.document.write(html);
     printWindow.document.close();
 
+    // Auto-close the popup once printing finishes. This keeps Chrome
+    // --kiosk-printing clean (no window pile-up at the counter); with the
+    // normal print dialog it closes after the user prints or cancels.
+    printWindow.onafterprint = () => printWindow.close();
+
     printWindow.onload = () => {
         printWindow.print();
     };
     setTimeout(() => {
         try { printWindow.print(); } catch (_) { /* already printed or closed */ }
     }, 500);
+    // Fallback close in case onafterprint never fires (some kiosk setups).
+    setTimeout(() => {
+        try { if (!printWindow.closed) printWindow.close(); } catch (_) { /* ignore */ }
+    }, 5000);
+}
+
+// Probe the local print agent once when this module loads (the invoices page
+// imports it), so the first Print click already knows whether to go direct.
+let agentKnownUp: boolean | null = null;
+if (typeof window !== "undefined") {
+    probePrintAgent().then((up) => { agentKnownUp = up; }).catch(() => { agentKnownUp = false; });
+}
+
+/**
+ * Print an invoice.
+ *
+ * Steady state on a counter PC with the print agent installed: ESC/POS bytes
+ * are pushed straight to the TVS RP3150 thermal printer — one click, no dialog.
+ *
+ * Anywhere the agent is not reachable (dev laptop, machine without the agent,
+ * agent stopped) it transparently falls back to the browser print popup.
+ *
+ * The fallback popup must be opened inside the click gesture or the browser
+ * blocks it. So when the agent's state is unknown/down we pre-open the popup
+ * synchronously; if the agent then turns out to be up we close it again.
+ */
+export async function printInvoice(invoice: InvoiceBill, company: CompanyInfo): Promise<void> {
+    // Agent known up → go direct, no popup, no flicker.
+    if (agentKnownUp === true) {
+        try {
+            const bytes = buildInvoiceEscPos(buildReceiptModel(invoice, company));
+            await sendToPrintAgent(bytes, `Invoice ${invoice.billNo || ""}`);
+            return;
+        } catch (_) {
+            // Agent went away since the probe. Fall through to browser print.
+            agentKnownUp = false;
+        }
+    }
+
+    // Agent unknown or down: keep the user-gesture popup alive while we try.
+    const preOpened = window.open("", "_blank", "width=420,height=900");
+    try {
+        const up = await probePrintAgent();
+        if (up) {
+            agentKnownUp = true;
+            const bytes = buildInvoiceEscPos(buildReceiptModel(invoice, company));
+            await sendToPrintAgent(bytes, `Invoice ${invoice.billNo || ""}`);
+            try { preOpened?.close(); } catch (_) { /* ignore */ }
+            return;
+        }
+    } catch (_) {
+        // ignore — fall back to browser print below
+    }
+    agentKnownUp = false;
+    browserPrintFallback(invoice, company, preOpened);
 }

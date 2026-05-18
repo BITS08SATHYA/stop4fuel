@@ -1,0 +1,19 @@
+{
+  "name": "stopforfuel-print-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local print agent: relays ESC/POS receipts from the StopForFuel web app to the counter thermal printer (Windows).",
+  "main": "agent.js",
+  "bin": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "build:win": "pkg . --targets node18-win-x64 --output dist/StopForFuelPrintAgent.exe"
+  },
+  "pkg": {
+    "assets": [],
+    "outputPath": "dist"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
+}
