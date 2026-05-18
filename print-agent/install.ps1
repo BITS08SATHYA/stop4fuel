@@ -71,14 +71,30 @@ if ($idx -lt 0 -or $idx -ge $printers.Count) {
 $chosenPrinter = $printers[$idx]
 Write-Host ("Selected printer: {0}" -f $chosenPrinter) -ForegroundColor Green
 
-# --- write config ---------------------------------------------------------
+# --- write config (UTF-8 *without* BOM) -----------------------------------
+# Set-Content/Out-File in Windows PowerShell prepend a BOM, which the agent's
+# JSON parser would choke on. WriteAllText with UTF8Encoding($false) = no BOM.
 $config = @{ port = $Port; printer = $chosenPrinter } | ConvertTo-Json
-Set-Content -Path (Join-Path $InstallDir "config.json") -Value $config -Encoding UTF8
+[System.IO.File]::WriteAllText(
+    (Join-Path $InstallDir "config.json"),
+    $config,
+    (New-Object System.Text.UTF8Encoding($false)))
+
+# Hidden launcher: the agent is a console exe, so running it directly under
+# the task shows a black console window on the counter screen. wscript runs
+# this VBS which starts the exe with window style 0 (hidden).
+$exePath = (Join-Path $InstallDir $ExeName)
+$vbsPath = (Join-Path $InstallDir "run-hidden.vbs")
+$vbs = 'CreateObject("WScript.Shell").Run """' + $exePath + '""", 0, False'
+[System.IO.File]::WriteAllText($vbsPath, $vbs, (New-Object System.Text.ASCIIEncoding))
 
 # --- register auto-start task --------------------------------------------
+# Kill any agent left running by a previous install (e.g. the visible v1.0.0
+# console) so the new hidden instance takes over cleanly.
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+Get-Process StopForFuelPrintAgent -ErrorAction SilentlyContinue | Stop-Process -Force
 
-$action   = New-ScheduledTaskAction  -Execute (Join-Path $InstallDir $ExeName)
+$action   = New-ScheduledTaskAction  -Execute "wscript.exe" -Argument ('"' + $vbsPath + '"')
 $trigger  = New-ScheduledTaskTrigger -AtLogOn
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
               -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `

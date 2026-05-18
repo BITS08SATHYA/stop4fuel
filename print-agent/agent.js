@@ -23,7 +23,7 @@ const os = require("os");
 const path = require("path");
 const { execFile } = require("child_process");
 
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 
 // When packaged with pkg, __dirname points inside the virtual snapshot, so
 // config/logs must sit next to the real .exe instead.
@@ -39,11 +39,25 @@ function log(msg) {
 
 function loadConfig() {
     const defaults = { port: 17777, printer: "" }; // printer "" → Windows default
+    let raw;
     try {
-        const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-        return { ...defaults, ...cfg };
+        raw = fs.readFileSync(CONFIG_PATH, "utf8");
     } catch (_) {
+        // No config yet — create a default one and use it.
         try { fs.writeFileSync(CONFIG_PATH, JSON.stringify(defaults, null, 2)); } catch (_) { /* ignore */ }
+        return defaults;
+    }
+    try {
+        // Strip a UTF-8 BOM if present — Windows PowerShell's Set-Content /
+        // Out-File prepend one and JSON.parse() chokes on the leading U+FEFF.
+        // Stripping it makes the agent tolerant of how config.json was written.
+        const cfg = JSON.parse(raw.replace(/^\uFEFF/, ""));
+        return { ...defaults, ...cfg };
+    } catch (e) {
+        // Malformed config: fall back to defaults but DO NOT overwrite the
+        // file — the user's printer choice is in there; clobbering it is what
+        // the v1.0.0 BOM bug did. Leave it for inspection.
+        log(`config.json is invalid (${e.message}); using defaults. File left untouched: ${CONFIG_PATH}`);
         return defaults;
     }
 }
