@@ -7,11 +7,13 @@ import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.entity.PurchaseInvoice;
 import com.stopforfuel.backend.entity.PurchaseInvoiceItem;
+import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.NozzleInventoryRepository;
 import com.stopforfuel.backend.repository.PurchaseInvoiceRepository;
+import com.stopforfuel.backend.repository.ShiftRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,12 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -54,6 +57,7 @@ public class DailySalesRegisterService {
     private final NozzleInventoryRepository nozzleInventoryRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final PurchaseInvoiceRepository purchaseInvoiceRepository;
+    private final ShiftRepository shiftRepository;
     private final DailySalesRegisterPdfGenerator pdfGenerator;
     private final DailySalesRegisterExcelService excelService;
 
@@ -96,17 +100,38 @@ public class DailySalesRegisterService {
         d.toDate = toDate;
         d.company = companyRepository.findByScid(scid).stream().findFirst().orElse(null);
 
-        LocalDateTime from = fromDate.atStartOfDay();
-        LocalDateTime to = toDate.atTime(LocalTime.MAX);
-        List<InvoiceBill> bills = invoiceBillRepository.findByDateBetween(from, to, scid);
-        List<NozzleInventory> nozzleRows = nozzleInventoryRepository.findByScidAndDateBetween(scid, fromDate, toDate);
+        // Data is binned by the SHIFT's business date (shift.start_time::date) —
+        // the same date the shift-closing report prints. A bill/nozzle row's own
+        // timestamp can roll past midnight or be entered on a later calendar day
+        // while still belonging to the prior shift, so binning by the raw
+        // timestamp would scatter a shift's sales across days and break the
+        // meter = credit + cash reconciliation. The fetch window is widened so a
+        // row whose timestamp landed outside [from,to] but whose shift business
+        // date is inside still gets pulled in; it is then re-binned and filtered
+        // by the resolved business date.
+        LocalDate fetchFrom = fromDate.minusDays(3);
+        LocalDate fetchTo = toDate.plusDays(3);
+        List<InvoiceBill> bills = invoiceBillRepository.findByDateBetween(
+                fetchFrom.atStartOfDay(), fetchTo.atTime(LocalTime.MAX), scid);
+        List<NozzleInventory> nozzleRows =
+                nozzleInventoryRepository.findByScidAndDateBetween(scid, fetchFrom, fetchTo);
 
-        // --- meter net litres per (section, date) ---
+        Set<Long> shiftIds = new HashSet<>();
+        for (NozzleInventory ni : nozzleRows) if (ni.getShiftId() != null) shiftIds.add(ni.getShiftId());
+        for (InvoiceBill b : bills) if (b.getShiftId() != null) shiftIds.add(b.getShiftId());
+        Map<Long, LocalDate> shiftBizDate = new java.util.HashMap<>();
+        for (Shift s : shiftRepository.findAllById(shiftIds)) {
+            if (s.getStartTime() != null) shiftBizDate.put(s.getId(), s.getStartTime().toLocalDate());
+        }
+
+        // --- meter net litres per (section, business date) ---
         Map<String, Map<LocalDate, BigDecimal>> meter = new LinkedHashMap<>();
         Map<String, Product> productBySection = new LinkedHashMap<>();
         for (NozzleInventory ni : nozzleRows) {
             if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
-                    || ni.getNozzle().getTank().getProduct() == null || ni.getDate() == null) continue;
+                    || ni.getNozzle().getTank().getProduct() == null) continue;
+            LocalDate day = businessDay(ni.getShiftId(), ni.getDate(), shiftBizDate);
+            if (day == null || day.isBefore(fromDate) || day.isAfter(toDate)) continue;
             Product p = ni.getNozzle().getTank().getProduct();
             // Classify by name/fuel-family (FuelClassifier), NOT the brittle category
             // string — products created via different paths carry "Fuel"/"FUEL"/null.
@@ -116,15 +141,17 @@ public class DailySalesRegisterService {
             double sales = ni.getSales() != null ? ni.getSales() : 0d;
             double test = ni.getTestQuantity() != null ? ni.getTestQuantity() : 0d;
             meter.computeIfAbsent(section, k -> new TreeMap<>())
-                    .merge(ni.getDate(), BigDecimal.valueOf(sales - test), BigDecimal::add);
+                    .merge(day, BigDecimal.valueOf(sales - test), BigDecimal::add);
         }
 
-        // --- credit fuel per (section, date, customer) + price frequency per (section, date) ---
+        // --- credit fuel per (section, business date, customer) + price frequency ---
         Map<String, Map<LocalDate, Map<String, BigDecimal[]>>> credit = new LinkedHashMap<>();
         Map<String, Map<LocalDate, Map<BigDecimal, Integer>>> priceFreq = new LinkedHashMap<>();
         for (InvoiceBill b : bills) {
-            if (b.getProducts() == null || b.getDate() == null) continue;
-            LocalDate day = b.getDate().toLocalDate();
+            if (b.getProducts() == null) continue;
+            LocalDate day = businessDay(b.getShiftId(),
+                    b.getDate() != null ? b.getDate().toLocalDate() : null, shiftBizDate);
+            if (day == null || day.isBefore(fromDate) || day.isAfter(toDate)) continue;
             boolean isCredit = BillType.CREDIT.equals(b.getBillType());
             String custName = customerName(b);
             for (InvoiceProduct ip : b.getProducts()) {
@@ -163,9 +190,18 @@ public class DailySalesRegisterService {
                     productBySection.get(section)));
         }
 
-        d.lubricant = buildLubricant(bills, fromDate, toDate);
+        d.lubricant = buildLubricant(bills, fromDate, toDate, shiftBizDate);
         d.purchaseRows = buildPurchase(scid, fromDate, toDate);
         return d;
+    }
+
+    /** Shift business date (shift.start_time::date) when known, else the row's own date. */
+    private static LocalDate businessDay(Long shiftId, LocalDate fallback, Map<Long, LocalDate> shiftBizDate) {
+        if (shiftId != null) {
+            LocalDate d = shiftBizDate.get(shiftId);
+            if (d != null) return d;
+        }
+        return fallback;
     }
 
     private FuelSection buildFuelSection(String section,
@@ -229,13 +265,16 @@ public class DailySalesRegisterService {
         return fs;
     }
 
-    private LubricantSection buildLubricant(List<InvoiceBill> bills, LocalDate fromDate, LocalDate toDate) {
+    private LubricantSection buildLubricant(List<InvoiceBill> bills, LocalDate fromDate, LocalDate toDate,
+                                            Map<Long, LocalDate> shiftBizDate) {
         Map<LocalDate, BigDecimal> totalByDay = new TreeMap<>();
         Map<LocalDate, BigDecimal> creditByDay = new TreeMap<>();
         Map<LocalDate, List<CreditCustomerRow>> creditRowsByDay = new TreeMap<>();
         for (InvoiceBill b : bills) {
-            if (b.getProducts() == null || b.getDate() == null) continue;
-            LocalDate day = b.getDate().toLocalDate();
+            if (b.getProducts() == null) continue;
+            LocalDate day = businessDay(b.getShiftId(),
+                    b.getDate() != null ? b.getDate().toLocalDate() : null, shiftBizDate);
+            if (day == null || day.isBefore(fromDate) || day.isAfter(toDate)) continue;
             boolean isCredit = BillType.CREDIT.equals(b.getBillType());
             String custName = customerName(b);
             for (InvoiceProduct ip : b.getProducts()) {
