@@ -307,7 +307,7 @@ public class ShiftReportFinancialSection {
                 }
             }
             addCellCenter(table, prodAbbr, SMALL_FONT);
-            addCellRight(table, fmt0(qty), SMALL_FONT);
+            addCellRight(table, fmt2(qty), SMALL_FONT);
             addCellRight(table, fmtComma(cbd.getAmount()), SMALL_FONT);
             totalQty += qty;
         }
@@ -318,7 +318,7 @@ public class ShiftReportFinancialSection {
         addCellLeft(table, "", SMALL_BOLD);
         addCellLeft(table, "", SMALL_BOLD);
         addCellLeft(table, "", SMALL_BOLD);
-        addCellRight(table, fmt0(totalQty), SMALL_BOLD);
+        addCellRight(table, fmt2(totalQty), SMALL_BOLD);
         addCellRight(table, fmtComma(creditTotal), SMALL_BOLD);
 
         doc.add(table);
