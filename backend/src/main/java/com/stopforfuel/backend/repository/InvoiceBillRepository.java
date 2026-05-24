@@ -72,6 +72,22 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 
+    // Find unlinked unpaid credit bills by calendar bill_date (not shift-based).
+    // Used by the day-wise statement preview where the user thinks in calendar days,
+    // not shift windows. Shift-based windowing (findUnlinkedCreditBills above) would
+    // miss a 5am bill whose shift opened the previous evening — that's correct for
+    // monthly reconciliation but wrong for "show me the bills on these dates."
+    @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
+           "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.paymentStatus = 'NOT_PAID' AND ib.independent = false " +
+           "AND ib.date BETWEEN :fromDate AND :toDate " +
+           "ORDER BY ib.date ASC, ib.id ASC")
+    List<InvoiceBill> findUnlinkedCreditBillsByBillDate(
+            @Param("customerId") Long customerId,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
     // Find unlinked unpaid credit bills filtered by vehicle
     @EntityGraph(attributePaths = {"vehicle", "customer", "products", "products.product"})
     @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +

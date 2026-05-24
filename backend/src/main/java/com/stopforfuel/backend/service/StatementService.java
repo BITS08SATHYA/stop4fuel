@@ -309,7 +309,9 @@ public class StatementService {
 
         LocalDateTime fromDateTime = fromDate.atStartOfDay();
         LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
-        List<InvoiceBill> bills = invoiceBillRepository.findUnlinkedCreditBills(customerId, fromDateTime, toDateTime);
+        // Use bill.date windowing (not shift-based) — the user picked calendar days
+        // and expects bills on those dates, not bills from shifts that opened on those dates.
+        List<InvoiceBill> bills = invoiceBillRepository.findUnlinkedCreditBillsByBillDate(customerId, fromDateTime, toDateTime);
 
         // Reject upfront — day-wise grouping requires a bill date.
         for (InvoiceBill bill : bills) {
