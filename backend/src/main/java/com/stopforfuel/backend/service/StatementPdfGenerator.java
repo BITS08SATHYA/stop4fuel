@@ -214,6 +214,9 @@ public class StatementPdfGenerator {
     private static final float[] BILL_WIDTHS = {0.35f, 0.6f, 0.8f, 0.5f, 0.95f, 0.65f, 0.6f, 0.8f, 0.85f};
     private static final String[] BILL_HEADERS = {"#", "DATE", "BILL NO", "INDENT", "PROD", "QTY (L)", "RATE", "GROSS", "NET AMT"};
     // Day-wise uses VEHICLE in place of DATE (date is already in the day-section header).
+    // Wider VEHICLE column so "TN 28 G 0344" / "TN 28 BX 1211" fit on one line;
+    // narrower PROD column since fuel codes are short ("HSD", "MS").
+    private static final float[] DAY_BILL_WIDTHS = {0.35f, 1.1f, 0.8f, 0.5f, 0.45f, 0.65f, 0.6f, 0.8f, 0.85f};
     private static final String[] DAY_BILL_HEADERS = {"#", "VEHICLE", "BILL NO", "INDENT", "PROD", "QTY (L)", "RATE", "GROSS", "NET AMT"};
     private static final Set<Integer> BILL_RIGHT_ALIGN = new HashSet<>(Arrays.asList(5, 6, 7, 8));
     private static final Color GROUP_HEADER_BG = new Color(225, 230, 240);
@@ -255,19 +258,38 @@ public class StatementPdfGenerator {
             addDayTable(doc, e.getKey(), e.getValue(), grand);
             doc.add(new Paragraph(" ", new Font(Font.HELVETICA, 4)));
         }
-        addGrandTotalRow(doc, bills.size(), grand);
+        addGrandTotalRowDayWise(doc, bills.size(), grand);
+    }
+
+    // Grand total row sized for DAY_BILL_WIDTHS so it lines up with the per-day tables.
+    // Mirrors addGrandTotalRow but uses the day-wise column widths.
+    private void addGrandTotalRowDayWise(Document doc, int billCount, BillTotals grand) throws DocumentException {
+        PdfPTable table = new PdfPTable(DAY_BILL_WIDTHS);
+        table.setWidthPercentage(100);
+
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "TOTAL (" + billCount + " bills)", GRAND_TOTAL_BG, Element.ALIGN_LEFT, true);
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, fmtQty(grand.qty), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, "", GRAND_TOTAL_BG, Element.ALIGN_RIGHT, false);
+        addCell(table, fmtAmt(grand.gross), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, fmtAmt(grand.net), GRAND_TOTAL_BG, Element.ALIGN_RIGHT, true);
+
+        doc.add(table);
     }
 
     private void addDayTable(Document doc, LocalDate date, List<InvoiceBill> dayBills,
                              BillTotals grand) throws DocumentException {
-        PdfPTable table = new PdfPTable(BILL_WIDTHS);
+        PdfPTable table = new PdfPTable(DAY_BILL_WIDTHS);
         table.setWidthPercentage(100);
         table.setHeaderRows(2); // group header row + column header row both repeat on page break
 
         // Row 1: group header spanning all 9 columns — date + bill count
         String dayLabel = date.equals(LocalDate.MIN) ? "Date: -" : "Date: " + date.format(DAY_HEADER_FMT);
         PdfPCell groupHeader = new PdfPCell(new Phrase(dayLabel + "  (" + dayBills.size() + " bill" + (dayBills.size() != 1 ? "s" : "") + ")", F_TD_BOLD));
-        groupHeader.setColspan(BILL_WIDTHS.length);
+        groupHeader.setColspan(DAY_BILL_WIDTHS.length);
         groupHeader.setBackgroundColor(GROUP_HEADER_BG);
         groupHeader.setPadding(5);
         groupHeader.setBorderColor(LIGHT_BORDER);
