@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.DayWiseStatementPreview;
 import com.stopforfuel.backend.dto.InvoiceBillDTO;
 import com.stopforfuel.backend.dto.StatementDTO;
 import com.stopforfuel.backend.dto.StatementStats;
@@ -7,7 +8,10 @@ import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
 import com.stopforfuel.backend.enums.BillType;
+import com.stopforfuel.backend.enums.ReportLayout;
 import com.stopforfuel.backend.repository.CompanyRepository;
+import com.stopforfuel.backend.repository.InvoiceBillRepository;
+import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.backend.service.BillSequenceService;
 import com.stopforfuel.backend.service.StatementAutoGenerationService;
@@ -38,6 +42,8 @@ public class StatementController {
     private final StatementRepository statementRepository;
     private final BillSequenceService billSequenceService;
     private final CompanyRepository companyRepository;
+    private final InvoiceBillRepository invoiceBillRepository;
+    private final PaymentRepository paymentRepository;
 
     @GetMapping("/stats")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
@@ -154,10 +160,57 @@ public class StatementController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) Long vehicleId,
             @RequestParam(required = false) Long productId,
-            @RequestParam(required = false) List<Long> billIds) {
+            @RequestParam(required = false) List<Long> billIds,
+            @RequestParam(required = false) ReportLayout reportLayout) {
         Statement statement = statementService.generateStatement(
-                customerId, fromDate, toDate, vehicleId, productId, billIds);
+                customerId, fromDate, toDate, vehicleId, productId, billIds,
+                reportLayout != null ? reportLayout : ReportLayout.VEHICLE_WISE);
         return ResponseEntity.ok(StatementDTO.from(statement));
+    }
+
+    /**
+     * Preview bills for the customer in the period grouped by calendar day, with running
+     * totals and suggested split boundaries that keep each statement under maxAmount.
+     * GET /api/statements/preview-day-wise?customerId=1&fromDate=...&toDate=...&maxAmount=369860
+     */
+    @GetMapping("/preview-day-wise")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public DayWiseStatementPreview previewDayWise(
+            @RequestParam Long customerId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) java.math.BigDecimal maxAmount) {
+        return statementService.previewDayWise(customerId, fromDate, toDate, maxAmount);
+    }
+
+    public record GenerateBatchRequest(Long customerId, ReportLayout reportLayout, List<BatchEntry> statements) {
+        public record BatchEntry(List<Long> billIds) {}
+    }
+
+    /**
+     * Create N statements at once. Each entry carries the explicit billIds the UI assigned
+     * to that statement (after the user's optional split-boundary adjustments).
+     * POST /api/statements/generate-batch
+     */
+    @PostMapping("/generate-batch")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_CREATE')")
+    public ResponseEntity<List<StatementDTO>> generateBatch(@RequestBody GenerateBatchRequest req) {
+        if (req == null || req.customerId() == null || req.statements() == null || req.statements().isEmpty()) {
+            throw new IllegalArgumentException("customerId and at least one statement group are required");
+        }
+        List<List<Long>> groups = req.statements().stream().map(GenerateBatchRequest.BatchEntry::billIds).toList();
+        ReportLayout layout = req.reportLayout() != null ? req.reportLayout() : ReportLayout.VEHICLE_WISE;
+        List<Statement> created = statementService.generateBatch(req.customerId(), layout, groups);
+        // PDF generation post-commit — failures here don't roll back statements.
+        for (Statement s : created) {
+            try {
+                statementService.generateAndStorePdf(s.getId());
+            } catch (Exception ignored) {
+                // PDF failures are non-fatal; the statement row is valid and the PDF
+                // can be regenerated later via /{id}/generate-pdf.
+            }
+        }
+        return ResponseEntity.ok(created.stream().map(StatementDTO::from).toList());
     }
 
     /**
@@ -173,9 +226,10 @@ public class StatementController {
             @RequestParam(required = false) Long vehicleId,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) List<Long> billIds,
-            @RequestParam(required = false) Long customerId) {
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) ReportLayout reportLayout) {
         Statement statement = statementService.regenerateStatement(
-                id, fromDate, toDate, vehicleId, productId, billIds, customerId);
+                id, fromDate, toDate, vehicleId, productId, billIds, customerId, reportLayout);
         return ResponseEntity.ok(StatementDTO.from(statement));
     }
 
@@ -323,6 +377,27 @@ public class StatementController {
     @PreAuthorize("hasPermission(null, 'PAYMENT_DELETE')")
     public void delete(@PathVariable Long id) {
         statementService.deleteStatement(id);
+    }
+
+    /**
+     * Per-statement Excel detail export. Mirrors the PDF layout (header, bills grouped
+     * by date or vehicle per the statement's reportLayout, product/vehicle summaries,
+     * payments, balance) but as a single-sheet .xlsx for accounting use.
+     */
+    @GetMapping("/{id}/export-excel")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public ResponseEntity<byte[]> exportStatementDetailExcel(@PathVariable Long id) {
+        Statement statement = statementService.getStatementById(id);
+        List<com.stopforfuel.backend.entity.InvoiceBill> bills = invoiceBillRepository.findByStatementId(id);
+        List<com.stopforfuel.backend.entity.Payment> payments = paymentRepository.findByStatementId(id);
+        Long scid = statement.getScid() != null ? statement.getScid() : SecurityUtils.getScid();
+        Company company = companyRepository.findByScid(scid).stream().findFirst().orElse(null);
+        byte[] bytes = statementExcelService.generateStatementDetailExcel(statement, bills, company, payments);
+        String safeNo = statement.getStatementNo() != null ? statement.getStatementNo().replace("/", "-") : String.valueOf(id);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Statement_" + safeNo + ".xlsx");
+        headers.add(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        return ResponseEntity.ok().headers(headers).body(bytes);
     }
 
     @GetMapping("/export/excel")

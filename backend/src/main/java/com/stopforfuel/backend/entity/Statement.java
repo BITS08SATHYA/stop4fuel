@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.entity;
 
+import com.stopforfuel.backend.enums.ReportLayout;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -65,6 +66,10 @@ public class Statement extends BaseEntity {
     @Column(name = "status", nullable = false)
     private String status = "NOT_PAID"; // PAID, NOT_PAID
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "report_layout", length = 20)
+    private ReportLayout reportLayout = ReportLayout.VEHICLE_WISE;
+
     @Column(name = "statement_pdf_url")
     private String statementPdfUrl;
 
@@ -89,6 +94,17 @@ public class Statement extends BaseEntity {
         }
         if (this.balanceAmount == null) {
             this.balanceAmount = this.netAmount;
+        }
+        if (this.reportLayout == null) {
+            this.reportLayout = ReportLayout.VEHICLE_WISE;
+        }
+    }
+
+    @PostLoad
+    protected void onLoad() {
+        // Legacy rows have NULL report_layout — treat as VEHICLE_WISE so the existing PDF path is used.
+        if (this.reportLayout == null) {
+            this.reportLayout = ReportLayout.VEHICLE_WISE;
         }
     }
 }

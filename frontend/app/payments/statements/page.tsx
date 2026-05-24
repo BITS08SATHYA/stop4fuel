@@ -11,7 +11,7 @@ import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
     FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight,
-    CheckCircle2, Zap, Pencil, ArrowUpDown, ArrowUp, ArrowDown, Settings, Hash
+    CheckCircle2, Zap, Pencil, ArrowUpDown, ArrowUp, ArrowDown, Settings, Hash, FileSpreadsheet
 } from "lucide-react";
 import {
     getStatements, generateStatement, regenerateStatement, getStatementBills,
@@ -22,8 +22,10 @@ import {
     getAutoGenNextRun, setAutoGenNextRun,
     updateCustomerCreditLimits, updateVehicleLiterLimit,
     updateStatementNo, getStatementSequence, setStatementSequence,
+    previewStatementDayWise, generateStatementBatch, exportStatementDetailExcel,
     type Statement, type InvoiceBill, type Customer, type Vehicle,
-    type Product, type PageResponse, type StatementStats, type NextBillNoView
+    type Product, type PageResponse, type StatementStats, type NextBillNoView,
+    type ReportLayout, type DayWiseStatementPreview, type DayWiseSplitGroup
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
 import { showToast } from "@/components/ui/toast";
@@ -61,6 +63,14 @@ export default function StatementsPage() {
     const [previewingPdf, setPreviewingPdf] = useState(false);
     const [selectedBillIds, setSelectedBillIds] = useState<Set<number>>(new Set());
     const [useBillSelection, setUseBillSelection] = useState(false);
+
+    // Day-wise + cap split preview
+    const [reportLayout, setReportLayout] = useState<ReportLayout>("VEHICLE_WISE");
+    const [maxAmount, setMaxAmount] = useState<string>("");
+    const [dayWisePreview, setDayWisePreview] = useState<DayWiseStatementPreview | null>(null);
+    // Indexes into dayWisePreview.days where a NEW statement begins (always starts with 0).
+    // Allows the user to drag split boundaries by toggling between-day markers without re-fetching.
+    const [splitStartIdxs, setSplitStartIdxs] = useState<number[]>([]);
 
     // Detail view
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -182,6 +192,31 @@ export default function StatementsPage() {
         setPreviewing(true);
         setError("");
         try {
+            if (reportLayout === "DAY_WISE") {
+                const cap = maxAmount ? Number(maxAmount) : undefined;
+                const preview = await previewStatementDayWise(
+                    Number(selectedCustomerId), fromDate, toDate, cap
+                );
+                setDayWisePreview(preview);
+                // Initialise split boundaries from the server's suggestion. Splits are
+                // contiguous date ranges over preview.days, so walk both in lockstep:
+                // every day whose date <= split.toDate belongs to that split.
+                const starts: number[] = [];
+                let dayIdx = 0;
+                for (const split of preview.suggestedSplits) {
+                    starts.push(dayIdx);
+                    while (dayIdx < preview.days.length && preview.days[dayIdx].date <= split.toDate) {
+                        dayIdx++;
+                    }
+                }
+                setSplitStartIdxs(starts.length > 0 ? starts : [0]);
+                setShowPreview(true);
+                // Clear vehicle-wise preview state.
+                setPreviewBills([]);
+                setSelectedBillIds(new Set());
+                setUseBillSelection(false);
+                return;
+            }
             const bills = await previewStatementBills(
                 Number(selectedCustomerId), fromDate, toDate,
                 {
@@ -190,6 +225,7 @@ export default function StatementsPage() {
                 }
             );
             setPreviewBills(bills);
+            setDayWisePreview(null);
             setShowPreview(true);
             // For BILL_WISE customers, start with no bills selected so user picks individually
             const selectedCustomer = customers.find(c => c.id === Number(selectedCustomerId));
@@ -205,6 +241,47 @@ export default function StatementsPage() {
         } finally {
             setPreviewing(false);
         }
+    };
+
+    // Derive the active splits from splitStartIdxs + dayWisePreview.days. Each split is a
+    // contiguous slice of days; its billIds are the union of its days' billIds, and its
+    // total is the sum of those days' day totals.
+    const activeSplits = (() => {
+        if (!dayWisePreview || dayWisePreview.days.length === 0) return [] as DayWiseSplitGroup[];
+        const starts = [...splitStartIdxs].sort((a, b) => a - b);
+        if (starts[0] !== 0) starts.unshift(0);
+        const cap = maxAmount ? Number(maxAmount) : null;
+        const groups: DayWiseSplitGroup[] = [];
+        for (let i = 0; i < starts.length; i++) {
+            const s = starts[i];
+            const e = i + 1 < starts.length ? starts[i + 1] : dayWisePreview.days.length;
+            const slice = dayWisePreview.days.slice(s, e);
+            const billIds = slice.flatMap(d => d.bills.map(b => b.id as number));
+            const total = slice.reduce((sum, d) => sum + Number(d.dayTotal || 0), 0);
+            const rounded = Math.round(total);
+            groups.push({
+                index: i,
+                fromDate: slice[0].date,
+                toDate: slice[slice.length - 1].date,
+                billCount: billIds.length,
+                billIds,
+                total: rounded,
+                exceedsCap: cap != null && slice.length === 1 && rounded > cap,
+            });
+        }
+        return groups;
+    })();
+
+    const toggleSplitBoundary = (dayIndex: number) => {
+        // dayIndex is the index of the day that would START a new split. 0 is always a start
+        // so it's not toggleable. Toggling a marker either adds or removes a boundary.
+        if (dayIndex === 0) return;
+        setSplitStartIdxs(prev => {
+            const set = new Set(prev);
+            if (set.has(dayIndex)) set.delete(dayIndex);
+            else set.add(dayIndex);
+            return Array.from(set).sort((a, b) => a - b);
+        });
     };
 
     const toggleBillSelection = (billId: number) => {
@@ -240,6 +317,10 @@ export default function StatementsPage() {
         setSelectedBillIds(new Set());
         setUseBillSelection(false);
         setError("");
+        setReportLayout((stmt.reportLayout as ReportLayout) || "VEHICLE_WISE");
+        setMaxAmount("");
+        setDayWisePreview(null);
+        setSplitStartIdxs([]);
         setShowGenerateModal(true);
     };
 
@@ -248,6 +329,47 @@ export default function StatementsPage() {
             setError("Please fill all required fields");
             return;
         }
+
+        // Day-wise + batch path — when day-wise preview is loaded with at least one split.
+        if (reportLayout === "DAY_WISE" && dayWisePreview && activeSplits.length > 0 && !editingStatementId) {
+            // For a single split, fall through to the single-generate path with reportLayout=DAY_WISE.
+            if (activeSplits.length === 1) {
+                setGenerating(true);
+                setError("");
+                try {
+                    await generateStatement(Number(selectedCustomerId), fromDate, toDate, {
+                        billIds: activeSplits[0].billIds,
+                        reportLayout: "DAY_WISE",
+                    });
+                    resetGenerateModal();
+                    loadStatements();
+                    loadStats();
+                } catch (e: any) {
+                    setError(e.message || "Failed to generate statement");
+                } finally {
+                    setGenerating(false);
+                }
+                return;
+            }
+            setGenerating(true);
+            setError("");
+            try {
+                await generateStatementBatch(
+                    Number(selectedCustomerId),
+                    "DAY_WISE",
+                    activeSplits.map(s => ({ billIds: s.billIds })),
+                );
+                resetGenerateModal();
+                loadStatements();
+                loadStats();
+            } catch (e: any) {
+                setError(e.message || "Failed to generate statements");
+            } finally {
+                setGenerating(false);
+            }
+            return;
+        }
+
         if (useBillSelection && selectedBillIds.size === 0) {
             setError("Please select at least one bill");
             return;
@@ -255,7 +377,7 @@ export default function StatementsPage() {
         setGenerating(true);
         setError("");
         try {
-            const filters: { vehicleId?: number; productId?: number; billIds?: number[] } = {};
+            const filters: { vehicleId?: number; productId?: number; billIds?: number[]; reportLayout?: ReportLayout } = {};
 
             if (useBillSelection && selectedBillIds.size > 0) {
                 filters.billIds = Array.from(selectedBillIds);
@@ -263,6 +385,7 @@ export default function StatementsPage() {
                 if (filterVehicleId) filters.vehicleId = Number(filterVehicleId);
                 if (filterProductId) filters.productId = Number(filterProductId);
             }
+            if (reportLayout === "DAY_WISE") filters.reportLayout = "DAY_WISE";
 
             if (editingStatementId) {
                 await regenerateStatement(editingStatementId, fromDate, toDate, filters, Number(selectedCustomerId));
@@ -324,6 +447,10 @@ export default function StatementsPage() {
         setEditingStatementId(null);
         setEditingStatementNo("");
         setError("");
+        setReportLayout("VEHICLE_WISE");
+        setMaxAmount("");
+        setDayWisePreview(null);
+        setSplitStartIdxs([]);
     };
 
     const handleViewDetail = async (stmt: Statement) => {
@@ -530,6 +657,28 @@ export default function StatementsPage() {
             showToast.error(e?.message || "Failed to set sequence");
         } finally {
             setSequenceSubmitting(false);
+        }
+    };
+
+    const [downloadingExcelId, setDownloadingExcelId] = useState<number | null>(null);
+    const handleDownloadExcel = async (stmt: Statement) => {
+        setDownloadingExcelId(stmt.id!);
+        try {
+            const blob = await exportStatementDetailExcel(stmt.id!);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            const safe = (stmt.statementNo || String(stmt.id)).replace(/\//g, "-");
+            a.download = `Statement_${safe}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e: any) {
+            setPdfError(e.message || "Failed to download Excel");
+            setTimeout(() => setPdfError(""), 4000);
+        } finally {
+            setDownloadingExcelId(null);
         }
     };
 
@@ -878,6 +1027,18 @@ export default function StatementsPage() {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
+                                                    <button
+                                                        onClick={() => handleDownloadExcel(stmt)}
+                                                        disabled={downloadingExcelId === stmt.id}
+                                                        className="p-1.5 rounded-md hover:bg-emerald-500/20 text-emerald-500 transition-colors disabled:opacity-50"
+                                                        title="Download Excel"
+                                                    >
+                                                        {downloadingExcelId === stmt.id ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <FileSpreadsheet className="w-4 h-4" />
+                                                        )}
+                                                    </button>
                                                     {stmt.statementPdfUrl ? (
                                                         <button
                                                             onClick={async () => {
@@ -1112,11 +1273,57 @@ export default function StatementsPage() {
                         </p>
                     </div>
 
-                    {/* Optional Filters */}
-                    <div className="border border-border/50 rounded-lg p-4 space-y-3">
+                    {/* Layout + Max Amount per statement */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">Report Layout</label>
+                            <div className="inline-flex rounded-lg border border-border overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => { setReportLayout("VEHICLE_WISE"); setShowPreview(false); setDayWisePreview(null); }}
+                                    className={`px-3 py-2 text-sm transition-colors ${reportLayout === "VEHICLE_WISE" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
+                                >
+                                    Vehicle-wise
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setReportLayout("DAY_WISE"); setShowPreview(false); setDayWisePreview(null); }}
+                                    className={`px-3 py-2 text-sm transition-colors ${reportLayout === "DAY_WISE" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
+                                >
+                                    Day-wise
+                                </button>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                                {reportLayout === "DAY_WISE" ? "PDF groups bills by date." : "PDF groups bills by vehicle (default)."}
+                            </p>
+                        </div>
+                        {reportLayout === "DAY_WISE" && !editingStatementId && (
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">Max Amount per Statement (₹)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={maxAmount}
+                                    onChange={(e) => { setMaxAmount(e.target.value); setShowPreview(false); setDayWisePreview(null); }}
+                                    placeholder="e.g. 369860 (leave blank for single statement)"
+                                    className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                                <p className="text-[11px] text-muted-foreground mt-1">
+                                    Splits into multiple statements at day boundaries (days stay intact).
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Optional Filters — disabled in day-wise + cap mode (splitter assumes the unfiltered set) */}
+                    <div className={`border border-border/50 rounded-lg p-4 space-y-3 ${reportLayout === "DAY_WISE" && maxAmount ? "opacity-50 pointer-events-none" : ""}`}>
                         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                             <Filter className="w-4 h-4" />
                             Filters (Optional)
+                            {reportLayout === "DAY_WISE" && maxAmount && (
+                                <span className="text-[10px] uppercase tracking-wide text-amber-400 font-bold ml-auto">Disabled in day-wise + cap mode</span>
+                            )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -1156,8 +1363,88 @@ export default function StatementsPage() {
                         {previewing ? "Loading..." : "Preview Bills"}
                     </button>
 
-                    {/* Preview Bills Table */}
-                    {showPreview && (
+                    {/* Day-wise Preview — split cards + day table with toggleable boundaries */}
+                    {showPreview && dayWisePreview && (
+                        <div className="border border-border/50 rounded-lg overflow-hidden">
+                            <div className="bg-muted/30 px-4 py-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-foreground">
+                                    {dayWisePreview.totalBills} bill{dayWisePreview.totalBills !== 1 ? "s" : ""} across {dayWisePreview.days.length} day{dayWisePreview.days.length !== 1 ? "s" : ""} — Grand total {dayWisePreview.grandTotal.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
+                                </span>
+                                <span className="text-sm font-semibold text-primary">
+                                    {activeSplits.length} statement{activeSplits.length !== 1 ? "s" : ""}
+                                </span>
+                            </div>
+
+                            {/* Split summary cards */}
+                            {activeSplits.length > 0 && (
+                                <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 border-b border-border/50">
+                                    {activeSplits.map((s, i) => (
+                                        <div
+                                            key={i}
+                                            className={`rounded-lg border p-2 text-xs ${s.exceedsCap ? "border-amber-500/40 bg-amber-500/10" : "border-border bg-card"}`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-semibold text-foreground">Statement {i + 1}</span>
+                                                {s.exceedsCap && (
+                                                    <span className="text-[10px] uppercase tracking-wide text-amber-400 font-bold">Over cap</span>
+                                                )}
+                                            </div>
+                                            <div className="text-muted-foreground mt-0.5">
+                                                {s.fromDate} → {s.toDate} · {s.billCount} bills
+                                            </div>
+                                            <div className="font-bold text-foreground mt-0.5">
+                                                ₹{s.total.toLocaleString("en-IN")}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="max-h-72 overflow-y-auto">
+                                <table className="w-full text-xs">
+                                    <thead>
+                                        <tr className="border-b border-border text-muted-foreground sticky top-0 bg-card">
+                                            <th className="py-2 px-3 text-left">Date</th>
+                                            <th className="py-2 px-3 text-right">Bills</th>
+                                            <th className="py-2 px-3 text-right">Day Total</th>
+                                            <th className="py-2 px-3 text-right">Cumulative</th>
+                                            <th className="py-2 px-3 text-center">Split</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {dayWisePreview.days.map((d, idx) => {
+                                            const isSplit = splitStartIdxs.includes(idx);
+                                            return (
+                                                <tr key={d.date} className={`border-b border-border/30 ${isSplit && idx > 0 ? "border-t-2 border-t-primary" : ""}`}>
+                                                    <td className="py-2 px-3 font-medium">{d.date}</td>
+                                                    <td className="py-2 px-3 text-right">{d.billCount}</td>
+                                                    <td className="py-2 px-3 text-right">{Number(d.dayTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-2 px-3 text-right text-muted-foreground">{Number(d.cumulativeTotal).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</td>
+                                                    <td className="py-2 px-3 text-center">
+                                                        {idx === 0 ? (
+                                                            <span className="text-[10px] text-muted-foreground">— start —</span>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleSplitBoundary(idx)}
+                                                                className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${isSplit ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+                                                                title={isSplit ? "Remove split boundary here" : "Start a new statement at this day"}
+                                                            >
+                                                                {isSplit ? "✓ split here" : "+ split"}
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Preview Bills Table (vehicle-wise / legacy) */}
+                    {showPreview && !dayWisePreview && (
                         <div className="border border-border/50 rounded-lg overflow-hidden">
                             <div className="bg-muted/30 px-4 py-2 flex items-center justify-between">
                                 <span className="text-sm font-medium text-foreground">
@@ -1257,10 +1544,20 @@ export default function StatementsPage() {
                         </button>
                         <button
                             onClick={handleGenerate}
-                            disabled={generating || (showPreview && selectedBillIds.size === 0)}
+                            disabled={
+                                generating ||
+                                (showPreview && !dayWisePreview && selectedBillIds.size === 0) ||
+                                (showPreview && !!dayWisePreview && activeSplits.length === 0)
+                            }
                             className="btn-gradient px-6 py-2 rounded-lg font-medium disabled:opacity-50"
                         >
-                            {generating ? (editingStatementId ? "Regenerating..." : "Generating...") : `${editingStatementId ? "Regenerate" : "Generate"}${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
+                            {generating
+                                ? (editingStatementId ? "Regenerating..." : (activeSplits.length > 1 ? `Generating ${activeSplits.length} statements...` : "Generating..."))
+                                : editingStatementId
+                                    ? "Regenerate"
+                                    : dayWisePreview && activeSplits.length > 0
+                                        ? (activeSplits.length === 1 ? `Generate 1 statement (${activeSplits[0].billCount} bills)` : `Generate ${activeSplits.length} statements`)
+                                        : `Generate${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
                         </button>
                     </div>
                 </div>
@@ -1309,6 +1606,18 @@ export default function StatementsPage() {
                                 Received: <span className="text-emerald-400 font-medium">{Number(detailStatement.receivedAmount).toLocaleString("en-IN", { style: "currency", currency: "INR" })}</span>
                             </span>
                             <div className="flex items-center gap-1 ml-4">
+                                <button
+                                    onClick={() => handleDownloadExcel(detailStatement)}
+                                    disabled={downloadingExcelId === detailStatement.id}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                >
+                                    {downloadingExcelId === detailStatement.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                                    )}
+                                    Download Excel
+                                </button>
                                 {detailStatement.statementPdfUrl ? (
                                     <button
                                         onClick={async () => {

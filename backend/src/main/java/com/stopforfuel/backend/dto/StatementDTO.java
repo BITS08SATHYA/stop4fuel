@@ -25,6 +25,7 @@ public class StatementDTO {
     private BigDecimal receivedAmount;
     private BigDecimal balanceAmount;
     private String status;
+    private String reportLayout;
     private String statementPdfUrl;
     private CustomerSummary customer;
     private Long scid;
@@ -46,6 +47,7 @@ public class StatementDTO {
                 .receivedAmount(s.getReceivedAmount())
                 .balanceAmount(s.getBalanceAmount())
                 .status(s.getStatus())
+                .reportLayout(s.getReportLayout() != null ? s.getReportLayout().name() : null)
                 .statementPdfUrl(s.getStatementPdfUrl())
                 .customer(CustomerSummary.from(s.getCustomer()))
                 .scid(s.getScid())

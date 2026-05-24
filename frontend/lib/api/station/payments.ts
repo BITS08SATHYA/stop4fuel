@@ -6,6 +6,8 @@ import type { InvoiceBill } from './invoices';
 export const PAYMENT_MODES = ["CASH", "CARD", "UPI", "CHEQUE", "CCMS", "BANK_TRANSFER", "NEFT"] as const;
 export type PaymentModeType = typeof PAYMENT_MODES[number];
 
+export type ReportLayout = 'VEHICLE_WISE' | 'DAY_WISE';
+
 export interface Statement {
     id?: number;
     statementNo: string;
@@ -20,7 +22,38 @@ export interface Statement {
     receivedAmount: number;
     balanceAmount: number;
     status: 'PAID' | 'NOT_PAID' | 'DRAFT';
+    reportLayout?: ReportLayout;
     statementPdfUrl?: string;
+}
+
+export interface DayWiseBucket {
+    date: string;
+    billCount: number;
+    dayTotal: number;
+    cumulativeTotal: number;
+    bills: InvoiceBill[];
+}
+
+export interface DayWiseSplitGroup {
+    index: number;
+    fromDate: string;
+    toDate: string;
+    billCount: number;
+    billIds: number[];
+    total: number;
+    exceedsCap: boolean;
+}
+
+export interface DayWiseStatementPreview {
+    customerId: number;
+    customerName: string;
+    fromDate: string;
+    toDate: string;
+    maxAmount: number | null;
+    totalBills: number;
+    grandTotal: number;
+    days: DayWiseBucket[];
+    suggestedSplits: DayWiseSplitGroup[];
 }
 
 export interface Payment {
@@ -134,7 +167,7 @@ export const getOutstandingStatementsSearch = (
 
 export const generateStatement = (
     customerId: number, fromDate: string, toDate: string,
-    filters?: { vehicleId?: number; productId?: number; billIds?: number[] }
+    filters?: { vehicleId?: number; productId?: number; billIds?: number[]; reportLayout?: ReportLayout }
 ): Promise<Statement> => {
     const params = new URLSearchParams({
         customerId: String(customerId),
@@ -143,6 +176,7 @@ export const generateStatement = (
     });
     if (filters?.vehicleId) params.append('vehicleId', String(filters.vehicleId));
     if (filters?.productId) params.append('productId', String(filters.productId));
+    if (filters?.reportLayout) params.append('reportLayout', filters.reportLayout);
     if (filters?.billIds?.length) {
         filters.billIds.forEach(id => params.append('billIds', String(id)));
     }
@@ -150,6 +184,35 @@ export const generateStatement = (
         method: 'POST',
     }).then(handleResponse);
 };
+
+/**
+ * Preview bills for a customer in the period grouped by calendar day, with running
+ * totals and suggested split boundaries that keep each statement under maxAmount.
+ */
+export const previewStatementDayWise = (
+    customerId: number, fromDate: string, toDate: string, maxAmount?: number
+): Promise<DayWiseStatementPreview> => {
+    const params = new URLSearchParams({
+        customerId: String(customerId),
+        fromDate,
+        toDate,
+    });
+    if (maxAmount != null) params.append('maxAmount', String(maxAmount));
+    return fetchWithAuth(`${API_BASE_URL}/statements/preview-day-wise?${params}`).then(handleResponse);
+};
+
+/**
+ * Create N statements at once. Each entry carries the explicit billIds the UI assigned
+ * to that statement (after any user-driven split-boundary adjustments).
+ */
+export const generateStatementBatch = (
+    customerId: number, reportLayout: ReportLayout, statements: { billIds: number[] }[]
+): Promise<Statement[]> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/generate-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId, reportLayout, statements }),
+    }).then(handleResponse);
 
 export const previewStatementBills = (
     customerId: number, fromDate: string, toDate: string,
@@ -212,13 +275,14 @@ export const approveStatement = (id: number): Promise<Statement> =>
 
 export const regenerateStatement = (
     statementId: number, fromDate: string, toDate: string,
-    filters?: { vehicleId?: number; productId?: number; billIds?: number[] },
+    filters?: { vehicleId?: number; productId?: number; billIds?: number[]; reportLayout?: ReportLayout },
     customerId?: number
 ): Promise<Statement> => {
     const params = new URLSearchParams({ fromDate, toDate });
     if (customerId) params.append('customerId', String(customerId));
     if (filters?.vehicleId) params.append('vehicleId', String(filters.vehicleId));
     if (filters?.productId) params.append('productId', String(filters.productId));
+    if (filters?.reportLayout) params.append('reportLayout', filters.reportLayout);
     if (filters?.billIds?.length) {
         filters.billIds.forEach(id => params.append('billIds', String(id)));
     }
@@ -461,6 +525,18 @@ export const exportStatementsExcel = (fromDate: string, toDate: string, status?:
             return res.blob();
         });
 };
+
+/**
+ * Per-statement Excel detail export. Returns the bills + summaries + payments + balance
+ * of a single statement as an .xlsx blob (one sheet, grouped by day or vehicle per the
+ * statement's reportLayout).
+ */
+export const exportStatementDetailExcel = (id: number): Promise<Blob> =>
+    fetchWithAuth(`${API_BASE_URL}/statements/${id}/export-excel`)
+        .then(res => {
+            if (!res.ok) return res.text().then(t => { throw new Error(t || 'Excel export failed'); });
+            return res.blob();
+        });
 
 export const bulkGenerateStatementPdfs = (
     fromDate: string,

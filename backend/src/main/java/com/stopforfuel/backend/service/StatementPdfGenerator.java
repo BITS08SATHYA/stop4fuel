@@ -5,6 +5,7 @@ import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.stopforfuel.backend.entity.*;
+import com.stopforfuel.backend.enums.ReportLayout;
 import com.stopforfuel.backend.exception.ReportGenerationException;
 import com.stopforfuel.backend.service.pdf.PageFooterEvent;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
@@ -79,7 +81,11 @@ public class StatementPdfGenerator {
 
             addHeader(doc, statement, company);
             addBillsHeading(doc, statement);
-            addBillsTable(doc, bills);
+            if (statement.getReportLayout() == ReportLayout.DAY_WISE) {
+                addBillsTableDayWise(doc, bills);
+            } else {
+                addBillsTable(doc, bills);
+            }
             addBottomSection(doc, bills, payments, statement, company);
 
             doc.close();
@@ -207,6 +213,8 @@ public class StatementPdfGenerator {
     // visually align as one continuous table.
     private static final float[] BILL_WIDTHS = {0.35f, 0.6f, 0.8f, 0.5f, 0.95f, 0.65f, 0.6f, 0.8f, 0.85f};
     private static final String[] BILL_HEADERS = {"#", "DATE", "BILL NO", "INDENT", "PROD", "QTY (L)", "RATE", "GROSS", "NET AMT"};
+    // Day-wise uses VEHICLE in place of DATE (date is already in the day-section header).
+    private static final String[] DAY_BILL_HEADERS = {"#", "VEHICLE", "BILL NO", "INDENT", "PROD", "QTY (L)", "RATE", "GROSS", "NET AMT"};
     private static final Set<Integer> BILL_RIGHT_ALIGN = new HashSet<>(Arrays.asList(5, 6, 7, 8));
     private static final Color GROUP_HEADER_BG = new Color(225, 230, 240);
     private static final Color SUBTOTAL_BG = new Color(245, 247, 250);
@@ -225,6 +233,123 @@ public class StatementPdfGenerator {
             doc.add(new Paragraph(" ", new Font(Font.HELVETICA, 4)));
         }
         addGrandTotalRow(doc, bills.size(), grand);
+    }
+
+    // ========== BILLS TABLE — DAY-WISE LAYOUT ==========
+    // Parallel to addBillsTable / addVehicleTable but groups bills by their calendar
+    // date instead of by vehicle. Each day section repeats the same 9-column header
+    // and subtotal pattern. Used for customers like THACILTHAR (election duty) where
+    // the auditor wants a day-by-day breakdown. The existing vehicle-wise renderer is
+    // untouched — selection is made in generate() via statement.reportLayout.
+    private static final DateTimeFormatter DAY_HEADER_FMT = DateTimeFormatter.ofPattern("dd-MMM-yyyy (EEE)");
+
+    private void addBillsTableDayWise(Document doc, List<InvoiceBill> bills) throws DocumentException {
+        TreeMap<LocalDate, List<InvoiceBill>> grouped = new TreeMap<>();
+        for (InvoiceBill b : bills) {
+            LocalDate key = b.getDate() != null ? b.getDate().toLocalDate() : LocalDate.MIN;
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(b);
+        }
+
+        BillTotals grand = new BillTotals();
+        for (Map.Entry<LocalDate, List<InvoiceBill>> e : grouped.entrySet()) {
+            addDayTable(doc, e.getKey(), e.getValue(), grand);
+            doc.add(new Paragraph(" ", new Font(Font.HELVETICA, 4)));
+        }
+        addGrandTotalRow(doc, bills.size(), grand);
+    }
+
+    private void addDayTable(Document doc, LocalDate date, List<InvoiceBill> dayBills,
+                             BillTotals grand) throws DocumentException {
+        PdfPTable table = new PdfPTable(BILL_WIDTHS);
+        table.setWidthPercentage(100);
+        table.setHeaderRows(2); // group header row + column header row both repeat on page break
+
+        // Row 1: group header spanning all 9 columns — date + bill count
+        String dayLabel = date.equals(LocalDate.MIN) ? "Date: -" : "Date: " + date.format(DAY_HEADER_FMT);
+        PdfPCell groupHeader = new PdfPCell(new Phrase(dayLabel + "  (" + dayBills.size() + " bill" + (dayBills.size() != 1 ? "s" : "") + ")", F_TD_BOLD));
+        groupHeader.setColspan(BILL_WIDTHS.length);
+        groupHeader.setBackgroundColor(GROUP_HEADER_BG);
+        groupHeader.setPadding(5);
+        groupHeader.setBorderColor(LIGHT_BORDER);
+        groupHeader.setBorderWidth(0.5f);
+        groupHeader.setHorizontalAlignment(Element.ALIGN_LEFT);
+        table.addCell(groupHeader);
+
+        // Row 2: column headers (day-wise variant uses VEHICLE in place of DATE)
+        for (int i = 0; i < DAY_BILL_HEADERS.length; i++) {
+            PdfPCell cell = new PdfPCell(new Phrase(DAY_BILL_HEADERS[i], F_TH));
+            cell.setBackgroundColor(HEADER_BG);
+            cell.setPadding(3);
+            cell.setBorderColor(HEADER_BG);
+            cell.setHorizontalAlignment(BILL_RIGHT_ALIGN.contains(i) ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT);
+            if (i == 0) cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            table.addCell(cell);
+        }
+
+        BillTotals sub = new BillTotals();
+        int index = 1;
+        for (InvoiceBill bill : dayBills) {
+            Color bg = (index % 2 == 0) ? ALT_ROW : Color.WHITE;
+
+            List<InvoiceProduct> products = bill.getProducts();
+            int productRowCount = (products == null || products.isEmpty()) ? 1 : products.size();
+
+            for (int pi = 0; pi < productRowCount; pi++) {
+                boolean firstRow = (pi == 0);
+                InvoiceProduct ip = (products != null && !products.isEmpty()) ? products.get(pi) : null;
+
+                String prodName = "-";
+                BigDecimal qty = BigDecimal.ZERO;
+                BigDecimal rate = BigDecimal.ZERO;
+                BigDecimal gross = BigDecimal.ZERO;
+                BigDecimal net = BigDecimal.ZERO;
+                if (ip != null) {
+                    if (ip.getProduct() != null) {
+                        prodName = shortProductName(ip.getProduct().getName());
+                    }
+                    qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
+                    rate = ip.getUnitPrice() != null ? ip.getUnitPrice() : BigDecimal.ZERO;
+                    gross = qty.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+                    net = ip.getAmount() != null ? ip.getAmount() : BigDecimal.ZERO;
+                }
+
+                // DAY-wise variant: the leftmost dimension is vehicle (replaces DATE in the per-row column),
+                // since the DATE is already shown in the day-section header. Keep the 9-col format intact.
+                String vehicleNum = bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : "-";
+
+                addCell(table, firstRow ? String.valueOf(index) : "", bg, Element.ALIGN_CENTER, false);
+                addCell(table, firstRow ? vehicleNum : "", bg, Element.ALIGN_LEFT, true);
+                addCell(table, firstRow ? (bill.getBillNo() != null ? bill.getBillNo() : "-") : "", bg, Element.ALIGN_LEFT, true);
+                addCell(table, firstRow ? (bill.getIndentNo() != null ? bill.getIndentNo() : "-") : "", bg, Element.ALIGN_LEFT, false);
+                addCell(table, prodName, bg, Element.ALIGN_LEFT, false);
+                addCell(table, qty.compareTo(BigDecimal.ZERO) > 0 ? fmtQty(qty) : "-", bg, Element.ALIGN_RIGHT, false);
+                addCell(table, rate.compareTo(BigDecimal.ZERO) > 0 ? fmtRate(rate) : "-", bg, Element.ALIGN_RIGHT, false);
+                addCell(table, fmtAmt(gross), bg, Element.ALIGN_RIGHT, false);
+                addCell(table, fmtAmt(net), bg, Element.ALIGN_RIGHT, true);
+
+                sub.qty = sub.qty.add(qty);
+                sub.gross = sub.gross.add(gross);
+                sub.net = sub.net.add(net);
+            }
+            index++;
+        }
+
+        // Subtotal row
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
+        addCell(table, "Day Subtotal", SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, fmtQty(sub.qty), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_RIGHT, false);
+        addCell(table, fmtAmt(sub.gross), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+        addCell(table, fmtAmt(sub.net), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+
+        grand.qty = grand.qty.add(sub.qty);
+        grand.gross = grand.gross.add(sub.gross);
+        grand.net = grand.net.add(sub.net);
+
+        doc.add(table);
     }
 
     private void addVehicleTable(Document doc, String vehicleNumber, List<InvoiceBill> vehicleBills,
