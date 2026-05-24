@@ -330,27 +330,12 @@ export default function StatementsPage() {
             return;
         }
 
-        // Day-wise + batch path — when day-wise preview is loaded with at least one split.
+        // Day-wise path — always go through the batch endpoint, even for a single split.
+        // The legacy single-generate GET puts billIds in the query string; with hundreds of
+        // bills the URL exceeds the ALB limit and we get a 414 (which the browser surfaces
+        // as a CORS error because the rejection lacks Access-Control-Allow-Origin headers).
+        // The batch endpoint sends billIds in a JSON body, so it scales cleanly.
         if (reportLayout === "DAY_WISE" && dayWisePreview && activeSplits.length > 0 && !editingStatementId) {
-            // For a single split, fall through to the single-generate path with reportLayout=DAY_WISE.
-            if (activeSplits.length === 1) {
-                setGenerating(true);
-                setError("");
-                try {
-                    await generateStatement(Number(selectedCustomerId), fromDate, toDate, {
-                        billIds: activeSplits[0].billIds,
-                        reportLayout: "DAY_WISE",
-                    });
-                    resetGenerateModal();
-                    loadStatements();
-                    loadStats();
-                } catch (e: any) {
-                    setError(e.message || "Failed to generate statement");
-                } finally {
-                    setGenerating(false);
-                }
-                return;
-            }
             setGenerating(true);
             setError("");
             try {
