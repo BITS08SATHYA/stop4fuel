@@ -356,12 +356,16 @@ public class StatementPdfGenerator {
             index++;
         }
 
-        // Subtotal row
-        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
-        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
-        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
-        addCell(table, "", SUBTOTAL_BG, Element.ALIGN_LEFT, false);
-        addCell(table, "Day Subtotal", SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
+        // Subtotal row — span the label across the first 5 cols (the narrow PROD col
+        // would otherwise wrap "Day Subtotal" across three lines).
+        PdfPCell labelCell = new PdfPCell(new Phrase("Day Subtotal", F_TD_BOLD));
+        labelCell.setColspan(5);
+        labelCell.setBackgroundColor(SUBTOTAL_BG);
+        labelCell.setPadding(3);
+        labelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        labelCell.setBorderColor(LIGHT_BORDER);
+        labelCell.setBorderWidth(0.5f);
+        table.addCell(labelCell);
         addCell(table, fmtQty(sub.qty), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
         addCell(table, "", SUBTOTAL_BG, Element.ALIGN_RIGHT, false);
         addCell(table, fmtAmt(sub.gross), SUBTOTAL_BG, Element.ALIGN_RIGHT, true);
