@@ -14,6 +14,7 @@ import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ import java.util.TreeMap;
 import org.springframework.data.domain.PageRequest;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class StatementService {
 
@@ -351,6 +353,8 @@ public class StatementService {
         List<DayWiseStatementPreview.SplitGroup> splits = new ArrayList<>();
         if (!byDate.isEmpty()) {
             BigDecimal cap = maxAmount != null ? maxAmount.setScale(0, RoundingMode.HALF_UP) : null;
+            log.info("[previewDayWise] customer={} from={} to={} cap={} days={} grandTotal={}",
+                    customerId, fromDate, toDate, cap, byDate.size(), grandTotalRaw);
 
             List<Long> currentBillIds = new ArrayList<>();
             BigDecimal currentRaw = BigDecimal.ZERO;
@@ -368,8 +372,12 @@ public class StatementService {
                     if (b.getNetAmount() != null) dayTotalRaw = dayTotalRaw.add(b.getNetAmount());
                 }
                 BigDecimal projected = currentRaw.add(dayTotalRaw);
+                boolean wouldOverflow = cap != null && !currentBillIds.isEmpty()
+                        && projected.setScale(0, RoundingMode.HALF_UP).compareTo(cap) > 0;
+                log.info("[previewDayWise]   day={} dayTotal={} currentRaw={} projected={} cap={} willClose={}",
+                        date, dayTotalRaw, currentRaw, projected, cap, wouldOverflow);
                 // Close current group BEFORE adding this day if it would overflow.
-                if (cap != null && !currentBillIds.isEmpty() && projected.setScale(0, RoundingMode.HALF_UP).compareTo(cap) > 0) {
+                if (wouldOverflow) {
                     splits.add(DayWiseStatementPreview.SplitGroup.builder()
                             .index(splitIndex++)
                             .fromDate(currentFrom)
@@ -406,6 +414,10 @@ public class StatementService {
                         .exceedsCap(currentExceeds)
                         .build());
             }
+            log.info("[previewDayWise] result: customer={} splits={} totals={}",
+                    customerId,
+                    splits.size(),
+                    splits.stream().map(g -> g.getTotal().toString()).toList());
         }
 
         return DayWiseStatementPreview.builder()
