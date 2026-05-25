@@ -281,11 +281,15 @@ export default function StatementsPage() {
             const billIds = bills.map(b => b.id as number);
             const total = bills.reduce((sum, b) => sum + Number(b.netAmount || 0), 0);
             const rounded = Math.round(total);
-            const dates = bills.map(b => b.date).filter(Boolean).sort();
+            // Date range = the day buckets this split covers. If pulled bills extend its
+            // effective range into the next day, include that day's date too.
+            const lastIdx = i + 1 < sortedStarts.length && bills.some(b => dayWisePreview.days[sortedStarts[i + 1]].bills.some(nb => nb.id === b.id))
+                ? sortedStarts[i + 1]
+                : e - 1;
             groups.push({
                 index: i,
-                fromDate: dates[0] || slice[0].date,
-                toDate: dates[dates.length - 1] || slice[slice.length - 1].date,
+                fromDate: dayWisePreview.days[s].date,
+                toDate: dayWisePreview.days[Math.min(lastIdx, dayWisePreview.days.length - 1)].date,
                 billCount: billIds.length,
                 billIds,
                 total: rounded,
@@ -301,6 +305,7 @@ export default function StatementsPage() {
         // dayIndex is the index of the day that would START a new split. 0 is always a start
         // so it's not toggleable. Toggling a marker either adds or removes a boundary.
         if (dayIndex === 0) return;
+        const wasSplit = splitStartIdxs.includes(dayIndex);
         setSplitStartIdxs(prev => {
             const set = new Set(prev);
             if (set.has(dayIndex)) set.delete(dayIndex);
@@ -318,7 +323,13 @@ export default function StatementsPage() {
                 return next;
             });
         }
-        if (expandedBoundaryIdx === dayIndex) setExpandedBoundaryIdx(null);
+        // Auto-expand the day when a NEW boundary is added so the bill picker is one
+        // click away. Collapse if user just removed the boundary.
+        if (wasSplit) {
+            if (expandedBoundaryIdx === dayIndex) setExpandedBoundaryIdx(null);
+        } else {
+            setExpandedBoundaryIdx(dayIndex);
+        }
     };
 
     // Toggle a single bill on a boundary day between the previous and next split.
@@ -1457,6 +1468,14 @@ export default function StatementsPage() {
                                     {activeSplits.length} statement{activeSplits.length !== 1 ? "s" : ""}
                                 </span>
                             </div>
+
+                            {/* Hint: over-cap with no manual splits yet — guide user to the picker */}
+                            {maxAmount && activeSplits.length === 1 && activeSplits[0].exceedsCap && (
+                                <div className="px-4 py-2 text-[11px] text-amber-300 bg-amber-500/5 border-b border-amber-500/20">
+                                    Total exceeds the cap. Click <span className="font-semibold">+ split</span> on the day
+                                    where you want the second statement to begin, then expand it to pick which bills go where.
+                                </div>
+                            )}
 
                             {/* Split summary cards */}
                             {activeSplits.length > 0 && (
