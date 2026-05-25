@@ -71,6 +71,12 @@ export default function StatementsPage() {
     // Indexes into dayWisePreview.days where a NEW statement begins (always starts with 0).
     // Allows the user to drag split boundaries by toggling between-day markers without re-fetching.
     const [splitStartIdxs, setSplitStartIdxs] = useState<number[]>([]);
+    // Bill IDs the user has "pulled back" from a boundary day into the previous statement,
+    // so a single day can be partially split between two statements when cap headroom allows.
+    // Only meaningful for bills whose date is a boundary day (the first day of a non-first split).
+    const [pulledBillIds, setPulledBillIds] = useState<Set<number>>(new Set());
+    // Day index whose bill list is currently expanded in the preview table.
+    const [expandedBoundaryIdx, setExpandedBoundaryIdx] = useState<number | null>(null);
 
     // Detail view
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -210,6 +216,8 @@ export default function StatementsPage() {
                     }
                 }
                 setSplitStartIdxs(starts.length > 0 ? starts : [0]);
+                setPulledBillIds(new Set());
+                setExpandedBoundaryIdx(null);
                 setShowPreview(true);
                 // Clear vehicle-wise preview state.
                 setPreviewBills([]);
@@ -243,34 +251,51 @@ export default function StatementsPage() {
         }
     };
 
-    // Derive the active splits from splitStartIdxs + dayWisePreview.days. Each split is a
-    // contiguous slice of days; its billIds are the union of its days' billIds, and its
-    // total is the sum of those days' day totals.
-    const activeSplits = (() => {
-        if (!dayWisePreview || dayWisePreview.days.length === 0) return [] as DayWiseSplitGroup[];
-        const starts = [...splitStartIdxs].sort((a, b) => a - b);
-        if (starts[0] !== 0) starts.unshift(0);
+    // Derive the active splits from splitStartIdxs + dayWisePreview.days + pulledBillIds.
+    // Each split is a contiguous slice of days; bills pulled from the FIRST day of a non-first
+    // split move into the previous split, letting a single day be partially split between two
+    // statements when the cap leaves room.
+    const computeSplits = (starts: number[], pulled: Set<number>): DayWiseSplitGroup[] => {
+        if (!dayWisePreview || dayWisePreview.days.length === 0) return [];
+        const sortedStarts = [...starts].sort((a, b) => a - b);
+        if (sortedStarts[0] !== 0) sortedStarts.unshift(0);
         const cap = maxAmount ? Number(maxAmount) : null;
         const groups: DayWiseSplitGroup[] = [];
-        for (let i = 0; i < starts.length; i++) {
-            const s = starts[i];
-            const e = i + 1 < starts.length ? starts[i + 1] : dayWisePreview.days.length;
+        for (let i = 0; i < sortedStarts.length; i++) {
+            const s = sortedStarts[i];
+            const e = i + 1 < sortedStarts.length ? sortedStarts[i + 1] : dayWisePreview.days.length;
             const slice = dayWisePreview.days.slice(s, e);
-            const billIds = slice.flatMap(d => d.bills.map(b => b.id as number));
-            const total = slice.reduce((sum, d) => sum + Number(d.dayTotal || 0), 0);
+            const firstDayBillIds = i > 0 ? new Set(slice[0].bills.map(b => b.id as number)) : null;
+            // Bills that belong to this split by default: all bills in its day slice, minus
+            // any from its first day that the user pulled back to the previous split.
+            let bills = slice.flatMap(d => d.bills).filter(b => {
+                if (!firstDayBillIds) return true;
+                if (!firstDayBillIds.has(b.id as number)) return true;
+                return !pulled.has(b.id as number);
+            });
+            // Bills pulled from the NEXT split's first day join this split.
+            if (i + 1 < sortedStarts.length) {
+                const nextDay = dayWisePreview.days[sortedStarts[i + 1]];
+                bills = [...bills, ...nextDay.bills.filter(b => pulled.has(b.id as number))];
+            }
+            const billIds = bills.map(b => b.id as number);
+            const total = bills.reduce((sum, b) => sum + Number(b.netAmount || 0), 0);
             const rounded = Math.round(total);
+            const dates = bills.map(b => b.date).filter(Boolean).sort();
             groups.push({
                 index: i,
-                fromDate: slice[0].date,
-                toDate: slice[slice.length - 1].date,
+                fromDate: dates[0] || slice[0].date,
+                toDate: dates[dates.length - 1] || slice[slice.length - 1].date,
                 billCount: billIds.length,
                 billIds,
                 total: rounded,
-                exceedsCap: cap != null && slice.length === 1 && rounded > cap,
+                exceedsCap: cap != null && rounded > cap,
             });
         }
         return groups;
-    })();
+    };
+
+    const activeSplits = computeSplits(splitStartIdxs, pulledBillIds);
 
     const toggleSplitBoundary = (dayIndex: number) => {
         // dayIndex is the index of the day that would START a new split. 0 is always a start
@@ -281,6 +306,70 @@ export default function StatementsPage() {
             if (set.has(dayIndex)) set.delete(dayIndex);
             else set.add(dayIndex);
             return Array.from(set).sort((a, b) => a - b);
+        });
+        // When a boundary disappears (or its day stops being a boundary), bill-level pulls
+        // for that day no longer have a target split — clear them so they don't silently
+        // reappear if the user toggles the boundary back on.
+        const day = dayWisePreview?.days[dayIndex];
+        if (day) {
+            setPulledBillIds(prev => {
+                const next = new Set(prev);
+                day.bills.forEach(b => next.delete(b.id as number));
+                return next;
+            });
+        }
+        if (expandedBoundaryIdx === dayIndex) setExpandedBoundaryIdx(null);
+    };
+
+    // Toggle a single bill on a boundary day between the previous and next split.
+    const togglePulledBill = (billId: number) => {
+        setPulledBillIds(prev => {
+            const next = new Set(prev);
+            if (next.has(billId)) next.delete(billId);
+            else next.add(billId);
+            return next;
+        });
+    };
+
+    // Greedy fill: pull as many bills from this boundary day into the previous split
+    // as possible without exceeding the cap. Largest bills first.
+    const autoFillToCap = (boundaryIdx: number) => {
+        if (!dayWisePreview || !maxAmount) return;
+        const cap = Number(maxAmount);
+        const day = dayWisePreview.days[boundaryIdx];
+        if (!day) return;
+        // Start from a state where NO bills from this day are pulled, so we recompute fresh.
+        const baseline = new Set(pulledBillIds);
+        day.bills.forEach(b => baseline.delete(b.id as number));
+        const baselineSplits = computeSplits(splitStartIdxs, baseline);
+        // Find the previous split (the one this day's pulls flow into).
+        const sortedStarts = [...splitStartIdxs].sort((a, b) => a - b);
+        if (sortedStarts[0] !== 0) sortedStarts.unshift(0);
+        const splitIdx = sortedStarts.indexOf(boundaryIdx);
+        if (splitIdx <= 0) return;
+        const prevTotal = baselineSplits[splitIdx - 1]?.total ?? 0;
+        let headroom = cap - prevTotal;
+        const next = baseline;
+        if (headroom > 0) {
+            const sorted = [...day.bills].sort((a, b) => Number(b.netAmount || 0) - Number(a.netAmount || 0));
+            for (const bill of sorted) {
+                const amt = Math.round(Number(bill.netAmount || 0));
+                if (amt <= headroom) {
+                    next.add(bill.id as number);
+                    headroom -= amt;
+                }
+            }
+        }
+        setPulledBillIds(next);
+    };
+
+    const clearPulledForDay = (boundaryIdx: number) => {
+        const day = dayWisePreview?.days[boundaryIdx];
+        if (!day) return;
+        setPulledBillIds(prev => {
+            const next = new Set(prev);
+            day.bills.forEach(b => next.delete(b.id as number));
+            return next;
         });
     };
 
@@ -321,6 +410,8 @@ export default function StatementsPage() {
         setMaxAmount("");
         setDayWisePreview(null);
         setSplitStartIdxs([]);
+        setPulledBillIds(new Set());
+        setExpandedBoundaryIdx(null);
         setShowGenerateModal(true);
     };
 
@@ -336,13 +427,18 @@ export default function StatementsPage() {
         // as a CORS error because the rejection lacks Access-Control-Allow-Origin headers).
         // The batch endpoint sends billIds in a JSON body, so it scales cleanly.
         if (reportLayout === "DAY_WISE" && dayWisePreview && activeSplits.length > 0 && !editingStatementId) {
+            const nonEmptySplits = activeSplits.filter(s => s.billIds.length > 0);
+            if (nonEmptySplits.length === 0) {
+                setError("All splits are empty — adjust the boundaries or bill picks");
+                return;
+            }
             setGenerating(true);
             setError("");
             try {
                 await generateStatementBatch(
                     Number(selectedCustomerId),
                     "DAY_WISE",
-                    activeSplits.map(s => ({ billIds: s.billIds })),
+                    nonEmptySplits.map(s => ({ billIds: s.billIds })),
                 );
                 resetGenerateModal();
                 loadStatements();
@@ -436,6 +532,8 @@ export default function StatementsPage() {
         setMaxAmount("");
         setDayWisePreview(null);
         setSplitStartIdxs([]);
+        setPulledBillIds(new Set());
+        setExpandedBoundaryIdx(null);
     };
 
     const handleViewDetail = async (stmt: Statement) => {
@@ -1265,14 +1363,14 @@ export default function StatementsPage() {
                             <div className="inline-flex rounded-lg border border-border overflow-hidden">
                                 <button
                                     type="button"
-                                    onClick={() => { setReportLayout("VEHICLE_WISE"); setShowPreview(false); setDayWisePreview(null); }}
+                                    onClick={() => { setReportLayout("VEHICLE_WISE"); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); }}
                                     className={`px-3 py-2 text-sm transition-colors ${reportLayout === "VEHICLE_WISE" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
                                 >
                                     Vehicle-wise
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => { setReportLayout("DAY_WISE"); setShowPreview(false); setDayWisePreview(null); }}
+                                    onClick={() => { setReportLayout("DAY_WISE"); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); }}
                                     className={`px-3 py-2 text-sm transition-colors ${reportLayout === "DAY_WISE" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
                                 >
                                     Day-wise
@@ -1290,7 +1388,7 @@ export default function StatementsPage() {
                                     min="0"
                                     step="1"
                                     value={maxAmount}
-                                    onChange={(e) => { setMaxAmount(e.target.value); setShowPreview(false); setDayWisePreview(null); }}
+                                    onChange={(e) => { setMaxAmount(e.target.value); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); }}
                                     placeholder="e.g. 369860 (leave blank for single statement)"
                                     className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
@@ -1399,27 +1497,145 @@ export default function StatementsPage() {
                                     <tbody>
                                         {dayWisePreview.days.map((d, idx) => {
                                             const isSplit = splitStartIdxs.includes(idx);
+                                            const isBoundary = isSplit && idx > 0;
+                                            const pulledHere = d.bills.filter(b => pulledBillIds.has(b.id as number));
+                                            const isExpanded = expandedBoundaryIdx === idx;
+                                            // Index of the split this day starts → bills get pulled into split-1.
+                                            const sortedStartsForRow = (() => {
+                                                const arr = [...splitStartIdxs].sort((a, b) => a - b);
+                                                if (arr[0] !== 0) arr.unshift(0);
+                                                return arr;
+                                            })();
+                                            const splitIdxForRow = sortedStartsForRow.indexOf(idx);
+                                            const prevSplit = isBoundary && splitIdxForRow > 0 ? activeSplits[splitIdxForRow - 1] : null;
+                                            const cap = maxAmount ? Number(maxAmount) : null;
                                             return (
-                                                <tr key={d.date} className={`border-b border-border/30 ${isSplit && idx > 0 ? "border-t-2 border-t-primary" : ""}`}>
-                                                    <td className="py-2 px-3 font-medium">{d.date}</td>
-                                                    <td className="py-2 px-3 text-right">{d.billCount}</td>
-                                                    <td className="py-2 px-3 text-right">{Number(d.dayTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-2 px-3 text-right text-muted-foreground">{Number(d.cumulativeTotal).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</td>
-                                                    <td className="py-2 px-3 text-center">
-                                                        {idx === 0 ? (
-                                                            <span className="text-[10px] text-muted-foreground">— start —</span>
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => toggleSplitBoundary(idx)}
-                                                                className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${isSplit ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
-                                                                title={isSplit ? "Remove split boundary here" : "Start a new statement at this day"}
-                                                            >
-                                                                {isSplit ? "✓ split here" : "+ split"}
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
+                                                <Fragment key={d.date}>
+                                                    <tr className={`border-b border-border/30 ${isBoundary ? "border-t-2 border-t-primary" : ""}`}>
+                                                        <td className="py-2 px-3 font-medium">
+                                                            <div className="flex items-center gap-1.5">
+                                                                {isBoundary ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setExpandedBoundaryIdx(isExpanded ? null : idx)}
+                                                                        className="text-muted-foreground hover:text-foreground"
+                                                                        title={isExpanded ? "Collapse bills" : "Pick bills to pull into previous statement"}
+                                                                    >
+                                                                        {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="w-3.5" />
+                                                                )}
+                                                                <span>{d.date}</span>
+                                                                {pulledHere.length > 0 && (
+                                                                    <span className="text-[10px] uppercase tracking-wide text-primary font-bold">
+                                                                        {pulledHere.length} pulled ←
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-2 px-3 text-right">{d.billCount}</td>
+                                                        <td className="py-2 px-3 text-right">{Number(d.dayTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                                                        <td className="py-2 px-3 text-right text-muted-foreground">{Number(d.cumulativeTotal).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</td>
+                                                        <td className="py-2 px-3 text-center">
+                                                            {idx === 0 ? (
+                                                                <span className="text-[10px] text-muted-foreground">— start —</span>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleSplitBoundary(idx)}
+                                                                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${isSplit ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+                                                                    title={isSplit ? "Remove split boundary here" : "Start a new statement at this day"}
+                                                                >
+                                                                    {isSplit ? "✓ split here" : "+ split"}
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                    {isExpanded && isBoundary && prevSplit && (
+                                                        <tr className="bg-muted/20">
+                                                            <td colSpan={5} className="px-3 py-3">
+                                                                <div className="flex items-center justify-between mb-2 text-[11px]">
+                                                                    <div className="text-muted-foreground">
+                                                                        Tick a bill to pull it into <span className="font-semibold text-foreground">Statement {splitIdxForRow}</span>
+                                                                        {cap != null && (
+                                                                            <> · headroom <span className={prevSplit.total > cap ? "text-amber-400 font-bold" : "text-foreground font-semibold"}>
+                                                                                ₹{(cap - prevSplit.total).toLocaleString("en-IN")}
+                                                                            </span></>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {cap != null && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => autoFillToCap(idx)}
+                                                                                className="px-2 py-0.5 rounded text-[10px] font-medium bg-primary/15 text-primary hover:bg-primary/25"
+                                                                                title="Greedy fill: largest bills first, stop before cap"
+                                                                            >
+                                                                                Auto-fill to cap
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => clearPulledForDay(idx)}
+                                                                            disabled={pulledHere.length === 0}
+                                                                            className="px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground hover:bg-muted/70 disabled:opacity-40"
+                                                                        >
+                                                                            Clear pulls
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="max-h-44 overflow-y-auto rounded border border-border/40">
+                                                                    <table className="w-full text-[11px]">
+                                                                        <thead>
+                                                                            <tr className="bg-card text-muted-foreground border-b border-border/40">
+                                                                                <th className="py-1 px-2 text-left w-8"></th>
+                                                                                <th className="py-1 px-2 text-left">Bill No</th>
+                                                                                <th className="py-1 px-2 text-left">Vehicle</th>
+                                                                                <th className="py-1 px-2 text-left">Products</th>
+                                                                                <th className="py-1 px-2 text-right">Qty</th>
+                                                                                <th className="py-1 px-2 text-right">Amount</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {d.bills.map(bill => {
+                                                                                const isPulled = pulledBillIds.has(bill.id as number);
+                                                                                return (
+                                                                                    <tr
+                                                                                        key={bill.id}
+                                                                                        onClick={() => togglePulledBill(bill.id as number)}
+                                                                                        className={`border-b border-border/20 cursor-pointer ${isPulled ? "bg-primary/10" : "hover:bg-muted/30"}`}
+                                                                                    >
+                                                                                        <td className="py-1 px-2">
+                                                                                            <input
+                                                                                                type="checkbox"
+                                                                                                checked={isPulled}
+                                                                                                onChange={() => togglePulledBill(bill.id as number)}
+                                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                                className="rounded border-border"
+                                                                                            />
+                                                                                        </td>
+                                                                                        <td className="py-1 px-2 font-medium">{bill.billNo || "-"}</td>
+                                                                                        <td className="py-1 px-2">{bill.vehicle?.vehicleNumber || "-"}</td>
+                                                                                        <td className="py-1 px-2 text-muted-foreground">
+                                                                                            {bill.products?.map(p => p.productName).filter(Boolean).join(", ") || "-"}
+                                                                                        </td>
+                                                                                        <td className="py-1 px-2 text-right">
+                                                                                            {bill.products?.reduce((sum, p) => sum + Number(p.quantity || 0), 0).toFixed(2) || "-"}
+                                                                                        </td>
+                                                                                        <td className="py-1 px-2 text-right font-medium">
+                                                                                            {Number(bill.netAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                );
+                                                                            })}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </Fragment>
                                             );
                                         })}
                                     </tbody>
