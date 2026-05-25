@@ -77,6 +77,10 @@ export default function StatementsPage() {
     const [pulledBillIds, setPulledBillIds] = useState<Set<number>>(new Set());
     // Day index whose bill list is currently expanded in the preview table.
     const [expandedBoundaryIdx, setExpandedBoundaryIdx] = useState<number | null>(null);
+    // Split indexes that the user has UNCHECKED — those won't be persisted on Generate.
+    // Default: every split is included; we track exclusions so newly-appearing splits
+    // (after a boundary toggle) are included automatically.
+    const [excludedSplitIdxs, setExcludedSplitIdxs] = useState<Set<number>>(new Set());
 
     // Detail view
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -218,6 +222,7 @@ export default function StatementsPage() {
                 setSplitStartIdxs(starts.length > 0 ? starts : [0]);
                 setPulledBillIds(new Set());
                 setExpandedBoundaryIdx(null);
+                setExcludedSplitIdxs(new Set());
                 setShowPreview(true);
                 // Clear vehicle-wise preview state.
                 setPreviewBills([]);
@@ -300,6 +305,16 @@ export default function StatementsPage() {
     };
 
     const activeSplits = computeSplits(splitStartIdxs, pulledBillIds);
+    const selectedSplits = activeSplits.filter(s => !excludedSplitIdxs.has(s.index) && s.billIds.length > 0);
+
+    const toggleSplitInclude = (splitIdx: number) => {
+        setExcludedSplitIdxs(prev => {
+            const next = new Set(prev);
+            if (next.has(splitIdx)) next.delete(splitIdx);
+            else next.add(splitIdx);
+            return next;
+        });
+    };
 
     const toggleSplitBoundary = (dayIndex: number) => {
         // dayIndex is the index of the day that would START a new split. 0 is always a start
@@ -423,6 +438,7 @@ export default function StatementsPage() {
         setSplitStartIdxs([]);
         setPulledBillIds(new Set());
         setExpandedBoundaryIdx(null);
+        setExcludedSplitIdxs(new Set());
         setShowGenerateModal(true);
     };
 
@@ -438,9 +454,8 @@ export default function StatementsPage() {
         // as a CORS error because the rejection lacks Access-Control-Allow-Origin headers).
         // The batch endpoint sends billIds in a JSON body, so it scales cleanly.
         if (reportLayout === "DAY_WISE" && dayWisePreview && activeSplits.length > 0 && !editingStatementId) {
-            const nonEmptySplits = activeSplits.filter(s => s.billIds.length > 0);
-            if (nonEmptySplits.length === 0) {
-                setError("All splits are empty — adjust the boundaries or bill picks");
+            if (selectedSplits.length === 0) {
+                setError("Select at least one statement to generate");
                 return;
             }
             setGenerating(true);
@@ -449,7 +464,7 @@ export default function StatementsPage() {
                 await generateStatementBatch(
                     Number(selectedCustomerId),
                     "DAY_WISE",
-                    nonEmptySplits.map(s => ({ billIds: s.billIds })),
+                    selectedSplits.map(s => ({ billIds: s.billIds })),
                 );
                 resetGenerateModal();
                 loadStatements();
@@ -545,6 +560,7 @@ export default function StatementsPage() {
         setSplitStartIdxs([]);
         setPulledBillIds(new Set());
         setExpandedBoundaryIdx(null);
+        setExcludedSplitIdxs(new Set());
     };
 
     const handleViewDetail = async (stmt: Statement) => {
@@ -1374,14 +1390,14 @@ export default function StatementsPage() {
                             <div className="inline-flex rounded-lg border border-border overflow-hidden">
                                 <button
                                     type="button"
-                                    onClick={() => { setReportLayout("VEHICLE_WISE"); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); }}
+                                    onClick={() => { setReportLayout("VEHICLE_WISE"); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); setExcludedSplitIdxs(new Set()); }}
                                     className={`px-3 py-2 text-sm transition-colors ${reportLayout === "VEHICLE_WISE" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
                                 >
                                     Vehicle-wise
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => { setReportLayout("DAY_WISE"); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); }}
+                                    onClick={() => { setReportLayout("DAY_WISE"); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); setExcludedSplitIdxs(new Set()); }}
                                     className={`px-3 py-2 text-sm transition-colors ${reportLayout === "DAY_WISE" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
                                 >
                                     Day-wise
@@ -1399,7 +1415,7 @@ export default function StatementsPage() {
                                     min="0"
                                     step="1"
                                     value={maxAmount}
-                                    onChange={(e) => { setMaxAmount(e.target.value); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); }}
+                                    onChange={(e) => { setMaxAmount(e.target.value); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); setExcludedSplitIdxs(new Set()); }}
                                     placeholder="e.g. 369860 (leave blank for single statement)"
                                     className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
@@ -1465,7 +1481,7 @@ export default function StatementsPage() {
                                     {dayWisePreview.totalBills} bill{dayWisePreview.totalBills !== 1 ? "s" : ""} across {dayWisePreview.days.length} day{dayWisePreview.days.length !== 1 ? "s" : ""} — Grand total {dayWisePreview.grandTotal.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
                                 </span>
                                 <span className="text-sm font-semibold text-primary">
-                                    {activeSplits.length} statement{activeSplits.length !== 1 ? "s" : ""}
+                                    {selectedSplits.length} of {activeSplits.length} statement{activeSplits.length !== 1 ? "s" : ""} selected
                                 </span>
                             </div>
 
@@ -1480,25 +1496,43 @@ export default function StatementsPage() {
                             {/* Split summary cards */}
                             {activeSplits.length > 0 && (
                                 <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 border-b border-border/50">
-                                    {activeSplits.map((s, i) => (
-                                        <div
-                                            key={i}
-                                            className={`rounded-lg border p-2 text-xs ${s.exceedsCap ? "border-amber-500/40 bg-amber-500/10" : "border-border bg-card"}`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-semibold text-foreground">Statement {i + 1}</span>
-                                                {s.exceedsCap && (
-                                                    <span className="text-[10px] uppercase tracking-wide text-amber-400 font-bold">Over cap</span>
-                                                )}
-                                            </div>
-                                            <div className="text-muted-foreground mt-0.5">
-                                                {s.fromDate} → {s.toDate} · {s.billCount} bills
-                                            </div>
-                                            <div className="font-bold text-foreground mt-0.5">
-                                                ₹{s.total.toLocaleString("en-IN")}
-                                            </div>
-                                        </div>
-                                    ))}
+                                    {activeSplits.map((s, i) => {
+                                        const isExcluded = excludedSplitIdxs.has(s.index);
+                                        const isEmpty = s.billIds.length === 0;
+                                        return (
+                                            <label
+                                                key={i}
+                                                className={`rounded-lg border p-2 text-xs flex gap-2 cursor-pointer transition-opacity ${
+                                                    isExcluded ? "opacity-40" : ""
+                                                } ${s.exceedsCap && !isExcluded ? "border-amber-500/40 bg-amber-500/10" : "border-border bg-card"}`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!isExcluded && !isEmpty}
+                                                    disabled={isEmpty}
+                                                    onChange={() => toggleSplitInclude(s.index)}
+                                                    className="rounded border-border mt-0.5"
+                                                />
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-semibold text-foreground">Statement {i + 1}</span>
+                                                        {s.exceedsCap && !isExcluded && (
+                                                            <span className="text-[10px] uppercase tracking-wide text-amber-400 font-bold">Over cap</span>
+                                                        )}
+                                                        {isEmpty && (
+                                                            <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-bold">Empty</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-muted-foreground mt-0.5">
+                                                        {s.fromDate} → {s.toDate} · {s.billCount} bills
+                                                    </div>
+                                                    <div className="font-bold text-foreground mt-0.5">
+                                                        ₹{s.total.toLocaleString("en-IN")}
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             )}
 
@@ -1767,16 +1801,16 @@ export default function StatementsPage() {
                             disabled={
                                 generating ||
                                 (showPreview && !dayWisePreview && selectedBillIds.size === 0) ||
-                                (showPreview && !!dayWisePreview && activeSplits.length === 0)
+                                (showPreview && !!dayWisePreview && selectedSplits.length === 0)
                             }
                             className="btn-gradient px-6 py-2 rounded-lg font-medium disabled:opacity-50"
                         >
                             {generating
-                                ? (editingStatementId ? "Regenerating..." : (activeSplits.length > 1 ? `Generating ${activeSplits.length} statements...` : "Generating..."))
+                                ? (editingStatementId ? "Regenerating..." : (selectedSplits.length > 1 ? `Generating ${selectedSplits.length} statements...` : "Generating..."))
                                 : editingStatementId
                                     ? "Regenerate"
-                                    : dayWisePreview && activeSplits.length > 0
-                                        ? (activeSplits.length === 1 ? `Generate 1 statement (${activeSplits[0].billCount} bills)` : `Generate ${activeSplits.length} statements`)
+                                    : dayWisePreview && selectedSplits.length > 0
+                                        ? (selectedSplits.length === 1 ? `Generate 1 statement (${selectedSplits[0].billCount} bills)` : `Generate ${selectedSplits.length} statements`)
                                         : `Generate${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
                         </button>
                     </div>
