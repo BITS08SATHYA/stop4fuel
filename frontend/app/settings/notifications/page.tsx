@@ -9,45 +9,95 @@ import {
     NotificationConfig,
     RoleOption,
 } from "@/lib/api/station";
-import { Bell, Save, AlertTriangle } from "lucide-react";
+import { Save, AlertTriangle, Boxes } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { PermissionGate } from "@/components/permission-gate";
+import { useAuth } from "@/lib/auth/auth-context";
 
-const ALERT_TYPES = [
-    { value: "LOW_STOCK", label: "Low Stock Alert", description: "Triggered when a tank's available stock drops to or below its threshold level." },
+interface AlertTypeDef {
+    value: string;
+    label: string;
+    description: string;
+    icon: typeof AlertTriangle;
+    iconTone: string;
+    requiresPermission?: string;
+    extraFields?: ("lowStockThreshold" | "emailRecipients")[];
+    defaultChannels?: string[];
+    defaultRoles?: string[];
+}
+
+const ALERT_TYPES: AlertTypeDef[] = [
+    {
+        value: "LOW_STOCK",
+        label: "Low Stock Alert",
+        description: "Triggered when a tank's available stock drops to or below its threshold level.",
+        icon: AlertTriangle,
+        iconTone: "bg-amber-500/10 text-amber-500",
+        defaultChannels: ["DASHBOARD"],
+    },
+    {
+        value: "SHIFT_CLOSE_STOCK",
+        label: "Shift-Close Stock Summary",
+        description: "On every shift close, send today's tank levels, sales, and prices to selected roles.",
+        icon: Boxes,
+        iconTone: "bg-emerald-500/10 text-emerald-500",
+        requiresPermission: "STOCK_NOTIFICATION_CONFIGURE",
+        extraFields: ["lowStockThreshold", "emailRecipients"],
+        defaultChannels: ["SSE", "PUSH", "EMAIL"],
+        defaultRoles: ["OWNER", "ADMIN", "CASHIER"],
+    },
 ];
 
 const CHANNELS = [
     { value: "DASHBOARD", label: "Dashboard", description: "Show alerts on the operational dashboard" },
+    { value: "SSE", label: "In-app toast", description: "Pop a toast for users with the app open" },
+    { value: "PUSH", label: "Android push", description: "Send to registered devices via SNS → FCM" },
     { value: "EMAIL", label: "Email", description: "Send email notifications (requires AWS SES configuration)" },
     { value: "SMS", label: "SMS", description: "Send SMS notifications (requires AWS SNS configuration)" },
 ];
 
+interface FormState {
+    enabled: boolean;
+    notifyRoles: string[];
+    channels: string[];
+    lowStockThreshold: string;
+    emailRecipients: string;
+}
+
+const blankForm = (def: AlertTypeDef): FormState => ({
+    enabled: true,
+    notifyRoles: def.defaultRoles ?? [],
+    channels: def.defaultChannels ?? ["DASHBOARD"],
+    lowStockThreshold: "",
+    emailRecipients: "",
+});
+
 export default function NotificationSettingsPage() {
-    const [configs, setConfigs] = useState<NotificationConfig[]>([]);
+    const { hasPermission } = useAuth();
     const [roles, setRoles] = useState<RoleOption[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
-
-    // Local form state per alert type
-    const [formState, setFormState] = useState<Record<string, { enabled: boolean; notifyRoles: string[]; channels: string[] }>>({});
+    const [formState, setFormState] = useState<Record<string, FormState>>({});
 
     useEffect(() => {
         Promise.all([getNotificationConfigs(), getAvailableRoles()])
             .then(([cfgs, rls]) => {
-                setConfigs(cfgs);
                 setRoles(rls);
-
-                // Build initial form state
-                const state: Record<string, { enabled: boolean; notifyRoles: string[]; channels: string[] }> = {};
-                for (const alertType of ALERT_TYPES) {
-                    const existing = cfgs.find((c) => c.alertType === alertType.value);
-                    state[alertType.value] = {
-                        enabled: existing?.enabled ?? true,
-                        notifyRoles: existing?.notifyRoles ?? [],
-                        channels: existing?.channels ?? ["DASHBOARD"],
-                    };
+                const state: Record<string, FormState> = {};
+                for (const def of ALERT_TYPES) {
+                    const existing = cfgs.find((c) => c.alertType === def.value);
+                    const base = blankForm(def);
+                    state[def.value] = existing
+                        ? {
+                              enabled: existing.enabled,
+                              notifyRoles: existing.notifyRoles ?? base.notifyRoles,
+                              channels: existing.channels?.length ? existing.channels : base.channels,
+                              lowStockThreshold:
+                                  existing.lowStockThreshold != null ? String(existing.lowStockThreshold) : "",
+                              emailRecipients: (existing.emailRecipients ?? []).join(", "),
+                          }
+                        : base;
                 }
                 setFormState(state);
             })
@@ -55,45 +105,48 @@ export default function NotificationSettingsPage() {
             .finally(() => setIsLoading(false));
     }, []);
 
+    const updateForm = (alertType: string, patch: Partial<FormState>) =>
+        setFormState((prev) => ({ ...prev, [alertType]: { ...prev[alertType], ...patch } }));
+
     const toggleRole = (alertType: string, roleType: string) => {
-        setFormState((prev) => {
-            const current = prev[alertType];
-            const roles = current.notifyRoles.includes(roleType)
-                ? current.notifyRoles.filter((r) => r !== roleType)
-                : [...current.notifyRoles, roleType];
-            return { ...prev, [alertType]: { ...current, notifyRoles: roles } };
-        });
+        const current = formState[alertType];
+        const next = current.notifyRoles.includes(roleType)
+            ? current.notifyRoles.filter((r) => r !== roleType)
+            : [...current.notifyRoles, roleType];
+        updateForm(alertType, { notifyRoles: next });
     };
 
     const toggleChannel = (alertType: string, channel: string) => {
-        setFormState((prev) => {
-            const current = prev[alertType];
-            const channels = current.channels.includes(channel)
-                ? current.channels.filter((c) => c !== channel)
-                : [...current.channels, channel];
-            return { ...prev, [alertType]: { ...current, channels } };
-        });
+        const current = formState[alertType];
+        const next = current.channels.includes(channel)
+            ? current.channels.filter((c) => c !== channel)
+            : [...current.channels, channel];
+        updateForm(alertType, { channels: next });
     };
 
-    const toggleEnabled = (alertType: string) => {
-        setFormState((prev) => ({
-            ...prev,
-            [alertType]: { ...prev[alertType], enabled: !prev[alertType].enabled },
-        }));
-    };
-
-    const handleSave = async (alertType: string) => {
-        setSaving(alertType);
+    const handleSave = async (def: AlertTypeDef) => {
+        const state = formState[def.value];
+        setSaving(def.value);
         setSaveSuccess(null);
         try {
-            const state = formState[alertType];
-            await saveNotificationConfig({
-                alertType,
+            const payload: NotificationConfig = {
+                alertType: def.value,
                 enabled: state.enabled,
                 notifyRoles: state.notifyRoles,
                 channels: state.channels,
-            });
-            setSaveSuccess(alertType);
+            };
+            if (def.extraFields?.includes("lowStockThreshold")) {
+                const n = parseFloat(state.lowStockThreshold);
+                payload.lowStockThreshold = Number.isFinite(n) && n > 0 ? n : null;
+            }
+            if (def.extraFields?.includes("emailRecipients")) {
+                payload.emailRecipients = state.emailRecipients
+                    .split(/[,\s]+/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+            }
+            await saveNotificationConfig(payload);
+            setSaveSuccess(def.value);
             setTimeout(() => setSaveSuccess(null), 3000);
         } catch (err) {
             console.error("Failed to save notification config", err);
@@ -110,6 +163,8 @@ export default function NotificationSettingsPage() {
         );
     }
 
+    const visible = ALERT_TYPES.filter((a) => !a.requiresPermission || hasPermission(a.requiresPermission));
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background transition-colors duration-300">
             <div className="max-w-4xl mx-auto">
@@ -123,32 +178,32 @@ export default function NotificationSettingsPage() {
                 </div>
 
                 <div className="space-y-6">
-                    {ALERT_TYPES.map((alertType) => {
-                        const state = formState[alertType.value];
+                    {visible.map((def) => {
+                        const state = formState[def.value];
                         if (!state) return null;
+                        const Icon = def.icon;
 
                         return (
-                            <GlassCard key={alertType.value}>
+                            <GlassCard key={def.value}>
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-amber-500/10">
-                                            <AlertTriangle className="w-5 h-5 text-amber-500" />
+                                        <div className={`p-2 rounded-lg ${def.iconTone}`}>
+                                            <Icon className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-semibold text-foreground">{alertType.label}</h3>
-                                            <p className="text-sm text-muted-foreground">{alertType.description}</p>
+                                            <h3 className="text-lg font-semibold text-foreground">{def.label}</h3>
+                                            <p className="text-sm text-muted-foreground">{def.description}</p>
                                         </div>
                                     </div>
                                     <ToggleSwitch
                                         checked={state.enabled}
-                                        onChange={() => toggleEnabled(alertType.value)}
+                                        onChange={() => updateForm(def.value, { enabled: !state.enabled })}
                                         label={state.enabled ? "Enabled" : "Disabled"}
                                     />
                                 </div>
 
                                 {state.enabled && (
                                     <div className="space-y-5 mt-4 pt-4 border-t border-border">
-                                        {/* Roles to notify */}
                                         <div>
                                             <label className="block text-sm font-medium text-foreground mb-3">
                                                 Roles to Notify
@@ -159,7 +214,7 @@ export default function NotificationSettingsPage() {
                                                     return (
                                                         <button
                                                             key={role.id}
-                                                            onClick={() => toggleRole(alertType.value, role.roleType)}
+                                                            onClick={() => toggleRole(def.value, role.roleType)}
                                                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
                                                                 isSelected
                                                                     ? "bg-primary/10 border-primary/30 text-primary"
@@ -178,7 +233,6 @@ export default function NotificationSettingsPage() {
                                             )}
                                         </div>
 
-                                        {/* Notification channels */}
                                         <div>
                                             <label className="block text-sm font-medium text-foreground mb-3">
                                                 Notification Channels
@@ -198,12 +252,16 @@ export default function NotificationSettingsPage() {
                                                             <input
                                                                 type="checkbox"
                                                                 checked={isSelected}
-                                                                onChange={() => toggleChannel(alertType.value, channel.value)}
+                                                                onChange={() => toggleChannel(def.value, channel.value)}
                                                                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary/50"
                                                             />
                                                             <div>
-                                                                <span className="text-sm font-medium text-foreground">{channel.label}</span>
-                                                                <p className="text-xs text-muted-foreground">{channel.description}</p>
+                                                                <span className="text-sm font-medium text-foreground">
+                                                                    {channel.label}
+                                                                </span>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {channel.description}
+                                                                </p>
                                                             </div>
                                                         </label>
                                                     );
@@ -211,19 +269,62 @@ export default function NotificationSettingsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Save button */}
+                                        {def.extraFields?.includes("lowStockThreshold") && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-foreground mb-2">
+                                                    Low-stock threshold (optional)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    step="0.01"
+                                                    value={state.lowStockThreshold}
+                                                    onChange={(e) =>
+                                                        updateForm(def.value, { lowStockThreshold: e.target.value })
+                                                    }
+                                                    placeholder="e.g. 500"
+                                                    className="w-full sm:w-64 px-3 py-2 rounded-lg bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                />
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Tanks/products at or below this value are flagged "low" in the summary.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {def.extraFields?.includes("emailRecipients") && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-foreground mb-2">
+                                                    Additional email recipients (optional)
+                                                </label>
+                                                <textarea
+                                                    rows={2}
+                                                    value={state.emailRecipients}
+                                                    onChange={(e) =>
+                                                        updateForm(def.value, { emailRecipients: e.target.value })
+                                                    }
+                                                    placeholder="owner@example.com, manager@example.com"
+                                                    className="w-full px-3 py-2 rounded-lg bg-card border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                />
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Comma- or space-separated. These are added on top of the role-based recipients.
+                                                </p>
+                                            </div>
+                                        )}
+
                                         <PermissionGate permission="SETTINGS_UPDATE">
                                             <div className="flex items-center gap-3 pt-2">
                                                 <button
-                                                    onClick={() => handleSave(alertType.value)}
-                                                    disabled={saving === alertType.value}
+                                                    onClick={() => handleSave(def)}
+                                                    disabled={saving === def.value}
                                                     className="btn-gradient px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 disabled:opacity-50"
                                                 >
                                                     <Save className="w-4 h-4" />
-                                                    {saving === alertType.value ? "Saving..." : "Save Configuration"}
+                                                    {saving === def.value ? "Saving..." : "Save Configuration"}
                                                 </button>
-                                                {saveSuccess === alertType.value && (
-                                                    <span className="text-sm text-green-500 font-medium">Saved successfully!</span>
+                                                {saveSuccess === def.value && (
+                                                    <span className="text-sm text-green-500 font-medium">
+                                                        Saved successfully!
+                                                    </span>
                                                 )}
                                             </div>
                                         </PermissionGate>

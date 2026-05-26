@@ -7,6 +7,7 @@ import { API_BASE_URL } from "@/lib/api/station/common";
 import { openStream, type SseEvent } from "@/lib/notifications/sse-client";
 import { approvalBus, type ApprovalEventType } from "@/lib/notifications/approval-bus";
 import { messageBus, type MessageEventType, type OtherParticipant } from "@/lib/notifications/message-bus";
+import { stockBus, type StockEventType, type StockTankRow, type StockProductRow } from "@/lib/notifications/stock-bus";
 import { playDing } from "@/lib/notifications/sound";
 
 const DEV_MODE = !process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
@@ -83,6 +84,28 @@ export function useNotificationStream(): void {
                     } catch {
                         // malformed frame — ignore
                     }
+                    return;
+                }
+                if (evt.event === "stock") {
+                    try {
+                        const data = JSON.parse(evt.data) as {
+                            type: StockEventType;
+                            shiftId: number;
+                            scid?: number;
+                            companyName?: string;
+                            closedAt?: string;
+                            tanks: StockTankRow[];
+                            products: StockProductRow[];
+                            lowStockCount: number;
+                        };
+                        stockBus.emit(data);
+                        if (data.type === "STOCK_SHIFT_CLOSE_SUMMARY") {
+                            fireStockDesktopNotification(data);
+                            playDing();
+                        }
+                    } catch {
+                        // malformed frame — ignore
+                    }
                 }
             },
             signal: controller.signal,
@@ -108,6 +131,29 @@ function fireApprovalDesktopNotification(data: { requestId: number; requestType:
             if (window.location.pathname !== "/approvals") {
                 window.location.href = "/approvals";
             }
+            n.close();
+        };
+    } catch {
+        // ignore
+    }
+}
+
+function fireStockDesktopNotification(data: { shiftId: number; lowStockCount: number }) {
+    if (typeof window === "undefined") return;
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+    try {
+        const body =
+            data.lowStockCount > 0
+                ? `${data.lowStockCount} item(s) flagged low`
+                : "Stock summary ready";
+        const n = new Notification(`Shift #${data.shiftId} closed`, {
+            body,
+            tag: `sff-stock-${data.shiftId}`,
+            icon: "/favicon.ico",
+        });
+        n.onclick = () => {
+            window.focus();
             n.close();
         };
     } catch {

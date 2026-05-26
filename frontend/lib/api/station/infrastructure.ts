@@ -52,6 +52,8 @@ export interface NotificationConfig {
     enabled: boolean;
     notifyRoles: string[];
     channels: string[];
+    lowStockThreshold?: number | null;
+    emailRecipients?: string[];
 }
 
 export interface RoleOption {

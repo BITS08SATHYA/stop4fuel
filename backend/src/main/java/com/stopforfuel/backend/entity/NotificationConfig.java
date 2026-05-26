@@ -30,9 +30,19 @@ public class NotificationConfig extends BaseEntity {
     @Column(name = "role_type")
     private Set<String> notifyRoles = new HashSet<>();
 
-    /** Channels to send notifications via (DASHBOARD, EMAIL, SMS) */
+    /** Channels to send notifications via (DASHBOARD/SSE, EMAIL, SMS, PUSH) */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "notification_config_channels", joinColumns = @JoinColumn(name = "config_id"))
     @Column(name = "channel")
     private Set<String> channels = new HashSet<>();
+
+    /** Optional threshold (units / liters) below which a product or tank is flagged "low" in the payload. */
+    @Column(name = "low_stock_threshold")
+    private Double lowStockThreshold;
+
+    /** Optional explicit email recipients (used by EMAIL channel when set, in addition to role-based recipients). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "notification_config_emails", joinColumns = @JoinColumn(name = "config_id"))
+    @Column(name = "email")
+    private Set<String> emailRecipients = new HashSet<>();
 }

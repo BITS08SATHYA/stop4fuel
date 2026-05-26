@@ -119,6 +119,51 @@ public class PushNotificationService {
         }
     }
 
+    /** Fire a shift-close stock summary push to a set of users. */
+    public void notifyShiftCloseStock(java.util.Collection<Long> userIds, String title, String body,
+                                      Map<String, Object> data) {
+        if (!enabled || snsClient.isEmpty() || platformAppArn.isBlank()) {
+            log.debug("Push disabled — skipping shift-close stock notify");
+            return;
+        }
+        if (userIds == null || userIds.isEmpty()) return;
+
+        Map<String, Object> fcmNotif = Map.of("title", title, "body", body);
+        Map<String, Object> fcmData = new HashMap<>();
+        fcmData.put("type", "STOCK_SHIFT_CLOSE_SUMMARY");
+        if (data != null) data.forEach((k, v) -> fcmData.put(k, String.valueOf(v)));
+        Map<String, Object> gcmPayload = Map.of("notification", fcmNotif, "data", fcmData);
+        String snsMessage;
+        try {
+            snsMessage = objectMapper.writeValueAsString(Map.of(
+                    "default", body,
+                    "GCM", objectMapper.writeValueAsString(gcmPayload)
+            ));
+        } catch (Exception e) {
+            log.warn("Failed to build stock push payload: {}", e.getMessage());
+            return;
+        }
+
+        for (Long userId : userIds) {
+            if (userId == null) continue;
+            for (DeviceToken t : deviceTokenRepository.findByUserId(userId)) {
+                if (t.getSnsEndpointArn() == null) continue;
+                try {
+                    snsClient.get().publish(PublishRequest.builder()
+                            .targetArn(t.getSnsEndpointArn())
+                            .message(snsMessage)
+                            .messageStructure("json")
+                            .build());
+                } catch (EndpointDisabledException | NotFoundException stale) {
+                    log.info("Stale device token (id={}), deleting", t.getId());
+                    deviceTokenRepository.delete(t);
+                } catch (Exception e) {
+                    log.warn("Stock push to endpoint {} failed: {}", t.getSnsEndpointArn(), e.getMessage());
+                }
+            }
+        }
+    }
+
     /**
      * Fire a push notification for a new direct message to a specific user.
      * Swallows all errors — messaging must never roll back because a device

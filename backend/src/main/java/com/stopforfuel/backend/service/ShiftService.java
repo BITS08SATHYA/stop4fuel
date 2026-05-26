@@ -6,10 +6,12 @@ import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.enums.AdvanceStatus;
 import com.stopforfuel.backend.enums.ShiftStatus;
+import com.stopforfuel.backend.event.ShiftClosedEvent;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.config.SecurityUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +50,7 @@ public class ShiftService {
     private final ShiftCashInvoiceAutoService shiftCashInvoiceAutoService;
     private final com.stopforfuel.backend.repository.UserRepository userRepository;
     private final com.stopforfuel.config.BusinessMetrics metrics;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ShiftService(ShiftRepository repository,
                         @Lazy ShiftClosingReportService shiftClosingReportService,
@@ -72,7 +75,8 @@ public class ShiftService {
                         @Lazy StatementAutoGenerationService statementAutoGenerationService,
                         @Lazy ShiftCashInvoiceAutoService shiftCashInvoiceAutoService,
                         com.stopforfuel.backend.repository.UserRepository userRepository,
-                        com.stopforfuel.config.BusinessMetrics metrics) {
+                        com.stopforfuel.config.BusinessMetrics metrics,
+                        ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
         this.productInventoryService = productInventoryService;
@@ -97,6 +101,7 @@ public class ShiftService {
         this.shiftCashInvoiceAutoService = shiftCashInvoiceAutoService;
         this.userRepository = userRepository;
         this.metrics = metrics;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -422,6 +427,9 @@ public class ShiftService {
         } catch (Exception e) {
             log.error("Failed to auto-generate synthetic cash invoices for shift {}", shiftId, e);
         }
+
+        // Fan-out stock summary (SSE/push/email) via @TransactionalEventListener AFTER_COMMIT.
+        eventPublisher.publishEvent(new ShiftClosedEvent(saved.getId(), saved.getScid()));
 
         metrics.shiftClosed();
         return saved;

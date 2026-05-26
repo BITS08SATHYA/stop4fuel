@@ -145,6 +145,7 @@ public class DataInitializer implements ApplicationRunner {
             {"USER_CREATE", "Create users", "USER", "CREATE"},
             {"USER_UPDATE", "Update users", "USER", "UPDATE"},
             {"USER_DELETE", "Delete users", "USER", "DELETE"},
+            {"STOCK_NOTIFICATION_CONFIGURE", "Configure shift-close stock notification", "SETTINGS", "CONFIGURE"},
         };
 
         for (String[] p : perms) {
@@ -257,6 +258,7 @@ public class DataInitializer implements ApplicationRunner {
             {"USER_CREATE", "Create users", "USER", "CREATE"},
             {"USER_UPDATE", "Update users", "USER", "UPDATE"},
             {"USER_DELETE", "Delete users", "USER", "DELETE"},
+            {"STOCK_NOTIFICATION_CONFIGURE", "Configure shift-close stock notification", "SETTINGS", "CONFIGURE"},
         };
         for (String[] p : required) {
             if (permissionRepository.findByCode(p[0]).isEmpty()) {
@@ -347,7 +349,8 @@ public class DataInitializer implements ApplicationRunner {
                 "FINANCE_VIEW", "FINANCE_CREATE",
                 "REPORT_VIEW"
             ),
-            "ADMIN", Set.of(), // gets all except SETTINGS_DELETE, USER_DELETE — handled below
+            "ADMIN", Set.of(), // gets all except SETTINGS_DELETE, USER_DELETE, STOCK_NOTIFICATION_CONFIGURE — handled below
+            "OWNER", Set.of(), // gets all permissions — handled below
             "EMPLOYEE", Set.of(
                 "DASHBOARD_VIEW", "SHIFT_VIEW", "INVENTORY_VIEW"
             )
@@ -362,9 +365,9 @@ public class DataInitializer implements ApplicationRunner {
             if (!rolePermissionRepository.findByRoleId(role.getId()).isEmpty()) continue;
 
             if ("ADMIN".equals(roleType)) {
-                // Admin gets everything except SETTINGS_DELETE and USER_DELETE
+                // Admin gets everything except OWNER-only permissions and SETTINGS_DELETE/USER_DELETE
                 List<Permission> allPerms = permissionRepository.findAll();
-                Set<String> excluded = Set.of("SETTINGS_DELETE", "USER_DELETE");
+                Set<String> excluded = Set.of("SETTINGS_DELETE", "USER_DELETE", "STOCK_NOTIFICATION_CONFIGURE");
                 for (Permission p : allPerms) {
                     if (!excluded.contains(p.getCode())) {
                         RolePermission rp = new RolePermission();
@@ -372,6 +375,14 @@ public class DataInitializer implements ApplicationRunner {
                         rp.setPermission(p);
                         rolePermissionRepository.save(rp);
                     }
+                }
+            } else if ("OWNER".equals(roleType)) {
+                // Owner gets every permission
+                for (Permission p : permissionRepository.findAll()) {
+                    RolePermission rp = new RolePermission();
+                    rp.setRole(role);
+                    rp.setPermission(p);
+                    rolePermissionRepository.save(rp);
                 }
             } else {
                 for (String code : entry.getValue()) {
@@ -385,6 +396,29 @@ public class DataInitializer implements ApplicationRunner {
             }
             log.info("Seeded role permissions for {}", roleType);
         }
+
+        patchOwnerStockNotificationPermission();
+    }
+
+    /**
+     * Idempotent: ensures OWNER role has STOCK_NOTIFICATION_CONFIGURE on existing deployments
+     * (seedRolePermissions skips roles that already have assignments).
+     */
+    private void patchOwnerStockNotificationPermission() {
+        Roles owner = rolesRepository.findByRoleType("OWNER").orElse(null);
+        if (owner == null) return;
+        Permission stockPerm = permissionRepository.findByCode("STOCK_NOTIFICATION_CONFIGURE").orElse(null);
+        if (stockPerm == null) return;
+        if (rolePermissionRepository.existsByRoleIdAndPermissionCode(owner.getId(), "STOCK_NOTIFICATION_CONFIGURE")) return;
+        RolePermission rp = new RolePermission();
+        rp.setRole(owner);
+        rp.setPermission(stockPerm);
+        rolePermissionRepository.save(rp);
+        log.info("Patched OWNER: added STOCK_NOTIFICATION_CONFIGURE");
+        var permCache = cacheManager.getCache("permissions");
+        if (permCache != null) permCache.clear();
+        var roleCache = cacheManager.getCache("rolePermissions");
+        if (roleCache != null) roleCache.clear();
     }
 
     private void backfillStatementQuantity() {
