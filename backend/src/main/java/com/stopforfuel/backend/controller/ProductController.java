@@ -38,6 +38,14 @@ public class ProductController {
         return productService.getActiveNonFuelProducts().stream().map(ProductDTO::from).toList();
     }
 
+    @GetMapping("/top-selling")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
+    public List<ProductDTO> getTopSellingProducts(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "8") int limit) {
+        return productService.getTopSellingProducts(days, limit).stream().map(ProductDTO::from).toList();
+    }
+
     @GetMapping("/category/{category}")
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
     public List<ProductDTO> getProductsByCategory(@PathVariable String category) {

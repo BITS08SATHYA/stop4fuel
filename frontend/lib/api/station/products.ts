@@ -55,6 +55,9 @@ export const getActiveNonFuelProducts = (): Promise<Product[]> =>
 export const getFuelProducts = (): Promise<Product[]> =>
     fetchWithAuth(`${API_BASE_URL}/products/category/Fuel`).then(handleResponse);
 
+export const getTopSellingProducts = (days = 30, limit = 8): Promise<Product[]> =>
+    fetchWithAuth(`${API_BASE_URL}/products/top-selling?days=${days}&limit=${limit}`).then(handleResponse);
+
 export const getProducts = (): Promise<Product[]> =>
     fetchWithAuth(`${API_BASE_URL}/products`).then(handleResponse);
 

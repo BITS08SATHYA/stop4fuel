@@ -11,6 +11,7 @@ import {
     moveInvoice,
     getMovableShifts,
     getActiveProducts,
+    getTopSellingProducts,
     getNozzles,
     getCustomers,
     getIncentivesByCustomer,
@@ -86,6 +87,7 @@ export default function InvoicesPage() {
     const isShiftPickerAllowed = user?.role === "OWNER" || user?.role === "ADMIN";
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
+    const [topProducts, setTopProducts] = useState<Product[]>([]);
     const [nozzles, setNozzles] = useState<Nozzle[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
@@ -223,12 +225,14 @@ export default function InvoicesPage() {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const [prodData, nozData, compRes] = await Promise.all([
+            const [prodData, nozData, compRes, topData] = await Promise.all([
                 getActiveProducts(),
                 getNozzles(),
-                fetchWithAuth(`${API_BASE_URL}/companies/print-info`).then(r => r.ok ? r.json() : null)
+                fetchWithAuth(`${API_BASE_URL}/companies/print-info`).then(r => r.ok ? r.json() : null),
+                getTopSellingProducts(30, 8).catch(() => [] as Product[])
             ]);
             setProducts(prodData);
+            setTopProducts(topData);
             setNozzles(nozData.filter((n: Nozzle) => n.active));
             if (compRes) {
                 const c = compRes;
@@ -990,44 +994,66 @@ export default function InvoicesPage() {
                     </button>
                 </div>
 
-                {/* Quick Select Product Buttons */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                    {[
+                {/* Quick Select Product Buttons — pinned fuels + auto top-selling */}
+                {(() => {
+                    const pinnedDefs = [
                         { label: "MS", matcher: (n: string, c: string) => c.toLowerCase() === "fuel" && n.toLowerCase().includes("petrol") && !n.toLowerCase().includes("additive") },
                         { label: "XP", matcher: (n: string, c: string) => c.toLowerCase() === "fuel" && (n.toLowerCase().includes("xtra premium") || n.toLowerCase().includes("extra premium")) },
                         { label: "HSD", matcher: (n: string, c: string) => c.toLowerCase() === "fuel" && n.toLowerCase().includes("diesel") && !n.toLowerCase().includes("additive") },
-                        { label: "2T Loose", matcher: (n: string, c: string) => n.toLowerCase().includes("2t") && n.toLowerCase().includes("loose") },
-                        { label: "2T 20ml", matcher: (n: string, c: string) => n.toLowerCase().includes("2t") && n.toLowerCase().includes("20") },
-                        { label: "2T 40ml", matcher: (n: string, c: string) => n.toLowerCase().includes("2t") && n.toLowerCase().includes("40") },
-                    ].map(({ label, matcher }) => {
-                        const matched = products.find(p => matcher(p.name || "", p.category || ""));
-                        if (!matched) return null;
-                        return (
-                            <button
-                                key={label}
-                                onClick={() => {
-                                    const emptyIdx = selectedProducts.findIndex((l: any) => !l.product);
-                                    const isFuel = matched.category?.toLowerCase() === "fuel";
-                                    if (emptyIdx >= 0) {
-                                        updateProductLine(emptyIdx, { product: matched, unitPrice: String(matched.price), amountMode: isFuel });
-                                    } else {
-                                        setSelectedProducts((prev: any[]) => [...prev, {
-                                            product: matched,
-                                            nozzle: null,
-                                            quantity: "",
-                                            unitPrice: String(matched.price),
-                                            amountMode: isFuel,
-                                            amount: 0
-                                        }]);
-                                    }
-                                }}
-                                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black rounded-full text-xs font-bold transition-all shadow-sm"
-                            >
-                                {label}
-                            </button>
-                        );
-                    })}
-                </div>
+                    ];
+                    const shortLabel = (name: string) => {
+                        const n = (name || "").trim();
+                        if (n.length <= 14) return n;
+                        const compact = n.replace(/\s+/g, " ");
+                        return compact.length <= 14 ? compact : compact.slice(0, 13) + "…";
+                    };
+                    type Chip = { key: string; label: string; product: Product };
+                    const chips: Chip[] = [];
+                    const usedIds = new Set<number>();
+                    for (const def of pinnedDefs) {
+                        const matched = products.find(p => def.matcher(p.name || "", p.category || ""));
+                        if (matched && !usedIds.has(matched.id)) {
+                            chips.push({ key: `pin-${def.label}`, label: def.label, product: matched });
+                            usedIds.add(matched.id);
+                        }
+                    }
+                    for (const tp of topProducts) {
+                        if (usedIds.has(tp.id)) continue;
+                        chips.push({ key: `top-${tp.id}`, label: shortLabel(tp.name), product: tp });
+                        usedIds.add(tp.id);
+                    }
+                    if (chips.length === 0) return null;
+                    const addChip = (matched: Product) => {
+                        const isFuel = matched.category?.toLowerCase() === "fuel";
+                        const emptyIdx = selectedProducts.findIndex((l: any) => !l.product);
+                        if (emptyIdx >= 0) {
+                            updateProductLine(emptyIdx, { product: matched, unitPrice: String(matched.price), amountMode: isFuel });
+                        } else {
+                            setSelectedProducts((prev: any[]) => [...prev, {
+                                product: matched,
+                                nozzle: null,
+                                quantity: "",
+                                unitPrice: String(matched.price),
+                                amountMode: isFuel,
+                                amount: 0
+                            }]);
+                        }
+                    };
+                    return (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {chips.map(({ key, label, product }) => (
+                                <button
+                                    key={key}
+                                    title={product.name}
+                                    onClick={() => addChip(product)}
+                                    className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black rounded-full text-xs font-bold transition-all shadow-sm"
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    );
+                })()}
 
                 {selectedProducts.length === 0 && (
                     <div className="text-center py-12 text-muted-foreground">
