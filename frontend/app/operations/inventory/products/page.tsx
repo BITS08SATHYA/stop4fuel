@@ -17,7 +17,7 @@ import {
 } from "@/lib/api/station";
 import { Box, Plus, Calendar, Archive, TrendingUp, Trash2, Edit2, Search, FileText, FileSpreadsheet } from "lucide-react";
 import { useFormValidation, required } from "@/lib/validation";
-import { fmtProductQty, isWholeCountUnit } from "@/lib/utils";
+import { fmtProductQty, isWholeCountUnit, parseLocalDate } from "@/lib/utils";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
 
@@ -326,7 +326,7 @@ export default function ProductInventoryPage() {
                                         <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
                                             <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div>
+                                                <div className="text-sm font-medium text-foreground">{parseLocalDate(inv.date).toLocaleDateString('en-GB')}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">

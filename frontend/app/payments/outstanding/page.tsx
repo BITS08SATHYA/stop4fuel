@@ -12,6 +12,7 @@ import {
     type Statement,
     type PageResponse,
 } from "@/lib/api/station";
+import { parseLocalDate } from "@/lib/utils";
 
 type Tab = "bills" | "statements";
 
@@ -21,7 +22,7 @@ const fmtInr = (n: number | undefined | null) =>
     Number(n || 0).toLocaleString("en-IN", { style: "currency", currency: "INR" });
 
 const fmtDate = (d?: string | null) =>
-    d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+    d ? parseLocalDate(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
 
 export default function OutstandingExplorerPage() {
     const [tab, setTab] = useState<Tab>("bills");

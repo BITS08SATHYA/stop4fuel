@@ -7,6 +7,7 @@ import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { CompanyDocuments } from "./company-documents";
 import { PermissionGate } from "@/components/permission-gate";
+import { parseLocalDate } from "@/lib/utils";
 
 interface Company {
     id?: number;
@@ -264,7 +265,7 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
                                         <input id="openDate" type="date" value={company.openDate} onChange={handleChange} className={inputClass} />
                                     ) : (
                                         <p className="text-sm py-2">
-                                            {company.openDate ? new Date(company.openDate).toLocaleDateString("en-IN") : "—"}
+                                            {company.openDate ? parseLocalDate(company.openDate).toLocaleDateString("en-IN") : "—"}
                                         </p>
                                     )}
                                 </div>

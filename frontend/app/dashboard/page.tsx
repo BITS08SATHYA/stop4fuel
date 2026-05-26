@@ -6,6 +6,7 @@ import { CashierDashboard } from "@/components/dashboards/cashier-dashboard";
 import { CustomerDashboard } from "@/components/dashboards/customer-dashboard";
 import { EmployeeDashboard } from "@/components/dashboards/employee-dashboard";
 import { GlassCard } from "@/components/ui/glass-card";
+import { parseLocalDate } from "@/lib/utils";
 import { getDashboardStats, DashboardStats, checkStockAlerts, StockAlert, getSystemHealth, SystemHealth } from "@/lib/api/station";
 import {
     IndianRupee,
@@ -76,8 +77,7 @@ function formatShiftTime(dt?: string | null) {
 }
 
 function formatShortDate(dateStr: string) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+    return parseLocalDate(dateStr).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 }
 
 const PRODUCT_COLORS = ["#f97316", "#06b6d4", "#8b5cf6", "#10b981", "#ef4444", "#eab308", "#ec4899"];

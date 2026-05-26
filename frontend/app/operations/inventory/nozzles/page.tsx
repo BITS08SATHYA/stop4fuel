@@ -19,6 +19,7 @@ import { Fuel, Plus, Calendar, Trash2, Edit2, Search, FileText, FileSpreadsheet,
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
+import { parseLocalDate } from "@/lib/utils";
 
 function getCurrentMonthRange() {
     const now = new Date();
@@ -321,7 +322,7 @@ export default function NozzleInventoryPage() {
                                         (pagedData as DailySummary[]).map((row, idx) => (
                                             <tr key={row.date} className="hover:bg-white/5 transition-colors">
                                                 <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
-                                                <td className="px-6 py-4"><div className="text-sm font-medium text-foreground">{new Date(row.date).toLocaleDateString('en-GB')}</div></td>
+                                                <td className="px-6 py-4"><div className="text-sm font-medium text-foreground">{parseLocalDate(row.date).toLocaleDateString('en-GB')}</div></td>
                                                 <td className="px-6 py-4"><div className="text-sm font-bold text-foreground">{row.product}</div></td>
                                                 <td className="px-6 py-4"><div className="text-xs text-muted-foreground">{row.nozzles}</div></td>
                                                 <td className="px-6 py-4 text-right font-black text-primary text-base font-mono bg-primary/5">
@@ -340,7 +341,7 @@ export default function NozzleInventoryPage() {
                                             return (
                                             <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
                                                 <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
-                                                <td className="px-6 py-4"><div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div></td>
+                                                <td className="px-6 py-4"><div className="text-sm font-medium text-foreground">{parseLocalDate(inv.date).toLocaleDateString('en-GB')}</div></td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="p-2 rounded-lg bg-green-500/10 text-green-500"><Fuel className="w-4 h-4" /></div>

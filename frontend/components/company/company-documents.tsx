@@ -8,6 +8,7 @@ import {
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
+import { parseLocalDate } from "@/lib/utils";
 
 const DOCUMENT_TYPES = [
     { value: "PARTNERSHIP_DEED", label: "Partnership Deed" },
@@ -350,7 +351,7 @@ export function CompanyDocuments({ companyId }: { companyId: number }) {
                                         <Calendar className="w-3 h-3" />
                                         {isExpired(doc.expiryDate) ? "Expired" : isExpiringSoon(doc.expiryDate) ? "Expiring soon" : "Valid"}
                                         <span className="ml-1 opacity-75">
-                                            {new Date(doc.expiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                            {parseLocalDate(doc.expiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                                         </span>
                                     </div>
                                 )}

@@ -28,6 +28,7 @@ import { FileText, Plus, Search, Trash2, Eye, Edit3, Upload, ExternalLink, Downl
 import { useFormValidation, required } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
+import { parseLocalDate } from "@/lib/utils";
 
 const STATUS_COLORS: Record<string, string> = {
     PENDING: "bg-yellow-500/10 text-yellow-500",
@@ -623,9 +624,9 @@ export default function PurchaseInvoicesPage() {
                                                 </td>
                                                 <td className="px-4 py-4 text-sm text-foreground">{inv.supplier?.name}</td>
                                                 <td className="px-4 py-4">
-                                                    <div className="text-sm text-foreground">{new Date(inv.invoiceDate).toLocaleDateString()}</div>
+                                                    <div className="text-sm text-foreground">{parseLocalDate(inv.invoiceDate).toLocaleDateString()}</div>
                                                     {inv.deliveryDate && (
-                                                        <div className="text-[10px] text-muted-foreground">Del: {new Date(inv.deliveryDate).toLocaleDateString()}</div>
+                                                        <div className="text-[10px] text-muted-foreground">Del: {parseLocalDate(inv.deliveryDate).toLocaleDateString()}</div>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-4 text-center text-sm font-mono text-muted-foreground">{inv.items?.length || 0}</td>
@@ -838,7 +839,7 @@ export default function PurchaseInvoicesPage() {
                                 onChange={(val) => setPurchaseOrderId(val)}
                                 options={[
                                     { value: "", label: "None" },
-                                    ...filteredPOs.map((po) => ({ value: String(po.id), label: `PO #${po.id} — ${new Date(po.orderDate).toLocaleDateString()} (${po.status})` })),
+                                    ...filteredPOs.map((po) => ({ value: String(po.id), label: `PO #${po.id} — ${parseLocalDate(po.orderDate).toLocaleDateString()} (${po.status})` })),
                                 ]}
                                 placeholder="None"
                                 className={`w-full ${!supplierId ? "opacity-50 pointer-events-none" : ""}`}
@@ -989,8 +990,8 @@ export default function PurchaseInvoicesPage() {
                             <div><span className="text-muted-foreground">Type:</span> <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${TYPE_COLORS[viewInvoice.invoiceType]}`}>{viewInvoice.invoiceType === "NON_FUEL" ? "Non-Fuel" : "Fuel"}</span></div>
                             <div><span className="text-muted-foreground">Supplier:</span> <span className="font-medium text-foreground">{viewInvoice.supplier?.name}</span></div>
                             <div><span className="text-muted-foreground">Status:</span> <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${STATUS_COLORS[viewInvoice.status]}`}>{viewInvoice.status}</span></div>
-                            <div><span className="text-muted-foreground">Invoice Date:</span> <span className="font-medium text-foreground">{new Date(viewInvoice.invoiceDate).toLocaleDateString()}</span></div>
-                            <div><span className="text-muted-foreground">Delivery Date:</span> <span className="font-medium text-foreground">{viewInvoice.deliveryDate ? new Date(viewInvoice.deliveryDate).toLocaleDateString() : '-'}</span></div>
+                            <div><span className="text-muted-foreground">Invoice Date:</span> <span className="font-medium text-foreground">{parseLocalDate(viewInvoice.invoiceDate).toLocaleDateString()}</span></div>
+                            <div><span className="text-muted-foreground">Delivery Date:</span> <span className="font-medium text-foreground">{viewInvoice.deliveryDate ? parseLocalDate(viewInvoice.deliveryDate).toLocaleDateString() : '-'}</span></div>
                             {viewInvoice.purchaseOrder && (
                                 <div className="col-span-2"><span className="text-muted-foreground">Linked PO:</span> <span className="font-medium text-foreground">PO #{viewInvoice.purchaseOrder.id}</span></div>
                             )}

@@ -18,6 +18,7 @@ import { Warehouse, Plus, Search, Edit2, Trash2, AlertTriangle } from "lucide-re
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
+import { parseLocalDate } from "@/lib/utils";
 
 export default function GodownStockPage() {
     const [stocks, setStocks] = useState<GodownStock[]>([]);
@@ -248,7 +249,7 @@ export default function GodownStockPage() {
                                                 <td className="px-6 py-4 text-right text-sm font-mono text-muted-foreground">{stock.maxStock}</td>
                                                 <td className="px-6 py-4 text-sm text-muted-foreground">{stock.location || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-muted-foreground">
-                                                    {stock.lastRestockDate ? new Date(stock.lastRestockDate).toLocaleDateString() : '-'}
+                                                    {stock.lastRestockDate ? parseLocalDate(stock.lastRestockDate).toLocaleDateString() : '-'}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex justify-center gap-2">

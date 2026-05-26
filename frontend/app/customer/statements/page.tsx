@@ -6,6 +6,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { getMyStatements, CustomerStatement } from "@/lib/api/station";
 import { Loader2, Receipt } from "lucide-react";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { parseLocalDate } from "@/lib/utils";
 
 function formatCurrency(val?: number | null) {
     if (val == null) return "0.00";
@@ -14,7 +15,7 @@ function formatCurrency(val?: number | null) {
 
 function formatDate(dt?: string | null) {
     if (!dt) return "-";
-    return new Date(dt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    return parseLocalDate(dt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 export default function CustomerStatementsPage() {

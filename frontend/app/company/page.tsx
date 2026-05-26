@@ -6,6 +6,7 @@ import { Building2, Plus, Eye, Pencil, Trash2, Loader2, AlertTriangle } from "lu
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
+import { parseLocalDate } from "@/lib/utils";
 
 interface Company {
     id: number;
@@ -144,7 +145,7 @@ export default function CompanyListPage() {
                                         <td className="px-6 py-4 text-sm text-muted-foreground">{company.gstNo || "—"}</td>
                                         <td className="px-6 py-4 text-sm text-muted-foreground">{company.site || "—"}</td>
                                         <td className="px-6 py-4 text-sm text-muted-foreground">
-                                            {company.openDate ? new Date(company.openDate).toLocaleDateString("en-IN") : "—"}
+                                            {company.openDate ? parseLocalDate(company.openDate).toLocaleDateString("en-IN") : "—"}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1">

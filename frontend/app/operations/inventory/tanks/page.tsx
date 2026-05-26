@@ -19,6 +19,7 @@ import { Droplets, Plus, Calendar, Ruler, TrendingDown, Trash2, Edit2, Search, D
 import { useFormValidation, required, min } from "@/lib/validation";
 import { FieldError, inputErrorClass, FormErrorBanner } from "@/components/ui/field-error";
 import { PermissionGate } from "@/components/permission-gate";
+import { parseLocalDate } from "@/lib/utils";
 
 function getCurrentMonthRange() {
     const now = new Date();
@@ -329,7 +330,7 @@ export default function TankInventoryPage() {
                                         <tr key={inv.id} className="hover:bg-white/5 transition-colors group">
                                             <td className="px-6 py-4 text-xs font-mono text-muted-foreground text-center">{page * pageSize + idx + 1}</td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString('en-GB')}</div>
+                                                <div className="text-sm font-medium text-foreground">{parseLocalDate(inv.date).toLocaleDateString('en-GB')}</div>
                                             </td>
                                             <td className="px-6 py-4 font-bold">
                                                 <div className="text-sm text-foreground">{inv.tank?.name}</div>
