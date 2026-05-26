@@ -30,6 +30,8 @@ public class ProductService {
 
     private final InvoiceProductRepository invoiceProductRepository;
 
+    private final ProductPriceHistoryService productPriceHistoryService;
+
     @Transactional(readOnly = true)
     public List<Product> getAllProducts() {
         return productRepository.findAllByScid(SecurityUtils.getScid());
@@ -81,9 +83,14 @@ public class ProductService {
     public Product updateProduct(Long id, Product productDetails) {
         validateGradeOilTypeLink(productDetails);
         Product product = getProductById(id);
+        BigDecimal previousPrice = product.getPrice();
         product.setName(productDetails.getName());
         product.setHsnCode(productDetails.getHsnCode());
         product.setPrice(productDetails.getPrice());
+        if (productDetails.getPrice() != null
+                && (previousPrice == null || previousPrice.compareTo(productDetails.getPrice()) != 0)) {
+            productPriceHistoryService.recordPriceChange(product, productDetails.getPrice());
+        }
         product.setCategory(productDetails.getCategory());
         product.setUnit(productDetails.getUnit());
         product.setVolume(productDetails.getVolume());
@@ -115,8 +122,13 @@ public class ProductService {
     @Transactional
     public Product updatePrice(Long id, BigDecimal newPrice) {
         Product product = getProductById(id);
+        BigDecimal previousPrice = product.getPrice();
         product.setPrice(newPrice);
-        return productRepository.save(product);
+        Product saved = productRepository.save(product);
+        if (newPrice != null && (previousPrice == null || previousPrice.compareTo(newPrice) != 0)) {
+            productPriceHistoryService.recordPriceChange(saved, newPrice);
+        }
+        return saved;
     }
 
     public Product toggleStatus(Long id) {

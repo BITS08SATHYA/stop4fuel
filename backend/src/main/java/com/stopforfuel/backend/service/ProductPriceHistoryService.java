@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -51,5 +52,40 @@ public class ProductPriceHistoryService {
     @Transactional
     public void delete(Long id) {
         repository.deleteById(id);
+    }
+
+    /**
+     * Resolve the product price effective on {@code asOf}.
+     * Picks the most recent history row with effectiveDate ≤ asOf;
+     * falls back to {@code fallback} (typically Product.price) if no history exists yet.
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal priceAsOf(Long productId, LocalDate asOf, BigDecimal fallback) {
+        if (productId == null || asOf == null) return fallback;
+        return repository
+                .findTopByProductIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(productId, asOf)
+                .map(ProductPriceHistory::getPrice)
+                .orElse(fallback);
+    }
+
+    /**
+     * Auto-snapshot a price change: upsert a ProductPriceHistory row for today.
+     * Same-day repeated edits overwrite the existing row (kept clean by the
+     * (product_id, effective_date) unique constraint).
+     */
+    @Transactional
+    public void recordPriceChange(Product product, BigDecimal newPrice) {
+        if (product == null || product.getId() == null || newPrice == null) return;
+        LocalDate today = LocalDate.now();
+        ProductPriceHistory row = repository
+                .findByProductIdAndEffectiveDate(product.getId(), today)
+                .orElseGet(() -> {
+                    ProductPriceHistory r = new ProductPriceHistory();
+                    r.setProduct(product);
+                    r.setEffectiveDate(today);
+                    return r;
+                });
+        row.setPrice(newPrice);
+        repository.save(row);
     }
 }

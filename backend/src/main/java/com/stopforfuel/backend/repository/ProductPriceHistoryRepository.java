@@ -21,4 +21,7 @@ public interface ProductPriceHistoryRepository extends JpaRepository<ProductPric
     Optional<ProductPriceHistory> findTopByProductIdOrderByEffectiveDateDesc(Long productId);
 
     Optional<ProductPriceHistory> findByProductIdAndEffectiveDate(Long productId, LocalDate effectiveDate);
+
+    Optional<ProductPriceHistory> findTopByProductIdAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
+            Long productId, LocalDate asOfDate);
 }

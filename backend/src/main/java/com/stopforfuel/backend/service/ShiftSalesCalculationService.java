@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,26 @@ public class ShiftSalesCalculationService {
     private final GodownStockRepository godownStockRepository;
     private final CashierStockRepository cashierStockRepository;
     private final WeightedAverageCostService wacService;
+    private final ProductPriceHistoryService priceHistoryService;
+    private final ShiftRepository shiftRepository;
+
+    /**
+     * Resolve the as-of date for price lookups: the shift's start date.
+     * Locked at open time so overnight shifts that close after a 6 AM price
+     * change still reproduce the original rate on recompute.
+     */
+    private LocalDate shiftAsOfDate(Long shiftId) {
+        if (shiftId == null) return LocalDate.now();
+        return shiftRepository.findById(shiftId)
+                .map(Shift::getStartTime)
+                .map(java.time.LocalDateTime::toLocalDate)
+                .orElse(LocalDate.now());
+    }
+
+    private LocalDate shiftAsOfDate(Shift shift) {
+        if (shift == null || shift.getStartTime() == null) return LocalDate.now();
+        return shift.getStartTime().toLocalDate();
+    }
 
     /**
      * Per-product fuel aggregate for a shift — sourced from nozzle meter readings.
@@ -65,12 +86,14 @@ public class ShiftSalesCalculationService {
     @Transactional(readOnly = true)
     public Map<Long, FuelSaleAggregate> computeFuelSalesByProduct(Long shiftId) {
         Map<Long, FuelSaleAggregate> byProduct = new LinkedHashMap<>();
+        LocalDate asOf = shiftAsOfDate(shiftId);
         List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
         for (NozzleInventory ni : nozzleInvs) {
             if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
                     || ni.getNozzle().getTank().getProduct() == null) continue;
             Product product = ni.getNozzle().getTank().getProduct();
-            double rate = product.getPrice() != null ? product.getPrice().doubleValue() : 0;
+            BigDecimal effective = priceHistoryService.priceAsOf(product.getId(), asOf, product.getPrice());
+            double rate = effective != null ? effective.doubleValue() : 0;
             double sales = ni.getSales() != null ? ni.getSales() : 0;
             double test = ni.getTestQuantity() != null ? ni.getTestQuantity() : 0;
             FuelSaleAggregate agg = byProduct.computeIfAbsent(product.getId(),
@@ -154,11 +177,14 @@ public class ShiftSalesCalculationService {
             }
         }
 
-        // 1b. Fuel Sales: compute from nozzle meter readings, rate from Product Catalog
+        // 1b. Fuel Sales: compute from nozzle meter readings, rate resolved
+        // from ProductPriceHistory as of the shift's start date (falls back to
+        // Product.price when no history exists yet).
         Map<String, double[]> fuelSales = new LinkedHashMap<>(); // productName -> [netLitres, amount, rate, wacCost]
         Map<String, Double> testCostByProduct = new LinkedHashMap<>(); // productName -> test litres × wacCost
         double totalTestLitres = 0;
         double totalTestAmount = 0;
+        LocalDate asOf = shiftAsOfDate(report != null ? report.getShift() : null);
         List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
         for (NozzleInventory ni : nozzleInvs) {
             if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
@@ -167,7 +193,8 @@ public class ShiftSalesCalculationService {
             String productName = product.getName();
             double sales = ni.getSales() != null ? ni.getSales() : 0;
             double test = ni.getTestQuantity() != null ? ni.getTestQuantity() : 0;
-            double rate = product.getPrice() != null ? product.getPrice().doubleValue() : 0;
+            BigDecimal effective = priceHistoryService.priceAsOf(product.getId(), asOf, product.getPrice());
+            double rate = effective != null ? effective.doubleValue() : 0;
             double wacCost = product.getWacCost() != null ? product.getWacCost().doubleValue() : 0;
             double netLitres = sales - test;
             double amount = netLitres * rate;
@@ -366,6 +393,7 @@ public class ShiftSalesCalculationService {
      */
     @Transactional(readOnly = true)
     public void populateMeterReadings(ShiftReportPrintData data, Long shiftId) {
+        LocalDate asOf = shiftAsOfDate(shiftId);
         List<NozzleInventory> nozzleInvs = nozzleInventoryRepository.findByShiftId(shiftId);
         for (NozzleInventory ni : nozzleInvs) {
             // Skip incomplete readings (no close reading = opening snapshot only)
@@ -373,15 +401,18 @@ public class ShiftSalesCalculationService {
             ShiftReportPrintData.MeterReading mr = new ShiftReportPrintData.MeterReading();
             mr.setPumpName(ni.getNozzle().getPump() != null ? ni.getNozzle().getPump().getName() : "-");
             mr.setNozzleName(ni.getNozzle().getNozzleName());
-            mr.setProductName(ni.getNozzle().getTank() != null && ni.getNozzle().getTank().getProduct() != null
-                    ? ni.getNozzle().getTank().getProduct().getName() : "-");
+            Product nzProduct = ni.getNozzle().getTank() != null ? ni.getNozzle().getTank().getProduct() : null;
+            mr.setProductName(nzProduct != null ? nzProduct.getName() : "-");
             mr.setOpenReading(ni.getOpenMeterReading());
             mr.setCloseReading(ni.getCloseMeterReading());
             mr.setSales(ni.getSales());
             mr.setTestQuantity(ni.getTestQuantity());
-            mr.setRate(ni.getNozzle().getTank() != null && ni.getNozzle().getTank().getProduct() != null
-                    && ni.getNozzle().getTank().getProduct().getPrice() != null
-                    ? ni.getNozzle().getTank().getProduct().getPrice().doubleValue() : ni.getRate());
+            Double rate = null;
+            if (nzProduct != null) {
+                BigDecimal effective = priceHistoryService.priceAsOf(nzProduct.getId(), asOf, nzProduct.getPrice());
+                if (effective != null) rate = effective.doubleValue();
+            }
+            mr.setRate(rate != null ? rate : ni.getRate());
             mr.setAmount(ni.getAmount());
             data.getMeterReadings().add(mr);
         }
