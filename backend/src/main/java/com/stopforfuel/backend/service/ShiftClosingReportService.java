@@ -294,28 +294,41 @@ public class ShiftClosingReportService {
     public ShiftClosingReport recomputeReport(Long reportId) {
         ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found"));
+        return doRecompute(report, "system");
+    }
 
+    /**
+     * Variant for event-driven recomputes (e.g. fuel price changes) where the scid
+     * comes from the event payload rather than the request SecurityContext. Bypasses
+     * the SecurityUtils tenant check — caller is responsible for passing the right scid.
+     */
+    @Transactional
+    public ShiftClosingReport recomputeReportForScid(Long reportId, Long scid, String performedBy) {
+        ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, scid)
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+        return doRecompute(report, performedBy);
+    }
+
+    private ShiftClosingReport doRecompute(ShiftClosingReport report, String performedBy) {
         if ("FINALIZED".equals(report.getStatus())) {
             throw new BusinessException("Cannot recompute a finalized report");
         }
 
+        Long reportId = report.getId();
         Shift shift = report.getShift();
 
-        // Clear existing line items and breakdowns
         lineItemRepository.deleteByReportId(reportId);
         breakdownRepository.deleteByReportId(reportId);
         report.getLineItems().clear();
         report.getCashBillBreakdowns().clear();
 
-        // Re-aggregate from source data
         populateReportData(report, shift);
 
-        // Audit log
         ReportAuditLog log = new ReportAuditLog();
         log.setReport(report);
         log.setAction("RECOMPUTED");
         log.setDescription("Report recomputed from source data");
-        log.setPerformedBy("system");
+        log.setPerformedBy(performedBy);
         auditLogRepository.save(log);
 
         return reportRepository.save(report);

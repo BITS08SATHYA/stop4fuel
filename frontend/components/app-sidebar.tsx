@@ -88,6 +88,7 @@ const employeeManagementNav = [
 
 const productManagementNav = [
     { name: "Products", href: "/operations/products", icon: Package },
+    { name: "Price History", href: "/operations/products/price-history", icon: History },
     { name: "Suppliers", href: "/operations/suppliers", icon: Truck },
     { name: "Oil Types", href: "/operations/oil-types", icon: Droplets },
     { name: "Lubricant Grades", href: "/operations/grades", icon: Award },

@@ -653,6 +653,7 @@ public class ShiftSalesCalculationService {
     public void populateStockData(ShiftReportPrintData data, Long shiftId) {
         List<TankInventory> tankInvs = tankInventoryRepository.findByShiftId(shiftId);
         List<InvoiceBill> invoices = invoiceBillRepository.findByShiftIdOrderByIdDesc(shiftId);
+        LocalDate asOf = shiftAsOfDate(shiftId);
 
         // Stock Summary — only products with sales > 0
         List<ProductInventory> shiftProductInvs = productInventoryRepository.findByShiftId(shiftId);
@@ -665,7 +666,8 @@ public class ShiftSalesCalculationService {
         for (Product product : allProductEntities) {
             ShiftReportPrintData.StockSummaryRow row = new ShiftReportPrintData.StockSummaryRow();
             row.setProductName(product.getName());
-            row.setRate(product.getPrice());
+            BigDecimal rateAsOf = priceHistoryService.priceAsOf(product.getId(), asOf, product.getPrice());
+            row.setRate(rateAsOf);
 
             if ("FUEL".equalsIgnoreCase(product.getCategory())) {
                 double open = 0, receipt = 0, total = 0, sales = 0;
@@ -718,8 +720,8 @@ public class ShiftSalesCalculationService {
                 }
             }
 
-            BigDecimal salesAmt = product.getPrice() != null && row.getSales() != null
-                    ? product.getPrice().multiply(BigDecimal.valueOf(row.getSales()))
+            BigDecimal salesAmt = rateAsOf != null && row.getSales() != null
+                    ? rateAsOf.multiply(BigDecimal.valueOf(row.getSales()))
                     : BigDecimal.ZERO;
             row.setAmount(salesAmt.setScale(2, RoundingMode.HALF_UP));
             data.getStockSummary().add(row);

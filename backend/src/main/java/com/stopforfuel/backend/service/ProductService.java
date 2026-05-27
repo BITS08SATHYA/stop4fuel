@@ -2,6 +2,7 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.GradeType;
 import com.stopforfuel.backend.entity.Product;
+import com.stopforfuel.backend.event.FuelPriceChangedEvent;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.GradeTypeRepository;
@@ -9,6 +10,7 @@ import com.stopforfuel.backend.repository.InvoiceProductRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,8 @@ public class ProductService {
     private final InvoiceProductRepository invoiceProductRepository;
 
     private final ProductPriceHistoryService productPriceHistoryService;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public List<Product> getAllProducts() {
@@ -89,7 +93,11 @@ public class ProductService {
         product.setPrice(productDetails.getPrice());
         if (productDetails.getPrice() != null
                 && (previousPrice == null || previousPrice.compareTo(productDetails.getPrice()) != 0)) {
-            productPriceHistoryService.recordPriceChange(product, productDetails.getPrice());
+            productPriceHistoryService.recordPriceChange(product, previousPrice, productDetails.getPrice());
+            if ("FUEL".equalsIgnoreCase(product.getCategory())) {
+                eventPublisher.publishEvent(new FuelPriceChangedEvent(
+                        product.getScid(), product.getId(), previousPrice, productDetails.getPrice()));
+            }
         }
         product.setCategory(productDetails.getCategory());
         product.setUnit(productDetails.getUnit());
@@ -126,7 +134,11 @@ public class ProductService {
         product.setPrice(newPrice);
         Product saved = productRepository.save(product);
         if (newPrice != null && (previousPrice == null || previousPrice.compareTo(newPrice) != 0)) {
-            productPriceHistoryService.recordPriceChange(saved, newPrice);
+            productPriceHistoryService.recordPriceChange(saved, previousPrice, newPrice);
+            if ("FUEL".equalsIgnoreCase(saved.getCategory())) {
+                eventPublisher.publishEvent(new FuelPriceChangedEvent(
+                        saved.getScid(), saved.getId(), previousPrice, newPrice));
+            }
         }
         return saved;
     }

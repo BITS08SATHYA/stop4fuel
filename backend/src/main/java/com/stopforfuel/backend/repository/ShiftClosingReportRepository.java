@@ -22,4 +22,6 @@ public interface ShiftClosingReportRepository extends ScidRepository<ShiftClosin
     @Override
     @EntityGraph(attributePaths = {"shift", "shift.attendant", "shift.attendant.role"})
     List<ShiftClosingReport> findAllByScid(Long scid);
+
+    List<ShiftClosingReport> findByScidAndStatusNot(Long scid, String status);
 }

@@ -5,14 +5,17 @@ import com.stopforfuel.backend.entity.ProductPriceHistory;
 import com.stopforfuel.backend.repository.ProductPriceHistoryRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class ProductPriceHistoryService {
 
@@ -72,20 +75,58 @@ public class ProductPriceHistoryService {
      * Auto-snapshot a price change: upsert a ProductPriceHistory row for today.
      * Same-day repeated edits overwrite the existing row (kept clean by the
      * (product_id, effective_date) unique constraint).
+     *
+     * Also self-heals snapshot-table drift: if the latest snapshot's price no
+     * longer matches {@code previousPrice} (the value being replaced), some prior
+     * change was missed — backfill an anchor row at (latest.effectiveDate + 1)
+     * capturing previousPrice so shifts in the gap resolve to the right rate.
      */
     @Transactional
-    public void recordPriceChange(Product product, BigDecimal newPrice) {
+    public void recordPriceChange(Product product, BigDecimal previousPrice, BigDecimal newPrice) {
         if (product == null || product.getId() == null || newPrice == null) return;
         LocalDate today = LocalDate.now();
+
+        if (previousPrice != null) {
+            Optional<ProductPriceHistory> latestOpt =
+                    repository.findTopByProductIdOrderByEffectiveDateDesc(product.getId());
+            if (latestOpt.isPresent()) {
+                ProductPriceHistory latest = latestOpt.get();
+                if (latest.getPrice() != null
+                        && latest.getPrice().compareTo(previousPrice) != 0
+                        && latest.getEffectiveDate() != null
+                        && latest.getEffectiveDate().isBefore(today)) {
+                    LocalDate anchorDate = latest.getEffectiveDate().plusDays(1);
+                    if (!anchorDate.isAfter(today.minusDays(1))) {
+                        upsertSnapshot(product, anchorDate, previousPrice, "drift-backfill");
+                    }
+                }
+            }
+        }
+
+        upsertSnapshot(product, today, newPrice, null);
+    }
+
+    /** Backwards-compatible overload — used by callers that don't know the previous price. */
+    @Transactional
+    public void recordPriceChange(Product product, BigDecimal newPrice) {
+        recordPriceChange(product, product != null ? product.getPrice() : null, newPrice);
+    }
+
+    private void upsertSnapshot(Product product, LocalDate date, BigDecimal price, String reason) {
         ProductPriceHistory row = repository
-                .findByProductIdAndEffectiveDate(product.getId(), today)
+                .findByProductIdAndEffectiveDate(product.getId(), date)
                 .orElseGet(() -> {
                     ProductPriceHistory r = new ProductPriceHistory();
                     r.setProduct(product);
-                    r.setEffectiveDate(today);
+                    r.setEffectiveDate(date);
                     return r;
                 });
-        row.setPrice(newPrice);
+        if (row.getPrice() != null && row.getPrice().compareTo(price) == 0) return;
+        row.setPrice(price);
         repository.save(row);
+        if (reason != null) {
+            log.warn("ProductPriceHistory {}: product={} ({}), date={}, price={}",
+                    reason, product.getId(), product.getName(), date, price);
+        }
     }
 }

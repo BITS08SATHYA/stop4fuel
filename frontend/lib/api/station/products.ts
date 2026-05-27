@@ -78,6 +78,44 @@ export const updateProduct = (id: number, product: Partial<Product>): Promise<Pr
 export const deleteProduct = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/products/${id}`, { method: 'DELETE' }).then(handleResponse);
 
+// Product Price History
+export interface ProductPriceHistoryEntry {
+    id: number;
+    effectiveDate: string;
+    productId: number;
+    productName: string;
+    price: number;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export const getProductPriceHistory = (params?: {
+    productId?: number;
+    from?: string;
+    to?: string;
+}): Promise<ProductPriceHistoryEntry[]> => {
+    const q = new URLSearchParams();
+    if (params?.productId != null) q.set('productId', String(params.productId));
+    if (params?.from) q.set('from', params.from);
+    if (params?.to) q.set('to', params.to);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return fetchWithAuth(`${API_BASE_URL}/product-price-history${qs}`).then(handleResponse);
+};
+
+export const createProductPriceHistory = (entry: {
+    product: { id: number };
+    effectiveDate: string;
+    price: number;
+}): Promise<ProductPriceHistoryEntry> =>
+    fetchWithAuth(`${API_BASE_URL}/product-price-history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+    }).then(handleResponse);
+
+export const deleteProductPriceHistory = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/product-price-history/${id}`, { method: 'DELETE' }).then(handleResponse);
+
 // Suppliers
 export const getSuppliers = (): Promise<Supplier[]> =>
     fetchWithAuth(`${API_BASE_URL}/suppliers`).then(handleResponse);
