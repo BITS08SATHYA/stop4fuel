@@ -12,12 +12,14 @@ import html2canvas from "html2canvas";
 // The local print agent stays "dumb" — it still just relays raw bytes.
 // ---------------------------------------------------------------------------
 
-// Printable width in dots. The TVS RP3150 at this site clips a 576-dot raster
-// on the right, so its real printable width is the other common value, 512
-// (= 64 bytes/row). Content is scaled to fit exactly this, so the only failure
-// modes are: still clipped → lower this (448); white gap on the right →
-// raise it (576). This is the single knob for "fits the paper".
-const PRINTER_DOTS = 512;
+// Printable width in dots. The counter printer is now the TVS-E RP 3230, an
+// 80mm / 203 dpi unit whose real printable width is the full 576 dots (72mm).
+// (The earlier RP3150 clipped a 576-dot raster, so it was run at 512 — that
+// left an ~8mm white gap on the RP 3230, which doesn't clip.) Content is scaled
+// to fit exactly this, so the only failure modes are: clipped on the right →
+// lower this (512); white gap on the right → raise it. Single knob for "fits
+// the paper".
+const PRINTER_DOTS = 576;
 const BYTES_PER_ROW = PRINTER_DOTS / 8;          // 72
 // Supersample factor: render the receipt this many times larger than the
 // printer's dot width, then downscale with smoothing before thresholding.
