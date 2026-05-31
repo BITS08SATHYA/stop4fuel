@@ -315,7 +315,7 @@ export default function StatementOrderPage() {
                         <p className="text-muted-foreground mt-1 text-sm">
                             Set the sequence in which Auto-Generate Drafts and bulk PDF process customers.
                             Lower numbers go first. Use <span className="font-mono text-orange-400">-1</span> to skip a customer.
-                            Blocked customers are shown so you can pre-configure their order — auto-gen still skips them at runtime until they're unblocked.
+                            Blocked customers are still included in auto-gen — their outstanding bills are real and need statements. Block status only stops new credit fuel, not billing. To exclude a customer from auto-gen, set its order to <span className="font-mono text-orange-400">-1</span>.
                         </p>
                     </div>
                     <div className="flex gap-2">

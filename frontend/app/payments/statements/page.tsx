@@ -93,6 +93,11 @@ export default function StatementsPage() {
     const [vehicleWisePreview, setVehicleWisePreview] = useState<VehicleWiseStatementPreview | null>(null);
     // Excluded vehicle splits, keyed `${vehicleIdx}:${splitIndex}`. Default: all included.
     const [excludedVehicleSplits, setExcludedVehicleSplits] = useState<Set<string>>(new Set());
+    // Manual whole-bill boundary editing: vehicleIdx -> sorted bill-start indices (always includes 0).
+    // Undefined = use the server's suggested split. Lets the user drag boundaries to hit target liters.
+    const [vehicleBoundaries, setVehicleBoundaries] = useState<Record<number, number[]>>({});
+    // Which vehicle's bill-level split editor is expanded.
+    const [expandedVehicleIdx, setExpandedVehicleIdx] = useState<number | null>(null);
 
     // Detail view
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -160,7 +165,7 @@ export default function StatementsPage() {
         setSelectedBillIds(new Set());
         setUseBillSelection(false);
         setVehicleWisePreview(null);
-        setExcludedVehicleSplits(new Set());
+        setExcludedVehicleSplits(new Set()); setVehicleBoundaries({}); setExpandedVehicleIdx(null);
         // Default the generation mode + ceiling from the customer's saved statement preferences,
         // but don't override an in-progress edit (handleEditStatement sets its own mode).
         if (!editingStatementId && selectedCustomerId) {
@@ -232,7 +237,7 @@ export default function StatementsPage() {
                     Number(selectedCustomerId), fromDate, toDate, ceil
                 );
                 setVehicleWisePreview(preview);
-                setExcludedVehicleSplits(new Set());
+                setExcludedVehicleSplits(new Set()); setVehicleBoundaries({}); setExpandedVehicleIdx(null);
                 setShowPreview(true);
                 // Clear other previews' state.
                 setDayWisePreview(null);
@@ -357,11 +362,67 @@ export default function StatementsPage() {
             return next;
         });
     };
-    // Flatten the vehicle-wise preview into the billId groups the user has kept selected.
+
+    // Liters on a single bill = sum of its product quantities.
+    const billLitersOf = (b: InvoiceBill) => (b.products ?? []).reduce((s, p) => s + Number(p.quantity || 0), 0);
+    // The vehicle's bills in canonical (date) order — reconstructed from the server's suggested
+    // split order, which is already date-sorted.
+    const orderedVehicleBills = (v: VehicleWiseStatementPreview["vehicles"][number]): InvoiceBill[] => {
+        const byId = new Map<number, InvoiceBill>();
+        v.bills.forEach(b => byId.set(b.id as number, b));
+        return v.suggestedSplits.flatMap(s => s.billIds).map(id => byId.get(id)).filter((b): b is InvoiceBill => !!b);
+    };
+    // Default statement start-indices from the server's suggestion (cumulative split sizes).
+    const suggestedStarts = (v: VehicleWiseStatementPreview["vehicles"][number]): number[] => {
+        const starts: number[] = [];
+        let acc = 0;
+        for (const s of v.suggestedSplits) { starts.push(acc); acc += s.billIds.length; }
+        return starts.length ? starts : [0];
+    };
+    const getVehicleStarts = (vIdx: number, v: VehicleWiseStatementPreview["vehicles"][number]): number[] =>
+        vehicleBoundaries[vIdx] ?? suggestedStarts(v);
+    // Resolve the vehicle's bills into statement groups from the (possibly user-edited) boundaries.
+    const computeVehicleGroups = (vIdx: number, v: VehicleWiseStatementPreview["vehicles"][number]) => {
+        const bills = orderedVehicleBills(v);
+        const starts = [...getVehicleStarts(vIdx, v)].sort((a, b) => a - b);
+        if (starts[0] !== 0) starts.unshift(0);
+        const ceiling = v.effectiveCeiling != null ? Number(v.effectiveCeiling) : null;
+        const groups: { billIds: number[]; liters: number; amount: number; exceedsCeiling: boolean }[] = [];
+        for (let i = 0; i < starts.length; i++) {
+            const s = starts[i];
+            const e = i + 1 < starts.length ? starts[i + 1] : bills.length;
+            const slice = bills.slice(s, e);
+            const liters = slice.reduce((x, b) => x + billLitersOf(b), 0);
+            groups.push({
+                billIds: slice.map(b => b.id as number),
+                liters,
+                amount: Math.round(slice.reduce((x, b) => x + Number(b.netAmount || 0), 0)),
+                exceedsCeiling: ceiling != null && liters > ceiling,
+            });
+        }
+        return groups;
+    };
+    // Toggle a statement boundary before bill index i (i>0) for a vehicle.
+    const toggleVehicleBoundary = (vIdx: number, v: VehicleWiseStatementPreview["vehicles"][number], i: number) => {
+        if (i <= 0) return;
+        const set = new Set(getVehicleStarts(vIdx, v));
+        if (set.has(i)) set.delete(i); else set.add(i);
+        const arr = Array.from(set).sort((a, b) => a - b);
+        if (arr[0] !== 0) arr.unshift(0);
+        setVehicleBoundaries(prev => ({ ...prev, [vIdx]: arr }));
+        // Statement indices shift when boundaries change — clear this vehicle's exclusions.
+        setExcludedVehicleSplits(prev => {
+            const next = new Set(prev);
+            for (const k of next) if (k.startsWith(`${vIdx}:`)) next.delete(k);
+            return next;
+        });
+    };
+    // Flatten the vehicle-wise preview into the billId groups the user has kept selected,
+    // honouring any manual boundary edits.
     const selectedVehicleSplitGroups: { billIds: number[] }[] = (vehicleWisePreview?.vehicles ?? [])
-        .flatMap((v, vIdx) => v.suggestedSplits
-            .filter((s, sIdx) => !excludedVehicleSplits.has(vehicleSplitKey(vIdx, sIdx)) && s.billIds.length > 0)
-            .map(s => ({ billIds: s.billIds })));
+        .flatMap((v, vIdx) => computeVehicleGroups(vIdx, v)
+            .filter((g, sIdx) => !excludedVehicleSplits.has(vehicleSplitKey(vIdx, sIdx)) && g.billIds.length > 0)
+            .map(g => ({ billIds: g.billIds })));
 
     const toggleSplitInclude = (splitIdx: number) => {
         setExcludedSplitIdxs(prev => {
@@ -495,7 +556,7 @@ export default function StatementsPage() {
         setMode(layout === "DAY_WISE" ? "DAY_WISE" : "CUSTOMER_WISE");
         setLiterCeiling("");
         setVehicleWisePreview(null);
-        setExcludedVehicleSplits(new Set());
+        setExcludedVehicleSplits(new Set()); setVehicleBoundaries({}); setExpandedVehicleIdx(null);
         setMaxAmount("");
         setDayWisePreview(null);
         setSplitStartIdxs([]);
@@ -652,7 +713,7 @@ export default function StatementsPage() {
         setMode("CUSTOMER_WISE");
         setLiterCeiling("");
         setVehicleWisePreview(null);
-        setExcludedVehicleSplits(new Set());
+        setExcludedVehicleSplits(new Set()); setVehicleBoundaries({}); setExpandedVehicleIdx(null);
     };
 
     const handleViewDetail = async (stmt: Statement) => {
@@ -1486,7 +1547,7 @@ export default function StatementsPage() {
                             setPulledBillIds(new Set());
                             setExpandedBoundaryIdx(null);
                             setExcludedSplitIdxs(new Set());
-                            setExcludedVehicleSplits(new Set());
+                            setExcludedVehicleSplits(new Set()); setVehicleBoundaries({}); setExpandedVehicleIdx(null);
                         };
                         const selectedCustomer = customers.find(c => c.id === Number(selectedCustomerId));
                         const customerDefaultCeiling = selectedCustomer?.statementVehicleLiterCeiling;
@@ -1547,7 +1608,7 @@ export default function StatementsPage() {
                                             min="0"
                                             step="any"
                                             value={literCeiling}
-                                            onChange={(e) => { setLiterCeiling(e.target.value); setShowPreview(false); setVehicleWisePreview(null); setExcludedVehicleSplits(new Set()); }}
+                                            onChange={(e) => { setLiterCeiling(e.target.value); setShowPreview(false); setVehicleWisePreview(null); setExcludedVehicleSplits(new Set()); setVehicleBoundaries({}); setExpandedVehicleIdx(null); }}
                                             placeholder={customerDefaultCeiling != null ? `Default ${customerDefaultCeiling} L (blank = per-vehicle)` : "Blank = no cap / per-vehicle"}
                                             className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                         />
@@ -1627,23 +1688,39 @@ export default function StatementsPage() {
                                 <div className="px-4 py-3 text-sm text-muted-foreground">No unlinked credit bills for this customer in the selected range.</div>
                             )}
                             <div className="divide-y divide-border/50 max-h-[40vh] overflow-y-auto">
-                                {vehicleWisePreview.vehicles.map((v, vIdx) => (
+                                {vehicleWisePreview.vehicles.map((v, vIdx) => {
+                                    const groups = computeVehicleGroups(vIdx, v);
+                                    const isEditing = expandedVehicleIdx === vIdx;
+                                    const orderedBills = orderedVehicleBills(v);
+                                    const starts = (() => { const s = [...getVehicleStarts(vIdx, v)].sort((a, b) => a - b); if (s[0] !== 0) s.unshift(0); return s; })();
+                                    return (
                                     <div key={vIdx} className="px-4 py-3">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-sm font-semibold text-foreground font-mono">{v.vehicleNumber}</span>
-                                            <span className="text-[11px] text-muted-foreground">
-                                                {v.billCount} bill{v.billCount !== 1 ? "s" : ""} · {Number(v.totalLiters).toLocaleString("en-IN", { maximumFractionDigits: 2 })} L
-                                                {v.effectiveCeiling != null && <> · ceiling {Number(v.effectiveCeiling).toLocaleString("en-IN", { maximumFractionDigits: 0 })} L</>}
-                                                {v.suggestedSplits.length > 1 && <> · <span className="text-primary font-semibold">{v.suggestedSplits.length} statements</span></>}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[11px] text-muted-foreground">
+                                                    {v.billCount} bill{v.billCount !== 1 ? "s" : ""} · {Number(v.totalLiters).toLocaleString("en-IN", { maximumFractionDigits: 2 })} L
+                                                    {v.effectiveCeiling != null && <> · ceiling {Number(v.effectiveCeiling).toLocaleString("en-IN", { maximumFractionDigits: 0 })} L</>}
+                                                    {groups.length > 1 && <> · <span className="text-primary font-semibold">{groups.length} statements</span></>}
+                                                </span>
+                                                {orderedBills.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setExpandedVehicleIdx(isEditing ? null : vIdx)}
+                                                        className="text-[10px] uppercase tracking-wide font-bold px-2 py-0.5 rounded border border-primary/40 text-primary hover:bg-primary/10"
+                                                    >
+                                                        {isEditing ? "Done" : "Edit splits"}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                            {v.suggestedSplits.map((s, sIdx) => {
+                                            {groups.map((g, sIdx) => {
                                                 const isExcluded = excludedVehicleSplits.has(vehicleSplitKey(vIdx, sIdx));
                                                 return (
                                                     <label
                                                         key={sIdx}
-                                                        className={`flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${isExcluded ? "border-border/40 bg-muted/10 opacity-60" : s.exceedsCeiling ? "border-amber-500/40 bg-amber-500/5" : "border-primary/40 bg-primary/5"}`}
+                                                        className={`flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${isExcluded ? "border-border/40 bg-muted/10 opacity-60" : g.exceedsCeiling ? "border-amber-500/40 bg-amber-500/5" : "border-primary/40 bg-primary/5"}`}
                                                     >
                                                         <input
                                                             type="checkbox"
@@ -1653,24 +1730,57 @@ export default function StatementsPage() {
                                                         />
                                                         <div className="text-xs">
                                                             <div className="font-semibold text-foreground">
-                                                                Statement {sIdx + 1}{v.suggestedSplits.length > 1 ? ` / ${v.suggestedSplits.length}` : ""}
+                                                                Statement {sIdx + 1}{groups.length > 1 ? ` / ${groups.length}` : ""}
                                                             </div>
                                                             <div className="text-muted-foreground">
-                                                                {s.billCount} bill{s.billCount !== 1 ? "s" : ""} · {Number(s.totalLiters).toLocaleString("en-IN", { maximumFractionDigits: 2 })} L
+                                                                {g.billIds.length} bill{g.billIds.length !== 1 ? "s" : ""} · {g.liters.toLocaleString("en-IN", { maximumFractionDigits: 2 })} L
                                                             </div>
                                                             <div className="text-foreground font-medium">
-                                                                {Number(s.total).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
+                                                                {g.amount.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
                                                             </div>
-                                                            {s.exceedsCeiling && (
-                                                                <div className="text-[10px] text-amber-400 font-semibold mt-0.5">Single bill over ceiling</div>
+                                                            {g.exceedsCeiling && (
+                                                                <div className="text-[10px] text-amber-400 font-semibold mt-0.5">Over ceiling</div>
                                                             )}
                                                         </div>
                                                     </label>
                                                 );
                                             })}
                                         </div>
+                                        {/* Manual whole-bill split editor — click between bills to start/merge a statement */}
+                                        {isEditing && (
+                                            <div className="mt-2 border border-border/50 rounded-lg p-2">
+                                                <p className="text-[10px] text-muted-foreground mb-1">
+                                                    Click <span className="font-semibold text-primary">+ split here</span> between bills to start a new statement (or click a divider to merge). The cards above show running liters &amp; amount.
+                                                </p>
+                                                {orderedBills.map((b, i) => {
+                                                    const isBoundary = starts.includes(i);
+                                                    const stmtNo = starts.filter(s => s <= i).length;
+                                                    return (
+                                                        <Fragment key={b.id}>
+                                                            {i > 0 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleVehicleBoundary(vIdx, v, i)}
+                                                                    className={`w-full text-[10px] py-0.5 my-0.5 rounded border-dashed transition-colors ${isBoundary ? "border border-primary/50 text-primary bg-primary/5 font-semibold" : "border border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
+                                                                >
+                                                                    {isBoundary ? `── Statement ${stmtNo} starts · click to merge ──` : "+ split here"}
+                                                                </button>
+                                                            )}
+                                                            <div className="flex items-center gap-2 text-xs px-1 py-0.5">
+                                                                <span className="inline-flex items-center justify-center w-5 h-4 rounded text-[9px] font-bold bg-primary/15 text-primary">S{stmtNo}</span>
+                                                                <span className="text-muted-foreground w-20">{b.date?.slice(0, 10)}</span>
+                                                                <span className="font-mono text-foreground flex-1 truncate">{b.billNo || `#${b.id}`}</span>
+                                                                <span className="text-foreground">{billLitersOf(b).toLocaleString("en-IN", { maximumFractionDigits: 2 })} L</span>
+                                                                <span className="text-muted-foreground w-20 text-right">{Number(b.netAmount || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+                                                            </div>
+                                                        </Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
