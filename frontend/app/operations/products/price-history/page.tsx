@@ -11,6 +11,7 @@ import {
     getProductPriceHistory,
     createProductPriceHistory,
     deleteProductPriceHistory,
+    isFuelProduct,
     Product,
     ProductPriceHistoryEntry,
 } from "@/lib/api/station";
@@ -35,6 +36,7 @@ export default function PriceHistoryPage() {
     const [entries, setEntries] = useState<ProductPriceHistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [productFilter, setProductFilter] = useState<string>("ALL");
+    const [categoryFilter, setCategoryFilter] = useState<"ALL" | "FUEL" | "NON_FUEL">("ALL");
     const [from, setFrom] = useState<string>(defaultFromDate());
     const [to, setTo] = useState<string>(todayISO());
 
@@ -67,10 +69,22 @@ export default function PriceHistoryPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [productFilter, from, to]);
 
+    // Set of productIds classified as fuel (mirrors backend FuelClassifier).
+    const fuelProductIds = useMemo(
+        () => new Set(products.filter(isFuelProduct).map((p) => p.id)),
+        [products]
+    );
+
     // Compute delta vs previous (older) snapshot per product.
     const rows = useMemo(() => {
+        const matchesCategory = (e: ProductPriceHistoryEntry) => {
+            if (categoryFilter === "ALL") return true;
+            const isFuel = fuelProductIds.has(e.productId);
+            return categoryFilter === "FUEL" ? isFuel : !isFuel;
+        };
+        const filtered = entries.filter(matchesCategory);
         const byProduct = new Map<number, ProductPriceHistoryEntry[]>();
-        for (const e of entries) {
+        for (const e of filtered) {
             const arr = byProduct.get(e.productId) || [];
             arr.push(e);
             byProduct.set(e.productId, arr);
@@ -90,15 +104,27 @@ export default function PriceHistoryPage() {
             if (d !== 0) return d;
             return a.productName.localeCompare(b.productName);
         });
-    }, [entries]);
+    }, [entries, categoryFilter, fuelProductIds]);
 
     const productOptions = useMemo(() => {
+        const visible = products.filter((p) => {
+            if (categoryFilter === "ALL") return true;
+            const isFuel = fuelProductIds.has(p.id);
+            return categoryFilter === "FUEL" ? isFuel : !isFuel;
+        });
         const opts = [{ value: "ALL", label: "All Products" }];
-        for (const p of products) {
+        for (const p of visible) {
             opts.push({ value: String(p.id), label: p.name });
         }
         return opts;
-    }, [products]);
+    }, [products, categoryFilter, fuelProductIds]);
+
+    // If the selected product is no longer in the chosen category, reset to All.
+    useEffect(() => {
+        if (productFilter !== "ALL" && !productOptions.some((o) => o.value === productFilter)) {
+            setProductFilter("ALL");
+        }
+    }, [productOptions, productFilter]);
 
     const handleAdd = async () => {
         if (!addProductId || !addDate || !addPrice) {
@@ -165,8 +191,21 @@ export default function PriceHistoryPage() {
                 </PermissionGate>
             </div>
 
-            <GlassCard className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <GlassCard className="p-4 relative z-20">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                        <label className="block text-xs text-muted-foreground mb-1">Category</label>
+                        <StyledSelect
+                            value={categoryFilter}
+                            onChange={(v) => setCategoryFilter(v as "ALL" | "FUEL" | "NON_FUEL")}
+                            options={[
+                                { value: "ALL", label: "All Categories" },
+                                { value: "FUEL", label: "Fuel" },
+                                { value: "NON_FUEL", label: "Non-Fuel" },
+                            ]}
+                            placeholder="All Categories"
+                        />
+                    </div>
                     <div>
                         <label className="block text-xs text-muted-foreground mb-1">Product</label>
                         <StyledSelect

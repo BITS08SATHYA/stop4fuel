@@ -45,6 +45,33 @@ export interface Product {
     scid?: number;
 }
 
+/**
+ * Mirror of the backend {@code FuelClassifier} — the single source of truth for
+ * deciding whether a product is fuel (XP / MS / HSD) or non-fuel (OTHER).
+ * Keep in sync with backend/.../service/FuelClassifier.java.
+ */
+export type FuelLabel = "XP" | "MS" | "HSD" | "OTHER";
+
+export function classifyFuel(p: Pick<Product, "name" | "fuelFamily" | "gradeType">): FuelLabel {
+    const fuelFamily = (p.fuelFamily || "").toUpperCase();
+    const name = (p.name || "").toUpperCase();
+    const gradeName = (p.gradeType?.name || "").toUpperCase();
+    if (fuelFamily === "DIESEL" || name.includes("DIESEL") || name === "HSD") return "HSD";
+    const petrol =
+        fuelFamily === "PETROL" || name.includes("PETROL") || name === "MS" || name.includes("XTRA");
+    if (!petrol) return "OTHER";
+    const isPremium =
+        name.includes("XTRA") ||
+        name.includes("PREMIUM") ||
+        name === "XP" ||
+        gradeName.includes("XTRA") ||
+        gradeName.includes("PREMIUM");
+    return isPremium ? "XP" : "MS";
+}
+
+export const isFuelProduct = (p: Pick<Product, "name" | "fuelFamily" | "gradeType">): boolean =>
+    classifyFuel(p) !== "OTHER";
+
 // Products
 export const getActiveProducts = (): Promise<Product[]> =>
     fetchWithAuth(`${API_BASE_URL}/products/active`).then(handleResponse);
