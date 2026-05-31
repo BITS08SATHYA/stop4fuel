@@ -59,6 +59,12 @@ public class Vehicle extends SimpleBaseEntity {
     @Column(name = "statement_order")
     private Integer statementOrder;
 
+    /** Optional per-vehicle override of the customer's VEHICLE_WISE liter ceiling. When set,
+     * takes precedence over Customer.statementVehicleLiterCeiling. NULL = fall back to the
+     * customer default (which may itself be NULL = no cap). */
+    @Column(name = "statement_liter_ceiling", precision = 19, scale = 4)
+    private BigDecimal statementLiterCeiling;
+
     // Convenience methods
     @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     public boolean isActive() {

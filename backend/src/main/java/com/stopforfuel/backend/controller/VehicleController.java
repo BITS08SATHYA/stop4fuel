@@ -113,16 +113,25 @@ public class VehicleController {
         java.util.List<java.util.Map<String, Object>> updates =
                 (java.util.List<java.util.Map<String, Object>>) body.get("updates");
         java.util.Map<Long, Integer> map = new java.util.LinkedHashMap<>();
+        java.util.Map<Long, java.math.BigDecimal> ceilings = new java.util.LinkedHashMap<>();
         if (updates != null) {
             for (var entry : updates) {
                 Object idRaw = entry.get("vehicleId");
-                Object orderRaw = entry.get("statementOrder");
                 if (idRaw == null) continue;
                 Long id = Long.valueOf(idRaw.toString());
-                Integer order = orderRaw == null ? null : Integer.valueOf(orderRaw.toString());
-                map.put(id, order);
+                // statementOrder is applied only when the key is present in the entry.
+                if (entry.containsKey("statementOrder")) {
+                    Object orderRaw = entry.get("statementOrder");
+                    map.put(id, orderRaw == null ? null : Integer.valueOf(orderRaw.toString()));
+                }
+                // statementLiterCeiling: present + null clears it; absent leaves it untouched.
+                if (entry.containsKey("statementLiterCeiling")) {
+                    Object ceilRaw = entry.get("statementLiterCeiling");
+                    String s = ceilRaw == null ? null : ceilRaw.toString().trim();
+                    ceilings.put(id, (s == null || s.isEmpty()) ? null : new java.math.BigDecimal(s));
+                }
             }
         }
-        return vehicleService.bulkUpdateVehicleStatementOrder(map);
+        return vehicleService.bulkUpdateVehicleStatementOrder(map, ceilings);
     }
 }

@@ -4,6 +4,7 @@ import com.stopforfuel.backend.dto.DayWiseStatementPreview;
 import com.stopforfuel.backend.dto.InvoiceBillDTO;
 import com.stopforfuel.backend.dto.StatementDTO;
 import com.stopforfuel.backend.dto.StatementStats;
+import com.stopforfuel.backend.dto.VehicleWiseStatementPreview;
 import com.stopforfuel.backend.entity.Company;
 import com.stopforfuel.backend.entity.InvoiceBill;
 import com.stopforfuel.backend.entity.Statement;
@@ -181,6 +182,22 @@ public class StatementController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) java.math.BigDecimal maxAmount) {
         return statementService.previewDayWise(customerId, fromDate, toDate, maxAmount);
+    }
+
+    /**
+     * Preview bills grouped by vehicle, each vehicle split into statement-sized groups by liter
+     * ceiling. literCeiling is optional — when omitted, each vehicle uses its effective ceiling
+     * (vehicle override → customer default). When supplied, it overrides all vehicles for this preview.
+     * GET /api/statements/preview-vehicle-wise?customerId=1&fromDate=...&toDate=...&literCeiling=250
+     */
+    @GetMapping("/preview-vehicle-wise")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public VehicleWiseStatementPreview previewVehicleWise(
+            @RequestParam Long customerId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) java.math.BigDecimal literCeiling) {
+        return statementService.previewVehicleWise(customerId, fromDate, toDate, literCeiling);
     }
 
     public record GenerateBatchRequest(Long customerId, ReportLayout reportLayout, List<BatchEntry> statements) {

@@ -178,6 +178,7 @@ public class VehicleService {
                     m.put("id", v.getId());
                     m.put("vehicleNumber", v.getVehicleNumber());
                     m.put("statementOrder", v.getStatementOrder());
+                    m.put("statementLiterCeiling", v.getStatementLiterCeiling());
                     m.put("status", v.getStatus() != null ? v.getStatus().name() : null);
                     return m;
                 })
@@ -192,14 +193,30 @@ public class VehicleService {
      */
     @Transactional
     public List<java.util.Map<String, Object>> bulkUpdateVehicleStatementOrder(java.util.Map<Long, Integer> updates) {
-        if (updates == null || updates.isEmpty()) {
+        return bulkUpdateVehicleStatementOrder(updates, java.util.Collections.emptyMap());
+    }
+
+    /**
+     * Bulk-update vehicle statement_order and/or per-vehicle liter ceiling. {@code orders} carries
+     * statement-order changes (validated for duplicates as above); {@code ceilings} carries the
+     * optional per-vehicle liter-ceiling override (null value clears it). A vehicle may appear in
+     * either or both maps; the union of keys is loaded and saved.
+     */
+    @Transactional
+    public List<java.util.Map<String, Object>> bulkUpdateVehicleStatementOrder(
+            java.util.Map<Long, Integer> orders, java.util.Map<Long, java.math.BigDecimal> ceilings) {
+        java.util.Map<Long, Integer> updates = orders != null ? orders : java.util.Collections.emptyMap();
+        if (ceilings == null) ceilings = java.util.Collections.emptyMap();
+        if (updates.isEmpty() && ceilings.isEmpty()) {
             return java.util.Collections.emptyList();
         }
-        List<Vehicle> vehicles = vehicleRepository.findByIdIn(new java.util.ArrayList<>(updates.keySet()));
+        java.util.Set<Long> allIds = new java.util.LinkedHashSet<>(updates.keySet());
+        allIds.addAll(ceilings.keySet());
+        List<Vehicle> vehicles = vehicleRepository.findByIdIn(new java.util.ArrayList<>(allIds));
         java.util.Map<Long, Vehicle> byId = new java.util.HashMap<>();
         for (Vehicle v : vehicles) byId.put(v.getId(), v);
 
-        List<Long> unknown = updates.keySet().stream().filter(id -> !byId.containsKey(id)).toList();
+        List<Long> unknown = allIds.stream().filter(id -> !byId.containsKey(id)).toList();
         if (!unknown.isEmpty()) {
             throw new BusinessException("Unknown vehicle ids: " + unknown);
         }
@@ -236,10 +253,11 @@ public class VehicleService {
             }
         }
 
-        // Apply
-        for (var u : updates.entrySet()) {
-            Vehicle v = byId.get(u.getKey());
-            v.setStatementOrder(u.getValue());
+        // Apply (order and/or ceiling — a vehicle may be touched by either map)
+        for (Long id : allIds) {
+            Vehicle v = byId.get(id);
+            if (updates.containsKey(id)) v.setStatementOrder(updates.get(id));
+            if (ceilings.containsKey(id)) v.setStatementLiterCeiling(ceilings.get(id));
             vehicleRepository.save(v);
         }
 

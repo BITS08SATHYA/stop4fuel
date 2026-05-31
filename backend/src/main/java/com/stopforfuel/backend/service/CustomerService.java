@@ -117,6 +117,7 @@ public class CustomerService {
         customer.setLongitude(customerDetails.getLongitude());
         customer.setStatementFrequency(customerDetails.getStatementFrequency());
         customer.setStatementGrouping(customerDetails.getStatementGrouping());
+        customer.setStatementVehicleLiterCeiling(customerDetails.getStatementVehicleLiterCeiling());
         customer.setStatementOrder(customerDetails.getStatementOrder());
 
         return customerRepository.save(customer);

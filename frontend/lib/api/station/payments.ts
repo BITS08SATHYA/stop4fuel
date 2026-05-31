@@ -56,6 +56,37 @@ export interface DayWiseStatementPreview {
     suggestedSplits: DayWiseSplitGroup[];
 }
 
+export interface VehicleWiseSplitGroup {
+    index: number;
+    billCount: number;
+    billIds: number[];
+    total: number;
+    totalLiters: number;
+    exceedsCeiling: boolean;
+}
+
+export interface VehicleBucket {
+    vehicleId: number | null;
+    vehicleNumber: string;
+    effectiveCeiling: number | null;
+    billCount: number;
+    totalLiters: number;
+    total: number;
+    bills: InvoiceBill[];
+    suggestedSplits: VehicleWiseSplitGroup[];
+}
+
+export interface VehicleWiseStatementPreview {
+    customerId: number;
+    customerName: string;
+    fromDate: string;
+    toDate: string;
+    defaultCeiling: number | null;
+    totalBills: number;
+    grandTotal: number;
+    vehicles: VehicleBucket[];
+}
+
 export interface Payment {
     id?: number;
     paymentDate: string;
@@ -199,6 +230,23 @@ export const previewStatementDayWise = (
     });
     if (maxAmount != null) params.append('maxAmount', String(maxAmount));
     return fetchWithAuth(`${API_BASE_URL}/statements/preview-day-wise?${params}`).then(handleResponse);
+};
+
+/**
+ * Preview a customer's bills grouped by vehicle, each vehicle split into statement-sized
+ * groups by liter ceiling. When literCeiling is omitted each vehicle uses its effective
+ * ceiling (per-vehicle override → customer default); when supplied it overrides all vehicles.
+ */
+export const previewStatementVehicleWise = (
+    customerId: number, fromDate: string, toDate: string, literCeiling?: number
+): Promise<VehicleWiseStatementPreview> => {
+    const params = new URLSearchParams({
+        customerId: String(customerId),
+        fromDate,
+        toDate,
+    });
+    if (literCeiling != null) params.append('literCeiling', String(literCeiling));
+    return fetchWithAuth(`${API_BASE_URL}/statements/preview-vehicle-wise?${params}`).then(handleResponse);
 };
 
 /**

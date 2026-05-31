@@ -50,6 +50,7 @@ public class CustomerDetailDTO {
     // Statement preferences
     private String statementFrequency;
     private String statementGrouping;
+    private BigDecimal statementVehicleLiterCeiling;
     private Integer statementOrder;
 
     // Credit monitoring
@@ -89,6 +90,7 @@ public class CustomerDetailDTO {
                 .longitude(c.getLongitude())
                 .statementFrequency(c.getStatementFrequency())
                 .statementGrouping(c.getStatementGrouping())
+                .statementVehicleLiterCeiling(c.getStatementVehicleLiterCeiling())
                 .statementOrder(c.getStatementOrder())
                 .lastBlockedAt(c.getLastBlockedAt())
                 .blockCount(c.getBlockCount())

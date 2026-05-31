@@ -44,6 +44,7 @@ public class CustomerListDTO {
 
     // Statement preferences
     private String statementGrouping;
+    private BigDecimal statementVehicleLiterCeiling;
 
     public static CustomerListDTO from(Customer c) {
         return CustomerListDTO.builder()
@@ -67,6 +68,7 @@ public class CustomerListDTO {
                 .creditLimitLiters(c.getCreditLimitLiters())
                 .consumedLiters(c.getConsumedLiters())
                 .statementGrouping(c.getStatementGrouping())
+                .statementVehicleLiterCeiling(c.getStatementVehicleLiterCeiling())
                 .build();
     }
 

@@ -15,7 +15,7 @@ import {
 import { ListOrdered, Save, RotateCcw, AlertTriangle, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon, Truck } from "lucide-react";
 
 type Row = StatementOrderEntry & { _draft: number | null };
-type VehicleRow = VehicleStatementOrderEntry & { _draft: number | null };
+type VehicleRow = VehicleStatementOrderEntry & { _draft: number | null; _draftCeiling: number | null };
 
 const FREQS = ["MONTHLY", "BIWEEKLY", "WEEKLY", "CUSTOM"] as const;
 type Freq = typeof FREQS[number];
@@ -99,7 +99,9 @@ export default function StatementOrderPage() {
             const orig = vehicleOriginalByCustomer.get(custId);
             if (!orig) continue;
             for (const v of vehicles) {
-                if ((orig.get(v.id) ?? null) !== (v._draft ?? null)) s.add(v.id);
+                const orderChanged = (orig.get(v.id) ?? null) !== (v._draft ?? null);
+                const ceilingChanged = (v.statementLiterCeiling ?? null) !== (v._draftCeiling ?? null);
+                if (orderChanged || ceilingChanged) s.add(v.id);
             }
         }
         return s;
@@ -163,7 +165,7 @@ export default function StatementOrderPage() {
             for (const [custId, vehicles] of prev.entries()) {
                 const orig = vehicleOriginalByCustomer.get(custId);
                 if (!orig) continue;
-                next.set(custId, vehicles.map((v) => ({ ...v, _draft: orig.get(v.id) ?? null })));
+                next.set(custId, vehicles.map((v) => ({ ...v, _draft: orig.get(v.id) ?? null, _draftCeiling: v.statementLiterCeiling ?? null })));
             }
             return next;
         });
@@ -192,7 +194,7 @@ export default function StatementOrderPage() {
                 });
                 setVehicleRowsByCustomer((prev) => {
                     const next = new Map(prev);
-                    next.set(customerId, data.map((d) => ({ ...d, _draft: d.statementOrder ?? null })));
+                    next.set(customerId, data.map((d) => ({ ...d, _draft: d.statementOrder ?? null, _draftCeiling: d.statementLiterCeiling ?? null })));
                     return next;
                 });
             } catch (err) {
@@ -222,6 +224,18 @@ export default function StatementOrderPage() {
         });
     };
 
+    const updateVehicleCeiling = (customerId: number, vehicleId: number, value: string) => {
+        const v = value.trim();
+        const next = v === "" ? null : Number.parseFloat(v);
+        if (v !== "" && Number.isNaN(next as number)) return;
+        setVehicleRowsByCustomer((prev) => {
+            const map = new Map(prev);
+            const list = map.get(customerId) || [];
+            map.set(customerId, list.map((r) => (r.id === vehicleId ? { ...r, _draftCeiling: next } : r)));
+            return map;
+        });
+    };
+
     const handleSave = async () => {
         if (dupOrders.size > 0) {
             showToast.error("Resolve duplicate orders before saving");
@@ -237,11 +251,11 @@ export default function StatementOrderPage() {
                 customerUpdates.push({ customerId: r.id, statementOrder: r._draft ?? null });
             }
         }
-        const vehicleUpdates: { vehicleId: number; statementOrder: number | null }[] = [];
+        const vehicleUpdates: { vehicleId: number; statementOrder: number | null; statementLiterCeiling: number | null }[] = [];
         for (const [, vehicles] of vehicleRowsByCustomer.entries()) {
             for (const v of vehicles) {
                 if (dirtyVehicleIds.has(v.id)) {
-                    vehicleUpdates.push({ vehicleId: v.id, statementOrder: v._draft ?? null });
+                    vehicleUpdates.push({ vehicleId: v.id, statementOrder: v._draft ?? null, statementLiterCeiling: v._draftCeiling ?? null });
                 }
             }
         }
@@ -272,7 +286,7 @@ export default function StatementOrderPage() {
                     });
                     setVehicleRowsByCustomer((prev) => {
                         const next = new Map(prev);
-                        next.set(custId, data.map((d) => ({ ...d, _draft: d.statementOrder ?? null })));
+                        next.set(custId, data.map((d) => ({ ...d, _draft: d.statementOrder ?? null, _draftCeiling: d.statementLiterCeiling ?? null })));
                         return next;
                     });
                 }
@@ -481,7 +495,7 @@ export default function StatementOrderPage() {
                                                                     <div className="pl-8">
                                                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
                                                                             <Truck className="w-3 h-3" />
-                                                                            Vehicle order ({vehicleRows.length} vehicles)
+                                                                            Vehicle order &amp; liter ceiling ({vehicleRows.length} vehicles)
                                                                         </div>
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
                                                                             {vehicleRows.map((v) => {
@@ -506,11 +520,25 @@ export default function StatementOrderPage() {
                                                                                             value={v._draft ?? ""}
                                                                                             onChange={(e) => updateVehicleOrder(r.id, v.id, e.target.value)}
                                                                                             placeholder="—"
+                                                                                            title="Statement order"
                                                                                             className={[
                                                                                                 "w-16 bg-white/5 border rounded px-2 py-0.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/40 text-right",
                                                                                                 vIsDup ? "border-yellow-500/60" : "border-white/10",
                                                                                             ].join(" ")}
                                                                                         />
+                                                                                        <div className="flex items-center gap-0.5">
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                step="any"
+                                                                                                value={v._draftCeiling ?? ""}
+                                                                                                onChange={(e) => updateVehicleCeiling(r.id, v.id, e.target.value)}
+                                                                                                placeholder="cap"
+                                                                                                title="Liter ceiling override (blank = use customer default)"
+                                                                                                className="w-20 bg-white/5 border border-white/10 rounded px-2 py-0.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/40 text-right"
+                                                                                            />
+                                                                                            <span className="text-[9px] text-muted-foreground">L</span>
+                                                                                        </div>
                                                                                     </div>
                                                                                 );
                                                                             })}

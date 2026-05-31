@@ -3,6 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.dto.DayWiseStatementPreview;
 import com.stopforfuel.backend.dto.InvoiceBillDTO;
 import com.stopforfuel.backend.dto.StatementStats;
+import com.stopforfuel.backend.dto.VehicleWiseStatementPreview;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.enums.ReportLayout;
 import com.stopforfuel.backend.exception.BusinessException;
@@ -195,6 +196,51 @@ public class StatementService {
             invoiceBillRepository.save(bill);
         }
         return saved;
+    }
+
+    /** Total liters on a bill = sum of its invoice-product quantities. */
+    public BigDecimal billLiters(InvoiceBill bill) {
+        BigDecimal liters = BigDecimal.ZERO;
+        if (bill.getProducts() != null) {
+            for (InvoiceProduct ip : bill.getProducts()) {
+                if (ip.getQuantity() != null) liters = liters.add(ip.getQuantity());
+            }
+        }
+        return liters;
+    }
+
+    /**
+     * Split a vehicle's bills into statement-sized groups so each group's total liters stays
+     * within the ceiling. Whole bills are kept intact and packed in chronological (bill-date)
+     * order: a bill is added to the current group unless it would push the group over the
+     * ceiling, in which case the group is closed and a new one started. A single bill whose own
+     * liters exceed the ceiling becomes its own group. A null/non-positive ceiling means no cap —
+     * all bills come back as one group (preserving the "one statement per vehicle" default).
+     */
+    public List<List<InvoiceBill>> splitBillsByLiterCeiling(List<InvoiceBill> bills, BigDecimal ceiling) {
+        List<InvoiceBill> sorted = new ArrayList<>(bills);
+        sorted.sort(java.util.Comparator.comparing(
+                InvoiceBill::getDate, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+
+        if (ceiling == null || ceiling.compareTo(BigDecimal.ZERO) <= 0) {
+            return sorted.isEmpty() ? new ArrayList<>() : new ArrayList<>(List.of(sorted));
+        }
+
+        List<List<InvoiceBill>> groups = new ArrayList<>();
+        List<InvoiceBill> current = new ArrayList<>();
+        BigDecimal runningLiters = BigDecimal.ZERO;
+        for (InvoiceBill bill : sorted) {
+            BigDecimal liters = billLiters(bill);
+            if (!current.isEmpty() && runningLiters.add(liters).compareTo(ceiling) > 0) {
+                groups.add(current);
+                current = new ArrayList<>();
+                runningLiters = BigDecimal.ZERO;
+            }
+            current.add(bill);
+            runningLiters = runningLiters.add(liters);
+        }
+        if (!current.isEmpty()) groups.add(current);
+        return groups;
     }
 
     /**
@@ -430,6 +476,102 @@ public class StatementService {
                 .grandTotal(grandTotalRaw.setScale(0, RoundingMode.HALF_UP))
                 .days(days)
                 .suggestedSplits(splits)
+                .build();
+    }
+
+    /**
+     * Preview unlinked credit bills grouped by vehicle, each vehicle further split into
+     * statement-sized groups by liter ceiling. When literCeilingOverride is provided it applies
+     * to every vehicle for this preview; otherwise each vehicle uses its effective ceiling
+     * (vehicle.statementLiterCeiling, falling back to customer.statementVehicleLiterCeiling).
+     * The suggestedSplits carry billIds per group — the UI submits the user's chosen groups to
+     * generateBatch with reportLayout=VEHICLE_WISE.
+     */
+    @Transactional(readOnly = true)
+    public VehicleWiseStatementPreview previewVehicleWise(Long customerId, LocalDate fromDate, LocalDate toDate,
+                                                          BigDecimal literCeilingOverride) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found with id: " + customerId));
+
+        LocalDateTime fromDateTime = fromDate.atStartOfDay();
+        LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
+        List<InvoiceBill> bills = invoiceBillRepository.findUnlinkedCreditBills(customerId, fromDateTime, toDateTime);
+
+        // Group by vehicle, preserving encounter order. Null-vehicle bills go to a "(no vehicle)" bucket.
+        LinkedHashMap<Long, List<InvoiceBill>> byVehicle = new LinkedHashMap<>();
+        Map<Long, Vehicle> vehicleById = new LinkedHashMap<>();
+        for (InvoiceBill b : bills) {
+            Vehicle v = b.getVehicle();
+            Long key = v != null ? v.getId() : null;
+            byVehicle.computeIfAbsent(key, k -> new ArrayList<>()).add(b);
+            if (v != null) vehicleById.putIfAbsent(key, v);
+        }
+
+        BigDecimal grandTotalRaw = BigDecimal.ZERO;
+        List<VehicleWiseStatementPreview.VehicleBucket> buckets = new ArrayList<>(byVehicle.size());
+        for (Map.Entry<Long, List<InvoiceBill>> e : byVehicle.entrySet()) {
+            Long vehicleId = e.getKey();
+            List<InvoiceBill> vehicleBills = e.getValue();
+            Vehicle vehicle = vehicleId != null ? vehicleById.get(vehicleId) : null;
+
+            BigDecimal ceiling = literCeilingOverride != null ? literCeilingOverride
+                    : (vehicle != null && vehicle.getStatementLiterCeiling() != null
+                        ? vehicle.getStatementLiterCeiling()
+                        : customer.getStatementVehicleLiterCeiling());
+
+            BigDecimal vehicleRaw = BigDecimal.ZERO;
+            BigDecimal vehicleLiters = BigDecimal.ZERO;
+            for (InvoiceBill b : vehicleBills) {
+                if (b.getNetAmount() != null) vehicleRaw = vehicleRaw.add(b.getNetAmount());
+                vehicleLiters = vehicleLiters.add(billLiters(b));
+            }
+            grandTotalRaw = grandTotalRaw.add(vehicleRaw);
+
+            List<List<InvoiceBill>> groups = splitBillsByLiterCeiling(vehicleBills, ceiling);
+            List<VehicleWiseStatementPreview.SplitGroup> splits = new ArrayList<>(groups.size());
+            int idx = 0;
+            for (List<InvoiceBill> group : groups) {
+                BigDecimal groupRaw = BigDecimal.ZERO;
+                BigDecimal groupLiters = BigDecimal.ZERO;
+                List<Long> billIds = new ArrayList<>(group.size());
+                for (InvoiceBill b : group) {
+                    if (b.getNetAmount() != null) groupRaw = groupRaw.add(b.getNetAmount());
+                    groupLiters = groupLiters.add(billLiters(b));
+                    billIds.add(b.getId());
+                }
+                boolean exceeds = ceiling != null && ceiling.compareTo(BigDecimal.ZERO) > 0
+                        && group.size() == 1 && groupLiters.compareTo(ceiling) > 0;
+                splits.add(VehicleWiseStatementPreview.SplitGroup.builder()
+                        .index(idx++)
+                        .billCount(group.size())
+                        .billIds(billIds)
+                        .total(groupRaw.setScale(0, RoundingMode.HALF_UP))
+                        .totalLiters(groupLiters)
+                        .exceedsCeiling(exceeds)
+                        .build());
+            }
+
+            buckets.add(VehicleWiseStatementPreview.VehicleBucket.builder()
+                    .vehicleId(vehicleId)
+                    .vehicleNumber(vehicle != null ? vehicle.getVehicleNumber() : "(no vehicle)")
+                    .effectiveCeiling(ceiling)
+                    .billCount(vehicleBills.size())
+                    .totalLiters(vehicleLiters)
+                    .total(vehicleRaw.setScale(0, RoundingMode.HALF_UP))
+                    .bills(vehicleBills.stream().map(InvoiceBillDTO::from).toList())
+                    .suggestedSplits(splits)
+                    .build());
+        }
+
+        return VehicleWiseStatementPreview.builder()
+                .customerId(customer.getId())
+                .customerName(customer.getName())
+                .fromDate(fromDate)
+                .toDate(toDate)
+                .defaultCeiling(customer.getStatementVehicleLiterCeiling())
+                .totalBills(bills.size())
+                .grandTotal(grandTotalRaw.setScale(0, RoundingMode.HALF_UP))
+                .vehicles(buckets)
                 .build();
     }
 

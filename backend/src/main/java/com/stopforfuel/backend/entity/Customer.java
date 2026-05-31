@@ -70,6 +70,13 @@ public class Customer extends User {
     @Column(name = "statement_grouping", length = 20)
     private String statementGrouping; // CUSTOMER_WISE, VEHICLE_WISE, BILL_WISE
 
+    /** Default per-vehicle liter ceiling for VEHICLE_WISE statements. When a vehicle's bills
+     * exceed this many liters, the statement is split into multiple statements (whole bills,
+     * date order). NULL = no cap (one statement per vehicle). A vehicle may override this via
+     * Vehicle.statementLiterCeiling. */
+    @Column(name = "statement_vehicle_liter_ceiling", precision = 19, scale = 4)
+    private BigDecimal statementVehicleLiterCeiling;
+
     /** Sort key used by Auto-Generate Drafts and bulk PDF: ascending, nulls last. */
     @Column(name = "statement_order")
     private Integer statementOrder;

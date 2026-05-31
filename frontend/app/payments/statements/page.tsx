@@ -23,9 +23,11 @@ import {
     updateCustomerCreditLimits, updateVehicleLiterLimit,
     updateStatementNo, getStatementSequence, setStatementSequence,
     previewStatementDayWise, generateStatementBatch, exportStatementDetailExcel,
+    previewStatementVehicleWise,
     type Statement, type InvoiceBill, type Customer, type Vehicle,
     type Product, type PageResponse, type StatementStats, type NextBillNoView,
-    type ReportLayout, type DayWiseStatementPreview, type DayWiseSplitGroup
+    type ReportLayout, type DayWiseStatementPreview, type DayWiseSplitGroup,
+    type VehicleWiseStatementPreview
 } from "@/lib/api/station";
 import { PermissionGate } from "@/components/permission-gate";
 import { showToast } from "@/components/ui/toast";
@@ -81,6 +83,16 @@ export default function StatementsPage() {
     // Default: every split is included; we track exclusions so newly-appearing splits
     // (after a boundary toggle) are included automatically.
     const [excludedSplitIdxs, setExcludedSplitIdxs] = useState<Set<number>>(new Set());
+
+    // Generation mode: CUSTOMER_WISE (one statement, all vehicles) | VEHICLE_WISE (one statement
+    // per vehicle, split by liter ceiling) | DAY_WISE (existing day/cap split). Drives reportLayout.
+    type GenMode = "CUSTOMER_WISE" | "VEHICLE_WISE" | "DAY_WISE";
+    const [mode, setMode] = useState<GenMode>("CUSTOMER_WISE");
+    // Vehicle-wise liter ceiling override (blank = use each vehicle's saved effective ceiling).
+    const [literCeiling, setLiterCeiling] = useState<string>("");
+    const [vehicleWisePreview, setVehicleWisePreview] = useState<VehicleWiseStatementPreview | null>(null);
+    // Excluded vehicle splits, keyed `${vehicleIdx}:${splitIndex}`. Default: all included.
+    const [excludedVehicleSplits, setExcludedVehicleSplits] = useState<Set<string>>(new Set());
 
     // Detail view
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -147,6 +159,18 @@ export default function StatementsPage() {
         setPreviewBills([]);
         setSelectedBillIds(new Set());
         setUseBillSelection(false);
+        setVehicleWisePreview(null);
+        setExcludedVehicleSplits(new Set());
+        // Default the generation mode + ceiling from the customer's saved statement preferences,
+        // but don't override an in-progress edit (handleEditStatement sets its own mode).
+        if (!editingStatementId && selectedCustomerId) {
+            const c = customers.find(cu => cu.id === Number(selectedCustomerId));
+            const grouping = c?.statementGrouping;
+            const nextMode: GenMode = grouping === "VEHICLE_WISE" ? "VEHICLE_WISE" : "CUSTOMER_WISE";
+            setMode(nextMode);
+            setReportLayout("VEHICLE_WISE");
+            setLiterCeiling("");
+        }
     }, [selectedCustomerId]);
 
     const loadCustomers = async () => {
@@ -202,7 +226,22 @@ export default function StatementsPage() {
         setPreviewing(true);
         setError("");
         try {
-            if (reportLayout === "DAY_WISE") {
+            if (mode === "VEHICLE_WISE") {
+                const ceil = literCeiling.trim() ? Number(literCeiling) : undefined;
+                const preview = await previewStatementVehicleWise(
+                    Number(selectedCustomerId), fromDate, toDate, ceil
+                );
+                setVehicleWisePreview(preview);
+                setExcludedVehicleSplits(new Set());
+                setShowPreview(true);
+                // Clear other previews' state.
+                setDayWisePreview(null);
+                setPreviewBills([]);
+                setSelectedBillIds(new Set());
+                setUseBillSelection(false);
+                return;
+            }
+            if (mode === "DAY_WISE") {
                 const cap = maxAmount ? Number(maxAmount) : undefined;
                 const preview = await previewStatementDayWise(
                     Number(selectedCustomerId), fromDate, toDate, cap
@@ -225,6 +264,7 @@ export default function StatementsPage() {
                 setExcludedSplitIdxs(new Set());
                 setShowPreview(true);
                 // Clear vehicle-wise preview state.
+                setVehicleWisePreview(null);
                 setPreviewBills([]);
                 setSelectedBillIds(new Set());
                 setUseBillSelection(false);
@@ -239,6 +279,7 @@ export default function StatementsPage() {
             );
             setPreviewBills(bills);
             setDayWisePreview(null);
+            setVehicleWisePreview(null);
             setShowPreview(true);
             // For BILL_WISE customers, start with no bills selected so user picks individually
             const selectedCustomer = customers.find(c => c.id === Number(selectedCustomerId));
@@ -306,6 +347,21 @@ export default function StatementsPage() {
 
     const activeSplits = computeSplits(splitStartIdxs, pulledBillIds);
     const selectedSplits = activeSplits.filter(s => !excludedSplitIdxs.has(s.index) && s.billIds.length > 0);
+
+    const vehicleSplitKey = (vIdx: number, sIdx: number) => `${vIdx}:${sIdx}`;
+    const toggleVehicleSplit = (vIdx: number, sIdx: number) => {
+        setExcludedVehicleSplits(prev => {
+            const next = new Set(prev);
+            const k = vehicleSplitKey(vIdx, sIdx);
+            if (next.has(k)) next.delete(k); else next.add(k);
+            return next;
+        });
+    };
+    // Flatten the vehicle-wise preview into the billId groups the user has kept selected.
+    const selectedVehicleSplitGroups: { billIds: number[] }[] = (vehicleWisePreview?.vehicles ?? [])
+        .flatMap((v, vIdx) => v.suggestedSplits
+            .filter((s, sIdx) => !excludedVehicleSplits.has(vehicleSplitKey(vIdx, sIdx)) && s.billIds.length > 0)
+            .map(s => ({ billIds: s.billIds })));
 
     const toggleSplitInclude = (splitIdx: number) => {
         setExcludedSplitIdxs(prev => {
@@ -432,7 +488,14 @@ export default function StatementsPage() {
         setSelectedBillIds(new Set());
         setUseBillSelection(false);
         setError("");
-        setReportLayout((stmt.reportLayout as ReportLayout) || "VEHICLE_WISE");
+        const layout = (stmt.reportLayout as ReportLayout) || "VEHICLE_WISE";
+        setReportLayout(layout);
+        // Edits regenerate a single existing statement — the per-vehicle/day batch split modes
+        // don't apply, so map the layout to the single-statement modes only.
+        setMode(layout === "DAY_WISE" ? "DAY_WISE" : "CUSTOMER_WISE");
+        setLiterCeiling("");
+        setVehicleWisePreview(null);
+        setExcludedVehicleSplits(new Set());
         setMaxAmount("");
         setDayWisePreview(null);
         setSplitStartIdxs([]);
@@ -453,7 +516,7 @@ export default function StatementsPage() {
         // bills the URL exceeds the ALB limit and we get a 414 (which the browser surfaces
         // as a CORS error because the rejection lacks Access-Control-Allow-Origin headers).
         // The batch endpoint sends billIds in a JSON body, so it scales cleanly.
-        if (reportLayout === "DAY_WISE" && dayWisePreview && activeSplits.length > 0 && !editingStatementId) {
+        if (mode === "DAY_WISE" && dayWisePreview && activeSplits.length > 0 && !editingStatementId) {
             if (selectedSplits.length === 0) {
                 setError("Select at least one statement to generate");
                 return;
@@ -465,6 +528,31 @@ export default function StatementsPage() {
                     Number(selectedCustomerId),
                     "DAY_WISE",
                     selectedSplits.map(s => ({ billIds: s.billIds })),
+                );
+                resetGenerateModal();
+                loadStatements();
+                loadStats();
+            } catch (e: any) {
+                setError(e.message || "Failed to generate statements");
+            } finally {
+                setGenerating(false);
+            }
+            return;
+        }
+
+        // Vehicle-wise path — one statement per vehicle (and per liter-ceiling split), via batch.
+        if (mode === "VEHICLE_WISE" && vehicleWisePreview && !editingStatementId) {
+            if (selectedVehicleSplitGroups.length === 0) {
+                setError("Select at least one statement to generate");
+                return;
+            }
+            setGenerating(true);
+            setError("");
+            try {
+                await generateStatementBatch(
+                    Number(selectedCustomerId),
+                    "VEHICLE_WISE",
+                    selectedVehicleSplitGroups,
                 );
                 resetGenerateModal();
                 loadStatements();
@@ -561,6 +649,10 @@ export default function StatementsPage() {
         setPulledBillIds(new Set());
         setExpandedBoundaryIdx(null);
         setExcludedSplitIdxs(new Set());
+        setMode("CUSTOMER_WISE");
+        setLiterCeiling("");
+        setVehicleWisePreview(null);
+        setExcludedVehicleSplits(new Set());
     };
 
     const handleViewDetail = async (stmt: Statement) => {
@@ -1383,56 +1475,101 @@ export default function StatementsPage() {
                         </p>
                     </div>
 
-                    {/* Layout + Max Amount per statement */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-1">Report Layout</label>
-                            <div className="inline-flex rounded-lg border border-border overflow-hidden">
-                                <button
-                                    type="button"
-                                    onClick={() => { setReportLayout("VEHICLE_WISE"); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); setExcludedSplitIdxs(new Set()); }}
-                                    className={`px-3 py-2 text-sm transition-colors ${reportLayout === "VEHICLE_WISE" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
-                                >
-                                    Vehicle-wise
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => { setReportLayout("DAY_WISE"); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); setExcludedSplitIdxs(new Set()); }}
-                                    className={`px-3 py-2 text-sm transition-colors ${reportLayout === "DAY_WISE" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
-                                >
-                                    Day-wise
-                                </button>
+                    {/* Mode + per-statement split control */}
+                    {(() => {
+                        const switchMode = (m: GenMode) => {
+                            setMode(m);
+                            setReportLayout(m === "DAY_WISE" ? "DAY_WISE" : "VEHICLE_WISE");
+                            setShowPreview(false);
+                            setDayWisePreview(null);
+                            setVehicleWisePreview(null);
+                            setPulledBillIds(new Set());
+                            setExpandedBoundaryIdx(null);
+                            setExcludedSplitIdxs(new Set());
+                            setExcludedVehicleSplits(new Set());
+                        };
+                        const selectedCustomer = customers.find(c => c.id === Number(selectedCustomerId));
+                        const customerDefaultCeiling = selectedCustomer?.statementVehicleLiterCeiling;
+                        const MODES: { key: GenMode; label: string }[] = [
+                            { key: "CUSTOMER_WISE", label: "Customer-wise" },
+                            { key: "VEHICLE_WISE", label: "Vehicle-wise" },
+                            { key: "DAY_WISE", label: "Day-wise" },
+                        ];
+                        return (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-muted-foreground mb-1">Statement Mode</label>
+                                    <div className="inline-flex rounded-lg border border-border overflow-hidden">
+                                        {MODES.map(({ key, label }) => {
+                                            // Per-vehicle and day-wise batch splitting don't apply to single-statement edits.
+                                            const disabled = !!editingStatementId && key !== "CUSTOMER_WISE" && key !== "DAY_WISE";
+                                            return (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    disabled={disabled}
+                                                    onClick={() => switchMode(key)}
+                                                    className={`px-3 py-2 text-sm transition-colors ${mode === key ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                >
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground mt-1">
+                                        {mode === "CUSTOMER_WISE" && "One statement with all the customer's vehicles (grouped by vehicle)."}
+                                        {mode === "VEHICLE_WISE" && "One statement per vehicle — split further by liter ceiling."}
+                                        {mode === "DAY_WISE" && "Groups bills by date; can split by amount cap."}
+                                    </p>
+                                </div>
+                                {mode === "DAY_WISE" && !editingStatementId && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Max Amount per Statement (₹)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={maxAmount}
+                                            onChange={(e) => { setMaxAmount(e.target.value); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); setExcludedSplitIdxs(new Set()); }}
+                                            placeholder="e.g. 369860 (leave blank for single statement)"
+                                            className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        />
+                                        <p className="text-[11px] text-muted-foreground mt-1">
+                                            Splits into multiple statements at day boundaries (days stay intact).
+                                        </p>
+                                    </div>
+                                )}
+                                {mode === "VEHICLE_WISE" && !editingStatementId && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Liter Ceiling per Statement</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="any"
+                                            value={literCeiling}
+                                            onChange={(e) => { setLiterCeiling(e.target.value); setShowPreview(false); setVehicleWisePreview(null); setExcludedVehicleSplits(new Set()); }}
+                                            placeholder={customerDefaultCeiling != null ? `Default ${customerDefaultCeiling} L (blank = per-vehicle)` : "Blank = no cap / per-vehicle"}
+                                            className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        />
+                                        <p className="text-[11px] text-muted-foreground mt-1">
+                                            A vehicle over this many liters splits into multiple statements. Blank uses each vehicle's saved ceiling.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                            <p className="text-[11px] text-muted-foreground mt-1">
-                                {reportLayout === "DAY_WISE" ? "PDF groups bills by date." : "PDF groups bills by vehicle (default)."}
-                            </p>
-                        </div>
-                        {reportLayout === "DAY_WISE" && !editingStatementId && (
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-1">Max Amount per Statement (₹)</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={maxAmount}
-                                    onChange={(e) => { setMaxAmount(e.target.value); setShowPreview(false); setDayWisePreview(null); setPulledBillIds(new Set()); setExpandedBoundaryIdx(null); setExcludedSplitIdxs(new Set()); }}
-                                    placeholder="e.g. 369860 (leave blank for single statement)"
-                                    className="w-full px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                />
-                                <p className="text-[11px] text-muted-foreground mt-1">
-                                    Splits into multiple statements at day boundaries (days stay intact).
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                        );
+                    })()}
 
-                    {/* Optional Filters — disabled in day-wise + cap mode (splitter assumes the unfiltered set) */}
-                    <div className={`border border-border/50 rounded-lg p-4 space-y-3 ${reportLayout === "DAY_WISE" && maxAmount ? "opacity-50 pointer-events-none" : ""}`}>
+                    {/* Optional Filters — disabled when a split mode owns the bill set (splitter assumes the unfiltered set) */}
+                    {(() => {
+                        const filtersDisabled = (mode === "DAY_WISE" && !!maxAmount) || mode === "VEHICLE_WISE";
+                        return (
+                    <div className={`border border-border/50 rounded-lg p-4 space-y-3 ${filtersDisabled ? "opacity-50 pointer-events-none" : ""}`}>
                         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                             <Filter className="w-4 h-4" />
                             Filters (Optional)
-                            {reportLayout === "DAY_WISE" && maxAmount && (
-                                <span className="text-[10px] uppercase tracking-wide text-amber-400 font-bold ml-auto">Disabled in day-wise + cap mode</span>
+                            {filtersDisabled && (
+                                <span className="text-[10px] uppercase tracking-wide text-amber-400 font-bold ml-auto">Disabled in {mode === "VEHICLE_WISE" ? "vehicle-wise" : "day-wise + cap"} mode</span>
                             )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -1462,6 +1599,8 @@ export default function StatementsPage() {
                             </div>
                         </div>
                     </div>
+                        );
+                    })()}
 
                     {/* Preview Button */}
                     <button
@@ -1470,8 +1609,71 @@ export default function StatementsPage() {
                         className="w-full px-4 py-2 rounded-lg border border-primary/50 text-primary hover:bg-primary/10 transition-colors font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         <Search className="w-4 h-4" />
-                        {previewing ? "Loading..." : "Preview Bills"}
+                        {previewing ? "Loading..." : mode === "VEHICLE_WISE" ? "Preview Vehicles" : "Preview Bills"}
                     </button>
+
+                    {/* Vehicle-wise Preview — one card per vehicle, each split into statement-sized groups */}
+                    {showPreview && vehicleWisePreview && (
+                        <div className="border border-border/50 rounded-lg overflow-hidden">
+                            <div className="bg-muted/30 px-4 py-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-foreground">
+                                    {vehicleWisePreview.totalBills} bill{vehicleWisePreview.totalBills !== 1 ? "s" : ""} across {vehicleWisePreview.vehicles.length} vehicle{vehicleWisePreview.vehicles.length !== 1 ? "s" : ""} — Grand total {vehicleWisePreview.grandTotal.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
+                                </span>
+                                <span className="text-sm font-semibold text-primary">
+                                    {selectedVehicleSplitGroups.length} statement{selectedVehicleSplitGroups.length !== 1 ? "s" : ""} selected
+                                </span>
+                            </div>
+                            {vehicleWisePreview.vehicles.length === 0 && (
+                                <div className="px-4 py-3 text-sm text-muted-foreground">No unlinked credit bills for this customer in the selected range.</div>
+                            )}
+                            <div className="divide-y divide-border/50 max-h-[40vh] overflow-y-auto">
+                                {vehicleWisePreview.vehicles.map((v, vIdx) => (
+                                    <div key={vIdx} className="px-4 py-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-semibold text-foreground font-mono">{v.vehicleNumber}</span>
+                                            <span className="text-[11px] text-muted-foreground">
+                                                {v.billCount} bill{v.billCount !== 1 ? "s" : ""} · {Number(v.totalLiters).toLocaleString("en-IN", { maximumFractionDigits: 2 })} L
+                                                {v.effectiveCeiling != null && <> · ceiling {Number(v.effectiveCeiling).toLocaleString("en-IN", { maximumFractionDigits: 0 })} L</>}
+                                                {v.suggestedSplits.length > 1 && <> · <span className="text-primary font-semibold">{v.suggestedSplits.length} statements</span></>}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                            {v.suggestedSplits.map((s, sIdx) => {
+                                                const isExcluded = excludedVehicleSplits.has(vehicleSplitKey(vIdx, sIdx));
+                                                return (
+                                                    <label
+                                                        key={sIdx}
+                                                        className={`flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${isExcluded ? "border-border/40 bg-muted/10 opacity-60" : s.exceedsCeiling ? "border-amber-500/40 bg-amber-500/5" : "border-primary/40 bg-primary/5"}`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!isExcluded}
+                                                            onChange={() => toggleVehicleSplit(vIdx, sIdx)}
+                                                            className="mt-0.5"
+                                                        />
+                                                        <div className="text-xs">
+                                                            <div className="font-semibold text-foreground">
+                                                                Statement {sIdx + 1}{v.suggestedSplits.length > 1 ? ` / ${v.suggestedSplits.length}` : ""}
+                                                            </div>
+                                                            <div className="text-muted-foreground">
+                                                                {s.billCount} bill{s.billCount !== 1 ? "s" : ""} · {Number(s.totalLiters).toLocaleString("en-IN", { maximumFractionDigits: 2 })} L
+                                                            </div>
+                                                            <div className="text-foreground font-medium">
+                                                                {Number(s.total).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
+                                                            </div>
+                                                            {s.exceedsCeiling && (
+                                                                <div className="text-[10px] text-amber-400 font-semibold mt-0.5">Single bill over ceiling</div>
+                                                            )}
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Day-wise Preview — split cards + day table with toggleable boundaries */}
                     {showPreview && dayWisePreview && (
@@ -1697,8 +1899,8 @@ export default function StatementsPage() {
                         </div>
                     )}
 
-                    {/* Preview Bills Table (vehicle-wise / legacy) */}
-                    {showPreview && !dayWisePreview && (
+                    {/* Preview Bills Table (customer-wise / legacy) */}
+                    {showPreview && !dayWisePreview && !vehicleWisePreview && (
                         <div className="border border-border/50 rounded-lg overflow-hidden">
                             <div className="bg-muted/30 px-4 py-2 flex items-center justify-between">
                                 <span className="text-sm font-medium text-foreground">
@@ -1789,9 +1991,9 @@ export default function StatementsPage() {
                         <button
                             type="button"
                             onClick={handlePreviewPdf}
-                            disabled={previewingPdf || generating || !selectedCustomerId || !fromDate || !toDate}
+                            disabled={previewingPdf || generating || !selectedCustomerId || !fromDate || !toDate || mode === "VEHICLE_WISE"}
                             className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50"
-                            title="Download a draft PDF without saving the statement"
+                            title={mode === "VEHICLE_WISE" ? "Not available in vehicle-wise mode (produces multiple statements)" : "Download a draft PDF without saving the statement"}
                         >
                             {previewingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                             {previewingPdf ? "Building PDF..." : "Download PDF (Preview)"}
@@ -1800,18 +2002,21 @@ export default function StatementsPage() {
                             onClick={handleGenerate}
                             disabled={
                                 generating ||
-                                (showPreview && !dayWisePreview && selectedBillIds.size === 0) ||
-                                (showPreview && !!dayWisePreview && selectedSplits.length === 0)
+                                (showPreview && !dayWisePreview && !vehicleWisePreview && selectedBillIds.size === 0) ||
+                                (showPreview && !!dayWisePreview && selectedSplits.length === 0) ||
+                                (showPreview && !!vehicleWisePreview && selectedVehicleSplitGroups.length === 0)
                             }
                             className="btn-gradient px-6 py-2 rounded-lg font-medium disabled:opacity-50"
                         >
                             {generating
-                                ? (editingStatementId ? "Regenerating..." : (selectedSplits.length > 1 ? `Generating ${selectedSplits.length} statements...` : "Generating..."))
+                                ? (editingStatementId ? "Regenerating..." : ((selectedSplits.length > 1 || selectedVehicleSplitGroups.length > 1) ? `Generating ${vehicleWisePreview ? selectedVehicleSplitGroups.length : selectedSplits.length} statements...` : "Generating..."))
                                 : editingStatementId
                                     ? "Regenerate"
-                                    : dayWisePreview && selectedSplits.length > 0
-                                        ? (selectedSplits.length === 1 ? `Generate 1 statement (${selectedSplits[0].billCount} bills)` : `Generate ${selectedSplits.length} statements`)
-                                        : `Generate${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
+                                    : vehicleWisePreview && selectedVehicleSplitGroups.length > 0
+                                        ? (selectedVehicleSplitGroups.length === 1 ? "Generate 1 statement" : `Generate ${selectedVehicleSplitGroups.length} statements`)
+                                        : dayWisePreview && selectedSplits.length > 0
+                                            ? (selectedSplits.length === 1 ? `Generate 1 statement (${selectedSplits[0].billCount} bills)` : `Generate ${selectedSplits.length} statements`)
+                                            : `Generate${showPreview ? ` (${selectedBillIds.size} bills)` : ""}`}
                         </button>
                     </div>
                 </div>

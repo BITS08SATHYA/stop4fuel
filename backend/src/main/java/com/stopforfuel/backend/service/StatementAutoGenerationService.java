@@ -42,6 +42,7 @@ public class StatementAutoGenerationService {
     private final VehicleRepository vehicleRepository;
     private final BillSequenceService billSequenceService;
     private final ApplicationSettingRepository applicationSettingRepository;
+    private final StatementService statementService;
 
     /**
      * Called from ShiftService.approveAndClose() after a shift is closed.
@@ -310,8 +311,19 @@ public class StatementAutoGenerationService {
             List<InvoiceBill> bills = invoiceBillRepository.findUnlinkedCreditBillsByVehicle(
                     customer.getId(), fromDateTime, toDateTime, vehicle.getId());
 
-            if (!bills.isEmpty()) {
-                createDraftStatement(customer, fromDate, toDate, bills);
+            if (bills.isEmpty()) {
+                continue;
+            }
+
+            // Effective ceiling: per-vehicle override → customer default → null (no cap).
+            BigDecimal ceiling = vehicle.getStatementLiterCeiling() != null
+                    ? vehicle.getStatementLiterCeiling()
+                    : customer.getStatementVehicleLiterCeiling();
+
+            // Split into statement-sized groups by liter ceiling (one group = one statement).
+            // With no ceiling this returns a single group → preserves prior one-per-vehicle behavior.
+            for (List<InvoiceBill> group : statementService.splitBillsByLiterCeiling(bills, ceiling)) {
+                createDraftStatement(customer, fromDate, toDate, group);
                 draftsCreated++;
             }
         }

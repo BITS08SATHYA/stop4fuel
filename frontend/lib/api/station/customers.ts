@@ -27,6 +27,7 @@ export interface Customer {
     phoneNumbers?: string;
     active: boolean;
     statementGrouping?: string;
+    statementVehicleLiterCeiling?: number | null;
     statementOrder?: number | null;
 }
 
@@ -196,6 +197,7 @@ export interface VehicleStatementOrderEntry {
     id: number;
     vehicleNumber: string;
     statementOrder: number | null;
+    statementLiterCeiling: number | null;
     status: string | null;
 }
 
@@ -203,7 +205,7 @@ export const getVehicleStatementOrderList = (customerId: number): Promise<Vehicl
     fetchWithAuth(`${API_BASE_URL}/vehicles/customer/${customerId}/statement-order`).then(handleResponse);
 
 export const bulkUpdateVehicleStatementOrder = (
-    updates: { vehicleId: number; statementOrder: number | null }[]
+    updates: { vehicleId: number; statementOrder?: number | null; statementLiterCeiling?: number | null }[]
 ): Promise<VehicleStatementOrderEntry[]> =>
     fetchWithAuth(`${API_BASE_URL}/vehicles/bulk/statement-order`, {
         method: 'PATCH',

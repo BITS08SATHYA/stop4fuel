@@ -37,6 +37,7 @@ interface CustomerDetail {
     ledgerBalance?: number;
     statementGrouping?: string | null;
     statementFrequency?: string | null;
+    statementVehicleLiterCeiling?: number | null;
     statementOrder?: number | null;
     gstNumber?: string | null;
     latitude?: number | string | null;
@@ -927,6 +928,29 @@ export default function CustomerProfilePage() {
                                     <span className="text-sm font-medium text-foreground">{customer.statementGrouping?.replace(/_/g, ' ') || "Not set"}</span>
                                 )}
                             </div>
+                            {customer.statementGrouping === "VEHICLE_WISE" && (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground" title="Default liter ceiling per vehicle statement. When a vehicle's bills exceed this, the statement is split into multiple statements (whole bills, date order). Leave blank for no cap. Individual vehicles can override this on the Statement Order page.">Vehicle Liter Ceiling</span>
+                                    {isEditing ? (
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="any"
+                                            value={customer.statementVehicleLiterCeiling ?? ""}
+                                            onChange={(e) => {
+                                                const v = e.target.value;
+                                                setCustomer({ ...customer, statementVehicleLiterCeiling: v === "" ? null : parseFloat(v) });
+                                            }}
+                                            placeholder="No cap"
+                                            className="min-w-[140px] bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                        />
+                                    ) : (
+                                        <span className="text-sm font-medium text-foreground">
+                                            {customer.statementVehicleLiterCeiling == null ? "No cap" : `${customer.statementVehicleLiterCeiling} L`}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground" title="Lower numbers print first when generating bulk statements. Leave blank for unranked. Set to -1 to exclude this customer from auto-generation and bulk PDF.">Order</span>
                                 {isEditing ? (
