@@ -219,4 +219,56 @@ public class PushNotificationService {
             }
         }
     }
+
+    /** Result of a manual test-push attempt, surfaced to the notification-settings UI. */
+    public record TestPushResult(boolean pushEnabled, int devices, int sent) {}
+
+    /**
+     * Send a one-off test push to the given user's own registered devices. Used by the
+     * notification-settings "Send test push" button to verify the SNS → FCM → device path
+     * without closing a shift. Never throws — returns counts so the UI can explain the result.
+     */
+    public TestPushResult sendTestPush(Long userId, String title, String body) {
+        boolean pushEnabled = enabled && snsClient.isPresent() && !platformAppArn.isBlank();
+        if (!pushEnabled || userId == null) {
+            return new TestPushResult(pushEnabled, 0, 0);
+        }
+
+        String snsMessage;
+        try {
+            Map<String, Object> gcmPayload = Map.of(
+                    "notification", Map.of("title", title, "body", body),
+                    "data", Map.of("type", "TEST_PUSH")
+            );
+            snsMessage = objectMapper.writeValueAsString(Map.of(
+                    "default", body,
+                    "GCM", objectMapper.writeValueAsString(gcmPayload)
+            ));
+        } catch (Exception e) {
+            log.warn("Failed to build test push payload: {}", e.getMessage());
+            return new TestPushResult(pushEnabled, 0, 0);
+        }
+
+        int devices = 0;
+        int sent = 0;
+        for (DeviceToken t : deviceTokenRepository.findByUserId(userId)) {
+            if (t.getSnsEndpointArn() == null) continue;
+            devices++;
+            try {
+                snsClient.get().publish(PublishRequest.builder()
+                        .targetArn(t.getSnsEndpointArn())
+                        .message(snsMessage)
+                        .messageStructure("json")
+                        .build());
+                sent++;
+            } catch (EndpointDisabledException | NotFoundException stale) {
+                log.info("Stale device token (id={}), deleting", t.getId());
+                deviceTokenRepository.delete(t);
+                devices--;
+            } catch (Exception e) {
+                log.warn("Test push to endpoint {} failed: {}", t.getSnsEndpointArn(), e.getMessage());
+            }
+        }
+        return new TestPushResult(pushEnabled, devices, sent);
+    }
 }

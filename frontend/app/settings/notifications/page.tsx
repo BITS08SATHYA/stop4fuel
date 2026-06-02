@@ -6,10 +6,11 @@ import {
     getNotificationConfigs,
     saveNotificationConfig,
     getAvailableRoles,
+    sendTestNotification,
     NotificationConfig,
     RoleOption,
 } from "@/lib/api/station";
-import { Save, AlertTriangle, Boxes } from "lucide-react";
+import { Save, AlertTriangle, Boxes, BellRing } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { PermissionGate } from "@/components/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -78,6 +79,8 @@ export default function NotificationSettingsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+    const [testing, setTesting] = useState<string | null>(null);
+    const [testMsg, setTestMsg] = useState<{ alertType: string; text: string; ok: boolean } | null>(null);
     const [formState, setFormState] = useState<Record<string, FormState>>({});
 
     useEffect(() => {
@@ -152,6 +155,33 @@ export default function NotificationSettingsPage() {
             console.error("Failed to save notification config", err);
         } finally {
             setSaving(null);
+        }
+    };
+
+    const handleTest = async (def: AlertTypeDef) => {
+        setTesting(def.value);
+        setTestMsg(null);
+        try {
+            const r = await sendTestNotification(def.value);
+            let text: string;
+            let ok = false;
+            if (!r.pushEnabled) {
+                text = "Push is disabled on the server.";
+            } else if (r.devices === 0) {
+                text = "No registered device for your account — log into the Android app first.";
+            } else if (r.sent > 0) {
+                text = `Test push sent to ${r.sent} device${r.sent > 1 ? "s" : ""}. Check your phone.`;
+                ok = true;
+            } else {
+                text = "Could not deliver — the device endpoint was disabled (stale token).";
+            }
+            setTestMsg({ alertType: def.value, text, ok });
+            setTimeout(() => setTestMsg(null), 7000);
+        } catch (err) {
+            console.error("Test push failed", err);
+            setTestMsg({ alertType: def.value, text: "Test failed — see console.", ok: false });
+        } finally {
+            setTesting(null);
         }
     };
 
@@ -312,7 +342,7 @@ export default function NotificationSettingsPage() {
                                         )}
 
                                         <PermissionGate permission="SETTINGS_UPDATE">
-                                            <div className="flex items-center gap-3 pt-2">
+                                            <div className="flex flex-wrap items-center gap-3 pt-2">
                                                 <button
                                                     onClick={() => handleSave(def)}
                                                     disabled={saving === def.value}
@@ -321,9 +351,32 @@ export default function NotificationSettingsPage() {
                                                     <Save className="w-4 h-4" />
                                                     {saving === def.value ? "Saving..." : "Save Configuration"}
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleTest(def)}
+                                                    disabled={testing === def.value || !state.channels.includes("PUSH")}
+                                                    title={
+                                                        state.channels.includes("PUSH")
+                                                            ? "Send a test push to your own device"
+                                                            : "Enable the Android push channel to send a test"
+                                                    }
+                                                    className="px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 border border-border bg-card hover:bg-muted disabled:opacity-50"
+                                                >
+                                                    <BellRing className="w-4 h-4" />
+                                                    {testing === def.value ? "Sending..." : "Send test push"}
+                                                </button>
                                                 {saveSuccess === def.value && (
                                                     <span className="text-sm text-green-500 font-medium">
                                                         Saved successfully!
+                                                    </span>
+                                                )}
+                                                {testMsg?.alertType === def.value && (
+                                                    <span
+                                                        className={`text-sm font-medium ${
+                                                            testMsg.ok ? "text-green-500" : "text-amber-500"
+                                                        }`}
+                                                    >
+                                                        {testMsg.text}
                                                     </span>
                                                 )}
                                             </div>

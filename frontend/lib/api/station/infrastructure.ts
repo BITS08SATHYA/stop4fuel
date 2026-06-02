@@ -123,6 +123,19 @@ export const saveNotificationConfig = (config: NotificationConfig): Promise<Noti
 export const getAvailableRoles = (): Promise<RoleOption[]> =>
     fetchWithAuth(`${API_BASE_URL}/notification-config/roles`).then(handleResponse);
 
+export interface TestNotificationResult {
+    pushEnabled: boolean;
+    devices: number;
+    sent: number;
+}
+
+export const sendTestNotification = (alertType: string): Promise<TestNotificationResult> =>
+    fetchWithAuth(`${API_BASE_URL}/notification-config/${alertType}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+    }).then(handleResponse);
+
 // Pumps
 export const getPumps = (): Promise<Pump[]> =>
     fetchWithAuth(`${API_BASE_URL}/pumps`).then(handleResponse);
