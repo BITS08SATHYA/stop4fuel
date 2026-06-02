@@ -89,7 +89,8 @@ public class PushNotificationService {
         );
         Map<String, Object> gcmPayload = Map.of(
                 "notification", fcmNotif,
-                "data", fcmData
+                "data", fcmData,
+                "priority", "high"
         );
         String snsMessage;
         try {
@@ -132,7 +133,7 @@ public class PushNotificationService {
         Map<String, Object> fcmData = new HashMap<>();
         fcmData.put("type", "STOCK_SHIFT_CLOSE_SUMMARY");
         if (data != null) data.forEach((k, v) -> fcmData.put(k, String.valueOf(v)));
-        Map<String, Object> gcmPayload = Map.of("notification", fcmNotif, "data", fcmData);
+        Map<String, Object> gcmPayload = Map.of("notification", fcmNotif, "data", fcmData, "priority", "high");
         String snsMessage;
         try {
             snsMessage = objectMapper.writeValueAsString(Map.of(
@@ -190,7 +191,8 @@ public class PushNotificationService {
         );
         Map<String, Object> gcmPayload = Map.of(
                 "notification", fcmNotif,
-                "data", fcmData
+                "data", fcmData,
+                "priority", "high"
         );
         String snsMessage;
         try {
@@ -238,7 +240,8 @@ public class PushNotificationService {
         try {
             Map<String, Object> gcmPayload = Map.of(
                     "notification", Map.of("title", title, "body", body),
-                    "data", Map.of("type", "TEST_PUSH")
+                    "data", Map.of("type", "TEST_PUSH"),
+                    "priority", "high"
             );
             snsMessage = objectMapper.writeValueAsString(Map.of(
                     "default", body,
