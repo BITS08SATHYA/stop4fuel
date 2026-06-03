@@ -111,8 +111,15 @@ public class PaymentService {
         }
 
         if (payment.getAmount().compareTo(statement.getBalanceAmount()) > 0) {
-            throw new BusinessException("Payment amount (" + payment.getAmount()
-                    + ") exceeds statement balance (" + statement.getBalanceAmount() + ")");
+            // Tolerate sub-paisa floating-point artifacts from a "Full Balance"
+            // amount by clamping to the true balance; reject genuine overpayments.
+            BigDecimal overage = payment.getAmount().subtract(statement.getBalanceAmount());
+            if (overage.compareTo(new BigDecimal("0.01")) <= 0) {
+                payment.setAmount(statement.getBalanceAmount());
+            } else {
+                throw new BusinessException("Payment amount (" + payment.getAmount()
+                        + ") exceeds statement balance (" + statement.getBalanceAmount() + ")");
+            }
         }
 
         // Set payment references
@@ -199,8 +206,16 @@ public class PaymentService {
         BigDecimal billBalance = bill.getNetAmount().subtract(totalReceived);
 
         if (payment.getAmount().compareTo(billBalance) > 0) {
-            throw new BusinessException("Payment amount (" + payment.getAmount()
-                    + ") exceeds bill balance (" + billBalance + ")");
+            // Tolerate sub-paisa floating-point artifacts from the client (e.g.
+            // a "Full Balance" amount of 8903.455000000002 vs an exact 8903.4550)
+            // by clamping to the true balance; reject only genuine overpayments.
+            BigDecimal overage = payment.getAmount().subtract(billBalance);
+            if (overage.compareTo(new BigDecimal("0.01")) <= 0) {
+                payment.setAmount(billBalance);
+            } else {
+                throw new BusinessException("Payment amount (" + payment.getAmount()
+                        + ") exceeds bill balance (" + billBalance + ")");
+            }
         }
 
         // Set payment references

@@ -317,9 +317,11 @@ export default function InvoiceExplorerPage() {
         }
     };
 
-    // Compute balance for selected invoice
+    // Compute balance for selected invoice. Round to strip floating-point
+    // artifacts (e.g. 8903.455000000002) that would otherwise exceed the
+    // backend's exact BigDecimal balance and get rejected on "Full Bal".
     const selectedBalance = selectedInvoice
-        ? (selectedInvoice.netAmount || 0) - invoicePayments.reduce((s, p) => s + (p.amount || 0), 0)
+        ? Number(((selectedInvoice.netAmount || 0) - invoicePayments.reduce((s, p) => s + (p.amount || 0), 0)).toFixed(6))
         : 0;
 
     return (
