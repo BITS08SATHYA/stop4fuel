@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { GlassCard } from "@/components/ui/glass-card";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
@@ -11,6 +12,7 @@ import {
     createTankInventory,
     updateTankInventory,
     downloadTankDipReport,
+    convertDip,
     TankInventory,
     Tank,
     deleteTankInventory
@@ -63,6 +65,8 @@ export default function TankInventoryPage() {
     const [incomeStock, setIncomeStock] = useState("");
     const [closeDip, setCloseDip] = useState("");
     const [closeStock, setCloseStock] = useState("");
+    const [openAutoFilled, setOpenAutoFilled] = useState(false);
+    const [closeAutoFilled, setCloseAutoFilled] = useState(false);
     const [apiError, setApiError] = useState("");
     const validationRules = useMemo(() => ({
         tankId: [required("Tank is required")],
@@ -114,9 +118,34 @@ export default function TankInventoryPage() {
         setSaleStock(Math.max(0, total - c));
     }, [openStock, incomeStock, closeStock]);
 
+    // Auto-fill stock from the tank's dip chart when a dip is entered.
+    const applyDip = async (dipStr: string, which: "open" | "close") => {
+        if (!tankId || !dipStr.trim()) return;
+        const d = parseFloat(dipStr);
+        if (isNaN(d)) return;
+        try {
+            const res = await convertDip(Number(tankId), d);
+            if (res.hasChart && res.volume != null) {
+                if (which === "open") {
+                    setOpenStock(String(res.volume));
+                    setOpenAutoFilled(true);
+                    clearError("openStock");
+                } else {
+                    setCloseStock(String(res.volume));
+                    setCloseAutoFilled(true);
+                    clearError("closeStock");
+                }
+            }
+        } catch {
+            // No chart / conversion failed — leave manual entry untouched.
+        }
+    };
+
     const handleEdit = (inv: TankInventory) => {
         clearAllErrors();
         setApiError("");
+        setOpenAutoFilled(false);
+        setCloseAutoFilled(false);
         setEditingId(inv.id);
         setDate(inv.date);
         setTankId(String(inv.tank.id));
@@ -199,6 +228,8 @@ export default function TankInventoryPage() {
         setIncomeStock("");
         setCloseDip("");
         setCloseStock("");
+        setOpenAutoFilled(false);
+        setCloseAutoFilled(false);
     };
 
     return (
@@ -213,15 +244,26 @@ export default function TankInventoryPage() {
                             Manage underground fuel storage measurements and stock reconciliation.
                         </p>
                     </div>
-                    <PermissionGate permission="INVENTORY_CREATE">
-                        <button
-                            onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
-                            className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Record Tank Dip
-                        </button>
-                    </PermissionGate>
+                    <div className="flex items-center gap-3">
+                        <PermissionGate permission="INVENTORY_CREATE">
+                            <Link
+                                href="/operations/inventory/dip-charts"
+                                className="px-5 py-3 rounded-xl font-medium flex items-center gap-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-foreground transition-all"
+                            >
+                                <Ruler className="w-5 h-5" />
+                                Dip Charts
+                            </Link>
+                        </PermissionGate>
+                        <PermissionGate permission="INVENTORY_CREATE">
+                            <button
+                                onClick={() => { resetForm(); clearAllErrors(); setApiError(""); setIsModalOpen(true); }}
+                                className="btn-gradient px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Record Tank Dip
+                            </button>
+                        </PermissionGate>
+                    </div>
                 </div>
 
                 {/* Filter Bar */}
@@ -424,6 +466,7 @@ export default function TankInventoryPage() {
                                     type="text"
                                     value={openDip}
                                     onChange={(e) => { setOpenDip(e.target.value); clearError("openDip"); }}
+                                    onBlur={(e) => applyDip(e.target.value, "open")}
                                     className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.openDip)}`}
                                     placeholder="e.g. 150.5"
                                 />
@@ -434,11 +477,13 @@ export default function TankInventoryPage() {
                                 <input
                                     type="number"
                                     value={openStock}
-                                    onChange={(e) => { setOpenStock(e.target.value); clearError("openStock"); }}
+                                    onChange={(e) => { setOpenStock(e.target.value); setOpenAutoFilled(false); clearError("openStock"); }}
                                     className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.openStock)}`}
                                     placeholder="0"
                                 />
-                                <FieldError error={errors.openStock} />
+                                {openAutoFilled
+                                    ? <p className="text-[10px] text-primary mt-1">Auto-filled from dip chart — editable</p>
+                                    : <FieldError error={errors.openStock} />}
                             </div>
                             <div className="col-span-1">
                                 <label className="block text-sm font-medium text-foreground mb-1.5 text-blue-500">Income (+ L)</label>
@@ -459,6 +504,7 @@ export default function TankInventoryPage() {
                                     type="text"
                                     value={closeDip}
                                     onChange={(e) => { setCloseDip(e.target.value); clearError("closeDip"); }}
+                                    onBlur={(e) => applyDip(e.target.value, "close")}
                                     className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.closeDip)}`}
                                     placeholder="e.g. 142.2"
                                 />
@@ -469,11 +515,13 @@ export default function TankInventoryPage() {
                                 <input
                                     type="number"
                                     value={closeStock}
-                                    onChange={(e) => { setCloseStock(e.target.value); clearError("closeStock"); }}
+                                    onChange={(e) => { setCloseStock(e.target.value); setCloseAutoFilled(false); clearError("closeStock"); }}
                                     className={`w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground ${inputErrorClass(errors.closeStock)}`}
                                     placeholder="Reading"
                                 />
-                                <FieldError error={errors.closeStock} />
+                                {closeAutoFilled
+                                    ? <p className="text-[10px] text-primary mt-1">Auto-filled from dip chart — editable</p>
+                                    : <FieldError error={errors.closeStock} />}
                             </div>
                         </div>
                     </div>

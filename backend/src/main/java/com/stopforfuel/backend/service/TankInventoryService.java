@@ -18,6 +18,7 @@ public class TankInventoryService {
 
     private final TankInventoryRepository repository;
     private final ShiftService shiftService;
+    private final DipChartService dipChartService;
 
     @Transactional(readOnly = true)
     public List<TankInventory> getAll() {
@@ -83,6 +84,18 @@ public class TankInventoryService {
     }
 
     private void calculateFields(TankInventory inventory) {
+        // Auto-fill stock from the tank's dip chart when the user left it blank
+        // (the frontend normally pre-fills, this is the server-side safety net).
+        Long tankId = inventory.getTank() != null ? inventory.getTank().getId() : null;
+        if (tankId != null) {
+            if (inventory.getOpenStock() == null) {
+                autoStock(tankId, inventory.getOpenDip()).ifPresent(inventory::setOpenStock);
+            }
+            if (inventory.getCloseStock() == null) {
+                autoStock(tankId, inventory.getCloseDip()).ifPresent(inventory::setCloseStock);
+            }
+        }
+
         double open = inventory.getOpenStock() != null ? inventory.getOpenStock() : 0.0;
         double income = inventory.getIncomeStock() != null ? inventory.getIncomeStock() : 0.0;
         double total = open + income;
@@ -91,5 +104,16 @@ public class TankInventoryService {
         if (inventory.getCloseStock() != null) {
             inventory.setSaleStock(total - inventory.getCloseStock());
         }
+    }
+
+    private java.util.Optional<Double> autoStock(Long tankId, String dip) {
+        if (dip == null || dip.isBlank()) return java.util.Optional.empty();
+        double dipCm;
+        try {
+            dipCm = Double.parseDouble(dip.trim());
+        } catch (NumberFormatException e) {
+            return java.util.Optional.empty();
+        }
+        return dipChartService.dipToVolume(tankId, dipCm);
     }
 }

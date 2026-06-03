@@ -177,3 +177,52 @@ export const updateNozzle = (id: number, nozzle: Partial<Nozzle>): Promise<Nozzl
 
 export const deleteNozzle = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/nozzles/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// Dip Charts (tank calibration)
+export interface DipChartSummary {
+    id: number;
+    tankId: number;
+    tankName: string;
+    productId: number | null;
+    productName: string | null;
+    sourceFile: string | null;
+    maxDipMm: number | null;
+    pointCount: number;
+    active: boolean;
+    hadGlitches: boolean;
+    glitchesRepaired: number;
+    glitchLog: string | null;
+    createdAt: string;
+}
+
+export type DipChartType = 'PER_CM' | 'GRID';
+
+/** Convert a dip reading (cm) to stock litres using the tank's calibration chart. */
+export const convertDip = (
+    tankId: number,
+    dip: number
+): Promise<{ tankId: number; dip: number; volume: number | null; hasChart: boolean }> =>
+    fetchWithAuth(`${API_BASE_URL}/dip-charts/convert?tankId=${tankId}&dip=${dip}`).then(handleResponse);
+
+export const getDipCharts = (): Promise<DipChartSummary[]> =>
+    fetchWithAuth(`${API_BASE_URL}/dip-charts`).then(handleResponse);
+
+export const uploadDipChart = (
+    tankId: number,
+    type: DipChartType,
+    volumeCol: string | undefined,
+    file: File
+): Promise<DipChartSummary> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const params = new URLSearchParams({ tankId: String(tankId), type });
+    if (volumeCol) params.set('volumeCol', volumeCol);
+    // Don't set Content-Type — the browser sets the multipart boundary.
+    return fetchWithAuth(`${API_BASE_URL}/dip-charts/import?${params.toString()}`, {
+        method: 'POST',
+        body: fd,
+    }).then(handleResponse);
+};
+
+export const deleteDipChart = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/dip-charts/${id}`, { method: 'DELETE' }).then(handleResponse);
