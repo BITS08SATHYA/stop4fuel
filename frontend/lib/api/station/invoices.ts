@@ -213,3 +213,24 @@ export const getProductSalesSummary = (
     if (filters?.categoryType) params.append('categoryType', filters.categoryType);
     return fetchWithAuth(`${API_BASE_URL}/invoices/history/product-summary?${params}`).then(handleResponse);
 };
+
+// --- Bill numbering sequence (CASH / CREDIT) ---
+export interface BillSequenceView {
+    lastNumber: number;
+    nextNumber: number;
+    nextBillNo: string;
+    highestInDb: number | null;
+}
+
+export const getInvoiceSequence = (billType: 'CASH' | 'CREDIT'): Promise<BillSequenceView> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/sequence/peek?billType=${billType}`).then(handleResponse);
+
+export const setInvoiceSequence = (
+    billType: 'CASH' | 'CREDIT',
+    nextNumber: number,
+): Promise<BillSequenceView> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/sequence/next`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billType, nextNumber }),
+    }).then(handleResponse);

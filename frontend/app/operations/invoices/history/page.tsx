@@ -6,7 +6,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import {
     Search, Filter, ChevronDown, ChevronRight,
-    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Printer
+    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Printer, Hash
 } from "lucide-react";
 import { printInvoice } from "@/lib/invoice-print";
 import { FormErrorBanner } from "@/components/ui/field-error";
@@ -15,8 +15,9 @@ import { PermissionGate } from "@/components/permission-gate";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
+    getInvoiceSequence, setInvoiceSequence,
     type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
-    type Product, type Nozzle, type Vehicle, type Customer,
+    type Product, type Nozzle, type Vehicle, type Customer, type BillSequenceView,
     API_BASE_URL
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
@@ -68,6 +69,63 @@ export default function InvoiceHistoryPage() {
     });
     const [appliedFilters, setAppliedFilters] = useState({ ...filters });
     const pageSize = 10;
+
+    // Bill-numbering sequence modal state
+    const [seqModal, setSeqModal] = useState(false);
+    const [seqType, setSeqType] = useState<'CREDIT' | 'CASH'>('CREDIT');
+    const [seqData, setSeqData] = useState<BillSequenceView | null>(null);
+    const [seqInput, setSeqInput] = useState("");
+    const [seqLoading, setSeqLoading] = useState(false);
+    const [seqSubmitting, setSeqSubmitting] = useState(false);
+    const [seqError, setSeqError] = useState("");
+
+    const loadSeq = useCallback(async (type: 'CREDIT' | 'CASH') => {
+        setSeqLoading(true);
+        setSeqError("");
+        try {
+            const data = await getInvoiceSequence(type);
+            setSeqData(data);
+            setSeqInput(String(data.nextNumber));
+        } catch (e: any) {
+            setSeqError(e?.message || "Failed to load sequence");
+            setSeqData(null);
+        } finally {
+            setSeqLoading(false);
+        }
+    }, []);
+
+    const openSeqModal = async () => {
+        setSeqModal(true);
+        setSeqType('CREDIT');
+        await loadSeq('CREDIT');
+    };
+
+    const switchSeqType = async (type: 'CREDIT' | 'CASH') => {
+        setSeqType(type);
+        await loadSeq(type);
+    };
+
+    const submitSeq = async () => {
+        const n = Number.parseInt(seqInput, 10);
+        if (!Number.isFinite(n) || n < 1) {
+            setSeqError("Next number must be a positive integer");
+            return;
+        }
+        const prefix = seqType === 'CREDIT' ? 'A' : 'C';
+        setSeqSubmitting(true);
+        setSeqError("");
+        try {
+            const updated = await setInvoiceSequence(seqType, n);
+            setSeqData(updated);
+            setSeqInput(String(updated.nextNumber));
+            setSeqError("");
+            setSeqModal(false);
+        } catch (e: any) {
+            setSeqError(e?.message || `Failed to set ${prefix} sequence`);
+        } finally {
+            setSeqSubmitting(false);
+        }
+    };
 
     // Edit modal state
     const [editModal, setEditModal] = useState(false);
@@ -322,9 +380,21 @@ export default function InvoiceHistoryPage() {
     return (
         <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-foreground">Invoice History</h1>
-                <p className="text-sm text-muted-foreground mt-1">Browse, filter, edit, and analyze all invoices</p>
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Invoice History</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Browse, filter, edit, and analyze all invoices</p>
+                </div>
+                <PermissionGate permission="INVOICE_VIEW">
+                    <button
+                        onClick={openSeqModal}
+                        title="View / set the next bill number"
+                        className="shrink-0 flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                        <Hash className="w-4 h-4" />
+                        Bill numbering
+                    </button>
+                </PermissionGate>
             </div>
 
             {/* Filter Bar */}
@@ -916,6 +986,110 @@ export default function InvoiceHistoryPage() {
                             {deleting ? "Deleting..." : "Delete Invoice"}
                         </button>
                     </div>
+                </div>
+            </Modal>
+
+            {/* Bill Numbering Sequence Modal */}
+            <Modal isOpen={seqModal} onClose={() => setSeqModal(false)} title="Bill Numbering">
+                <div className="p-6 space-y-4">
+                    {/* Type toggle */}
+                    <div className="flex gap-2">
+                        {(['CREDIT', 'CASH'] as const).map((t) => (
+                            <button
+                                key={t}
+                                onClick={() => switchSeqType(t)}
+                                disabled={seqSubmitting}
+                                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-colors disabled:opacity-50 ${
+                                    seqType === t
+                                        ? "bg-primary/10 border-primary/30 text-primary"
+                                        : "bg-card border-border text-muted-foreground hover:bg-muted"
+                                }`}
+                            >
+                                {t === 'CREDIT' ? 'Credit (A…)' : 'Cash (C…)'}
+                            </button>
+                        ))}
+                    </div>
+
+                    {seqLoading || !seqData ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            {seqError ? <span className="text-red-400">{seqError}</span> : "Loading…"}
+                        </div>
+                    ) : (() => {
+                        const series = seqData.nextBillNo.replace(/\d+$/, ""); // e.g. "A26/"
+                        return (
+                        <>
+                            <div className="rounded-lg border border-border bg-card/50 p-3 text-sm space-y-1">
+                                <div>Last issued: <span className="font-mono font-semibold text-foreground">{series}{seqData.lastNumber}</span></div>
+                                <div>Next will be: <span className="font-mono font-semibold text-foreground">{seqData.nextBillNo}</span></div>
+                                {seqData.highestInDb != null ? (() => {
+                                    const maxDb = seqData.highestInDb;
+                                    const next = seqData.nextNumber;
+                                    let pillText = ""; let pillClass = "";
+                                    if (next === maxDb + 1) {
+                                        pillText = "✓ in sync";
+                                        pillClass = "bg-emerald-500/15 border-emerald-500/40 text-emerald-300";
+                                    } else if (next <= maxDb) {
+                                        pillText = `⚠ would duplicate`;
+                                        pillClass = "bg-yellow-500/15 border-yellow-500/40 text-yellow-300";
+                                    } else {
+                                        pillText = `gap of ${next - maxDb - 1}`;
+                                        pillClass = "bg-blue-500/15 border-blue-500/40 text-blue-300";
+                                    }
+                                    return (
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span>Highest bill: <span className="font-mono font-semibold text-foreground">{series}{maxDb}</span></span>
+                                            <span className={`text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded border ${pillClass}`}>{pillText}</span>
+                                        </div>
+                                    );
+                                })() : (
+                                    <div className="text-muted-foreground text-xs">Highest bill: <span className="italic">none yet this year</span></div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">Set next number</label>
+                                <input
+                                    type="number" min="1" step="1"
+                                    value={seqInput}
+                                    onChange={(e) => setSeqInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === "Enter") submitSeq(); }}
+                                    autoFocus
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                                {(() => {
+                                    const n = Number.parseInt(seqInput, 10);
+                                    if (!Number.isFinite(n) || n < 1) {
+                                        return <p className="text-xs text-red-300 mt-1">Must be a positive integer.</p>;
+                                    }
+                                    const dupes = seqData.highestInDb != null && n <= seqData.highestInDb;
+                                    return (
+                                        <p className={`text-xs mt-1 ${dupes ? "text-yellow-300" : "text-muted-foreground"}`}>
+                                            {dupes && "⚠ "}Next bill will be <span className="font-mono">{series}{n}</span>
+                                            {dupes && ` — but ${series}${n} already exists; this will be rejected.`}
+                                        </p>
+                                    );
+                                })()}
+                            </div>
+
+                            {seqError && <p className="text-xs text-red-400">{seqError}</p>}
+
+                            <p className="text-xs text-muted-foreground">
+                                Forward-only — existing bills are not renumbered. Only affects the next bill created.
+                            </p>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button onClick={() => setSeqModal(false)} disabled={seqSubmitting}
+                                    className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted disabled:opacity-50">
+                                    Cancel
+                                </button>
+                                <button onClick={submitSeq} disabled={seqSubmitting || !seqInput.trim()}
+                                    className="btn-gradient px-5 py-2 rounded-lg font-medium disabled:opacity-50">
+                                    {seqSubmitting ? "Saving…" : "Save"}
+                                </button>
+                            </div>
+                        </>
+                        );
+                    })()}
                 </div>
             </Modal>
         </div>

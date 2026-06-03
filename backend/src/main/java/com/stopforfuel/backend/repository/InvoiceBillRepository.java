@@ -35,6 +35,16 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     @Query("SELECT COUNT(i) FROM InvoiceBill i WHERE i.shiftId = :shiftId AND i.billType = 'CREDIT' AND NOT EXISTS (SELECT 1 FROM InvoiceBillPhoto p WHERE p.invoiceBill = i AND p.photoType = 'bill-pic')")
     long countCreditBillsWithoutPhoto(@Param("shiftId") Long shiftId);
 
+    /**
+     * MAX(numeric portion after the '/') of well-formed bill numbers for a given
+     * type + prefix (e.g. "A26/"). Lets the bill-numbering UI surface drift between
+     * the sequence counter and the real bills. Null when no matching bills exist.
+     */
+    @Query(value = "SELECT MAX(CAST(split_part(bill_no, '/', 2) AS INTEGER)) FROM invoice_bill " +
+            "WHERE bill_type = :billType AND bill_no LIKE CONCAT(:prefix, '%') " +
+            "AND split_part(bill_no, '/', 2) ~ '^[0-9]+$'", nativeQuery = true)
+    Long findMaxNumericBillCounter(@Param("billType") String billType, @Param("prefix") String prefix);
+
     @Query("SELECT COALESCE(SUM(ib.netAmount), 0) FROM InvoiceBill ib WHERE ib.shiftId = :shiftId AND ib.billType = 'CASH'")
     BigDecimal sumCashBillsByShift(@Param("shiftId") Long shiftId);
 

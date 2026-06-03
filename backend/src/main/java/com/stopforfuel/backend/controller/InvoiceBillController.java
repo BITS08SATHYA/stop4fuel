@@ -6,6 +6,7 @@ import com.stopforfuel.backend.dto.OutstandingBillDTO;
 import com.stopforfuel.backend.dto.ProductSalesSummary;
 import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.entity.InvoiceBill;
+import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.service.InvoiceBillService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ public class InvoiceBillController {
 
     private final InvoiceBillService service;
     private final PaymentRepository paymentRepository;
+    private final com.stopforfuel.backend.service.BillSequenceService billSequenceService;
 
     @GetMapping
     @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
@@ -192,5 +194,48 @@ public class InvoiceBillController {
     public ResponseEntity<Void> deletePhoto(@PathVariable Long id, @PathVariable Long photoId) {
         service.deletePhoto(id, photoId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Peek the next bill number for CASH or CREDIT without consuming the sequence.
+     * Read-only; surfaces highestInDb so the UI can flag drift.
+     */
+    @GetMapping("/sequence/peek")
+    @PreAuthorize("hasPermission(null, 'INVOICE_VIEW')")
+    public com.stopforfuel.backend.service.BillSequenceService.NextBillNoView peekSequence(
+            @RequestParam BillType billType) {
+        requireCashOrCredit(billType);
+        return billSequenceService.peekNextBillNo(billType);
+    }
+
+    /**
+     * Set the next CASH/CREDIT bill number (admin sequence reset / fast-forward).
+     * Forward-only by design — existing bills are not renumbered. Rejects values that
+     * would re-issue a number already on a bill (would create a duplicate bill_no).
+     */
+    @PutMapping("/sequence/next")
+    @PreAuthorize("hasPermission(null, 'INVOICE_UPDATE')")
+    public com.stopforfuel.backend.service.BillSequenceService.NextBillNoView setSequence(
+            @RequestBody Map<String, Object> body) {
+        BillType billType = BillType.valueOf(String.valueOf(body.get("billType")));
+        requireCashOrCredit(billType);
+        Object raw = body.get("nextNumber");
+        if (raw == null) {
+            throw new IllegalArgumentException("nextNumber is required");
+        }
+        long next = Long.parseLong(String.valueOf(raw));
+        Long highestInDb = billSequenceService.peekNextBillNo(billType).highestInDb();
+        if (highestInDb != null && next <= highestInDb) {
+            throw new IllegalArgumentException(
+                    "Next number " + next + " would duplicate an existing bill (highest is "
+                            + highestInDb + "). Choose " + (highestInDb + 1) + " or higher.");
+        }
+        return billSequenceService.setNextBillNo(billType, next);
+    }
+
+    private void requireCashOrCredit(BillType billType) {
+        if (billType != BillType.CASH && billType != BillType.CREDIT) {
+            throw new IllegalArgumentException("billType must be CASH or CREDIT");
+        }
     }
 }

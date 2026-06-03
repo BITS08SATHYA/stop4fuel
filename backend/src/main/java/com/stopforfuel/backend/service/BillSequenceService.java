@@ -3,6 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.BillSequence;
 import com.stopforfuel.backend.enums.BillType;
 import com.stopforfuel.backend.repository.BillSequenceRepository;
+import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,20 @@ public class BillSequenceService {
 
     private final BillSequenceRepository billSequenceRepository;
     private final StatementRepository statementRepository;
+    private final InvoiceBillRepository invoiceBillRepository;
+
+    /**
+     * Highest bill/statement counter actually present in the DB for this type — lets the
+     * numbering UI flag drift between the sequence counter and real rows. STMT reads the
+     * statement table; CASH/CREDIT read invoice_bill for the current FY prefix.
+     */
+    private Long highestInDbFor(BillType billType, int fyYear) {
+        if (billType == BillType.STMT) {
+            return statementRepository.findMaxNumericStatementNo();
+        }
+        String prefix = PREFIX_MAP.getOrDefault(billType, billType.name().substring(0, 1)) + fyYear + "/";
+        return invoiceBillRepository.findMaxNumericBillCounter(billType.name(), prefix);
+    }
 
     private static final Map<BillType, String> PREFIX_MAP = Map.of(
             BillType.CASH, "C",
@@ -91,7 +106,7 @@ public class BillSequenceService {
         long next = lastNumber + 1;
         String prefix = PREFIX_MAP.getOrDefault(billType, billType.name().substring(0, 1));
         String formatted = global ? prefix + "-" + next : prefix + fyYear + "/" + next;
-        Long highestInDb = (billType == BillType.STMT) ? statementRepository.findMaxNumericStatementNo() : null;
+        Long highestInDb = highestInDbFor(billType, fyYear);
         return new NextBillNoView(lastNumber, next, formatted, highestInDb);
     }
 
@@ -120,14 +135,14 @@ public class BillSequenceService {
         billSequenceRepository.save(seq);
         String prefix = PREFIX_MAP.getOrDefault(billType, billType.name().substring(0, 1));
         String formatted = global ? prefix + "-" + nextNumber : prefix + fyYear + "/" + nextNumber;
-        Long highestInDb = (billType == BillType.STMT) ? statementRepository.findMaxNumericStatementNo() : null;
+        Long highestInDb = highestInDbFor(billType, fyYear);
         return new NextBillNoView(nextNumber - 1, nextNumber, formatted, highestInDb);
     }
 
     /**
-     * Lightweight view returned by peek/set. highestInDb is the MAX(numeric portion of statement_no)
-     * for well-formed S-NNNNN rows in the statement table — only populated for BillType.STMT, null
-     * for other types. Lets the gear-icon UI surface drift between the sequence counter and DB reality.
+     * Lightweight view returned by peek/set. highestInDb is the MAX(numeric counter) of well-formed
+     * rows for this type — statement_no for STMT, invoice_bill.bill_no (current FY) for CASH/CREDIT.
+     * Lets the gear-icon UI surface drift between the sequence counter and DB reality.
      */
     public record NextBillNoView(long lastNumber, long nextNumber, String nextBillNo, Long highestInDb) {}
 }
