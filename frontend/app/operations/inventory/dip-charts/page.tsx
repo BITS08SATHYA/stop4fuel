@@ -10,11 +10,12 @@ import {
     getDipCharts,
     uploadDipChart,
     deleteDipChart,
+    convertDip,
     Tank,
     DipChartSummary,
     DipChartType,
 } from "@/lib/api/station";
-import { Ruler, Upload, Trash2, ArrowLeft, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
+import { Ruler, Upload, Trash2, ArrowLeft, AlertTriangle, CheckCircle2, FileText, Calculator } from "lucide-react";
 
 export default function DipChartsPage() {
     const [tanks, setTanks] = useState<Tank[]>([]);
@@ -29,6 +30,34 @@ export default function DipChartsPage() {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
     const [result, setResult] = useState<DipChartSummary | null>(null);
+
+    // Dip → stock lookup
+    const [lookupTankId, setLookupTankId] = useState("");
+    const [lookupDip, setLookupDip] = useState("");
+    const [lookupVolume, setLookupVolume] = useState<number | null>(null);
+    const [lookupNote, setLookupNote] = useState("");
+    const [lookupBusy, setLookupBusy] = useState(false);
+
+    const handleLookup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLookupVolume(null);
+        setLookupNote("");
+        if (!lookupTankId) { setLookupNote("Select a tank."); return; }
+        const d = parseFloat(lookupDip);
+        if (isNaN(d) || d < 0) { setLookupNote("Enter a valid dip in cm."); return; }
+        setLookupBusy(true);
+        try {
+            const res = await convertDip(Number(lookupTankId), d);
+            if (res.hasChart && res.volume != null) {
+                setLookupVolume(res.volume);
+            } else {
+                setLookupNote("This tank has no dip chart — upload one above first.");
+            }
+        } catch (err) {
+            setLookupNote(err instanceof Error ? err.message : "Lookup failed");
+        }
+        setLookupBusy(false);
+    };
 
     const loadData = async () => {
         setIsLoading(true);
@@ -182,6 +211,58 @@ export default function DipChartsPage() {
                         )}
                     </GlassCard>
                 </PermissionGate>
+
+                <GlassCard className="p-6 mb-8">
+                    <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                        <Calculator className="w-5 h-5 text-primary" /> Dip → Stock Lookup
+                    </h2>
+                    <form onSubmit={handleLookup} className="flex flex-col sm:flex-row sm:items-end gap-4">
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-foreground mb-1.5">Tank</label>
+                            <StyledSelect
+                                value={lookupTankId}
+                                onChange={(v) => { setLookupTankId(v); setLookupVolume(null); setLookupNote(""); }}
+                                options={[
+                                    { value: "", label: "Select Tank..." },
+                                    ...tanks.map((t) => ({ value: String(t.id), label: `${t.name} (${t.product?.name})` })),
+                                ]}
+                                placeholder="Select Tank..."
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-foreground mb-1.5">Dip (cm)</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                value={lookupDip}
+                                onChange={(e) => { setLookupDip(e.target.value); setLookupVolume(null); setLookupNote(""); }}
+                                placeholder="e.g. 150.5"
+                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={lookupBusy}
+                            className="btn-gradient px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                        >
+                            {lookupBusy ? "Looking up…" : "Find Stock"}
+                        </button>
+                    </form>
+
+                    {lookupVolume != null && (
+                        <div className="mt-4 rounded-xl border border-border p-4 bg-black/5 dark:bg-white/5 flex items-baseline gap-2">
+                            <span className="text-sm text-muted-foreground">Stock at {parseFloat(lookupDip)} cm:</span>
+                            <span className="text-2xl font-bold text-gradient font-mono">{lookupVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                            <span className="text-sm text-muted-foreground">litres</span>
+                        </div>
+                    )}
+                    {lookupNote && (
+                        <div className="mt-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-xl px-4 py-3">
+                            <AlertTriangle className="w-4 h-4 shrink-0" /> {lookupNote}
+                        </div>
+                    )}
+                </GlassCard>
 
                 <h2 className="text-lg font-bold text-foreground mb-3">Installed Charts</h2>
                 {isLoading ? (
