@@ -125,7 +125,7 @@ export default function DipChartsPage() {
                 </div>
 
                 <PermissionGate permission="INVENTORY_CREATE">
-                    <GlassCard className="p-6 mb-8">
+                    <GlassCard className="p-6 mb-8 relative z-30">
                         <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                             <Upload className="w-5 h-5 text-primary" /> Upload / Replace a Chart
                         </h2>
@@ -212,7 +212,7 @@ export default function DipChartsPage() {
                     </GlassCard>
                 </PermissionGate>
 
-                <GlassCard className="p-6 mb-8">
+                <GlassCard className="p-6 mb-8 relative z-20">
                     <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                         <Calculator className="w-5 h-5 text-primary" /> Dip → Stock Lookup
                     </h2>
