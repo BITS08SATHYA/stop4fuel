@@ -224,7 +224,7 @@ export default function DipChartsPage() {
                                 onChange={(v) => { setLookupTankId(v); setLookupVolume(null); setLookupNote(""); }}
                                 options={[
                                     { value: "", label: "Select Tank..." },
-                                    ...tanks.map((t) => ({ value: String(t.id), label: `${t.name} (${t.product?.name})` })),
+                                    ...charts.map((c) => ({ value: String(c.tankId), label: `${c.tankName}${c.productName ? ` (${c.productName})` : ""}` })),
                                 ]}
                                 placeholder="Select Tank..."
                             />
