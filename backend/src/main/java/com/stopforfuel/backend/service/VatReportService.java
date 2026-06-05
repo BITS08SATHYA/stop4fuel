@@ -6,10 +6,12 @@ import com.stopforfuel.backend.entity.InvoiceProduct;
 import com.stopforfuel.backend.entity.NozzleInventory;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.entity.PurchaseInvoice;
+import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.NozzleInventoryRepository;
 import com.stopforfuel.backend.repository.PurchaseInvoiceRepository;
+import com.stopforfuel.backend.repository.ShiftRepository;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,9 +22,12 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -37,6 +42,8 @@ public class VatReportService {
     private final PurchaseInvoiceRepository purchaseInvoiceRepository;
     private final InvoiceBillRepository invoiceBillRepository;
     private final NozzleInventoryRepository nozzleInventoryRepository;
+    private final ShiftRepository shiftRepository;
+    private final ProductPriceHistoryService priceHistoryService;
     private final VatReportPdfGenerator pdfGenerator;
     private final VatReportExcelService excelService;
 
@@ -61,13 +68,38 @@ public class VatReportService {
 
         d.purchaseInvoices = purchaseInvoiceRepository.findByDateRangeWithDetails(scid, fromDate, toDate);
 
+        // Bin by the SHIFT's business date (shift.start_time::date) — the same date
+        // the shift-closing report prints. A bill/nozzle row's own timestamp can roll
+        // past midnight or be entered on a later calendar day while still belonging to
+        // the prior shift, so binning by the raw timestamp scatters a shift's sales
+        // into the wrong day (mirrors DailySalesRegisterService). The fetch window is
+        // widened so a row whose timestamp landed outside [from,to] but whose shift
+        // business date is inside still gets pulled in, then re-binned and filtered.
+        LocalDate fetchFrom = fromDate.minusDays(3);
+        LocalDate fetchTo = toDate.plusDays(3);
+
+        List<NozzleInventory> nozzleRows =
+                nozzleInventoryRepository.findByScidAndDateBetween(scid, fetchFrom, fetchTo);
+        LocalDateTime from = fetchFrom.atStartOfDay();
+        LocalDateTime to = fetchTo.atTime(LocalTime.MAX);
+        List<InvoiceBill> bills = invoiceBillRepository.findByDateBetween(from, to, scid);
+
+        Set<Long> shiftIds = new HashSet<>();
+        for (NozzleInventory ni : nozzleRows) if (ni.getShiftId() != null) shiftIds.add(ni.getShiftId());
+        for (InvoiceBill b : bills) if (b.getShiftId() != null) shiftIds.add(b.getShiftId());
+        Map<Long, LocalDate> shiftBizDate = new HashMap<>();
+        for (Shift s : shiftRepository.findAllById(shiftIds)) {
+            if (s.getStartTime() != null) shiftBizDate.put(s.getId(), s.getStartTime().toLocalDate());
+        }
+
         // Daily fuel sales per product, from nozzle readings (canonical revenue source).
-        // Group by (date, productId) → totals; rate = product.price (current catalog).
-        List<NozzleInventory> nozzleRows = nozzleInventoryRepository.findByScidAndDateBetween(scid, fromDate, toDate);
+        // Group by (business date, productId) → totals; rate = product.price (current catalog).
         Map<Long, FuelProductDaily> byProduct = new LinkedHashMap<>();
         for (NozzleInventory ni : nozzleRows) {
             if (ni.getNozzle() == null || ni.getNozzle().getTank() == null
                     || ni.getNozzle().getTank().getProduct() == null) continue;
+            LocalDate day = businessDay(ni.getShiftId(), ni.getDate(), shiftBizDate);
+            if (day == null || day.isBefore(fromDate) || day.isAfter(toDate)) continue;
             Product p = ni.getNozzle().getTank().getProduct();
             // Only fuel products (skip non-FUEL even if a nozzle was misconfigured)
             if (!"FUEL".equalsIgnoreCase(p.getCategory())) continue;
@@ -77,14 +109,19 @@ public class VatReportService {
                 f.dailyTotals = new TreeMap<>();
                 return f;
             });
-            DailyFuelRow row = fpd.dailyTotals.computeIfAbsent(ni.getDate(), k -> new DailyFuelRow());
+            DailyFuelRow row = fpd.dailyTotals.computeIfAbsent(day, k -> new DailyFuelRow());
             if (ni.getSales() != null) row.litres = row.litres.add(BigDecimal.valueOf(ni.getSales()));
             if (ni.getTestQuantity() != null) row.test = row.test.add(BigDecimal.valueOf(ni.getTestQuantity()));
         }
-        // Compute net & amount per row
+        // Compute net & amount per row. Rate is resolved PER DAY from ProductPriceHistory
+        // (price effective on that day), since fuel prices change daily — same source the
+        // shift-closing report uses. Falls back to the current catalog price if no history.
         for (FuelProductDaily fpd : byProduct.values()) {
-            BigDecimal rate = fpd.product.getPrice() != null ? fpd.product.getPrice() : BigDecimal.ZERO;
-            for (DailyFuelRow row : fpd.dailyTotals.values()) {
+            for (Map.Entry<LocalDate, DailyFuelRow> e : fpd.dailyTotals.entrySet()) {
+                LocalDate day = e.getKey();
+                DailyFuelRow row = e.getValue();
+                BigDecimal rate = priceHistoryService.priceAsOf(fpd.product.getId(), day, fpd.product.getPrice());
+                if (rate == null) rate = BigDecimal.ZERO;
                 row.netSale = row.litres.subtract(row.test);
                 row.rate = rate;
                 row.amount = row.netSale.multiply(rate).setScale(2, RoundingMode.HALF_UP);
@@ -92,15 +129,15 @@ public class VatReportService {
         }
         d.fuelDailyByProduct = byProduct;
 
-        // Daily lubricant sales — sum non-FUEL InvoiceProduct.amount grouped by InvoiceBill.date::date.
-        LocalDateTime from = fromDate.atStartOfDay();
-        LocalDateTime to = toDate.atTime(LocalTime.MAX);
-        List<InvoiceBill> bills = invoiceBillRepository.findByDateBetween(from, to, scid);
+        // Daily lubricant sales — sum non-FUEL InvoiceProduct.amount grouped by the
+        // shift's business date (same binning as the fuel block above).
         Map<LocalDate, BigDecimal> lubeByDay = new TreeMap<>();
         BigDecimal lubeTotal = BigDecimal.ZERO;
         for (InvoiceBill b : bills) {
-            if (b.getProducts() == null || b.getDate() == null) continue;
-            LocalDate day = b.getDate().toLocalDate();
+            if (b.getProducts() == null) continue;
+            LocalDate day = businessDay(b.getShiftId(),
+                    b.getDate() != null ? b.getDate().toLocalDate() : null, shiftBizDate);
+            if (day == null || day.isBefore(fromDate) || day.isAfter(toDate)) continue;
             for (InvoiceProduct ip : b.getProducts()) {
                 if (ip.getProduct() == null) continue;
                 if ("FUEL".equalsIgnoreCase(ip.getProduct().getCategory())) continue;
@@ -125,6 +162,15 @@ public class VatReportService {
         d.cgst9 = vatTotal.subtract(half); // residual goes here so SGST + CGST = vatTotal exactly
 
         return d;
+    }
+
+    /** Shift business date (shift.start_time::date) when known, else the row's own date. */
+    private static LocalDate businessDay(Long shiftId, LocalDate fallback, Map<Long, LocalDate> shiftBizDate) {
+        if (shiftId != null) {
+            LocalDate d = shiftBizDate.get(shiftId);
+            if (d != null) return d;
+        }
+        return fallback;
     }
 
     // ===================== DTOs =====================
