@@ -66,7 +66,14 @@ public class VatReportService {
         d.toDate = toDate;
         d.company = company;
 
-        d.purchaseInvoices = purchaseInvoiceRepository.findByDateRangeWithDetails(scid, fromDate, toDate);
+        // The shared query returns newest-first; the VAT purchase register reads
+        // top-to-bottom oldest-first, so sort ascending by invoice date here (don't
+        // flip the shared query — other callers rely on DESC).
+        d.purchaseInvoices = new java.util.ArrayList<>(
+                purchaseInvoiceRepository.findByDateRangeWithDetails(scid, fromDate, toDate));
+        d.purchaseInvoices.sort(java.util.Comparator.comparing(
+                PurchaseInvoice::getInvoiceDate,
+                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 
         // Bin by the SHIFT's business date (shift.start_time::date) — the same date
         // the shift-closing report prints. A bill/nozzle row's own timestamp can roll

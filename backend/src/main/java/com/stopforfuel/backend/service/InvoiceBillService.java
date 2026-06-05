@@ -171,9 +171,19 @@ public class InvoiceBillService {
         // --- Validate all products are active and have sufficient inventory ---
         if (invoice.getProducts() != null) {
             for (InvoiceProduct ip : invoice.getProducts()) {
+                // Every line item must reference a real product — otherwise the
+                // printed bill falls back to the literal word "Product".
+                if (ip.getProduct() == null || ip.getProduct().getId() == null) {
+                    throw new BusinessException(
+                            "Cannot create invoice: every line item must have a product selected.");
+                }
                 if (ip.getProduct() != null && ip.getProduct().getId() != null) {
                     Product prod = productRepository.findById(ip.getProduct().getId())
                             .orElseThrow(() -> new RuntimeException("Product not found"));
+                    // Replace the client-sent stub ({id} only, name=null) with the fully
+                    // loaded entity so the create response — used to print the bill
+                    // immediately — carries the real product name, not "Product".
+                    ip.setProduct(prod);
                     if (!prod.isActive()) {
                         throw new BusinessException(
                                 "Cannot create invoice: Product '" + prod.getName() + "' is disabled.");
@@ -815,6 +825,16 @@ public class InvoiceBillService {
 
         if (updated.getProducts() != null) {
             for (InvoiceProduct ip : updated.getProducts()) {
+                // Every line item must reference a real product — otherwise the
+                // printed bill falls back to the literal word "Product".
+                if (ip.getProduct() == null || ip.getProduct().getId() == null) {
+                    throw new BusinessException(
+                            "Cannot update invoice: every line item must have a product selected.");
+                }
+                // Replace the client-sent stub ({id} only) with the loaded entity so the
+                // update response carries the real product name, not "Product".
+                ip.setProduct(productRepository.findById(ip.getProduct().getId())
+                        .orElseThrow(() -> new RuntimeException("Product not found")));
                 ip.setInvoiceBill(existing);
 
                 BigDecimal qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;

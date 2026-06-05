@@ -81,10 +81,39 @@ public class PurchaseInvoiceDTO {
 
     @Getter
     @Builder
+    public static class ProductSummary {
+        private Long id;
+        private String name;
+        private GradeSummary gradeType;
+
+        public static ProductSummary from(Product p) {
+            if (p == null) return null;
+            return ProductSummary.builder()
+                    .id(p.getId())
+                    .name(p.getName())
+                    .gradeType(p.getGrade() != null
+                            ? GradeSummary.builder().name(p.getGrade().getName()).build()
+                            : null)
+                    .build();
+        }
+    }
+
+    @Getter
+    @Builder
+    public static class GradeSummary {
+        private String name;
+    }
+
+    @Getter
+    @Builder
     public static class ItemDTO {
         private Long id;
         private Long productId;
         private String productName;
+        // Nested product summary — the frontend reads item.product.{id,name,gradeType.name}
+        // for the details modal and the Edit form. Without it the modal shows "-" and
+        // the Edit button crashes on item.product.id.
+        private ProductSummary product;
         private Double quantity;
         private BigDecimal unitPrice;
         private BigDecimal totalPrice;
@@ -100,6 +129,7 @@ public class PurchaseInvoiceDTO {
                     .id(item.getId())
                     .productId(item.getProduct() != null ? item.getProduct().getId() : null)
                     .productName(item.getProduct() != null ? item.getProduct().getName() : null)
+                    .product(ProductSummary.from(item.getProduct()))
                     .quantity(item.getQuantity())
                     .unitPrice(item.getUnitPrice())
                     .totalPrice(item.getTotalPrice())

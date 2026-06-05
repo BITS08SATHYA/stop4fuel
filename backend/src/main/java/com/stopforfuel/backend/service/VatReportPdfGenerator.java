@@ -117,13 +117,13 @@ public class VatReportPdfGenerator {
 
     // ===================== Section 1: Purchase Register =====================
 
-    /** Purchase Register INVOICE NO column: shows "{sapEntryNumber}/({invoiceNumber})" when SAP # is set, else just invoiceNumber. */
+    /** Purchase Register INVOICE NO column: shows the SAP entry number (falls back to the supplier invoice number when SAP # is blank). */
     private static String formatInvoiceCell(PurchaseInvoice pi) {
-        String inv = pi.getInvoiceNumber();
         String sap = pi.getSapEntryNumber();
         if (sap != null && !sap.isBlank()) {
-            return sap + "/(" + (inv != null ? inv : "-") + ")";
+            return sap;
         }
+        String inv = pi.getInvoiceNumber();
         return inv != null ? inv : "-";
     }
 

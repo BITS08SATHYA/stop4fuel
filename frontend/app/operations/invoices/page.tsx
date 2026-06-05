@@ -416,6 +416,14 @@ export default function InvoicesPage() {
         const errors: string[] = [];
         if (selectedProducts.length === 0) return errors;
 
+        // Every line must have a product selected — otherwise the printed bill
+        // shows the literal word "Product" instead of Petrol/Diesel/etc.
+        selectedProducts.forEach((line: any, idx: number) => {
+            if (!line.product || !line.product.id) {
+                errors.push(`Line ${idx + 1}: select a product before continuing.`);
+            }
+        });
+
         const totalFuelQty = selectedProducts
             .filter((l: any) => isFuelProduct(l.product))
             .reduce((sum: number, l: any) => sum + (parseFloat(l.quantity) || 0), 0);
