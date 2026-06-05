@@ -64,13 +64,20 @@ public class EmployeeController {
 
     @PostMapping
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_CREATE')")
-    public EmployeeDetailDTO createEmployee(@Valid @RequestBody Employee employee) {
+    // No @Valid here: username is server-generated in the service (clients don't send it),
+    // and @NotBlank on User.username would reject the request before generation. The fully
+    // populated entity is still bean-validated by Hibernate on flush.
+    public EmployeeDetailDTO createEmployee(@RequestBody Employee employee) {
         return EmployeeDetailDTO.from(employeeService.createEmployee(employee));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
-    public ResponseEntity<EmployeeDetailDTO> updateEmployee(@PathVariable Long id, @jakarta.validation.Valid @RequestBody Employee employee) {
+    // No @Valid here: the update merges editable fields into the loaded employee (which
+    // keeps its existing username). Validating the incoming partial body would fail on the
+    // server-managed username the client never sends. The merged entity is bean-validated
+    // by Hibernate on flush, so field constraints (aadhar, pincode, etc.) are still enforced.
+    public ResponseEntity<EmployeeDetailDTO> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
         return ResponseEntity.ok(EmployeeDetailDTO.from(employeeService.updateEmployee(id, employee)));
     }
 
