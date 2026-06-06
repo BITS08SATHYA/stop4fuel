@@ -340,16 +340,22 @@ export function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo):
     .company { font-size: 12pt; font-weight: 900; letter-spacing: 0.3px; line-height: 1.15; margin-bottom: 1mm; }
     .addr { font-size: 8pt; font-weight: 700; line-height: 1.3; }
 
-    /* Dividers */
-    .rule-d { border-top: 1px dashed #000; margin: 1.2mm 0; }
-    .rule-s { border-top: 1px solid #000; margin: 1.2mm 0; }
-    .rule-h { border-top: 2px solid #000; margin: 1.2mm 0; }
+    /* Dividers. line-height/font-size 0 so the empty rule div carries no stray
+       line box — html2canvas (the thermal raster path) would otherwise render
+       that box overlapping the text row above it. Clearance is provided by the
+       section blocks below (.meta/.tot margins), which the rasterizer respects
+       even when it drops an empty element's own margin. */
+    .rule-d, .rule-s, .rule-h { line-height: 0; font-size: 0; }
+    .rule-d { border-top: 1px dashed #000; margin: 1.6mm 0; }
+    .rule-s { border-top: 1px solid #000; margin: 1.6mm 0; }
+    .rule-h { border-top: 2px solid #000; margin: 1.6mm 0; }
 
     /* Title strip */
     .title { font-size: 11pt; font-weight: 900; letter-spacing: 1.5px; margin: 0.5mm 0; }
     .badge { display: inline-block; border: 1.5px solid #000; padding: 0.3mm 2mm; font-size: 9pt; font-weight: 900; letter-spacing: 1px; margin-top: 0.6mm; }
 
     /* Label : value pairs */
+    .meta { margin: 0 0 1.6mm; }
     .meta .row { font-size: 9pt; font-weight: 700; }
     .meta .lbl { white-space: nowrap; }
     .meta .val { font-weight: 900; word-break: break-word; }
@@ -366,10 +372,11 @@ export function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo):
     .isub { font-size: 7.5pt; font-weight: 700; padding-left: 2mm; }
 
     /* Totals */
+    .tot { margin: 1.4mm 0; }
     .tot .row { font-size: 9.5pt; font-weight: 700; }
     .tot .row.bold { font-weight: 900; }
     .tot .row.sub { font-size: 8.5pt; font-weight: 700; padding-left: 3mm; }
-    .grand-wrap { margin: 1mm 0; padding: 1mm 0; border-top: 2px solid #000; border-bottom: 3px double #000; }
+    .grand-wrap { margin: 2mm 0 1mm; padding: 1.4mm 0; border-top: 2px solid #000; border-bottom: 3px double #000; }
     .grand { display: flex; justify-content: space-between; gap: 6px; font-size: 12pt; font-weight: 900; letter-spacing: 0.3px; }
     .in-words { font-size: 8pt; font-weight: 700; line-height: 1.3; margin-top: 0.8mm; font-style: italic; }
 
