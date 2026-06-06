@@ -645,6 +645,7 @@ export default function InvoicesPage() {
         setCustomerSuggestions([]);
         setIncentives([]);
         setBillType('CASH');
+        setVehicleKM("");
     };
 
     const renderStep1 = () => (
@@ -674,7 +675,7 @@ export default function InvoicesPage() {
                             </button>
                         ) : (
                             <button
-                                onClick={() => { setIsWalkIn(false); setVehicleQuickPicked(false); setWalkInCustomerName(""); setWalkInVehicleNo(""); setWalkInGST(""); }}
+                                onClick={() => { setIsWalkIn(false); setVehicleQuickPicked(false); setWalkInCustomerName(""); setWalkInVehicleNo(""); setWalkInGST(""); setVehicleKM(""); }}
                                 className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground border border-border rounded-xl transition-colors"
                             >
                                 Cancel
@@ -684,7 +685,7 @@ export default function InvoicesPage() {
 
                     {isWalkIn && (
                         <div className="mt-4 pt-4 border-t border-border/50 space-y-3">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                 <div>
                                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 block">Customer Name <span className="font-normal normal-case">(Optional)</span></label>
                                     <input
@@ -714,6 +715,16 @@ export default function InvoicesPage() {
                                         className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm font-mono"
                                         placeholder="e.g. 33AABCS1234F1Z5"
                                         maxLength={15}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 block">Vehicle KM <span className="font-normal normal-case">(Optional)</span></label>
+                                    <input
+                                        type="number"
+                                        value={vehicleKM}
+                                        onChange={(e) => setVehicleKM(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm"
+                                        placeholder="Current odometer reading"
                                     />
                                 </div>
                             </div>
