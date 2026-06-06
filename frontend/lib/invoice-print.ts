@@ -352,7 +352,10 @@ export function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo):
 
     /* Title strip */
     .title { font-size: 11pt; font-weight: 900; letter-spacing: 1.5px; margin: 0.5mm 0; }
-    .badge { display: inline-block; border: 1.5px solid #000; padding: 0.3mm 2mm; font-size: 9pt; font-weight: 900; letter-spacing: 1px; margin-top: 0.6mm; }
+    /* Bill-type box. line-height:1 + symmetric padding so the border frames the
+       text evenly — the raster (html2canvas) otherwise clips the box against the
+       glyphs when it inherits the 1.25 body line-height. */
+    .badge { display: inline-block; border: 1.5px solid #000; padding: 1mm 3mm; font-size: 9pt; font-weight: 900; letter-spacing: 1px; line-height: 1; margin-top: 1.2mm; }
 
     /* Label : value pairs */
     .meta { margin: 0 0 1.6mm; }

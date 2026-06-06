@@ -52,6 +52,7 @@ public class DataInitializer implements ApplicationRunner {
         patchCashierPermissions();
         patchStatementSequence();
         backfillStatementQuantity();
+        backfillIncentiveCustomerNames();
     }
 
     private void seedRoles() {
@@ -277,6 +278,7 @@ public class DataInitializer implements ApplicationRunner {
         for (String code : List.of(
                 "DASHBOARD_VIEW",
                 "CUSTOMER_VIEW", "VEHICLE_VIEW", "PRODUCT_VIEW", "STATION_VIEW",
+                "INVENTORY_VIEW",
                 "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
                 "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
                 "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE",
@@ -343,6 +345,7 @@ public class DataInitializer implements ApplicationRunner {
             "CASHIER", Set.of(
                 "DASHBOARD_VIEW",
                 "CUSTOMER_VIEW", "VEHICLE_VIEW", "PRODUCT_VIEW", "STATION_VIEW",
+                "INVENTORY_VIEW",
                 "SHIFT_VIEW", "SHIFT_CREATE", "SHIFT_UPDATE",
                 "INVOICE_VIEW", "INVOICE_CREATE", "INVOICE_UPDATE",
                 "PAYMENT_VIEW", "PAYMENT_CREATE", "PAYMENT_UPDATE",
@@ -419,6 +422,24 @@ public class DataInitializer implements ApplicationRunner {
         if (permCache != null) permCache.clear();
         var roleCache = cacheManager.getCache("rolePermissions");
         if (roleCache != null) roleCache.clear();
+    }
+
+    /**
+     * Backfill customer_name on legacy auto-discount incentives. Older rows stored
+     * the payee only inside the description ("Auto: Discount on Invoice #X - NAME");
+     * extract the part after " - " so the incentives report can show it. Idempotent:
+     * only touches rows whose customer_name is still null. No-op once backfilled.
+     */
+    private void backfillIncentiveCustomerNames() {
+        int updated = entityManager.createNativeQuery(
+                "UPDATE incentive_payment " +
+                "SET customer_name = TRIM(SUBSTRING(description FROM POSITION(' - ' IN description) + 3)) " +
+                "WHERE customer_name IS NULL " +
+                "AND description LIKE 'Auto: Discount on Invoice #% - %'")
+                .executeUpdate();
+        if (updated > 0) {
+            log.info("Backfilled customer_name for {} incentive payments", updated);
+        }
     }
 
     private void backfillStatementQuantity() {

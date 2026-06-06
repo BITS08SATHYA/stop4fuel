@@ -28,6 +28,12 @@ public class IncentivePayment extends BaseEntity {
     @Column(name = "description")
     private String description;
 
+    // Resolved payee name captured at creation time. For walk-in CASH discounts
+    // there is no linked Customer entity (the name lives only on the invoice's
+    // signatory), so this lets the report show the name without a relation.
+    @Column(name = "customer_name")
+    private String customerName;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

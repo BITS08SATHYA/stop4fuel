@@ -194,6 +194,7 @@ const cashierSections: NavSection[] = [
             { name: "Incentive Payments", href: "/operations/incentive-payments", icon: Gift },
             { name: "Operational Advances", href: "/operations/advances", icon: Wallet },
             { name: "E-Advances", href: "/operations/e-advances", icon: CreditCard },
+            { name: "Dip Stock Lookup", href: "/operations/inventory/dip-charts", icon: Ruler },
             { name: "Shift Closing", href: "/operations/shifts", icon: Clock },
         ],
     },

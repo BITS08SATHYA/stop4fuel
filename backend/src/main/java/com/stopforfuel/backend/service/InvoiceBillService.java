@@ -464,6 +464,7 @@ public class InvoiceBillService {
         IncentivePayment incentivePayment = new IncentivePayment();
         incentivePayment.setAmount(discount);
         incentivePayment.setDescription("Auto: Discount on Invoice #" + invoice.getBillNo() + " - " + customerName);
+        incentivePayment.setCustomerName(customerName);
         incentivePayment.setCustomer(customer);
         incentivePayment.setInvoiceBill(invoice);
         incentivePayment.setShiftId(activeShift.getId());
