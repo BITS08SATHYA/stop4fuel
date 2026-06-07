@@ -14,6 +14,7 @@ public class IncentivePaymentDTO {
     private LocalDateTime paymentDate;
     private BigDecimal amount;
     private String description;
+    private String customerName;
     private CustomerSummary customer;
     private InvoiceBillSummary invoiceBill;
     private StatementSummary statement;
@@ -28,6 +29,7 @@ public class IncentivePaymentDTO {
                 .paymentDate(ip.getPaymentDate())
                 .amount(ip.getAmount())
                 .description(ip.getDescription())
+                .customerName(ip.getCustomerName())
                 .customer(CustomerSummary.from(ip.getCustomer()))
                 .invoiceBill(InvoiceBillSummary.from(ip.getInvoiceBill()))
                 .statement(StatementSummary.from(ip.getStatement()))

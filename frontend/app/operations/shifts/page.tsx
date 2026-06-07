@@ -817,7 +817,7 @@ export default function ShiftsPage() {
                                                 <tbody className="divide-y divide-border/20">
                                                     {incentivePayments.map(ip => (
                                                         <tr key={ip.id} className="hover:bg-white/5">
-                                                            <td className="py-1.5 text-foreground">{ip.customer?.name || ip.customerName || "-"}</td>
+                                                            <td className="py-1.5 text-foreground">{ip.customer?.name || ip.customerName || ip.invoiceBill?.customerName || ip.invoiceBill?.signatoryName || ip.invoiceBill?.billDesc || "-"}</td>
                                                             <td className="py-1.5 text-muted-foreground truncate max-w-[160px]">{ip.description || "-"}</td>
                                                             <td className="py-1.5 text-right font-medium text-foreground">{formatCurrency(ip.amount)}</td>
                                                         </tr>
