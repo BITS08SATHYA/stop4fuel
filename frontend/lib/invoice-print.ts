@@ -141,6 +141,7 @@ export interface ReceiptModel {
     vehicleNo: string;
     isNamedCustomer: boolean;
     odometerDisplay: string;
+    showOdometer: boolean;
     showIndent: boolean;
     indentNo: string;
     // B2B refs
@@ -183,7 +184,11 @@ export function buildReceiptModel(invoice: InvoiceBill, company: CompanyInfo): R
         || asciiSafe(invoice.raisedBy?.username)
         || (invoice.raisedBy?.id ? `#${invoice.raisedBy.id}` : "-");
 
-    const odometerDisplay = invoice.vehicleKM ? `${invoice.vehicleKM.toLocaleString("en-IN")} km` : "-";
+    // Odometer is captured on both the walk-in cash flow and named-customer credit
+    // flow, so gate the printed row on the value itself — not on isNamedCustomer
+    // (walk-ins have no customer.id and would otherwise drop the reading silently).
+    const showOdometer = !!invoice.vehicleKM;
+    const odometerDisplay = showOdometer ? `${invoice.vehicleKM!.toLocaleString("en-IN")} km` : "-";
 
     const indentTrim = (invoice.indentNo || "").trim();
     const showIndent = indentTrim !== "" && indentTrim !== "0";
@@ -261,6 +266,7 @@ export function buildReceiptModel(invoice: InvoiceBill, company: CompanyInfo): R
         vehicleNo: asciiSafe(vehicleNo),
         isNamedCustomer,
         odometerDisplay,
+        showOdometer,
         showIndent,
         indentNo: asciiSafe(invoice.indentNo),
         buyersOrder,
@@ -352,10 +358,15 @@ export function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo):
 
     /* Title strip */
     .title { font-size: 11pt; font-weight: 900; letter-spacing: 1.5px; margin: 0.5mm 0; }
-    /* Bill-type box. line-height:1 + symmetric padding so the border frames the
-       text evenly — the raster (html2canvas) otherwise clips the box against the
-       glyphs when it inherits the 1.25 body line-height. */
-    .badge { display: inline-block; border: 1.5px solid #000; padding: 1mm 3mm; font-size: 9pt; font-weight: 900; letter-spacing: 1px; line-height: 1; margin-top: 1.2mm; }
+    /* Bill-type box. Rendered by html2canvas (thermal raster), which is fussy
+       about bordered inline-blocks:
+         - integer 2px border (sub-pixel 1.5px rendered ragged, like the dividers);
+         - line-height 1.1 + symmetric vertical padding so the frame clears the
+           glyphs instead of clipping against them at the line-box edge;
+         - text-indent balances the trailing letter-spacing (which otherwise adds
+           a gap only on the right and makes CASH/CREDIT look off-centre);
+         - small top+bottom margin keeps the box off the line above/below. */
+    .badge { display: inline-block; border: 2px solid #000; padding: 1mm 3mm 1.2mm; font-size: 9pt; font-weight: 900; letter-spacing: 1px; text-indent: 1px; line-height: 1.1; margin: 1.2mm 0 0.5mm; }
 
     /* Label : value pairs */
     .meta { margin: 0 0 1.6mm; }
@@ -421,7 +432,7 @@ export function generateInvoiceHTML(invoice: InvoiceBill, company: CompanyInfo):
     ${m.customerPhone ? `<div class="row"><span class="lbl">Phone</span><span class="val">${m.customerPhone}</span></div>` : ""}
     ${m.customerGST ? `<div class="row"><span class="lbl">GST</span><span class="val">${m.customerGST}</span></div>` : ""}
     ${m.vehicleNo ? `<div class="row"><span class="lbl">Vehicle</span><span class="val">${m.vehicleNo}</span></div>` : ""}
-    ${m.isNamedCustomer ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${m.odometerDisplay}</span></div>` : ""}
+    ${m.showOdometer ? `<div class="row"><span class="lbl">Odometer</span><span class="val">${m.odometerDisplay}</span></div>` : ""}
     ${m.showIndent ? `<div class="row"><span class="lbl">Indent</span><span class="val">${m.indentNo}</span></div>` : ""}
 </div>
 
