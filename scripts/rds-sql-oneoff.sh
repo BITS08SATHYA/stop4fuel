@@ -31,13 +31,16 @@ echo "==> Resolving AWS account + networking"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$SECRET_NAME" --region "$REGION" --query ARN --output text)
 
-VPC_ID=$(aws ec2 describe-vpcs --region "$REGION" --filters "Name=tag:Name,Values=stopforfuel-vpc" --query 'Vpcs[0].VpcId' --output text)
-SUBNETS=$(aws ec2 describe-subnets --region "$REGION" \
-  --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=stopforfuel-private-*" \
-  --query 'Subnets[].SubnetId' --output text | tr '\t' ',')
-SG_ID=$(aws ec2 describe-security-groups --region "$REGION" \
-  --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=stopforfuel-ecs-sg" \
-  --query 'SecurityGroups[0].GroupId' --output text)
+# Reuse the running backend service's network config (public subnets +
+# assignPublicIp=ENABLED). The private subnets have no NAT/VPC endpoints, so a
+# task there can't reach Secrets Manager / ECR / Docker Hub. The backend works
+# because it runs in public subnets with a public IP — mirror that exactly.
+NETCFG=$(aws ecs describe-services --region "$REGION" --cluster "$CLUSTER" \
+  --services stopforfuel-backend-service \
+  --query 'services[0].networkConfiguration.awsvpcConfiguration' --output json)
+SUBNETS=$(echo "$NETCFG" | jq -r '.subnets | join(",")')
+SG_ID=$(echo "$NETCFG" | jq -r '.securityGroups[0]')
+ASSIGN_PUBLIC_IP=$(echo "$NETCFG" | jq -r '.assignPublicIp')
 
 EXEC_ROLE="arn:aws:iam::${ACCOUNT_ID}:role/stopforfuel-ecs-execution-role"
 TASK_ROLE="arn:aws:iam::${ACCOUNT_ID}:role/stopforfuel-ecs-task-role"
@@ -99,7 +102,7 @@ TASK_ARN=$(aws ecs run-task \
   --cluster "$CLUSTER" \
   --launch-type FARGATE \
   --task-definition "$TASKDEF_ARN" \
-  --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG_ID],assignPublicIp=DISABLED}" \
+  --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG_ID],assignPublicIp=$ASSIGN_PUBLIC_IP}" \
   --overrides "$OVERRIDES" \
   --query 'tasks[0].taskArn' --output text)
 
