@@ -568,7 +568,9 @@ export default function InvoicesPage() {
                 buyersOrderDate: buyersOrderDate || undefined,
                 supplierRefNo: supplierRefNo || undefined,
                 paymentDetails: paymentDetails || undefined,
-                date: new Date().toISOString()
+                // Let the server stamp the bill date (LocalDateTime.now() in the
+                // container's Asia/Kolkata TZ). Sending new Date().toISOString()
+                // here pushed a UTC wall-clock, so bills printed 5h30m behind IST.
             };
 
             const saved = await createInvoice(payload);
