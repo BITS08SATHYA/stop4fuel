@@ -486,13 +486,162 @@ ${m.isNamedCustomer ? `<div class="sign">Customer Signature</div>` : ""}
 </html>`;
 }
 
-// Browser-print fallback: used when the local thermal print agent is not
+// ---------------------------------------------------------------------------
+// Dot-matrix (TVS MSP 250) layout — 6x4.5" pre-printed slip.
+//
+// This is the layout the bunk used before the thermal RP 3230 (restored from
+// commit 28f446b^). It prints through the OS driver via window.print() — there
+// is no ESC/POS path for the 9-pin dot matrix. It consumes the SAME
+// buildReceiptModel() as the thermal receipt so the two media can never show
+// different bill data; only the markup/CSS differs (large bold Courier for a
+// faded ribbon, 2-column meta strip, manual-fill audit blanks).
+// ---------------------------------------------------------------------------
+export function generateDotMatrixHTML(invoice: InvoiceBill, company: CompanyInfo): string {
+    const m = buildReceiptModel(invoice, company);
+    const isCash = m.billBadge === "CASH";
+    // driverName isn't part of the shared model; read it straight off the invoice.
+    const driverName = asciiSafe(invoice.driverName);
+
+    const itemsHtml = m.items.map((it) => {
+        const disc = it.discount ? ` (-${it.discount})` : "";
+        return `<tr>
+            <td style="padding:1px 0;">${it.name}${disc}</td>
+            <td style="text-align:center;padding:1px 0;">${it.qty}</td>
+            <td style="text-align:center;padding:1px 0;">${it.unitRate}</td>
+            <td style="text-align:right;font-weight:bold;padding:1px 0;">${it.amt}</td>
+        </tr>`;
+    }).join("");
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Invoice ${m.billNo}</title>
+<style>
+    @page { size: 6in 4.5in; margin: 2mm 3mm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 12pt; font-weight: 900; line-height: 1.15; color: #000; background: #fff; width: 5.3in; margin: 0 auto; -webkit-text-stroke: 0.4px #000; }
+    table { width: 100%; border-collapse: collapse; }
+    td { vertical-align: top; font-size: 12pt; font-weight: 900; }
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .big { font-size: 16pt; font-weight: 900; }
+    .xs { font-size: 10pt; font-weight: 900; color: #000; }
+    hr { border: none; border-top: 2px solid #000; margin: 2px 0; }
+    hr.solid { border-top: 3px solid #000; }
+    .badge { display: inline-block; border: 2px solid #000; padding: 0 8px; font-size: 12pt; font-weight: 900; letter-spacing: 1px; }
+    .info td:first-child { font-size: 11pt; font-weight: 900; width: 22%; padding: 0; }
+    .info td:last-child { font-weight: 900; padding: 0; }
+    .items th { font-size: 11pt; font-weight: 900; border-bottom: 2px solid #000; padding: 2px 0; text-transform: uppercase; }
+    .items td { padding: 1px 0; }
+    .totals { margin-top: 2px; }
+    .totals td { font-size: 12pt; font-weight: 900; padding: 0; }
+    .totals .label { text-align: right; padding-right: 8px; }
+    .totals .val { text-align: right; width: 28%; }
+    .totals .grand td { font-size: 14pt; border-top: 2px solid #000; border-bottom: 3px double #000; padding: 2px 0; }
+    .sign-line { margin-top: 14px; border-top: 1px solid #000; text-align: center; }
+    .audit { margin-top: 6px; font-size: 10pt; font-weight: 900; display: flex; justify-content: space-between; gap: 6px; }
+    .audit span { border-bottom: 1px dotted #000; flex: 1; padding: 0 2px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="center">
+    <div class="big">${m.company.name}</div>
+    <div class="xs">${m.company.address} | Ph: ${m.company.phone} | GSTIN: ${m.company.gstNo}</div>
+</div>
+<hr class="solid">
+<div class="center"><span style="font-size:13pt;font-weight:900;">TAX INVOICE</span> <span class="badge">${m.billBadge}</span></div>
+<hr>
+
+<!-- Customer on its own full-width line -->
+<table class="info"><tr>
+    <td style="width:14%;">Customer:</td>
+    <td style="text-align:left;">${m.customerName}${m.customerPhone ? ` (${m.customerPhone})` : ""}${m.customerGST ? ` | GST: ${m.customerGST}` : ""}</td>
+</tr></table>
+
+<!-- Bill / Vehicle two-column strip -->
+<table><tr>
+<td style="width:48%;">
+    <table class="info">
+        <tr><td>Bill:</td><td>${m.billNo}</td></tr>
+        <tr><td>Date:</td><td>${m.dateStr}</td></tr>
+        <tr><td>Shift:</td><td>${m.shiftId}</td></tr>
+    </table>
+</td>
+<td style="width:4%;"></td>
+<td style="width:48%;">
+    <table class="info">
+        ${m.vehicleNo ? `<tr><td>Vehicle:</td><td>${m.vehicleNo}</td></tr>` : ""}
+        ${driverName ? `<tr><td>Driver:</td><td>${driverName}</td></tr>` : ""}
+        ${m.showIndent ? `<tr><td>Indent:</td><td>${m.indentNo}</td></tr>` : ""}
+        <tr><td>Cashier:</td><td>${m.cashierLabel}</td></tr>
+    </table>
+</td>
+</tr></table>
+${m.showOdometer ? `<div class="xs right">Odometer: ${m.odometerDisplay}</div>` : ""}
+<hr class="solid">
+
+<!-- Items -->
+<table class="items">
+    <thead><tr>
+        <th style="text-align:left;">Product</th>
+        <th style="text-align:center;">Qty</th>
+        <th style="text-align:center;">Rate</th>
+        <th style="text-align:right;">Amount</th>
+    </tr></thead>
+    <tbody>${itemsHtml}</tbody>
+</table>
+
+<!-- Right-aligned totals stack -->
+<table class="totals">
+    <tr><td class="label">Sub Total</td><td class="val">${m.subTotal}</td></tr>
+    ${m.totalDiscount > 0 ? `<tr><td class="label">Discount</td><td class="val">-${m.totalDiscountStr}</td></tr>` : ""}
+    <tr class="grand"><td class="label">Total (Rs.)</td><td class="val">${m.netAmountStr}</td></tr>
+</table>
+
+${!isCash ? `<div class="sign-line"><span class="xs">Customer Signature</span></div>` : ""}
+
+<div class="audit">
+    <span>Pump Reading: </span>
+    <span>Nozzle: </span>
+    <span>Attendant: </span>
+</div>
+<div class="xs center" style="margin-top:2px;">Computer-generated invoice.</div>
+
+</body>
+</html>`;
+}
+
+// Remembered printer choice — which device the cashier last printed an invoice
+// to. Mirrors the printAgentUrl override pattern in lib/print-agent.ts.
+export type PrinterTarget = "thermal" | "dotmatrix";
+const PRINTER_TARGET_KEY = "invoicePrinterTarget";
+
+export function getPrinterTarget(): PrinterTarget {
+    if (typeof window !== "undefined") {
+        try {
+            const v = window.localStorage.getItem(PRINTER_TARGET_KEY);
+            if (v === "thermal" || v === "dotmatrix") return v;
+        } catch (_) { /* localStorage blocked — use default */ }
+    }
+    return "thermal";
+}
+
+export function setPrinterTarget(t: PrinterTarget): void {
+    if (typeof window !== "undefined") {
+        try { window.localStorage.setItem(PRINTER_TARGET_KEY, t); } catch (_) { /* ignore */ }
+    }
+}
+
+// Print an HTML document through the OS print dialog. Used for the dot-matrix
+// route (always) and as the thermal fallback when the local print agent is not
 // reachable (machine without the agent installed, or agent stopped). Opens a
-// popup sized for the thermal roll and triggers the OS print dialog — the
-// original behaviour, preserved verbatim so nothing regresses.
-function browserPrintFallback(invoice: InvoiceBill, company: CompanyInfo, preOpened?: Window | null): void {
-    const html = generateInvoiceHTML(invoice, company);
-    const printWindow = preOpened || window.open("", "_blank", "width=420,height=900");
+// popup, writes the markup, triggers window.print(), and auto-closes.
+function browserPrint(html: string, popupFeatures: string, preOpened?: Window | null): void {
+    const printWindow = preOpened || window.open("", "_blank", popupFeatures);
     if (!printWindow) {
         alert("Please allow popups to print invoices.");
         return;
@@ -525,21 +674,37 @@ if (typeof window !== "undefined") {
 }
 
 /**
- * Print an invoice.
+ * Print an invoice to the chosen printer.
  *
- * Steady state on a counter PC with the print agent installed: the HTML
- * receipt is rasterized in-browser and pushed to the TVS RP3150 as an ESC/POS
- * image — same look as the browser print, one click, no dialog.
+ * `target` selects the device:
+ *  - "thermal"   → TVS-E RP 3230. On a counter PC with the print agent the HTML
+ *                  receipt is rasterized in-browser and pushed as an ESC/POS
+ *                  image — one click, no dialog. Where the agent is unreachable
+ *                  (dev laptop, agent stopped) it falls back to the browser
+ *                  print popup with the same 72mm receipt.
+ *  - "dotmatrix" → TVS MSP 250. The 9-pin printer has no ESC/POS path, so the
+ *                  6x4.5" slip is printed straight through the OS driver via the
+ *                  browser print dialog (cashier picks MSP 250 / OS default).
  *
- * Anywhere the agent is not reachable (dev laptop, machine without the agent,
- * agent stopped) it transparently falls back to the browser print popup.
+ * When `target` is omitted the remembered choice (getPrinterTarget) is used,
+ * defaulting to "thermal" — so older call sites keep their original behaviour.
  *
- * The fallback popup must be opened inside the click gesture or the browser
- * blocks it. So when the agent's state is unknown/down we pre-open the popup
- * synchronously; if the agent then turns out to be up we close it again.
+ * The popup must be opened inside the click gesture or the browser blocks it.
+ * For the thermal path, when the agent's state is unknown/down we pre-open the
+ * popup synchronously; if the agent then turns out to be up we close it again.
  */
-export async function printInvoice(invoice: InvoiceBill, company: CompanyInfo): Promise<void> {
-    // Agent known up → go direct, no popup, no flicker.
+export async function printInvoice(
+    invoice: InvoiceBill,
+    company: CompanyInfo,
+    target: PrinterTarget = getPrinterTarget(),
+): Promise<void> {
+    // Dot-matrix: never touches the thermal agent — straight to the OS driver.
+    if (target === "dotmatrix") {
+        browserPrint(generateDotMatrixHTML(invoice, company), "width=650,height=900");
+        return;
+    }
+
+    // Thermal. Agent known up → go direct, no popup, no flicker.
     if (agentKnownUp === true) {
         try {
             const bytes = await buildInvoiceRaster(generateInvoiceHTML(invoice, company));
@@ -566,5 +731,5 @@ export async function printInvoice(invoice: InvoiceBill, company: CompanyInfo): 
         // ignore — fall back to browser print below
     }
     agentKnownUp = false;
-    browserPrintFallback(invoice, company, preOpened);
+    browserPrint(generateInvoiceHTML(invoice, company), "width=420,height=900", preOpened);
 }

@@ -29,7 +29,7 @@ import {
     getCustomerCreditInfo
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
-import { printInvoice } from "@/lib/invoice-print";
+import { printInvoice, getPrinterTarget, setPrinterTarget, type PrinterTarget } from "@/lib/invoice-print";
 import { useAuth } from "@/lib/auth/auth-context";
 
 interface PostableShift {
@@ -141,6 +141,10 @@ export default function InvoicesPage() {
     const [vehicleKM, setVehicleKM] = useState("");
     const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
     const [lastCreatedInvoice, setLastCreatedInvoice] = useState<InvoiceBill | null>(null);
+    // Which printer the Print button targets. Seeded "thermal" for SSR, then
+    // hydrated from the remembered choice on mount to avoid a hydration mismatch.
+    const [printTarget, setPrintTarget] = useState<PrinterTarget>("thermal");
+    useEffect(() => { setPrintTarget(getPrinterTarget()); }, []);
     const [manualDiscount, setManualDiscount] = useState("");
     // GST tax-invoice optional fields (mirror the IOC-dealer manual book)
     const [reverseCharge, setReverseCharge] = useState(false);
@@ -1751,14 +1755,29 @@ export default function InvoicesPage() {
                                 />
                             </div>
                         </GlassCard>
-                        <div className="flex justify-end gap-3">
+                        <div className="flex justify-end items-center gap-3">
                             {companyInfo && (
-                                <button
-                                    onClick={() => printInvoice(lastCreatedInvoice, companyInfo)}
-                                    className="px-8 py-4 border border-border text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 hover:bg-muted/50"
-                                >
-                                    <Receipt size={20} /> Print
-                                </button>
+                                <>
+                                    <div className="w-56">
+                                        <StyledSelect
+                                            value={printTarget}
+                                            onChange={(v) => setPrintTarget(v as PrinterTarget)}
+                                            options={[
+                                                { value: "thermal", label: "Thermal — RP 3230" },
+                                                { value: "dotmatrix", label: "Dot-matrix — MSP 250" },
+                                            ]}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setPrinterTarget(printTarget);
+                                            printInvoice(lastCreatedInvoice, companyInfo, printTarget);
+                                        }}
+                                        className="px-8 py-4 border border-border text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 hover:bg-muted/50"
+                                    >
+                                        <Receipt size={20} /> Print
+                                    </button>
+                                </>
                             )}
                             <button
                                 onClick={() => {
