@@ -15,12 +15,20 @@ import { PermissionGate } from "@/components/permission-gate";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
-    getInvoiceSequence, setInvoiceSequence,
+    getInvoiceSequence, setInvoiceSequence, getActiveShift,
     type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
     type Product, type Nozzle, type Vehicle, type Customer, type BillSequenceView,
     API_BASE_URL
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
+
+// Format a Date as a <input type="datetime-local"> value (YYYY-MM-DDTHH:mm) in
+// LOCAL time. Using toISOString() here emits UTC and made the date filters show
+// times 5h30m behind IST.
+const toLocalInput = (d: Date): string => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 interface EditLine {
     id?: number;
@@ -55,16 +63,17 @@ export default function InvoiceHistoryPage() {
         }).catch(() => {});
     }, []);
 
-    // Filters — toDate uses end of day so newly created invoices are always visible
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59);
+    // Date window: FROM = current shift's start time, TO = now (set in the effect
+    // below once the active shift loads). Until then, start with a synchronous
+    // placeholder of today 00:00 -> now so nothing renders a UTC-shifted time.
+    const startOfTodayInit = new Date();
+    startOfTodayInit.setHours(0, 0, 0, 0);
     const [filters, setFilters] = useState({
         billType: "",
         paymentStatus: "",
         categoryType: "",
-        fromDate: firstDayOfMonth.toISOString().slice(0, 16),
-        toDate: endOfToday.toISOString().slice(0, 16),
+        fromDate: toLocalInput(startOfTodayInit),
+        toDate: toLocalInput(new Date()),
         search: "",
     });
     const [appliedFilters, setAppliedFilters] = useState({ ...filters });
@@ -169,7 +178,8 @@ export default function InvoiceHistoryPage() {
         if (f.paymentStatus) params.paymentStatus = f.paymentStatus;
         if (f.categoryType) params.categoryType = f.categoryType;
         if (f.fromDate) params.fromDate = f.fromDate + ":00";
-        if (f.toDate) params.toDate = f.toDate + ":00";
+        // :59 so a bill created within the selected end minute (e.g. "now") is included.
+        if (f.toDate) params.toDate = f.toDate + ":59";
         if (f.search) params.search = f.search;
         return params;
     }, []);
@@ -200,6 +210,28 @@ export default function InvoiceHistoryPage() {
         }
     }, [buildFilterParams]);
 
+    // Default the date window to the current shift: FROM = shift start, TO = now.
+    // Falls back to today 00:00 -> now when no shift is open.
+    const loadDefaultWindow = useCallback(async () => {
+        let from = new Date();
+        from.setHours(0, 0, 0, 0);
+        try {
+            const shift = await getActiveShift();
+            if (shift?.startTime) from = new Date(shift.startTime);
+        } catch { /* no active shift -> keep today 00:00 */ }
+        return { fromDate: toLocalInput(from), toDate: toLocalInput(new Date()) };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        loadDefaultWindow().then(win => {
+            if (cancelled) return;
+            setFilters(f => ({ ...f, ...win }));
+            setAppliedFilters(f => ({ ...f, ...win }));
+        });
+        return () => { cancelled = true; };
+    }, [loadDefaultWindow]);
+
     useEffect(() => {
         fetchInvoices(page, appliedFilters);
     }, [page, appliedFilters, fetchInvoices]);
@@ -214,17 +246,14 @@ export default function InvoiceHistoryPage() {
         setAppliedFilters({ ...filters });
     };
 
-    const handleReset = () => {
-        const now2 = new Date();
-        const firstDay2 = new Date(now2.getFullYear(), now2.getMonth(), 1);
-        const endOfDay2 = new Date(now2.getFullYear(), now2.getMonth(), now2.getDate(), 23, 59);
+    const handleReset = async () => {
+        const win = await loadDefaultWindow();
         const defaultFilters = {
             billType: "",
             paymentStatus: "",
             categoryType: "",
-            fromDate: firstDay2.toISOString().slice(0, 16),
-            toDate: endOfDay2.toISOString().slice(0, 16),
             search: "",
+            ...win,
         };
         setFilters(defaultFilters);
         setPage(0);

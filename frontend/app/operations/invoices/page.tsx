@@ -207,8 +207,10 @@ export default function InvoicesPage() {
                 // We pull a generous page so the existing client-side table works unchanged for
                 // typical date ranges; date filter happens in SQL, not after shipping every invoice.
                 const result = await getInvoiceHistory(0, 500, {
-                    fromDate: new Date(from).toISOString(),
-                    toDate: new Date(to + "T23:59:59").toISOString(),
+                    // Send IST wall-clock day bounds directly; routing through
+                    // toISOString() shifts them to UTC and drops the last evening.
+                    fromDate: from + "T00:00:00",
+                    toDate: to + "T23:59:59",
                 });
                 invData = result.content;
             } else {
@@ -251,7 +253,10 @@ export default function InvoicesPage() {
                     // Pre-fill date filters with shift start time
                     if (shift.startTime) {
                         setHistoryFromDate(shift.startTime.split("T")[0]);
-                        setHistoryToDate(new Date().toISOString().split("T")[0]);
+                        // Local (IST) date, not toISOString() which can roll to the
+                        // previous day late at night.
+                        const td = new Date();
+                        setHistoryToDate(`${td.getFullYear()}-${String(td.getMonth() + 1).padStart(2, "0")}-${String(td.getDate()).padStart(2, "0")}`);
                     }
                 } else {
                     setIsLoading(false);
