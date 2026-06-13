@@ -261,9 +261,20 @@ function LoginContent() {
 
                             {!enrolled && enrollment && (
                                 <div className="space-y-3">
-                                    <div className="p-3 text-sm text-[#CBD5E1] bg-[#FFB300]/5 border border-[#FFB300]/20 rounded-xl">
-                                        Scan this QR code with Google Authenticator, Microsoft
-                                        Authenticator, or Authy, then enter the 6-digit code it shows.
+                                    <div className="p-3 text-sm text-[#CBD5E1] bg-[#FFB300]/5 border border-[#FFB300]/20 rounded-xl space-y-2">
+                                        <p className="font-medium text-white">Set up your authenticator app</p>
+                                        <ol className="list-decimal list-inside space-y-1 text-[#94A3B8]">
+                                            <li>
+                                                Install an authenticator app — Google Authenticator,
+                                                Microsoft Authenticator, or Authy (free, iPhone or Android).
+                                            </li>
+                                            <li>Open it and tap <span className="text-[#CBD5E1]">+</span> → <span className="text-[#CBD5E1]">Scan a QR code</span>.</li>
+                                            <li>Scan the code below, then enter the 6-digit code it shows.</li>
+                                        </ol>
+                                        <p className="text-xs text-[#64748B]">
+                                            You only scan once. After this, just open the app and type the
+                                            current code each time you sign in.
+                                        </p>
                                     </div>
                                     <div className="flex justify-center">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
