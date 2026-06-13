@@ -46,6 +46,13 @@ public class User extends PersonEntity {
     @Column(name = "passcode")
     private String passcode; // BCrypt-hashed 4-digit passcode
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "totp_secret")
+    private String totpSecret; // AES-encrypted Base32 TOTP secret (reversible, not hashed)
+
+    @Column(name = "mfa_enrolled")
+    private boolean mfaEnrolled; // true once the user has scanned the QR and confirmed a code
+
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 }

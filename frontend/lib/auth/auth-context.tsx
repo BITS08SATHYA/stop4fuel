@@ -22,6 +22,21 @@ interface AuthUser {
     permissions: string[];
 }
 
+export interface MfaEnrollment {
+    qrDataUri: string;
+    manualKey: string;
+}
+
+export interface PasscodeLoginResult {
+    success: boolean;
+    error?: string;
+    // Present when the passcode was correct but a TOTP code is still required.
+    mfaRequired?: boolean;
+    enrolled?: boolean;
+    mfaToken?: string;
+    enrollment?: MfaEnrollment;
+}
+
 interface AuthContextType {
     user: AuthUser | null;
     isLoading: boolean;
@@ -38,10 +53,11 @@ interface AuthContextType {
     loginWithPasscode: (
         phone: string,
         passcode: string,
-    ) => Promise<{
-        success: boolean;
-        error?: string;
-    }>;
+    ) => Promise<PasscodeLoginResult>;
+    verifyMfa: (
+        mfaToken: string,
+        totpCode: string,
+    ) => Promise<{ success: boolean; error?: string }>;
     logout: () => Promise<void>;
     logoutAllDevices: () => Promise<void>;
     hasPermission: (code: string) => boolean;
@@ -54,6 +70,7 @@ const AuthContext = createContext<AuthContextType>({
     accessToken: null,
     login: async () => ({ success: false }),
     loginWithPasscode: async () => ({ success: false }),
+    verifyMfa: async () => ({ success: false }),
     logout: async () => {},
     logoutAllDevices: async () => {},
     hasPermission: () => false,
@@ -233,11 +250,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         [loadUser],
     );
 
+    // Applies a completed {token, user} login response: sets the middleware cookie + user state.
+    const applyLoginResponse = useCallback((data: { user: AuthUser }) => {
+        setAccessToken(null);
+        // Set client-side cookie so Next.js middleware can detect the session
+        document.cookie = `sff-auth-session=1; path=/; max-age=${8 * 60 * 60}; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
+
+        const userData = data.user;
+        setUser({
+            id: userData.id,
+            cognitoId: userData.cognitoId || "",
+            username: userData.username,
+            name: userData.name || "User",
+            email: userData.email,
+            phone: userData.phone,
+            role: userData.role || "EMPLOYEE",
+            designation: userData.designation,
+            permissions: userData.permissions || [],
+        });
+    }, []);
+
     const loginWithPasscode = useCallback(
         async (
             phone: string,
             passcode: string,
-        ): Promise<{ success: boolean; error?: string }> => {
+        ): Promise<PasscodeLoginResult> => {
             try {
                 const res = await fetch(
                     `${getApiBaseUrl()}/auth/login`,
@@ -249,31 +286,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     }
                 );
 
+                const data = await res.json();
+
                 if (!res.ok) {
-                    const data = await res.json();
                     return { success: false, error: data.error || "Sign in failed" };
                 }
 
-                const data = await res.json();
+                // Passcode OK but a second factor (TOTP) is still required.
+                if (data.mfaRequired) {
+                    return {
+                        success: false,
+                        mfaRequired: true,
+                        enrolled: data.enrolled,
+                        mfaToken: data.mfaToken,
+                        enrollment: data.enrollment,
+                    };
+                }
 
-                setAccessToken(null);
-
-                // Set client-side cookie so Next.js middleware can detect the session
-                document.cookie = `sff-auth-session=1; path=/; max-age=${8 * 60 * 60}; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
-
-                const userData = data.user;
-                setUser({
-                    id: userData.id,
-                    cognitoId: userData.cognitoId || "",
-                    username: userData.username,
-                    name: userData.name || "User",
-                    email: userData.email,
-                    phone: userData.phone,
-                    role: userData.role || "EMPLOYEE",
-                    designation: userData.designation,
-                    permissions: userData.permissions || [],
-                });
-
+                // MFA disabled (dev): session already issued.
+                applyLoginResponse(data);
                 return { success: true };
             } catch (err: unknown) {
                 const error = err as Error;
@@ -283,7 +314,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 };
             }
         },
-        [],
+        [applyLoginResponse],
+    );
+
+    const verifyMfa = useCallback(
+        async (
+            mfaToken: string,
+            totpCode: string,
+        ): Promise<{ success: boolean; error?: string }> => {
+            try {
+                const res = await fetch(
+                    `${getApiBaseUrl()}/auth/mfa/verify`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ mfaToken, totpCode }),
+                    }
+                );
+
+                const data = await res.json();
+                if (!res.ok) {
+                    return { success: false, error: data.error || "Verification failed" };
+                }
+
+                applyLoginResponse(data);
+                return { success: true };
+            } catch (err: unknown) {
+                const error = err as Error;
+                return {
+                    success: false,
+                    error: error.message || "Verification failed",
+                };
+            }
+        },
+        [applyLoginResponse],
     );
 
     const logout = useCallback(async () => {
@@ -342,6 +407,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 accessToken,
                 login,
                 loginWithPasscode,
+                verifyMfa,
                 logout,
                 logoutAllDevices,
                 hasPermission,

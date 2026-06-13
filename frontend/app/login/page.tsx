@@ -3,17 +3,25 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Phone, ArrowLeft, ShieldCheck } from "lucide-react";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, type MfaEnrollment } from "@/lib/auth/auth-context";
+import { TotpInput } from "@/components/auth/totp-input";
 import Image from "next/image";
 
 function LoginContent() {
-    const { isAuthenticated, isLoading, loginWithPasscode } = useAuth();
+    const { isAuthenticated, isLoading, loginWithPasscode, verifyMfa } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [phone, setPhone] = useState("");
     const [passcode, setPasscode] = useState("");
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // MFA step state
+    const [step, setStep] = useState<"credentials" | "mfa">("credentials");
+    const [mfaToken, setMfaToken] = useState("");
+    const [enrolled, setEnrolled] = useState(true);
+    const [enrollment, setEnrollment] = useState<MfaEnrollment | null>(null);
+    const [totpCode, setTotpCode] = useState("");
 
     useEffect(() => {
         const returnTo = searchParams.get("returnTo");
@@ -46,7 +54,13 @@ function LoginContent() {
         setIsSubmitting(true);
         try {
             const result = await loginWithPasscode(phone, passcode);
-            if (!result.success) {
+            if (result.mfaRequired && result.mfaToken) {
+                setMfaToken(result.mfaToken);
+                setEnrolled(result.enrolled ?? true);
+                setEnrollment(result.enrollment ?? null);
+                setTotpCode("");
+                setStep("mfa");
+            } else if (!result.success) {
                 setError(result.error || "Sign in failed. Check your credentials.");
             }
         } catch {
@@ -54,6 +68,37 @@ function LoginContent() {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleVerify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
+
+        if (!/^\d{6}$/.test(totpCode)) {
+            setError("Enter the 6-digit code from your authenticator app");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const result = await verifyMfa(mfaToken, totpCode);
+            if (!result.success) {
+                setError(result.error || "Verification failed. Please try again.");
+                setTotpCode("");
+            }
+        } catch {
+            setError("An unexpected error occurred. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const backToCredentials = () => {
+        setStep("credentials");
+        setError("");
+        setTotpCode("");
+        setMfaToken("");
+        setEnrollment(null);
     };
 
     if (isLoading) {
@@ -115,88 +160,156 @@ function LoginContent() {
                     </div>
 
                     <div className="hidden lg:block mb-8">
-                        <h1 className="text-2xl font-bold text-white">Welcome back</h1>
-                        <p className="text-[#94A3B8] text-sm mt-1">Sign in to your account</p>
+                        <h1 className="text-2xl font-bold text-white">
+                            {step === "credentials" ? "Welcome back" : "Two-step verification"}
+                        </h1>
+                        <p className="text-[#94A3B8] text-sm mt-1">
+                            {step === "credentials"
+                                ? "Sign in to your account"
+                                : enrolled
+                                    ? "Enter the code from your authenticator app"
+                                    : "Set up your authenticator app to continue"}
+                        </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {error && (
-                            <div className="p-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
-                                {error}
-                            </div>
-                        )}
+                    {step === "credentials" ? (
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            {error && (
+                                <div className="p-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
+                                    {error}
+                                </div>
+                            )}
 
-                        <div className="space-y-2">
-                            <label htmlFor="phone" className="text-sm font-medium text-[#CBD5E1]">
-                                Mobile Number
-                            </label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] text-sm flex items-center gap-1.5">
-                                    <Phone className="w-4 h-4" />
-                                    +91
-                                </span>
+                            <div className="space-y-2">
+                                <label htmlFor="phone" className="text-sm font-medium text-[#CBD5E1]">
+                                    Mobile Number
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B] text-sm flex items-center gap-1.5">
+                                        <Phone className="w-4 h-4" />
+                                        +91
+                                    </span>
+                                    <input
+                                        id="phone"
+                                        type="tel"
+                                        inputMode="numeric"
+                                        value={phone}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                            setPhone(val);
+                                        }}
+                                        placeholder="9840011111"
+                                        required
+                                        autoComplete="tel"
+                                        className="w-full pl-20 pr-3 py-3 bg-[#0D1117] border border-[#21283B] rounded-xl text-white placeholder:text-[#475569] focus:outline-none focus:ring-2 focus:ring-[#FFB300]/40 focus:border-[#FFB300] transition-colors"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label htmlFor="passcode" className="text-sm font-medium text-[#CBD5E1]">
+                                    Passcode
+                                </label>
                                 <input
-                                    id="phone"
-                                    type="tel"
+                                    id="passcode"
+                                    type="password"
                                     inputMode="numeric"
-                                    value={phone}
+                                    maxLength={4}
+                                    value={passcode}
                                     onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                                        setPhone(val);
+                                        const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                        setPasscode(val);
                                     }}
-                                    placeholder="9840011111"
+                                    placeholder="4-digit passcode"
                                     required
-                                    autoComplete="tel"
-                                    className="w-full pl-20 pr-3 py-3 bg-[#0D1117] border border-[#21283B] rounded-xl text-white placeholder:text-[#475569] focus:outline-none focus:ring-2 focus:ring-[#FFB300]/40 focus:border-[#FFB300] transition-colors"
+                                    autoComplete="current-password"
+                                    className="w-full px-3 py-3 bg-[#0D1117] border border-[#21283B] rounded-xl text-white placeholder:text-[#475569] focus:outline-none focus:ring-2 focus:ring-[#FFB300]/40 focus:border-[#FFB300] tracking-[0.5em] text-center text-lg transition-colors"
                                 />
                             </div>
-                        </div>
 
-                        <div className="space-y-2">
-                            <label htmlFor="passcode" className="text-sm font-medium text-[#CBD5E1]">
-                                Passcode
-                            </label>
-                            <input
-                                id="passcode"
-                                type="password"
-                                inputMode="numeric"
-                                maxLength={4}
-                                value={passcode}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-                                    setPasscode(val);
-                                }}
-                                placeholder="4-digit passcode"
-                                required
-                                autoComplete="current-password"
-                                className="w-full px-3 py-3 bg-[#0D1117] border border-[#21283B] rounded-xl text-white placeholder:text-[#475569] focus:outline-none focus:ring-2 focus:ring-[#FFB300]/40 focus:border-[#FFB300] tracking-[0.5em] text-center text-lg transition-colors"
-                            />
-                        </div>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="w-full py-3 px-4 bg-gradient-to-r from-[#FFC107] to-[#FF8F00] text-[#0D1117] rounded-xl font-bold hover:from-[#FFCA28] hover:to-[#FFB300] transition-all shadow-lg shadow-[#FFB300]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSubmitting ? "Signing in..." : "Sign In"}
+                            </button>
 
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-full py-3 px-4 bg-gradient-to-r from-[#FFC107] to-[#FF8F00] text-[#0D1117] rounded-xl font-bold hover:from-[#FFCA28] hover:to-[#FFB300] transition-all shadow-lg shadow-[#FFB300]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isSubmitting ? "Signing in..." : "Sign In"}
-                        </button>
-
-                        <div className="flex items-center justify-between text-sm">
-                            <a href="/forgot-passcode" className="text-[#FFB300] hover:text-[#FFCA28] transition-colors">
-                                Forgot Passcode?
+                            <div className="flex items-center justify-between text-sm">
+                                <a href="/forgot-passcode" className="text-[#FFB300] hover:text-[#FFCA28] transition-colors">
+                                    Forgot Passcode?
+                                </a>
+                                <span className="text-[#64748B]">
+                                    Contact admin for an account
+                                </span>
+                            </div>
+                            <a
+                                href={process.env.NEXT_PUBLIC_LANDING_URL || '/'}
+                                className="flex items-center justify-center gap-1.5 text-sm text-[#64748B] hover:text-[#94A3B8] transition-colors"
+                            >
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                                Back to website
                             </a>
-                            <span className="text-[#64748B]">
-                                Contact admin for an account
-                            </span>
-                        </div>
-                        <a
-                            href={process.env.NEXT_PUBLIC_LANDING_URL || '/'}
-                            className="flex items-center justify-center gap-1.5 text-sm text-[#64748B] hover:text-[#94A3B8] transition-colors"
-                        >
-                            <ArrowLeft className="w-3.5 h-3.5" />
-                            Back to website
-                        </a>
-                    </form>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleVerify} className="space-y-5">
+                            {error && (
+                                <div className="p-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
+                                    {error}
+                                </div>
+                            )}
+
+                            {!enrolled && enrollment && (
+                                <div className="space-y-3">
+                                    <div className="p-3 text-sm text-[#CBD5E1] bg-[#FFB300]/5 border border-[#FFB300]/20 rounded-xl">
+                                        Scan this QR code with Google Authenticator, Microsoft
+                                        Authenticator, or Authy, then enter the 6-digit code it shows.
+                                    </div>
+                                    <div className="flex justify-center">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={enrollment.qrDataUri}
+                                            alt="Authenticator QR code"
+                                            className="w-44 h-44 rounded-xl bg-white p-2"
+                                        />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-xs text-[#64748B]">Can&apos;t scan? Enter this key manually:</p>
+                                        <code className="text-xs text-[#CBD5E1] break-all select-all">{enrollment.manualKey}</code>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <label htmlFor="totp" className="text-sm font-medium text-[#CBD5E1]">
+                                    Authenticator Code
+                                </label>
+                                <TotpInput
+                                    value={totpCode}
+                                    onChange={setTotpCode}
+                                    autoFocus
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="w-full py-3 px-4 bg-gradient-to-r from-[#FFC107] to-[#FF8F00] text-[#0D1117] rounded-xl font-bold hover:from-[#FFCA28] hover:to-[#FFB300] transition-all shadow-lg shadow-[#FFB300]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSubmitting ? "Verifying..." : enrolled ? "Verify & Sign In" : "Confirm & Sign In"}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={backToCredentials}
+                                className="flex items-center justify-center gap-1.5 w-full text-sm text-[#64748B] hover:text-[#94A3B8] transition-colors"
+                            >
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                                Back
+                            </button>
+                        </form>
+                    )}
                 </div>
             </div>
         </div>

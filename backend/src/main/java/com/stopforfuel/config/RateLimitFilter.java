@@ -44,8 +44,14 @@ public class RateLimitFilter implements Filter {
 
     private static final int MAX_BUCKETS = 10_000;
 
+    // Sensitive auth endpoints (e.g. TOTP code verification) get a much tighter per-IP
+    // budget so a 6-digit code cannot be brute-forced. Kept NAT-friendly (a station may
+    // share one public IP) while still well below any feasible guessing rate.
+    private static final String MFA_VERIFY_PATH = "/api/auth/mfa/verify";
+
     private final Map<String, Bucket> readBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> writeBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> mfaVerifyBuckets = new ConcurrentHashMap<>();
 
     @Value("${app.rate-limit.trust-proxy:true}")
     private boolean trustProxy;
@@ -69,6 +75,7 @@ public class RateLimitFilter implements Filter {
         // Evict buckets if too many to prevent memory exhaustion
         if (readBuckets.size() > MAX_BUCKETS) readBuckets.clear();
         if (writeBuckets.size() > MAX_BUCKETS) writeBuckets.clear();
+        if (mfaVerifyBuckets.size() > MAX_BUCKETS) mfaVerifyBuckets.clear();
 
         // Apply stricter limit for write operations
         boolean isWrite = "POST".equalsIgnoreCase(method)
@@ -76,7 +83,9 @@ public class RateLimitFilter implements Filter {
                 || "DELETE".equalsIgnoreCase(method);
 
         Bucket bucket;
-        if (isWrite) {
+        if (MFA_VERIFY_PATH.equals(httpRequest.getRequestURI())) {
+            bucket = mfaVerifyBuckets.computeIfAbsent(clientIp, k -> createMfaVerifyBucket());
+        } else if (isWrite) {
             bucket = writeBuckets.computeIfAbsent(clientIp, k -> createWriteBucket());
         } else {
             bucket = readBuckets.computeIfAbsent(clientIp, k -> createReadBucket());
@@ -103,6 +112,13 @@ public class RateLimitFilter implements Filter {
     private Bucket createWriteBucket() {
         return Bucket.builder()
                 .addLimit(Bandwidth.simple(20, Duration.ofMinutes(1)))
+                .build();
+    }
+
+    private Bucket createMfaVerifyBucket() {
+        // 10 code attempts per 5 minutes per IP — stops brute force, tolerates NAT/retries.
+        return Bucket.builder()
+                .addLimit(Bandwidth.simple(10, Duration.ofMinutes(5)))
                 .build();
     }
 

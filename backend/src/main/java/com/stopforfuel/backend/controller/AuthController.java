@@ -6,9 +6,12 @@ import com.stopforfuel.backend.entity.User;
 import com.stopforfuel.backend.repository.PasscodeResetRequestRepository;
 import com.stopforfuel.backend.repository.UserRepository;
 import com.stopforfuel.backend.service.AuditLogService;
+import com.stopforfuel.backend.service.MfaCryptoService;
+import com.stopforfuel.backend.service.MfaService;
 import com.stopforfuel.backend.service.PermissionService;
 import com.stopforfuel.config.SecurityUtils;
 import com.stopforfuel.config.JwtTokenProvider;
+import com.nimbusds.jwt.JWTClaimsSet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,8 @@ public class AuthController {
     private final AuditLogService auditLogService;
     private final PasscodeResetRequestRepository resetRequestRepository;
     private final CognitoIdentityProviderClient cognitoClient;
+    private final MfaService mfaService;
+    private final MfaCryptoService mfaCryptoService;
 
     @Value("${app.cognito.user-pool-id:}")
     private String userPoolId;
@@ -45,13 +50,17 @@ public class AuthController {
                           @Autowired(required = false) JwtTokenProvider jwtTokenProvider,
                           AuditLogService auditLogService,
                           PasscodeResetRequestRepository resetRequestRepository,
-                          @Autowired(required = false) CognitoIdentityProviderClient cognitoClient) {
+                          @Autowired(required = false) CognitoIdentityProviderClient cognitoClient,
+                          MfaService mfaService,
+                          MfaCryptoService mfaCryptoService) {
         this.userRepository = userRepository;
         this.permissionService = permissionService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.auditLogService = auditLogService;
         this.resetRequestRepository = resetRequestRepository;
         this.cognitoClient = cognitoClient;
+        this.mfaService = mfaService;
+        this.mfaCryptoService = mfaCryptoService;
     }
 
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -59,6 +68,9 @@ public class AuthController {
 
     @Value("${app.auth.enabled:true}")
     private boolean authEnabled;
+
+    @Value("${app.mfa.enabled:true}")
+    private boolean mfaEnabled;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> request,
@@ -103,6 +115,107 @@ public class AuthController {
             return ResponseEntity.status(403).body(Map.of("error", "Account is inactive"));
         }
 
+        // Passcode is the FIRST factor. Unless MFA is disabled (dev), the session cookie is
+        // NOT issued here — the caller must complete the TOTP step via /api/auth/mfa/verify.
+        if (!mfaEnabled) {
+            auditLogService.logLogin("LOGIN_SUCCESS", user.getId(), user.getName(), clientIp,
+                    "Successful login via passcode (MFA disabled)");
+            return ResponseEntity.ok(issueSession(user, normalizedPhone, httpResponse));
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("mfaRequired", true);
+
+        if (user.getTotpSecret() == null || !user.isMfaEnrolled()) {
+            // First-time enrollment: mint a fresh secret, carry it (encrypted) inside the
+            // short-lived mfaToken, and hand back a QR for the authenticator app. Nothing is
+            // persisted until the user confirms a code in /mfa/verify.
+            String secret = mfaService.generateSecret();
+            String encryptedSecret = mfaCryptoService.encrypt(secret);
+            response.put("enrolled", false);
+            response.put("mfaToken", jwtTokenProvider.generateMfaToken(user.getId(), encryptedSecret));
+            response.put("enrollment", Map.of(
+                    "qrDataUri", mfaService.buildQrDataUri(secret, normalizedPhone),
+                    "manualKey", secret
+            ));
+        } else {
+            response.put("enrolled", true);
+            response.put("mfaToken", jwtTokenProvider.generateMfaToken(user.getId(), null));
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/mfa/verify")
+    public ResponseEntity<Map<String, Object>> mfaVerify(@RequestBody Map<String, String> request,
+                                                         HttpServletRequest httpRequest,
+                                                         HttpServletResponse httpResponse) {
+        if (jwtTokenProvider == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "Passcode login is not available in this environment"));
+        }
+
+        String mfaToken = request.get("mfaToken");
+        String code = request.get("totpCode");
+        if (mfaToken == null || mfaToken.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing MFA token"));
+        }
+        if (code == null || !code.matches("\\d{6}")) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Enter the 6-digit code from your authenticator app"));
+        }
+
+        JWTClaimsSet claims = jwtTokenProvider.validateToken(mfaToken);
+        String clientIp = httpRequest.getRemoteAddr();
+        try {
+            if (claims == null || !JwtTokenProvider.MFA_PURPOSE.equals(claims.getStringClaim("purpose"))) {
+                return ResponseEntity.status(401).body(Map.of("error", "Your verification session expired. Please log in again."));
+            }
+        } catch (java.text.ParseException e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Your verification session expired. Please log in again."));
+        }
+
+        Long userId;
+        String enrollClaim;
+        try {
+            userId = Long.parseLong(claims.getSubject());
+            enrollClaim = claims.getStringClaim("enroll");
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid verification session"));
+        }
+
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || user.getStatus() != com.stopforfuel.backend.enums.EntityStatus.ACTIVE) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid verification session"));
+        }
+
+        boolean enrolling = enrollClaim != null;
+        // For enrollment, the secret lives in the token; otherwise it's the persisted (encrypted) one.
+        String secret = mfaCryptoService.decrypt(enrolling ? enrollClaim : user.getTotpSecret());
+
+        if (!mfaService.verify(secret, code)) {
+            auditLogService.logLogin("MFA_FAILED", user.getId(), user.getName(), clientIp,
+                    enrolling ? "Failed MFA enrollment code" : "Failed MFA verification");
+            return ResponseEntity.status(401).body(Map.of("error", "Incorrect code. Please try again."));
+        }
+
+        if (enrolling) {
+            // Persist the secret only now that the user has proven they can generate valid codes.
+            user.setTotpSecret(enrollClaim); // store the already-encrypted form
+            user.setMfaEnrolled(true);
+            auditLogService.logLogin("MFA_ENROLLED", user.getId(), user.getName(), clientIp,
+                    "Completed TOTP enrollment");
+        }
+
+        auditLogService.logLogin("MFA_SUCCESS", user.getId(), user.getName(), clientIp,
+                "Successful MFA verification");
+
+        String phone = (user.getPhoneNumbers() != null && !user.getPhoneNumbers().isEmpty())
+                ? user.getPhoneNumbers().iterator().next().replaceAll("^\\+91", "") : null;
+        return ResponseEntity.ok(issueSession(user, phone, httpResponse));
+    }
+
+    /** Mints the 8h session JWT, sets the httpOnly cookie, stamps last-login, and builds the
+     *  {token, user} response shared by the MFA-disabled login path and /mfa/verify. */
+    private Map<String, Object> issueSession(User user, String phone, HttpServletResponse httpResponse) {
         String designation = null;
         if (user instanceof Employee employee && employee.getDesignationEntity() != null) {
             designation = employee.getDesignationEntity().getName();
@@ -113,21 +226,15 @@ public class AuthController {
                 user.getRole().getRoleType(),
                 user.getScid(),
                 user.getName(),
-                normalizedPhone,
+                phone,
                 designation
         );
 
         List<String> permissions = permissionService.getPermissionsForRole(user.getRole().getRoleType());
 
-        // Update last login timestamp
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        // Audit log
-        auditLogService.logLogin("LOGIN_SUCCESS", user.getId(), user.getName(), clientIp,
-                "Successful login via passcode");
-
-        // Set httpOnly auth cookie
         ResponseCookie cookie = ResponseCookie.from(AUTH_COOKIE_NAME, token)
                 .httpOnly(true)
                 .secure(authEnabled) // true in production (HTTPS), false in dev
@@ -140,8 +247,7 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("user", buildUserResponse(user, permissions, designation));
-
-        return ResponseEntity.ok(response);
+        return response;
     }
 
     @PostMapping("/forgot-passcode")

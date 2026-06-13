@@ -79,6 +79,13 @@ public class AdminUserController {
         return ResponseEntity.ok(Map.of("passcode", newPasscode));
     }
 
+    @PostMapping("/{id}/reset-mfa")
+    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
+    public ResponseEntity<Map<String, String>> resetMfa(@PathVariable Long id) {
+        adminUserService.resetMfa(id);
+        return ResponseEntity.ok(Map.of("message", "MFA reset. The user will re-enroll on next login."));
+    }
+
     @PutMapping("/{id}/role")
     @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
     public ResponseEntity<UserListDTO> updateUserRole(@PathVariable Long id, @Valid @RequestBody UpdateUserRoleRequest request) {

@@ -149,6 +149,19 @@ public class AdminUserService {
         return plainPasscode;
     }
 
+    /**
+     * Clears a user's TOTP enrollment (lost / changed phone). On next login the user is
+     * routed back through QR enrollment with a fresh secret.
+     */
+    public void resetMfa(Long userId) {
+        User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setTotpSecret(null);
+        user.setMfaEnrolled(false);
+        userRepository.save(user);
+    }
+
     public User createUser(String username, String email, String name, String roleType, String tempPassword) {
         Roles role = rolesRepository.findByRoleType(roleType)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleType));

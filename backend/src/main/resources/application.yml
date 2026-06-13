@@ -46,6 +46,11 @@ spring.cache:
 app:
   auth:
     enabled: ${AUTH_ENABLED:true}
+  mfa:
+    enabled: ${MFA_ENABLED:true}
+    issuer: ${MFA_ISSUER:StopForFuel}
+    # Any non-empty string; SHA-256 derives the AES-256 key from it. Override in prod via Secrets Manager.
+    encryption-key: ${MFA_ENCRYPTION_KEY:stopforfuel-dev-mfa-secret-change-in-prod}
   cognito:
     user-pool-id: ${COGNITO_USER_POOL_ID:}
     client-id: ${COGNITO_CLIENT_ID:}

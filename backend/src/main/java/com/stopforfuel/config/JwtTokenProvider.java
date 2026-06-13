@@ -18,6 +18,8 @@ public class JwtTokenProvider {
     private String secret;
 
     private static final long EXPIRATION_MS = 8 * 60 * 60 * 1000; // 8 hours
+    private static final long MFA_TOKEN_EXPIRATION_MS = 5 * 60 * 1000; // 5 minutes
+    public static final String MFA_PURPOSE = "mfa_pending";
 
     public String generateToken(Long userId, String role, Long scid, String name, String phone, String designation) {
         try {
@@ -47,6 +49,38 @@ public class JwtTokenProvider {
             return signedJWT.serialize();
         } catch (JOSEException e) {
             throw new RuntimeException("Failed to generate JWT token", e);
+        }
+    }
+
+    /**
+     * Short-lived token bridging the two login steps. It proves the passcode was already
+     * verified, so step 2 (TOTP verify) can trust the user id without re-checking the passcode.
+     * For first-time enrollment, the not-yet-persisted (already encrypted) secret rides along in
+     * the {@code enroll} claim, keeping the flow stateless until the user confirms a code.
+     */
+    public String generateMfaToken(Long userId, String encryptedEnrollSecret) {
+        try {
+            JWSSigner signer = new MACSigner(secret.getBytes());
+
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
+                    .subject(String.valueOf(userId))
+                    .claim("purpose", MFA_PURPOSE)
+                    .issueTime(new Date())
+                    .expirationTime(new Date(System.currentTimeMillis() + MFA_TOKEN_EXPIRATION_MS));
+
+            if (encryptedEnrollSecret != null) {
+                claimsBuilder.claim("enroll", encryptedEnrollSecret);
+            }
+
+            SignedJWT signedJWT = new SignedJWT(
+                    new JWSHeader(JWSAlgorithm.HS256),
+                    claimsBuilder.build()
+            );
+            signedJWT.sign(signer);
+
+            return signedJWT.serialize();
+        } catch (JOSEException e) {
+            throw new RuntimeException("Failed to generate MFA token", e);
         }
     }
 
