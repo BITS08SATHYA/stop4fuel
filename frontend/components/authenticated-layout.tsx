@@ -13,6 +13,7 @@ import { useNotificationStream } from "@/lib/hooks/use-notification-stream";
 import { ApprovalToastHost } from "@/components/approval-toast-host";
 import { StockToastHost } from "@/components/stock-toast-host";
 import { MessengerDock } from "@/components/messaging/MessengerDock";
+import { IdleLogout } from "@/components/auth/idle-logout";
 
 // Initialize Amplify on client side
 if (typeof window !== "undefined") {
@@ -72,6 +73,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <ApprovalToastHost />
             <StockToastHost />
             <MessengerDock />
+            <IdleLogout />
         </div>
     );
 }
