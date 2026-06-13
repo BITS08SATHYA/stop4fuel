@@ -14,8 +14,10 @@ class AuthInterceptor @Inject constructor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
 
-        // Skip auth header for login endpoint
-        if (request.url.encodedPath.contains("auth/login")) {
+        // Skip auth header for the unauthenticated login steps. /mfa/verify is
+        // authorised by the mfaToken in its body, not a Bearer token (none exists yet).
+        val path = request.url.encodedPath
+        if (path.contains("auth/login") || path.contains("auth/mfa/verify")) {
             return chain.proceed(request)
         }
 

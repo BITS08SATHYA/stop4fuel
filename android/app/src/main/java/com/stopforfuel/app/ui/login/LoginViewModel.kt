@@ -15,7 +15,14 @@ data class LoginUiState(
     val passcode: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isLoggedIn: Boolean = false
+    val isLoggedIn: Boolean = false,
+    // MFA (second factor) step
+    val mfaRequired: Boolean = false,
+    val mfaEnrolled: Boolean = true,
+    val mfaToken: String? = null,
+    val qrDataUri: String? = null,
+    val manualKey: String? = null,
+    val totpCode: String = ""
 )
 
 @HiltViewModel
@@ -74,14 +81,88 @@ class LoginViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             val result = authRepository.login(state.phone, state.passcode)
             result.fold(
-                onSuccess = {
-                    _uiState.value = _uiState.value.copy(isLoading = false, isLoggedIn = true)
+                onSuccess = { resp ->
+                    if (resp.mfaRequired) {
+                        // Passcode OK — move to the TOTP step, no session yet.
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            mfaRequired = true,
+                            mfaEnrolled = resp.enrolled,
+                            mfaToken = resp.mfaToken,
+                            qrDataUri = resp.enrollment?.qrDataUri,
+                            manualKey = resp.enrollment?.manualKey,
+                            totpCode = "",
+                            error = null
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(isLoading = false, isLoggedIn = true)
+                    }
                 },
-                onFailure = { e ->
+                onFailure = {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         passcode = "",
                         error = "Invalid phone or passcode"
+                    )
+                }
+            )
+        }
+    }
+
+    // ---- TOTP second factor ----
+
+    fun appendTotp(digit: String) {
+        val current = _uiState.value.totpCode
+        if (current.length < 6) {
+            val next = current + digit
+            _uiState.value = _uiState.value.copy(totpCode = next, error = null)
+            if (next.length == 6) {
+                verifyMfa()
+            }
+        }
+    }
+
+    fun clearTotp() {
+        _uiState.value = _uiState.value.copy(totpCode = "", error = null)
+    }
+
+    fun deleteLastTotpDigit() {
+        val current = _uiState.value.totpCode
+        if (current.isNotEmpty()) {
+            _uiState.value = _uiState.value.copy(totpCode = current.dropLast(1), error = null)
+        }
+    }
+
+    /** Return from the TOTP step back to phone + passcode entry. */
+    fun backToCredentials() {
+        _uiState.value = _uiState.value.copy(
+            mfaRequired = false,
+            mfaEnrolled = true,
+            mfaToken = null,
+            qrDataUri = null,
+            manualKey = null,
+            totpCode = "",
+            passcode = "",
+            error = null
+        )
+    }
+
+    private fun verifyMfa() {
+        val token = _uiState.value.mfaToken ?: return
+        val code = _uiState.value.totpCode
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val result = authRepository.verifyMfa(token, code)
+            result.fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(isLoading = false, isLoggedIn = true)
+                },
+                onFailure = {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        totpCode = "",
+                        error = "Incorrect code. Please try again."
                     )
                 }
             )

@@ -10,6 +10,9 @@ interface ApiService {
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
 
+    @POST("api/auth/mfa/verify")
+    suspend fun verifyMfa(@Body request: MfaVerifyRequest): LoginResponse
+
     // Shift
     @GET("api/shifts/active")
     suspend fun getActiveShift(): ShiftDto?
