@@ -51,3 +51,10 @@ variable "alarm_email" {
   description = "Email address to subscribe to the alarms SNS topic. Leave empty to skip — you can subscribe via the AWS console later."
   default     = ""
 }
+
+# TOTP MFA enforcement at login. Keep false until the mfa-encryption-key secret
+# value is set and a pilot enrollment is verified, then set true in terraform.tfvars.
+variable "mfa_enabled" {
+  type    = bool
+  default = false
+}

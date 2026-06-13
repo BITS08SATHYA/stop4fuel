@@ -73,6 +73,18 @@ variable "anthropic_api_key_secret_arn" {
   default     = ""
 }
 
+variable "mfa_encryption_key_secret_arn" {
+  description = "Secrets Manager ARN for MFA_ENCRYPTION_KEY (AES key for TOTP secrets, plain string secret)"
+  type        = string
+  default     = ""
+}
+
+variable "mfa_enabled" {
+  description = "Whether TOTP MFA is enforced at login. Keep false until the encryption key is set and a pilot is done."
+  type        = bool
+  default     = false
+}
+
 variable "assign_public_ip" {
   description = "Assign public IP to Fargate tasks. Set true when running in public subnets without NAT."
   type        = bool
