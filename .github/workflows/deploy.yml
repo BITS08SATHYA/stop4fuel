@@ -164,9 +164,10 @@ jobs:
           IMAGE_URI: ${{ steps.build-backend.outputs.image_uri }}
         run: |
           set -euo pipefail
-          # Resolve the MFA encryption-key secret ARN (random suffix) by name.
-          MFA_SECRET_ARN=$(aws secretsmanager describe-secret \
-            --secret-id stopforfuel/mfa-encryption-key --query 'ARN' --output text)
+          # MFA encryption-key secret ARN. Hardcoded (like the other secret ARNs the task def
+          # already carries) so the deploy user needs no secretsmanager read permission — only
+          # the ECS execution role reads it at runtime. Update this if the secret is recreated.
+          MFA_SECRET_ARN="arn:aws:secretsmanager:ap-south-1:607856468014:secret:stopforfuel/mfa-encryption-key-Immtx1"
           # Fetch current task def, swap image to digest-pinned URI, register new revision.
           # MFA is enforced in prod: pin MFA_ENABLED=true and inject the encryption-key secret
           # (set MFA_ENABLED to "false" here to disable). Both persist across future deploys.
