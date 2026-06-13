@@ -48,7 +48,6 @@ resource "aws_ecs_task_definition" "backend" {
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
         { name = "AUTH_ENABLED", value = "true" },
-        { name = "MFA_ENABLED", value = var.mfa_enabled ? "true" : "false" },
         { name = "SERVER_PORT", value = "8080" },
         { name = "TZ", value = "Asia/Kolkata" }
       ]
@@ -67,12 +66,6 @@ resource "aws_ecs_task_definition" "backend" {
           {
             name      = "ANTHROPIC_API_KEY"
             valueFrom = var.anthropic_api_key_secret_arn
-          }
-        ] : [],
-        var.mfa_encryption_key_secret_arn != "" ? [
-          {
-            name      = "MFA_ENCRYPTION_KEY"
-            valueFrom = var.mfa_encryption_key_secret_arn
           }
         ] : []
       )

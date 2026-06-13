@@ -196,6 +196,9 @@ resource "aws_secretsmanager_secret" "anthropic_api_key" {
 # AES key used to encrypt TOTP secrets at rest. Value is set out-of-band
 # (CLI/console), never in code. NOTE: losing or rotating this value makes all
 # enrolled MFA secrets undecryptable and locks every staff member out.
+# The container env wiring (MFA_ENABLED + the MFA_ENCRYPTION_KEY secret) lives in
+# .github/workflows/deploy.yml, NOT here — the ECS task definition's
+# container_definitions are ignore_changes-managed by Terraform and owned by CI.
 resource "aws_secretsmanager_secret" "mfa_encryption_key" {
   name = "${var.project_name}/mfa-encryption-key"
 
@@ -228,9 +231,6 @@ module "ecs" {
   task_role_arn                = aws_iam_role.ecs_task.arn
   db_secret_arn                = aws_secretsmanager_secret.db_credentials.arn
   anthropic_api_key_secret_arn = aws_secretsmanager_secret.anthropic_api_key.arn
-
-  mfa_encryption_key_secret_arn = aws_secretsmanager_secret.mfa_encryption_key.arn
-  mfa_enabled                   = var.mfa_enabled
 
   backend_cpu     = 512
   backend_memory  = 1024

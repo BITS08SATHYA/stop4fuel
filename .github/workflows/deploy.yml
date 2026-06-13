@@ -164,16 +164,27 @@ jobs:
           IMAGE_URI: ${{ steps.build-backend.outputs.image_uri }}
         run: |
           set -euo pipefail
-          # Fetch current task def, swap image to digest-pinned URI, register new revision
+          # Resolve the MFA encryption-key secret ARN (random suffix) by name.
+          MFA_SECRET_ARN=$(aws secretsmanager describe-secret \
+            --secret-id stopforfuel/mfa-encryption-key --query 'ARN' --output text)
+          # Fetch current task def, swap image to digest-pinned URI, register new revision.
+          # MFA is enforced in prod: pin MFA_ENABLED=true and inject the encryption-key secret
+          # (set MFA_ENABLED to "false" here to disable). Both persist across future deploys.
           aws ecs describe-task-definition \
             --task-definition stopforfuel-backend \
             --query 'taskDefinition' \
-            | jq --arg img "$IMAGE_URI" '
+            | jq --arg img "$IMAGE_URI" --arg mfaArn "$MFA_SECRET_ARN" '
                 .containerDefinitions[0].image = $img
                 | .containerDefinitions[0].environment = (
                     (.containerDefinitions[0].environment // [])
-                    | map(select(.name != "TZ"))
-                    + [{"name": "TZ", "value": "Asia/Kolkata"}]
+                    | map(select(.name != "TZ" and .name != "MFA_ENABLED"))
+                    + [{"name": "TZ", "value": "Asia/Kolkata"},
+                       {"name": "MFA_ENABLED", "value": "true"}]
+                  )
+                | .containerDefinitions[0].secrets = (
+                    (.containerDefinitions[0].secrets // [])
+                    | map(select(.name != "MFA_ENCRYPTION_KEY"))
+                    + [{"name": "MFA_ENCRYPTION_KEY", "valueFrom": $mfaArn}]
                   )
                 | .runtimePlatform = {"cpuArchitecture":"ARM64","operatingSystemFamily":"LINUX"}
                 | {family, networkMode, containerDefinitions, executionRoleArn, taskRoleArn,
