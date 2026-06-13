@@ -50,8 +50,11 @@ public class User extends PersonEntity {
     @Column(name = "totp_secret")
     private String totpSecret; // AES-encrypted Base32 TOTP secret (reversible, not hashed)
 
+    // Nullable on purpose: ddl-auto adds this column to pre-existing user rows as NULL,
+    // and a primitive boolean can't hold null (Hibernate would fail to hydrate the entity).
+    // NULL is treated as "not enrolled".
     @Column(name = "mfa_enrolled")
-    private boolean mfaEnrolled; // true once the user has scanned the QR and confirmed a code
+    private Boolean mfaEnrolled = false; // true once the user has scanned the QR and confirmed a code
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;

@@ -126,7 +126,7 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("mfaRequired", true);
 
-        if (user.getTotpSecret() == null || !user.isMfaEnrolled()) {
+        if (user.getTotpSecret() == null || !Boolean.TRUE.equals(user.getMfaEnrolled())) {
             // First-time enrollment: mint a fresh secret, carry it (encrypted) inside the
             // short-lived mfaToken, and hand back a QR for the authenticator app. Nothing is
             // persisted until the user confirms a code in /mfa/verify.
