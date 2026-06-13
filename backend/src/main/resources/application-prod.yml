@@ -6,3 +6,9 @@ management:
         namespace: StopForFuel/Backend
         step: 1m
         batch-size: 20
+
+app:
+  mfa:
+    # Prod defaults to MFA OFF so a code deploy can never enforce it before the
+    # encryption key is set. Enable explicitly via the MFA_ENABLED env (mfa_enabled tfvar).
+    enabled: ${MFA_ENABLED:false}
