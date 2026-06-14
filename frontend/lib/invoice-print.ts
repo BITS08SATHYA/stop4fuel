@@ -167,12 +167,20 @@ export interface ReceiptModel {
 export function buildReceiptModel(invoice: InvoiceBill, company: CompanyInfo): ReceiptModel {
     const isCash = invoice.billType === "CASH";
 
-    const customerName = invoice.customer?.name || invoice.signatoryName || "Walk-in Customer";
-    const customerPhone = invoice.signatoryCellNo || "";
-    const customerGST = invoice.customer?.partyType === "COMPANY" ? invoice.customerGST : "";
+    // Some legacy rows persist the literal strings "null"/"undefined" in free-text
+    // fields (signatory, vehicle desc, driver). Treat those as empty so they never
+    // print on the bill — plain "|| fallback" lets the truthy string "null" through.
+    const clean = (s?: string | null) => {
+        const t = (s ?? "").trim();
+        return /^(null|undefined)$/i.test(t) ? "" : t;
+    };
+
+    const customerName = clean(invoice.customer?.name) || clean(invoice.signatoryName) || "Walk-in Customer";
+    const customerPhone = clean(invoice.signatoryCellNo);
+    const customerGST = invoice.customer?.partyType === "COMPANY" ? clean(invoice.customerGST) : "";
     const isNamedCustomer = !!invoice.customer?.id;
 
-    const vehicleNo = invoice.vehicle?.vehicleNumber || invoice.billDesc || "";
+    const vehicleNo = clean(invoice.vehicle?.vehicleNumber) || clean(invoice.billDesc);
 
     const products = invoice.products || [];
     const totalDiscount = invoice.totalDiscount || 0;
@@ -500,7 +508,9 @@ export function generateDotMatrixHTML(invoice: InvoiceBill, company: CompanyInfo
     const m = buildReceiptModel(invoice, company);
     const isCash = m.billBadge === "CASH";
     // driverName isn't part of the shared model; read it straight off the invoice.
-    const driverName = asciiSafe(invoice.driverName);
+    // Strip the literal "null"/"undefined" strings legacy rows persist here.
+    const driverName = /^(null|undefined)$/i.test((invoice.driverName ?? "").trim())
+        ? "" : asciiSafe(invoice.driverName);
 
     const itemsHtml = m.items.map((it) => {
         const disc = it.discount ? ` (-${it.discount})` : "";
@@ -518,21 +528,26 @@ export function generateDotMatrixHTML(invoice: InvoiceBill, company: CompanyInfo
 <meta charset="UTF-8">
 <title>Invoice ${m.billNo}</title>
 <style>
-    @page { size: 6in 4.5in; margin: 2mm 3mm; }
+    /* 6x4.5" fanfold slip on the 9-pin MSP 250. Width is left at 100% of the
+       @page content box (page margins do the insetting) so nothing centred can
+       spill past the carriage edges. No -webkit-text-stroke: at 900 weight it
+       made the dot-matrix glyphs print muddy/doubled. */
+    @page { size: 6in 4.5in; margin: 3mm 4mm; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', Courier, monospace; font-size: 12pt; font-weight: 900; line-height: 1.15; color: #000; background: #fff; width: 5.3in; margin: 0 auto; -webkit-text-stroke: 0.4px #000; }
-    table { width: 100%; border-collapse: collapse; }
-    td { vertical-align: top; font-size: 12pt; font-weight: 900; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 11pt; font-weight: 900; line-height: 1.15; color: #000; background: #fff; width: 100%; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    td { vertical-align: top; font-size: 11pt; font-weight: 900; word-break: break-word; }
     .center { text-align: center; }
     .right { text-align: right; }
-    .big { font-size: 16pt; font-weight: 900; }
-    .xs { font-size: 10pt; font-weight: 900; color: #000; }
+    .big { font-size: 15pt; font-weight: 900; }
+    .xs { font-size: 9pt; font-weight: 900; color: #000; }
     hr { border: none; border-top: 2px solid #000; margin: 2px 0; }
     hr.solid { border-top: 3px solid #000; }
-    .badge { display: inline-block; border: 2px solid #000; padding: 0 8px; font-size: 12pt; font-weight: 900; letter-spacing: 1px; }
-    .info td:first-child { font-size: 11pt; font-weight: 900; width: 22%; padding: 0; }
-    .info td:last-child { font-weight: 900; padding: 0; }
+    .badge { display: inline-block; border: 2px solid #000; padding: 0 8px; font-size: 11pt; font-weight: 900; letter-spacing: 1px; }
+    .info td { font-size: 10pt; font-weight: 900; padding: 0; }
+    .info td:first-child { width: 30%; white-space: nowrap; }
+    .info td:last-child { word-break: break-word; }
     .items th { font-size: 11pt; font-weight: 900; border-bottom: 2px solid #000; padding: 2px 0; text-transform: uppercase; }
     .items td { padding: 1px 0; }
     .totals { margin-top: 2px; }
@@ -550,7 +565,8 @@ export function generateDotMatrixHTML(invoice: InvoiceBill, company: CompanyInfo
 <!-- Header -->
 <div class="center">
     <div class="big">${m.company.name}</div>
-    <div class="xs">${m.company.address} | Ph: ${m.company.phone} | GSTIN: ${m.company.gstNo}</div>
+    <div class="xs">${m.company.address}</div>
+    <div class="xs">Ph: ${m.company.phone} | GSTIN: ${m.company.gstNo}</div>
 </div>
 <hr class="solid">
 <div class="center"><span style="font-size:13pt;font-weight:900;">TAX INVOICE</span> <span class="badge">${m.billBadge}</span></div>
