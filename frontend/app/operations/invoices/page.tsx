@@ -29,7 +29,7 @@ import {
     getCustomerCreditInfo
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
-import { printInvoice, getPrinterTarget, setPrinterTarget, type PrinterTarget } from "@/lib/invoice-print";
+import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
 import { useAuth } from "@/lib/auth/auth-context";
 
 interface PostableShift {
@@ -145,6 +145,11 @@ export default function InvoicesPage() {
     // hydrated from the remembered choice on mount to avoid a hydration mismatch.
     const [printTarget, setPrintTarget] = useState<PrinterTarget>("thermal");
     useEffect(() => { setPrintTarget(getPrinterTarget()); }, []);
+    // Windows printer name for the MSP 250 (so dot-matrix jobs route to it via
+    // the agent even when the agent default is the thermal printer). Hydrated on
+    // mount; only surfaced when the dot-matrix target is selected.
+    const [dmPrinter, setDmPrinter] = useState("");
+    useEffect(() => { setDmPrinter(getDotMatrixPrinter()); }, []);
     const [manualDiscount, setManualDiscount] = useState("");
     // GST tax-invoice optional fields (mirror the IOC-dealer manual book)
     const [reverseCharge, setReverseCharge] = useState(false);
@@ -1768,9 +1773,20 @@ export default function InvoicesPage() {
                                             ]}
                                         />
                                     </div>
+                                    {printTarget === "dotmatrix" && (
+                                        <input
+                                            type="text"
+                                            value={dmPrinter}
+                                            onChange={(e) => setDmPrinter(e.target.value)}
+                                            placeholder="MSP 250 printer name (optional)"
+                                            title="Exact Windows printer name for the MSP 250. Leave blank to use the agent's default printer."
+                                            className="w-56 px-4 py-4 border border-border rounded-2xl bg-background text-foreground text-sm"
+                                        />
+                                    )}
                                     <button
                                         onClick={() => {
                                             setPrinterTarget(printTarget);
+                                            if (printTarget === "dotmatrix") setDotMatrixPrinter(dmPrinter);
                                             printInvoice(lastCreatedInvoice, companyInfo, printTarget);
                                         }}
                                         className="px-8 py-4 border border-border text-foreground rounded-2xl font-bold transition-all flex items-center gap-3 hover:bg-muted/50"

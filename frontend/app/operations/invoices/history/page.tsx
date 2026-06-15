@@ -6,11 +6,12 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import {
     Search, Filter, ChevronDown, ChevronRight,
-    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Printer, Hash
+    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Hash
 } from "lucide-react";
-import { printInvoice } from "@/lib/invoice-print";
+import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
 import { FormErrorBanner } from "@/components/ui/field-error";
 import { StyledSelect } from "@/components/ui/styled-select";
+import { PrintMenuButton } from "@/components/ui/print-menu-button";
 import { PermissionGate } from "@/components/permission-gate";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
@@ -54,6 +55,13 @@ export default function InvoiceHistoryPage() {
 
     const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
     const [companyInfo, setCompanyInfo] = useState<{ name: string; address: string; phone: string; gstNo: string; site?: string } | null>(null);
+
+    // Printer the row print icons default to. Seeded "thermal" for SSR, then
+    // hydrated from the shared remembered choice on mount (same localStorage key
+    // as the new-invoice screen). dmPrinter is the MSP 250 Windows printer name.
+    const [printTarget, setPrintTarget] = useState<PrinterTarget>("thermal");
+    const [dmPrinter, setDmPrinter] = useState("");
+    useEffect(() => { setPrintTarget(getPrinterTarget()); setDmPrinter(getDotMatrixPrinter()); }, []);
 
     useEffect(() => {
         fetchWithAuth(`${API_BASE_URL}/companies/print-info`).then(r => r.ok ? r.json() : null).then(c => {
@@ -503,6 +511,33 @@ export default function InvoiceHistoryPage() {
                     <button onClick={handleReset} className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors">
                         <RotateCcw className="w-4 h-4 inline mr-1" />Reset
                     </button>
+                    {/* Printer preference — the default the row print icons use. Not a
+                        filter, so it sits past the Apply/Reset and is unaffected by Reset. */}
+                    <div className="min-w-[170px]">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Printer</label>
+                        <StyledSelect
+                            value={printTarget}
+                            onChange={(val) => { setPrintTarget(val as PrinterTarget); setPrinterTarget(val as PrinterTarget); }}
+                            options={[
+                                { value: "thermal", label: "Thermal — RP 3230" },
+                                { value: "dotmatrix", label: "Dot-matrix — MSP 250" },
+                            ]}
+                        />
+                    </div>
+                    {printTarget === "dotmatrix" && (
+                        <div className="min-w-[180px]">
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">MSP 250 name</label>
+                            <input
+                                type="text"
+                                value={dmPrinter}
+                                onChange={e => setDmPrinter(e.target.value)}
+                                onBlur={() => setDotMatrixPrinter(dmPrinter)}
+                                placeholder="Windows printer name (optional)"
+                                title="Exact Windows printer name for the MSP 250. Leave blank to use the agent's default printer."
+                                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
+                            />
+                        </div>
+                    )}
                 </div>
             </GlassCard>
 
@@ -620,13 +655,10 @@ export default function InvoiceHistoryPage() {
                                                 <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                                                     <div className="flex items-center justify-center gap-1">
                                                         {companyInfo && (
-                                                            <button
-                                                                onClick={() => printInvoice(inv, companyInfo)}
-                                                                className="p-1.5 rounded-md text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"
-                                                                title="Print"
-                                                            >
-                                                                <Printer className="w-3.5 h-3.5" />
-                                                            </button>
+                                                            <PrintMenuButton
+                                                                defaultTarget={printTarget}
+                                                                onPrint={(t) => printInvoice(inv, companyInfo, t)}
+                                                            />
                                                         )}
                                                         <PermissionGate permission="INVOICE_MODIFY">
                                                             <button

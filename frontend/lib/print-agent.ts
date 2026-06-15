@@ -55,16 +55,21 @@ export async function probePrintAgent(): Promise<boolean> {
 }
 
 /**
- * Send raw ESC/POS bytes to the agent for printing.
+ * Send raw bytes to the agent for printing.
  * Resolves on success; throws on any failure so the caller can fall back.
+ *
+ * `printer` optionally names the Windows printer to spool to, overriding the
+ * agent's configured default. Used to send dot-matrix (ESC/P) jobs to the
+ * MSP 250 from a counter PC whose agent default is the thermal printer; omit it
+ * and the job goes to the configured default (thermal).
  */
-export async function sendToPrintAgent(bytes: Uint8Array, jobName: string): Promise<void> {
+export async function sendToPrintAgent(bytes: Uint8Array, jobName: string, printer?: string): Promise<void> {
     const { signal, done } = withTimeout(8000);
     try {
         const res = await fetch(agentBaseUrl() + "/print", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ data: toBase64(bytes), jobName }),
+            body: JSON.stringify({ data: toBase64(bytes), jobName, ...(printer ? { printer } : {}) }),
             signal,
             cache: "no-store",
         });

@@ -23,7 +23,7 @@ const os = require("os");
 const path = require("path");
 const { execFile } = require("child_process");
 
-const VERSION = "1.0.1";
+const VERSION = "1.1.0"; // 1.1.0: per-request `printer` override (dot-matrix → MSP 250)
 
 // When packaged with pkg, __dirname points inside the virtual snapshot, so
 // config/logs must sit next to the real .exe instead.
@@ -121,14 +121,17 @@ else { Write-Error ("WritePrinter failed for '" + $PrinterName + "'"); exit 1 }
 const PS_PATH = path.join(os.tmpdir(), "stopforfuel-rawprint.ps1");
 try { fs.writeFileSync(PS_PATH, PS_SCRIPT); } catch (e) { log("Failed to write PS helper: " + e.message); }
 
-function rawPrint(bytes, cb) {
+function rawPrint(bytes, printer, cb) {
+    // Per-request printer overrides the configured default (e.g. dot-matrix
+    // jobs targeting the MSP 250 on a PC whose default is the thermal printer).
+    const target = (printer && String(printer).trim()) || config.printer || "";
     const tmpBin = path.join(os.tmpdir(), `sff-receipt-${Date.now()}-${Math.random().toString(36).slice(2)}.bin`);
     fs.writeFile(tmpBin, bytes, (werr) => {
         if (werr) return cb(werr);
         execFile(
             "powershell.exe",
             ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-                "-File", PS_PATH, "-PrinterName", config.printer || "", "-FilePath", tmpBin],
+                "-File", PS_PATH, "-PrinterName", target, "-FilePath", tmpBin],
             { windowsHide: true, timeout: 20000 },
             (err, stdout, stderr) => {
                 fs.unlink(tmpBin, () => { /* best-effort cleanup */ });
@@ -202,12 +205,13 @@ const server = http.createServer((req, res) => {
             try { bytes = Buffer.from(parsed.data, "base64"); } catch (_) {
                 return sendJson(res, 400, { ok: false, error: "invalid base64" });
             }
-            rawPrint(bytes, (perr) => {
+            const reqPrinter = typeof parsed.printer === "string" ? parsed.printer.trim() : "";
+            rawPrint(bytes, reqPrinter, (perr) => {
                 if (perr) {
                     log(`PRINT FAILED (${parsed.jobName || "?"}): ${perr.message}`);
                     return sendJson(res, 500, { ok: false, error: perr.message });
                 }
-                log(`PRINTED ${bytes.length} bytes (${parsed.jobName || "?"}) -> ${config.printer || "(default)"}`);
+                log(`PRINTED ${bytes.length} bytes (${parsed.jobName || "?"}) -> ${reqPrinter || config.printer || "(default)"}`);
                 sendJson(res, 200, { ok: true });
             });
         });

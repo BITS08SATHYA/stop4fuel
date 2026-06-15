@@ -1,5 +1,6 @@
 import { InvoiceBill } from "@/lib/api/station";
 import { buildInvoiceRaster } from "@/lib/escpos-raster";
+import { generateDotMatrixEscP } from "@/lib/escp-dotmatrix";
 import { sendToPrintAgent, probePrintAgent } from "@/lib/print-agent";
 
 // Number to words (Indian system)
@@ -497,12 +498,12 @@ ${m.isNamedCustomer ? `<div class="sign">Customer Signature</div>` : ""}
 // ---------------------------------------------------------------------------
 // Dot-matrix (TVS MSP 250) layout — 6x4.5" pre-printed slip.
 //
-// This is the layout the bunk used before the thermal RP 3230 (restored from
-// commit 28f446b^). It prints through the OS driver via window.print() — there
-// is no ESC/POS path for the 9-pin dot matrix. It consumes the SAME
-// buildReceiptModel() as the thermal receipt so the two media can never show
-// different bill data; only the markup/CSS differs (large bold Courier for a
-// faded ribbon, 2-column meta strip, manual-fill audit blanks).
+// This is the browser-print FALLBACK for the dot-matrix slip, used only when the
+// local print agent is unreachable; the primary path is native ESC/P text via
+// generateDotMatrixEscP() (lib/escp-dotmatrix.ts), which prints far crisper on
+// the 9-pin head. It prints through the OS driver via window.print() and shares
+// the SAME buildReceiptModel() as the thermal/ESC-P paths so the media can never
+// show different bill data; only the markup/CSS differs.
 // ---------------------------------------------------------------------------
 export function generateDotMatrixHTML(invoice: InvoiceBill, company: CompanyInfo): string {
     const m = buildReceiptModel(invoice, company);
@@ -652,6 +653,24 @@ export function setPrinterTarget(t: PrinterTarget): void {
     }
 }
 
+// Windows printer name for the MSP 250, used to route dot-matrix jobs to it via
+// the agent when the agent's configured default is the thermal printer. Empty →
+// the agent uses its configured default. Per-machine, like printAgentUrl.
+const DOTMATRIX_PRINTER_KEY = "dotMatrixPrinterName";
+
+export function getDotMatrixPrinter(): string {
+    if (typeof window !== "undefined") {
+        try { return window.localStorage.getItem(DOTMATRIX_PRINTER_KEY) || ""; } catch (_) { /* ignore */ }
+    }
+    return "";
+}
+
+export function setDotMatrixPrinter(name: string): void {
+    if (typeof window !== "undefined") {
+        try { window.localStorage.setItem(DOTMATRIX_PRINTER_KEY, name.trim()); } catch (_) { /* ignore */ }
+    }
+}
+
 // Print an HTML document through the OS print dialog. Used for the dot-matrix
 // route (always) and as the thermal fallback when the local print agent is not
 // reachable (machine without the agent installed, or agent stopped). Opens a
@@ -698,9 +717,11 @@ if (typeof window !== "undefined") {
  *                  image — one click, no dialog. Where the agent is unreachable
  *                  (dev laptop, agent stopped) it falls back to the browser
  *                  print popup with the same 72mm receipt.
- *  - "dotmatrix" → TVS MSP 250. The 9-pin printer has no ESC/POS path, so the
- *                  6x4.5" slip is printed straight through the OS driver via the
- *                  browser print dialog (cashier picks MSP 250 / OS default).
+ *  - "dotmatrix" → TVS MSP 250. With the agent up, the 6x4.5" slip is sent as
+ *                  native ESC/P text (printer hardware font, char-counted columns)
+ *                  to the MSP 250 (getDotMatrixPrinter() names it, else the agent
+ *                  default). Where the agent is unreachable it falls back to the
+ *                  browser print dialog with the same HTML slip.
  *
  * When `target` is omitted the remembered choice (getPrinterTarget) is used,
  * defaulting to "thermal" — so older call sites keep their original behaviour.
@@ -714,9 +735,33 @@ export async function printInvoice(
     company: CompanyInfo,
     target: PrinterTarget = getPrinterTarget(),
 ): Promise<void> {
-    // Dot-matrix: never touches the thermal agent — straight to the OS driver.
+    // Dot-matrix: prefer native ESC/P text through the agent (crisp hardware
+    // font, columns counted to the form — no rasterised bitmap). Falls back to
+    // the OS print dialog with the HTML slip when the agent is unreachable.
     if (target === "dotmatrix") {
-        browserPrint(generateDotMatrixHTML(invoice, company), "width=650,height=900");
+        const dmPrinter = getDotMatrixPrinter();
+        if (agentKnownUp === true) {
+            try {
+                await sendToPrintAgent(generateDotMatrixEscP(invoice, company), `Invoice ${invoice.billNo || ""}`, dmPrinter);
+                return;
+            } catch (_) {
+                agentKnownUp = false; // agent went away — fall through to browser print
+            }
+        }
+        const preOpenedDm = window.open("", "_blank", "width=650,height=900");
+        try {
+            const up = await probePrintAgent();
+            if (up) {
+                agentKnownUp = true;
+                await sendToPrintAgent(generateDotMatrixEscP(invoice, company), `Invoice ${invoice.billNo || ""}`, dmPrinter);
+                try { preOpenedDm?.close(); } catch (_) { /* ignore */ }
+                return;
+            }
+        } catch (_) {
+            // ignore — fall back to browser print below
+        }
+        agentKnownUp = false;
+        browserPrint(generateDotMatrixHTML(invoice, company), "width=650,height=900", preOpenedDm);
         return;
     }
 
