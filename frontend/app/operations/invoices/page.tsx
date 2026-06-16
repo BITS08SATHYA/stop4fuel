@@ -30,6 +30,7 @@ import {
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
+import { listPrintAgentPrinters } from "@/lib/print-agent";
 import { useAuth } from "@/lib/auth/auth-context";
 
 interface PostableShift {
@@ -150,6 +151,10 @@ export default function InvoicesPage() {
     // mount; only surfaced when the dot-matrix target is selected.
     const [dmPrinter, setDmPrinter] = useState("");
     useEffect(() => { setDmPrinter(getDotMatrixPrinter()); }, []);
+    // Windows printers the local agent can see — drives the MSP 250 picker so the
+    // exact name is selected, not typed. [] when the agent is down/old.
+    const [agentPrinters, setAgentPrinters] = useState<string[]>([]);
+    useEffect(() => { listPrintAgentPrinters().then(setAgentPrinters); }, []);
     const [manualDiscount, setManualDiscount] = useState("");
     // GST tax-invoice optional fields (mirror the IOC-dealer manual book)
     const [reverseCharge, setReverseCharge] = useState(false);
@@ -1774,14 +1779,27 @@ export default function InvoicesPage() {
                                         />
                                     </div>
                                     {printTarget === "dotmatrix" && (
-                                        <input
-                                            type="text"
-                                            value={dmPrinter}
-                                            onChange={(e) => setDmPrinter(e.target.value)}
-                                            placeholder="MSP 250 printer name (optional)"
-                                            title="Exact Windows printer name for the MSP 250. Leave blank to use the agent's default printer."
-                                            className="w-56 px-4 py-4 border border-border rounded-2xl bg-background text-foreground text-sm"
-                                        />
+                                        agentPrinters.length > 0 ? (
+                                            <div className="w-56">
+                                                <StyledSelect
+                                                    value={dmPrinter}
+                                                    onChange={(v) => { setDmPrinter(v); setDotMatrixPrinter(v); }}
+                                                    options={[
+                                                        { value: "", label: "Agent default" },
+                                                        ...agentPrinters.map(p => ({ value: p, label: p })),
+                                                    ]}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                value={dmPrinter}
+                                                onChange={(e) => setDmPrinter(e.target.value)}
+                                                placeholder="MSP 250 printer name (optional)"
+                                                title="Exact Windows printer name for the MSP 250. Leave blank to use the agent's default printer."
+                                                className="w-56 px-4 py-4 border border-border rounded-2xl bg-background text-foreground text-sm"
+                                            />
+                                        )
                                     )}
                                     <button
                                         onClick={() => {

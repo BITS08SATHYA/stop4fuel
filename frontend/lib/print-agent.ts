@@ -55,6 +55,25 @@ export async function probePrintAgent(): Promise<boolean> {
 }
 
 /**
+ * List the Windows printers the agent can see. Returns [] on any failure
+ * (agent down, old version without /printers, network error) so callers can
+ * fall back to a free-text printer name. Never throws.
+ */
+export async function listPrintAgentPrinters(): Promise<string[]> {
+    const { signal, done } = withTimeout(3000);
+    try {
+        const res = await fetch(agentBaseUrl() + "/printers", { signal, cache: "no-store" });
+        if (!res.ok) return [];
+        const body = await res.json();
+        return Array.isArray(body?.printers) ? body.printers.filter((p: unknown) => typeof p === "string") : [];
+    } catch (_) {
+        return [];
+    } finally {
+        done();
+    }
+}
+
+/**
  * Send raw bytes to the agent for printing.
  * Resolves on success; throws on any failure so the caller can fall back.
  *

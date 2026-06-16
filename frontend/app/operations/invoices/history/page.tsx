@@ -9,6 +9,7 @@ import {
     Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Hash
 } from "lucide-react";
 import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
+import { listPrintAgentPrinters } from "@/lib/print-agent";
 import { FormErrorBanner } from "@/components/ui/field-error";
 import { StyledSelect } from "@/components/ui/styled-select";
 import { PrintMenuButton } from "@/components/ui/print-menu-button";
@@ -61,7 +62,12 @@ export default function InvoiceHistoryPage() {
     // as the new-invoice screen). dmPrinter is the MSP 250 Windows printer name.
     const [printTarget, setPrintTarget] = useState<PrinterTarget>("thermal");
     const [dmPrinter, setDmPrinter] = useState("");
+    // Windows printers the local agent can see — populates the MSP 250 picker so
+    // the cashier selects the exact name instead of typing it. [] when the agent
+    // is down/old (no /printers); we then fall back to a free-text field.
+    const [agentPrinters, setAgentPrinters] = useState<string[]>([]);
     useEffect(() => { setPrintTarget(getPrinterTarget()); setDmPrinter(getDotMatrixPrinter()); }, []);
+    useEffect(() => { listPrintAgentPrinters().then(setAgentPrinters); }, []);
 
     useEffect(() => {
         fetchWithAuth(`${API_BASE_URL}/companies/print-info`).then(r => r.ok ? r.json() : null).then(c => {
@@ -524,9 +530,23 @@ export default function InvoiceHistoryPage() {
                             ]}
                         />
                     </div>
-                    {printTarget === "dotmatrix" && (
-                        <div className="min-w-[180px]">
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">MSP 250 name</label>
+                    {/* MSP 250 target printer. Always shown (not gated on the default
+                        target) so per-row dot-matrix overrides also route correctly.
+                        When the agent lists printers we offer a dropdown of exact
+                        Windows names; otherwise (agent down/old) we fall back to a
+                        free-text field. */}
+                    <div className="min-w-[200px]">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Dot-matrix printer</label>
+                        {agentPrinters.length > 0 ? (
+                            <StyledSelect
+                                value={dmPrinter}
+                                onChange={(val) => { setDmPrinter(val); setDotMatrixPrinter(val); }}
+                                options={[
+                                    { value: "", label: "Agent default" },
+                                    ...agentPrinters.map(p => ({ value: p, label: p })),
+                                ]}
+                            />
+                        ) : (
                             <input
                                 type="text"
                                 value={dmPrinter}
@@ -536,8 +556,8 @@ export default function InvoiceHistoryPage() {
                                 title="Exact Windows printer name for the MSP 250. Leave blank to use the agent's default printer."
                                 className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
                             />
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </GlassCard>
 
