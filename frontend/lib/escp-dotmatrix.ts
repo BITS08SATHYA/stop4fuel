@@ -47,6 +47,10 @@ const NLQ_ON = [ESC, 0x78, 0x01];  // ESC x 1 — near-letter-quality (crisp)
 // blurry" look). Forcing one print direction makes the two passes line up. Costs
 // ~half the speed — fine for a one-slip receipt.
 const UNIDIR_ON = [ESC, 0x55, 0x01];
+// ESC l 0 — left margin at column 0 so the slip starts at the leftmost printable
+// column (pulls content toward the paper-left edge). If more shift is needed it
+// is mechanical: slide the form on the tractor feed. Raise n to inset instead.
+const LEFT_MARGIN = [ESC, 0x6c, 0x00];
 const PICA_10CPI = [ESC, 0x50];    // ESC P  — 10 chars per inch
 const LINE_1_6 = [ESC, 0x32];      // ESC 2  — 1/6" line spacing (6 LPI)
 const SET_PAGE_LINES = [ESC, 0x43, PAGE_LINES]; // ESC C n — page length in lines
@@ -92,7 +96,7 @@ export function generateDotMatrixEscP(invoice: InvoiceBill, company: CompanyInfo
     };
 
     // --- printer setup ---
-    push(...INIT, ...NLQ_ON, ...UNIDIR_ON, ...PICA_10CPI, ...LINE_1_6, ...SET_PAGE_LINES);
+    push(...INIT, ...NLQ_ON, ...UNIDIR_ON, ...PICA_10CPI, ...LEFT_MARGIN, ...LINE_1_6, ...SET_PAGE_LINES);
 
     // --- header ---
     emph(() => lineC(m.company.name));
