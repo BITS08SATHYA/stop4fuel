@@ -41,6 +41,12 @@ const COL_AMOUNT = 9; // 22 + 7 + 8 + 9 = 46
 const ESC = 0x1b;
 const INIT = [ESC, 0x40];          // ESC @  — reset to power-on defaults
 const NLQ_ON = [ESC, 0x78, 0x01];  // ESC x 1 — near-letter-quality (crisp)
+// ESC U 1 — unidirectional printing. NLQ on a 9-pin head is a two-pass mode;
+// with the default bidirectional travel the L->R and R->L passes rarely register
+// on a used MSP 250, so every glyph prints a faint offset twin (the "doubled/
+// blurry" look). Forcing one print direction makes the two passes line up. Costs
+// ~half the speed — fine for a one-slip receipt.
+const UNIDIR_ON = [ESC, 0x55, 0x01];
 const PICA_10CPI = [ESC, 0x50];    // ESC P  — 10 chars per inch
 const LINE_1_6 = [ESC, 0x32];      // ESC 2  — 1/6" line spacing (6 LPI)
 const SET_PAGE_LINES = [ESC, 0x43, PAGE_LINES]; // ESC C n — page length in lines
@@ -86,7 +92,7 @@ export function generateDotMatrixEscP(invoice: InvoiceBill, company: CompanyInfo
     };
 
     // --- printer setup ---
-    push(...INIT, ...NLQ_ON, ...PICA_10CPI, ...LINE_1_6, ...SET_PAGE_LINES);
+    push(...INIT, ...NLQ_ON, ...UNIDIR_ON, ...PICA_10CPI, ...LINE_1_6, ...SET_PAGE_LINES);
 
     // --- header ---
     emph(() => lineC(m.company.name));
