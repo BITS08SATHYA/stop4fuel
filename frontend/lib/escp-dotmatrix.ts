@@ -47,10 +47,12 @@ const NLQ_ON = [ESC, 0x78, 0x01];  // ESC x 1 — near-letter-quality (crisp)
 // blurry" look). Forcing one print direction makes the two passes line up. Costs
 // ~half the speed — fine for a one-slip receipt.
 const UNIDIR_ON = [ESC, 0x55, 0x01];
-// ESC l 0 — left margin at column 0 so the slip starts at the leftmost printable
-// column (pulls content toward the paper-left edge). If more shift is needed it
-// is mechanical: slide the form on the tractor feed. Raise n to inset instead.
-const LEFT_MARGIN = [ESC, 0x6c, 0x00];
+// ESC l n — left margin in columns. The form is ~60 cols wide (6in @ 10cpi) and
+// the content is WIDTH(46), so ~14 cols are spare. At n=0 the first cols fall in
+// the printer's left dead zone (leading glyphs clip) and all slack pools on the
+// right. n=6 insets past the dead zone and splits the slack roughly evenly L/R.
+// Lower for more paper-left, raise for more paper-right.
+const LEFT_MARGIN = [ESC, 0x6c, 0x06];
 const PICA_10CPI = [ESC, 0x50];    // ESC P  — 10 chars per inch
 const LINE_1_6 = [ESC, 0x32];      // ESC 2  — 1/6" line spacing (6 LPI)
 const SET_PAGE_LINES = [ESC, 0x43, PAGE_LINES]; // ESC C n — page length in lines
