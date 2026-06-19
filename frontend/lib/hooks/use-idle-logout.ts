@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 
 // Sign the user out after this much inactivity. Overridable via env for tuning/testing.
-const IDLE_MS = (Number(process.env.NEXT_PUBLIC_IDLE_TIMEOUT_MINUTES) || 10) * 60_000;
+const IDLE_MS = (Number(process.env.NEXT_PUBLIC_IDLE_TIMEOUT_MINUTES) || 25) * 60_000;
 // How long before logout to show the "still there?" warning.
 const WARN_MS = 60_000;
 // Activity that resets the timer.

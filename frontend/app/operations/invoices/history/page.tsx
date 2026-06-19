@@ -641,8 +641,8 @@ export default function InvoiceHistoryPage() {
                                                     <div className="text-sm font-medium text-foreground">{new Date(inv.date).toLocaleDateString()}</div>
                                                     <div className="text-[10px] text-muted-foreground font-mono">{new Date(inv.date).toLocaleTimeString()}</div>
                                                 </td>
-                                                <td className="px-4 py-3 text-sm text-foreground">{inv.customer?.name || <span className="text-muted-foreground italic">Walk-in</span>}</td>
-                                                <td className="px-4 py-3 text-sm font-mono text-foreground">{inv.vehicle?.vehicleNumber || "—"}</td>
+                                                <td className="px-4 py-3 text-sm text-foreground">{inv.customer?.name || inv.signatoryName || <span className="text-muted-foreground italic">Walk-in</span>}</td>
+                                                <td className="px-4 py-3 text-sm font-mono text-foreground">{inv.vehicle?.vehicleNumber || inv.billDesc || "—"}</td>
                                                 <td className="px-4 py-3">
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                                                         inv.billType === 'CASH'
