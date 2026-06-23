@@ -160,7 +160,19 @@ public class ShiftSalesCalculationService {
                 creditBillTotal = creditBillTotal.add(inv.getNetAmount() != null ? inv.getNetAmount() : BigDecimal.ZERO);
             }
 
+            // Non-fuel items billed alongside fuel are bundled into the fuel sale
+            // (e.g. 2T oil premixed into the petrol), not over-the-counter sales —
+            // exclude the whole bill's non-fuel lines from the oil/non-fuel revenue
+            // lines. Only pure non-fuel bills count toward oil sales.
+            boolean billHasFuel = false;
             if (inv.getProducts() != null) {
+                for (InvoiceProduct ip : inv.getProducts()) {
+                    String cat = ip.getProduct() != null ? ip.getProduct().getCategory() : "FUEL";
+                    if ("FUEL".equalsIgnoreCase(cat)) { billHasFuel = true; break; }
+                }
+            }
+
+            if (inv.getProducts() != null && !billHasFuel) {
                 for (InvoiceProduct ip : inv.getProducts()) {
                     String category = ip.getProduct() != null ? ip.getProduct().getCategory() : "FUEL";
                     if (!"FUEL".equalsIgnoreCase(category)) {
