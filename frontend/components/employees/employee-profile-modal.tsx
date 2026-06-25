@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import {
     Plus, User, MapPin, Landmark, History, Banknote, ChevronRight,
-    FileText, ExternalLink, IndianRupee, Loader2, Upload,
+    FileText, ExternalLink, IndianRupee, Loader2, Upload, IdCard,
 } from "lucide-react";
+import { IdCardModal } from "./id-card-modal";
 import { Modal } from "@/components/ui/modal";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
@@ -30,6 +31,7 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
     const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
     const [showSalaryForm, setShowSalaryForm] = useState(false);
     const [showAdvanceForm, setShowAdvanceForm] = useState(false);
+    const [showIdCard, setShowIdCard] = useState(false);
     const [salaryRevision, setSalaryRevision] = useState({ newSalary: "", effectiveDate: "", reason: "" });
     const [newAdvance, setNewAdvance] = useState({ amount: "", advanceDate: "", advanceType: "SALARY_ADVANCE", remarks: "" });
 
@@ -130,6 +132,12 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
                             <span className="text-sm font-semibold">{formatRupees(employee.salary)}</span>
                         </div>
                     </div>
+                    <button
+                        onClick={() => setShowIdCard(true)}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-border rounded-md hover:bg-muted transition-colors flex-shrink-0"
+                    >
+                        <IdCard className="w-4 h-4" />ID Card
+                    </button>
                 </div>
 
                 {/* Profile Tabs */}
@@ -331,6 +339,7 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
                     </div>
                 )}
             </div>
+            {showIdCard && <IdCardModal employee={employee} onClose={() => setShowIdCard(false)} />}
         </Modal>
     );
 }
