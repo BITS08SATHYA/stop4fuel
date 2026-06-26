@@ -69,20 +69,18 @@ async function captureCard(node: HTMLElement): Promise<HTMLCanvasElement> {
     });
 }
 
-/** Compose front + back canvases side-by-side onto a single padded canvas. */
-function composeSideBySide(front: HTMLCanvasElement, back: HTMLCanvasElement, bg: string | null): HTMLCanvasElement {
-    const pad = Math.round(front.width * 0.07);
-    const gap = pad;
+/** Pad a single card canvas (optionally onto a solid background). */
+function padCard(src: HTMLCanvasElement, bg: string | null): HTMLCanvasElement {
+    const pad = Math.round(src.width * 0.07);
     const out = document.createElement("canvas");
-    out.width = front.width + back.width + gap + pad * 2;
-    out.height = Math.max(front.height, back.height) + pad * 2;
+    out.width = src.width + pad * 2;
+    out.height = src.height + pad * 2;
     const ctx = out.getContext("2d")!;
     if (bg) {
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, out.width, out.height);
     }
-    ctx.drawImage(front, pad, pad);
-    ctx.drawImage(back, pad + front.width + gap, pad);
+    ctx.drawImage(src, pad, pad);
     return out;
 }
 
@@ -108,8 +106,11 @@ function triggerDownload(dataUrl: string, filename: string) {
 }
 
 /**
- * Capture the front/back card nodes and download in the chosen format.
- * PNG keeps transparency; JPEG/PDF render on a light background.
+ * Capture the front/back card nodes and download in the chosen format, with
+ * front and back kept separate so each can be printed onto one side of the card:
+ *   • PDF  → page 1 = front, page 2 = back (each card centered at print size).
+ *   • PNG  → two files (…-front.png, …-back.png), transparency preserved.
+ *   • JPEG → two files (…-front.jpg, …-back.jpg), rendered on white.
  */
 export async function exportIdCard(
     frontNode: HTMLElement,
@@ -121,25 +122,29 @@ export async function exportIdCard(
 
     if (format === "pdf") {
         const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-        const cardW = 54;
-        const cardH = (front.height / front.width) * cardW;
-        const gap = 12;
-        const totalW = cardW * 2 + gap;
-        const x0 = (210 - totalW) / 2;
-        const y0 = 36;
-        pdf.addImage(canvasToWhiteJpeg(front), "JPEG", x0, y0, cardW, cardH);
-        pdf.addImage(canvasToWhiteJpeg(back), "JPEG", x0 + cardW + gap, y0, cardW, cardH);
-        pdf.setFontSize(8);
-        pdf.setTextColor(120);
-        pdf.text("FRONT", x0 + cardW / 2, y0 + cardH + 6, { align: "center" });
-        pdf.text("BACK", x0 + cardW + gap + cardW / 2, y0 + cardH + 6, { align: "center" });
+        const pageW = 210, pageH = 297;
+        const cardW = 74; // mm — large, centered card per page
+        const addPage = (canvas: HTMLCanvasElement, caption: string, first: boolean) => {
+            if (!first) pdf.addPage();
+            const cardH = (canvas.height / canvas.width) * cardW;
+            const x = (pageW - cardW) / 2;
+            const y = (pageH - cardH) / 2;
+            pdf.addImage(canvasToWhiteJpeg(canvas), "JPEG", x, y, cardW, cardH);
+            pdf.setFontSize(9);
+            pdf.setTextColor(120);
+            pdf.text(caption, pageW / 2, y + cardH + 8, { align: "center" });
+        };
+        addPage(front, "FRONT", true);
+        addPage(back, "BACK", false);
         pdf.save(`${baseName}.pdf`);
         return;
     }
 
     const bg = format === "jpeg" ? "#ffffff" : null;
-    const composed = composeSideBySide(front, back, bg);
+    const ext = format === "jpeg" ? "jpg" : "png";
     const mime = format === "jpeg" ? "image/jpeg" : "image/png";
-    const dataUrl = composed.toDataURL(mime, 0.95);
-    triggerDownload(dataUrl, `${baseName}.${format === "jpeg" ? "jpg" : "png"}`);
+    triggerDownload(padCard(front, bg).toDataURL(mime, 0.95), `${baseName}-front.${ext}`);
+    // Stagger the second download — some browsers drop back-to-back programmatic clicks.
+    await new Promise((r) => setTimeout(r, 350));
+    triggerDownload(padCard(back, bg).toDataURL(mime, 0.95), `${baseName}-back.${ext}`);
 }

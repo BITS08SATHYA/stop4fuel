@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Download, Loader2, ChevronDown, FileText, ImageIcon } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { getEmployeeFileUrl, API_BASE_URL } from "@/lib/api/station";
@@ -112,7 +113,8 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
             <div className="space-y-6">
                 <p className="text-sm text-muted-foreground">
                     Preview of the employee identity card (front &amp; back), pre-filled from this profile.
-                    Download as PDF, PNG, or JPEG.
+                    PDF downloads as two pages (front, then back); PNG/JPEG download as two separate
+                    files — ready to print on each side of the card.
                 </p>
 
                 {/* Preview */}
@@ -124,10 +126,24 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
                         </div>
                     ) : (
                         <div style={{ position: "relative", width: previewBoxW, height: previewBoxH, flexShrink: 0 }}>
+                            {/* Visible preview — scaled down for display only (no refs) */}
                             <div style={{ position: "absolute", top: 0, left: 0, transform: `scale(${PREVIEW_SCALE})`, transformOrigin: "top left", display: "flex", gap: GAP }}>
-                                <IdCard ref={frontRef} side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} />
-                                <IdCard ref={backRef} side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} />
+                                <IdCard side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} />
+                                <IdCard side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} />
                             </div>
+                            {/*
+                             * Capture source — full-size, un-transformed copies portalled to
+                             * <body>. html2canvas mis-positions every text run when the node sits
+                             * inside a CSS-scaled / overflow-clipped ancestor (which is what made
+                             * the exported text overlap), so the export must read these instead.
+                             */}
+                            {createPortal(
+                                <div aria-hidden style={{ position: "fixed", top: 0, left: -100000, display: "flex", gap: GAP }}>
+                                    <IdCard ref={frontRef} side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} />
+                                    <IdCard ref={backRef} side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} />
+                                </div>,
+                                document.body,
+                            )}
                         </div>
                     )}
                 </div>

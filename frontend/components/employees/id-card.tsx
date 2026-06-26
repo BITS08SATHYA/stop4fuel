@@ -115,8 +115,8 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
 
                 <div style={{ padding: "40px 28px 26px" }}>
                     {/* Header */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                        <div style={{ flex: 1, minWidth: 0, overflowWrap: "break-word" }}>
                             <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.12, color: WHITE }}>
                                 {(company.name || "Company").split(" ").slice(0, 2).join(" ")}
                             </div>
