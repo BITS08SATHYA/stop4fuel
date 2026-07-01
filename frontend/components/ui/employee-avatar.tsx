@@ -8,6 +8,8 @@ interface EmployeeAvatarProps {
     name: string;
     photoUrl?: string;
     size?: "sm" | "md" | "lg";
+    /** Bump to force a fresh presigned URL fetch (e.g. after replacing the photo). */
+    refreshKey?: number;
 }
 
 const sizeMap = {
@@ -45,7 +47,7 @@ function getColor(name: string): string {
     return colors[Math.abs(hash) % colors.length];
 }
 
-export function EmployeeAvatar({ employeeId, name, photoUrl, size = "md" }: EmployeeAvatarProps) {
+export function EmployeeAvatar({ employeeId, name, photoUrl, size = "md", refreshKey = 0 }: EmployeeAvatarProps) {
     const [imgUrl, setImgUrl] = useState<string | null>(null);
     const [imgError, setImgError] = useState(false);
 
@@ -56,6 +58,7 @@ export function EmployeeAvatar({ employeeId, name, photoUrl, size = "md" }: Empl
             return;
         }
         let cancelled = false;
+        setImgError(false);
         getEmployeeFileUrl(employeeId, "photo")
             .then((data) => {
                 if (!cancelled) setImgUrl(data.url);
@@ -64,7 +67,7 @@ export function EmployeeAvatar({ employeeId, name, photoUrl, size = "md" }: Empl
                 if (!cancelled) setImgError(true);
             });
         return () => { cancelled = true; };
-    }, [employeeId, photoUrl]);
+    }, [employeeId, photoUrl, refreshKey]);
 
     const sizeClass = sizeMap[size];
 

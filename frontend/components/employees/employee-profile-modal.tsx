@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import {
     Plus, User, MapPin, Landmark, History, Banknote, ChevronRight,
     FileText, ExternalLink, IndianRupee, Loader2, Upload, IdCard,
+    Camera, Download,
 } from "lucide-react";
 import { IdCardModal } from "./id-card-modal";
 import { Modal } from "@/components/ui/modal";
@@ -119,7 +120,7 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
             <div className="space-y-6">
                 {/* Profile Header */}
                 <div className="flex items-start gap-5 -mt-2">
-                    <EmployeeAvatar employeeId={employee.id} name={employee.name} photoUrl={employee.photoUrl} size="lg" />
+                    <ProfilePhoto employee={employee} onUploaded={fetchEmployee} />
                     <div className="flex-1 min-w-0">
                         <h3 className="text-xl font-bold truncate">{employee.name}</h3>
                         <p className="text-sm text-muted-foreground">{employee.designation}{employee.department ? ` - ${employee.department}` : ""}</p>
@@ -345,6 +346,74 @@ export function EmployeeProfileModal({ employee: initialEmployee, onClose }: Emp
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────
+
+function ProfilePhoto({ employee, onUploaded }: { employee: Employee; onUploaded: () => void }) {
+    const [uploading, setUploading] = useState(false);
+    const [downloading, setDownloading] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await fetchWithAuth(`${API_BASE}/${employee.id}/upload-photo`, { method: "POST", body: formData });
+            if (res.ok) { setRefreshKey((k) => k + 1); onUploaded(); }
+            else console.error("Photo upload failed");
+        } catch (error) { console.error("Failed to upload photo", error); }
+        finally { setUploading(false); e.target.value = ""; }
+    };
+
+    const handleDownload = async () => {
+        setDownloading(true);
+        try {
+            const { url } = await getEmployeeFileUrl(employee.id, "photo");
+            try {
+                const resp = await fetch(url);
+                const blob = await resp.blob();
+                const ext = ((blob.type.split("/")[1] || "jpg").split("+")[0]) || "jpg";
+                const objectUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = objectUrl;
+                a.download = `${(employee.name || "employee").replace(/\s+/g, "_")}_photo.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(objectUrl);
+            } catch {
+                // CORS or fetch failure — fall back to opening the presigned URL
+                window.open(url, "_blank");
+            }
+        } catch (error) { console.error("Failed to download photo", error); }
+        finally { setDownloading(false); }
+    };
+
+    return (
+        <div className="flex flex-col items-center gap-2 flex-shrink-0">
+            <div className="relative group w-24 h-24">
+                <EmployeeAvatar employeeId={employee.id} name={employee.name} photoUrl={employee.photoUrl} size="lg" refreshKey={refreshKey} />
+                <label
+                    title={employee.photoUrl ? "Change photo" : "Upload photo"}
+                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                    {uploading ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleUpload} disabled={uploading} />
+                </label>
+            </div>
+            {employee.photoUrl && (
+                <button
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                >
+                    {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />} Download
+                </button>
+            )}
+        </div>
+    );
+}
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (

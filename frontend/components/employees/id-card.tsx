@@ -148,13 +148,13 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
 
                     {/* Name + role */}
                     <div style={{ textAlign: "center", fontSize: 27, fontWeight: 800, marginTop: 10, color: WHITE }}>{employee.name}</div>
-                    <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
-                        <span style={{ background: `linear-gradient(145deg, ${GOLD}, ${GOLD_SOFT})`, color: "#1a1205", fontWeight: 800, fontSize: 13, letterSpacing: 1, padding: "7px 26px", borderRadius: 20 }}>
+                    <div style={{ textAlign: "center", marginTop: 10 }}>
+                        <span style={{ display: "inline-block", background: `linear-gradient(145deg, ${GOLD}, ${GOLD_SOFT})`, color: "#1a1205", fontWeight: 800, fontSize: 13, letterSpacing: 1, padding: "7px 26px", borderRadius: 20 }}>
                             {(employee.designation || "STAFF").toUpperCase()}
                         </span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
-                        <span style={{ border: `1px solid ${GOLD}`, color: GOLD, fontWeight: 700, fontSize: 10.5, letterSpacing: 1, padding: "4px 16px", borderRadius: 14 }}>
+                    <div style={{ textAlign: "center", marginTop: 8 }}>
+                        <span style={{ display: "inline-block", border: `1px solid ${GOLD}`, color: GOLD, fontWeight: 700, fontSize: 10.5, letterSpacing: 1, padding: "4px 16px", borderRadius: 14 }}>
                             {tenureLabel(employee.joinDate)}
                         </span>
                     </div>
@@ -178,7 +178,7 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
     return (
         <div ref={ref} style={shell}>
             <div style={{ height: 64, background: "#0b0d11" }} />
-            <div style={{ padding: "0 28px 24px" }}>
+            <div style={{ padding: "0 28px 18px" }}>
                 {/* QR */}
                 <div style={{ display: "flex", justifyContent: "center", marginTop: -10 }}>
                     <div style={{ width: 132, height: 132, background: WHITE, borderRadius: 10, padding: 8, boxSizing: "border-box" }}>
@@ -190,14 +190,14 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                 </div>
                 <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 1.5, color: MUTED, marginTop: 8 }}>Scan to save contact</div>
 
-                <div style={{ height: 1, background: "#2a2f39", margin: "20px 0" }} />
+                <div style={{ height: 1, background: "#2a2f39", margin: "16px 0" }} />
 
                 <SectionLabel>EMPLOYEE ADDRESS</SectionLabel>
-                <div style={{ fontSize: 12.5, color: "#d7dbe2", lineHeight: 1.5, marginTop: 6 }}>
+                <div style={{ fontSize: 12.5, color: "#d7dbe2", lineHeight: 1.4, marginTop: 6 }}>
                     {[employee.address, [employee.city, employee.state].filter(Boolean).join(", "), employee.pincode ? `- ${employee.pincode}` : ""].filter(Boolean).join(" ") || "—"}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 14, marginTop: 22 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 14, marginTop: 16 }}>
                     <div>
                         <SectionLabel>EMERGENCY CONTACT</SectionLabel>
                         <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: LABEL, marginTop: 10 }}>NAME</div>
@@ -215,7 +215,7 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                 </div>
 
                 {/* Signature */}
-                <div style={{ background: "#eef1f5", borderRadius: 8, height: 62, marginTop: 22, position: "relative", display: "flex", alignItems: "center" }}>
+                <div style={{ background: "#eef1f5", borderRadius: 8, height: 56, marginTop: 16, position: "relative", display: "flex", alignItems: "center" }}>
                     <span style={{ fontSize: 8.5, letterSpacing: 1.5, color: "#9aa1ac", position: "absolute", bottom: 8, left: 14 }}>AUTHORISED SIGNATURE</span>
                     <span style={{ position: "absolute", top: 8, right: 18, fontFamily: "'Segoe Script', 'Brush Script MT', cursive", fontStyle: "italic", fontSize: 26, color: "#1c2330", fontWeight: 700 }}>
                         {signatureInitials(employee.name || "")}
@@ -223,12 +223,12 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                 </div>
 
                 {/* Footer */}
-                <div style={{ textAlign: "center", marginTop: 18 }}>
+                <div style={{ textAlign: "center", marginTop: 14 }}>
                     <div style={{ fontSize: 10.5, color: MUTED }}>Property of {company.name}</div>
                     {company.address ? <div style={{ fontSize: 9.5, color: "#5f6775", marginTop: 3 }}>{company.address}</div> : null}
                     <div style={{ fontSize: 9.5, color: "#5f6775", marginTop: 3 }}>If found, please return to the above address.</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12 }}>
                     <span style={{ width: 14, height: 14, borderRadius: "50%", background: GOLD, display: "inline-block" }} />
                     <span style={{ fontSize: 11, color: MUTED }}>Powered by <b style={{ color: "#cfd4dc" }}>StopForFuel</b></span>
                 </div>
