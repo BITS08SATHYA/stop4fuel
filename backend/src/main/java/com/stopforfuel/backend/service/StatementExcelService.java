@@ -58,7 +58,19 @@ public class StatementExcelService {
             XSSFCellStyle centerStyle = buildBodyStyle(workbook, HorizontalAlignment.CENTER);
             XSSFCellStyle numStyle = buildNumberStyle(workbook);
 
-            writeTitle(sheet, titleStyle, companyName, fromDate, toDate);
+            // Title period must reflect the statements' actual coverage span, not the
+            // generation-date filter window used to fetch them (statements are often
+            // generated well after the period they cover — e.g. May statements run in
+            // June). Derive min(fromDate) → max(toDate) from the rows; fall back to the
+            // filter dates only when the export is empty.
+            LocalDate titleFrom = statements.stream()
+                    .map(Statement::getFromDate).filter(java.util.Objects::nonNull)
+                    .min(Comparator.naturalOrder()).orElse(fromDate);
+            LocalDate titleTo = statements.stream()
+                    .map(Statement::getToDate).filter(java.util.Objects::nonNull)
+                    .max(Comparator.naturalOrder()).orElse(toDate);
+
+            writeTitle(sheet, titleStyle, companyName, titleFrom, titleTo);
             writeHeader(sheet, headerStyle);
             applyColumnWidths(sheet);
 
