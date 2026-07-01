@@ -1368,7 +1368,12 @@ export default function StatementsPage() {
                                                             </button>
                                                         </PermissionGate>
                                                     )}
-                                                    {stmt.status !== "PAID" && Number(stmt.receivedAmount || 0) === 0 && (
+                                                    {/* Edit / Delete gate on actual money received, not the PAID label:
+                                                        an empty (0-bill) statement is trivially PAID (received ₹0 ≥ net ₹0)
+                                                        yet has no real payment, so it must stay editable/deletable.
+                                                        Backend agrees — regenerate blocks only when receivedAmount > 0,
+                                                        and delete has no PAID guard. */}
+                                                    {Number(stmt.receivedAmount || 0) === 0 && (
                                                         <PermissionGate permission="PAYMENT_UPDATE">
                                                             <button
                                                                 onClick={() => handleEditStatement(stmt)}
@@ -1379,7 +1384,7 @@ export default function StatementsPage() {
                                                             </button>
                                                         </PermissionGate>
                                                     )}
-                                                    {stmt.status !== "PAID" && (
+                                                    {(stmt.status !== "PAID" || Number(stmt.receivedAmount || 0) === 0) && (
                                                         <PermissionGate permission="PAYMENT_DELETE">
                                                             <button
                                                                 onClick={() => handleDelete(stmt.id!)}
