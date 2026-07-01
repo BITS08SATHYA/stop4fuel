@@ -52,6 +52,23 @@ public class InvoiceBillService {
     private final ShiftClosingReportRepository shiftClosingReportRepository;
     private final StatementService statementService;
     private final ShiftClosingReportService shiftClosingReportService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+
+    /**
+     * Request an AFTER_COMMIT recompute of the given shifts' closing reports (deduped, nulls
+     * dropped). Runs after this transaction commits so a recompute failure can't roll back the
+     * invoice write. See {@link com.stopforfuel.backend.event.InvoiceShiftRecomputeListener}.
+     */
+    private void requestShiftReportRecompute(String reason, Long... shiftIds) {
+        java.util.Set<Long> ids = java.util.Arrays.stream(shiftIds)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!ids.isEmpty()) {
+            eventPublisher.publishEvent(
+                    new com.stopforfuel.backend.event.InvoiceShiftRecomputeEvent(
+                            SecurityUtils.getScid(), reason, ids));
+        }
+    }
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -807,8 +824,7 @@ public class InvoiceBillService {
 
         // The moved bill's net amount now belongs to a different shift's credit total — recompute
         // both source and target closing reports so their cached figures self-correct.
-        shiftClosingReportService.recomputeReportForShiftIfEditable(sourceShiftId, "system:invoice-move");
-        shiftClosingReportService.recomputeReportForShiftIfEditable(targetShiftId, "system:invoice-move");
+        requestShiftReportRecompute("system:invoice-move", sourceShiftId, targetShiftId);
 
         return saved;
     }
@@ -907,7 +923,7 @@ public class InvoiceBillService {
         // Net amount may have changed — keep the parent statement's totals in sync (flag it for
         // regeneration) and refresh the shift's closing report so its credit total stays correct.
         statementService.resyncStatementAfterBillChange(existing.getStatement());
-        shiftClosingReportService.recomputeReportForShiftIfEditable(existing.getShiftId(), "system:invoice-edit");
+        requestShiftReportRecompute("system:invoice-edit", existing.getShiftId());
 
         return saved;
     }
