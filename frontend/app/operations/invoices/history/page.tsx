@@ -6,7 +6,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import {
     Search, Filter, ChevronDown, ChevronRight,
-    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Hash
+    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Hash, Move
 } from "lucide-react";
 import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
 import { listPrintAgentPrinters } from "@/lib/print-agent";
@@ -17,12 +17,21 @@ import { PermissionGate } from "@/components/permission-gate";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
-    getInvoiceSequence, setInvoiceSequence, getActiveShift,
+    getInvoiceSequence, setInvoiceSequence, getActiveShift, moveInvoice, getMovableShifts,
     type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
     type Product, type Nozzle, type Vehicle, type Customer, type BillSequenceView,
     API_BASE_URL
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
+import { useAuth } from "@/lib/auth/auth-context";
+
+interface PostableShift {
+    id: number;
+    status: string;
+    startTime?: string;
+    endTime?: string | null;
+    attendantName?: string | null;
+}
 
 // Format a Date as a <input type="datetime-local"> value (YYYY-MM-DDTHH:mm) in
 // LOCAL time. Using toISOString() here emits UTC and made the date filters show
@@ -45,11 +54,22 @@ interface EditLine {
 }
 
 export default function InvoiceHistoryPage() {
+    const { user } = useAuth();
+    const isShiftPickerAllowed = user?.role === "OWNER" || user?.role === "ADMIN";
+
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(true);
+
+    // Admin: move/re-date an existing invoice to the shift that covers the corrected date.
+    const [moveInvoiceTarget, setMoveInvoiceTarget] = useState<InvoiceBill | null>(null);
+    const [movableShifts, setMovableShifts] = useState<PostableShift[]>([]);
+    const [moveTargetShiftId, setMoveTargetShiftId] = useState<number | null>(null);
+    const [moveBillDate, setMoveBillDate] = useState<string>("");
+    const [moveSubmitting, setMoveSubmitting] = useState(false);
+    const [moveError, setMoveError] = useState<string>("");
 
     const [productSummary, setProductSummary] = useState<ProductSalesSummary[]>([]);
     const [summaryLoading, setSummaryLoading] = useState(true);
@@ -278,6 +298,50 @@ export default function InvoiceHistoryPage() {
     const refresh = () => {
         fetchInvoices(page, appliedFilters);
         fetchSummary(appliedFilters);
+    };
+
+    // --- Admin: move / re-date an invoice ---
+    const openMoveInvoice = async (inv: InvoiceBill) => {
+        setMoveInvoiceTarget(inv);
+        setMoveTargetShiftId(null);
+        setMoveBillDate("");
+        setMoveError("");
+        try {
+            const shifts = await getMovableShifts(20);
+            setMovableShifts(shifts.map(s => ({
+                id: s.id,
+                status: s.status,
+                startTime: s.startTime,
+                endTime: s.endTime ?? null,
+                attendantName: s.attendant?.name ?? null,
+            })));
+        } catch (e) {
+            setMoveError(e instanceof Error ? e.message : "Failed to load movable shifts");
+            setMovableShifts([]);
+        }
+    };
+
+    const closeMoveInvoice = () => {
+        setMoveInvoiceTarget(null);
+        setMovableShifts([]);
+        setMoveTargetShiftId(null);
+        setMoveBillDate("");
+        setMoveError("");
+    };
+
+    const submitMoveInvoice = async () => {
+        if (!moveInvoiceTarget || !moveTargetShiftId || !moveBillDate) return;
+        setMoveSubmitting(true);
+        setMoveError("");
+        try {
+            await moveInvoice(moveInvoiceTarget.id!, moveTargetShiftId, moveBillDate);
+            closeMoveInvoice();
+            refresh();
+        } catch (e) {
+            setMoveError(e instanceof Error ? e.message : "Failed to move invoice");
+        } finally {
+            setMoveSubmitting(false);
+        }
     };
 
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -689,6 +753,15 @@ export default function InvoiceHistoryPage() {
                                                                 <Pencil className="w-3.5 h-3.5" />
                                                             </button>
                                                         </PermissionGate>
+                                                        {isShiftPickerAllowed && (
+                                                            <button
+                                                                onClick={() => openMoveInvoice(inv)}
+                                                                className="p-1.5 rounded-md text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors"
+                                                                title="Change date / move to correct shift (admin)"
+                                                            >
+                                                                <Move className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                         <PermissionGate permission="INVOICE_DELETE">
                                                             <button
                                                                 onClick={() => setDeleteConfirm(inv)}
@@ -1068,6 +1141,117 @@ export default function InvoiceHistoryPage() {
                         </button>
                     </div>
                 </div>
+            </Modal>
+
+            {/* Move / Change Date Modal (admin) */}
+            <Modal isOpen={!!moveInvoiceTarget} onClose={closeMoveInvoice} title={`Change Date / Move — ${moveInvoiceTarget?.billNo || ""}`}>
+                {moveInvoiceTarget && (() => {
+                    const selected = movableShifts.find(s => s.id === moveTargetShiftId);
+                    const selectedStart = selected?.startTime ? new Date(selected.startTime) : null;
+                    const selectedEndRaw = selected?.endTime ? new Date(selected.endTime) : null;
+                    const selectedEnd = selectedEndRaw ?? new Date();
+                    const toLocalIn = (d: Date) => {
+                        const tzOffsetMs = d.getTimezoneOffset() * 60_000;
+                        return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+                    };
+                    const maxAttr = toLocalIn(selectedEnd);
+                    const billDateValid = (() => {
+                        if (!moveBillDate || !selectedStart) return false;
+                        const d = new Date(moveBillDate);
+                        if (Number.isNaN(d.getTime())) return false;
+                        return d >= selectedStart && d <= selectedEnd;
+                    })();
+                    // Date-first: given the corrected date, find the movable shift whose window covers it.
+                    const coveringShiftFor = (dateStr: string) => {
+                        if (!dateStr) return null;
+                        const d = new Date(dateStr);
+                        if (Number.isNaN(d.getTime())) return null;
+                        return movableShifts.find(s => {
+                            if (s.id === moveInvoiceTarget.shiftId) return false;
+                            const st = s.startTime ? new Date(s.startTime) : null;
+                            const en = s.endTime ? new Date(s.endTime) : new Date();
+                            return st != null && d >= st && d <= en;
+                        }) ?? null;
+                    };
+                    const noCoveringShift = !!moveBillDate && !selected;
+                    return (
+                        <div className="space-y-4">
+                            {moveError && <FormErrorBanner message={moveError} onDismiss={() => setMoveError("")} />}
+                            <p className="text-xs text-muted-foreground">
+                                Currently on Shift #{moveInvoiceTarget.shiftId ?? "—"}, dated {new Date(moveInvoiceTarget.date).toLocaleString()}. Set the correct bill date — the shift that covers it is selected automatically. Audit-logged.
+                            </p>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Correct bill date/time</label>
+                                <input
+                                    type="datetime-local"
+                                    value={moveBillDate}
+                                    max={maxAttr}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        setMoveBillDate(v);
+                                        const cover = coveringShiftFor(v);
+                                        setMoveTargetShiftId(cover ? cover.id : null);
+                                    }}
+                                    className="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                    Pick the date the fuel was actually issued — the matching shift follows.
+                                </p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                                    {selected ? "Shift (auto-detected)" : "Shift"}
+                                </label>
+                                <StyledSelect
+                                    value={moveTargetShiftId != null ? String(moveTargetShiftId) : ""}
+                                    onChange={(v) => setMoveTargetShiftId(v ? Number(v) : null)}
+                                    options={[
+                                        { value: "", label: "— Select shift —" },
+                                        ...movableShifts
+                                            .filter(s => s.id !== moveInvoiceTarget.shiftId)
+                                            .map(s => ({
+                                                value: String(s.id),
+                                                label: `Shift #${s.id} · ${s.startTime ? new Date(s.startTime).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"} · ${s.status}`,
+                                            })),
+                                    ]}
+                                    className="mt-1"
+                                />
+                                {movableShifts.length === 0 && (
+                                    <p className="text-xs text-amber-500 mt-2">
+                                        No movable shifts. RECONCILED shifts must be un-finalized from their report page first.
+                                    </p>
+                                )}
+                                {noCoveringShift && movableShifts.length > 0 && (
+                                    <p className="text-xs text-amber-500 mt-2">
+                                        No movable shift covers {new Date(moveBillDate).toLocaleString("en-IN")}. Pick one manually, or that day&apos;s shift is finalized and must be un-finalized first.
+                                    </p>
+                                )}
+                                {selected && (
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                        Window: {selectedStart?.toLocaleString("en-IN") ?? "—"} → {selectedEndRaw?.toLocaleString("en-IN") ?? "now"}
+                                        {!billDateValid && " — date is outside this shift"}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={closeMoveInvoice}
+                                    className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitMoveInvoice}
+                                    disabled={moveSubmitting || !moveTargetShiftId || !billDateValid}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <Move className="w-4 h-4" />
+                                    {moveSubmitting ? "Moving…" : "Move invoice"}
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
             </Modal>
 
             {/* Bill Numbering Sequence Modal */}
