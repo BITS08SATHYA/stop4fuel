@@ -159,6 +159,57 @@ public class ShiftService {
         return Optional.of(com.stopforfuel.backend.dto.CoveringShiftDTO.from(shift, report));
     }
 
+    /**
+     * Recent shifts of ANY status, each tagged with its closing-report state — backs the Move
+     * dialog's "all shifts" picker. Unlike {@link #getMovableShifts} this includes RECONCILED /
+     * FINALIZED-report shifts so an admin can select one and un-finalize it in place.
+     */
+    @Transactional(readOnly = true)
+    public List<com.stopforfuel.backend.dto.CoveringShiftDTO> getShiftsForMove(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 100);
+        List<Shift> shifts = repository.findByScidOrderByIdDesc(
+                SecurityUtils.getScid(),
+                org.springframework.data.domain.PageRequest.of(0, safeLimit));
+        if (shifts.isEmpty()) return List.of();
+        Map<Long, ShiftClosingReport> reportByShift = new HashMap<>();
+        for (ShiftClosingReport r : shiftClosingReportRepository.findByShift_IdIn(
+                shifts.stream().map(Shift::getId).toList())) {
+            if (r.getShift() != null) reportByShift.put(r.getShift().getId(), r);
+        }
+        return shifts.stream()
+                .map(s -> com.stopforfuel.backend.dto.CoveringShiftDTO.from(s, reportByShift.get(s.getId())))
+                .toList();
+    }
+
+    /**
+     * Un-finalize a shift so an invoice can be moved into it, handling both cases:
+     *  - a FINALIZED closing report exists → delegate to the report un-finalize (report → DRAFT,
+     *    RECONCILED shift → CLOSED, audit-logged);
+     *  - RECONCILED shift with NO report (e.g. imported/legacy) → just flip status to CLOSED.
+     * OPEN/REVIEW or CLOSED-with-DRAFT/no-report shifts are already movable → no-op.
+     * Reversible; never generates a report. Returns the refreshed shift + report state.
+     */
+    @Transactional
+    public com.stopforfuel.backend.dto.CoveringShiftDTO unfinalizeShiftForMove(Long shiftId, String performedBy) {
+        Long scid = SecurityUtils.getScid();
+        Shift shift = repository.findById(shiftId)
+                .filter(s -> Objects.equals(s.getScid(), scid))
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found: " + shiftId));
+        ShiftClosingReport report = shiftClosingReportRepository.findByShift_Id(shiftId).orElse(null);
+
+        if (report != null && "FINALIZED".equals(report.getStatus())) {
+            shiftClosingReportService.unfinalizeReport(report.getId(), performedBy);
+        } else if (shift.getStatus() == ShiftStatus.RECONCILED) {
+            shift.setStatus(ShiftStatus.CLOSED);
+            repository.save(shift);
+        }
+        // else already movable — no-op.
+
+        Shift fresh = repository.findById(shiftId).orElseThrow();
+        ShiftClosingReport freshReport = shiftClosingReportRepository.findByShift_Id(shiftId).orElse(null);
+        return com.stopforfuel.backend.dto.CoveringShiftDTO.from(fresh, freshReport);
+    }
+
     @Transactional
     public Shift openShift(Shift shift) {
         repository.findTopByStatusAndScidOrderByIdDesc(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {

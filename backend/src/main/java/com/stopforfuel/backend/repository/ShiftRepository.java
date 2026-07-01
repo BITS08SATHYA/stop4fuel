@@ -30,6 +30,11 @@ public interface ShiftRepository extends ScidRepository<Shift> {
     @EntityGraph(attributePaths = {"attendant", "attendant.role"})
     List<Shift> findByScidAndStatusInOrderByIdDesc(Long scid, List<ShiftStatus> statuses, Pageable pageable);
 
+    // Recent shifts of ANY status — backs the Move dialog's "all shifts" picker so an admin can
+    // target a RECONCILED/finalized shift and un-finalize it in place.
+    @EntityGraph(attributePaths = {"attendant", "attendant.role"})
+    List<Shift> findByScidOrderByIdDesc(Long scid, Pageable pageable);
+
     /**
      * Shifts an admin can move an existing invoice into: status OPEN/REVIEW (no/DRAFT report yet),
      * or status CLOSED whose closing report is still DRAFT (Recompute is allowed). Excludes any

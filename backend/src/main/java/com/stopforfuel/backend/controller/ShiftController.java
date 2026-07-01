@@ -84,6 +84,28 @@ public class ShiftController {
         return service.getCoveringShift(timestamp).orElse(null);
     }
 
+    /**
+     * All recent shifts (any status) with report state — backs the Move dialog's full shift picker,
+     * so an admin can target a RECONCILED/finalized shift and un-finalize it in place.
+     */
+    @GetMapping("/for-move")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    public List<CoveringShiftDTO> getForMove(@RequestParam(name = "limit", defaultValue = "50") int limit) {
+        return service.getShiftsForMove(limit);
+    }
+
+    /**
+     * Un-finalize a shift so a bill can be moved into it: un-finalizes a FINALIZED report, or flips
+     * a RECONCILED (report-less) shift back to CLOSED. Reversible; no report is generated.
+     */
+    @PostMapping("/{id}/unfinalize")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    public CoveringShiftDTO unfinalizeForMove(@PathVariable Long id,
+                                              @RequestBody(required = false) Map<String, String> body) {
+        String performedBy = body != null ? body.get("performedBy") : null;
+        return service.unfinalizeShiftForMove(id, performedBy);
+    }
+
     @GetMapping("/cashiers")
     @PreAuthorize("hasPermission(null, 'SHIFT_VIEW')")
     public List<UserListDTO> getCashiers() {

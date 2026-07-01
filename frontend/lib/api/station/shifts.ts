@@ -279,6 +279,21 @@ export interface CoveringShift {
 export const getCoveringShift = (timestamp: string): Promise<CoveringShift | null> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/covering?timestamp=${encodeURIComponent(timestamp)}`).then(handleResponse);
 
+/** All recent shifts (any status) with report state — for the Move dialog's full shift picker. */
+export const getShiftsForMove = (limit = 50): Promise<CoveringShift[]> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/for-move?limit=${limit}`).then(handleResponse);
+
+/**
+ * Un-finalize a shift so a bill can be moved into it — un-finalizes a FINALIZED report, or flips a
+ * RECONCILED (report-less) shift back to CLOSED. Returns the refreshed shift + report state.
+ */
+export const unfinalizeShiftForMove = (shiftId: number, performedBy?: string): Promise<CoveringShift> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/${shiftId}/unfinalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ performedBy }),
+    }).then(handleResponse);
+
 export const getReportAuditLog = (reportId: number): Promise<ReportAuditLog[]> =>
     fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/audit-log`).then(handleResponse);
 
