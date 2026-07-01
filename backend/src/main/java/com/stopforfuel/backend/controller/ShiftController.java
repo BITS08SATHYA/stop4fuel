@@ -1,6 +1,7 @@
 package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
+import com.stopforfuel.backend.dto.CoveringShiftDTO;
 import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
 import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
 import com.stopforfuel.backend.dto.ShiftDTO;
@@ -68,6 +69,19 @@ public class ShiftController {
     @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
     public List<ShiftDTO> getMovable(@RequestParam(name = "limit", defaultValue = "20") int limit) {
         return service.getMovableShifts(limit).stream().map(ShiftDTO::from).toList();
+    }
+
+    /**
+     * Resolve the shift covering a corrected bill date (with its report state) for the Move dialog.
+     * Returns null when no shift covers the timestamp. Unlike /movable, this includes shifts whose
+     * report is FINALIZED so the admin can un-finalize in place before moving the bill.
+     */
+    @GetMapping("/covering")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    public CoveringShiftDTO getCovering(@RequestParam(name = "timestamp")
+                                        @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
+                                        java.time.LocalDateTime timestamp) {
+        return service.getCoveringShift(timestamp).orElse(null);
     }
 
     @GetMapping("/cashiers")

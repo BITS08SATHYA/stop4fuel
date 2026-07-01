@@ -6,7 +6,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import {
     Search, Filter, ChevronDown, ChevronRight,
-    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Hash, Move
+    Package, RotateCcw, Pencil, Trash2, Plus, X, Save, Hash, Move, RefreshCw
 } from "lucide-react";
 import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
 import { listPrintAgentPrinters } from "@/lib/print-agent";
@@ -18,8 +18,10 @@ import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
     getActiveProducts, getNozzles, getCustomers, getVehiclesByCustomer, searchVehicles,
     getInvoiceSequence, setInvoiceSequence, getActiveShift, moveInvoice, getMovableShifts,
+    getCoveringShift, recomputeShiftReport, unfinalizeShiftReport,
     type InvoiceBill, type InvoiceProduct, type PageResponse, type ProductSalesSummary,
     type Product, type Nozzle, type Vehicle, type Customer, type BillSequenceView,
+    type CoveringShift,
     API_BASE_URL
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
@@ -70,6 +72,11 @@ export default function InvoiceHistoryPage() {
     const [moveBillDate, setMoveBillDate] = useState<string>("");
     const [moveSubmitting, setMoveSubmitting] = useState(false);
     const [moveError, setMoveError] = useState<string>("");
+    // The shift covering the corrected date (any finalize status) + its report state — lets the
+    // dialog surface a finalized covering shift and offer in-place Un-finalize / Recompute.
+    const [coveringInfo, setCoveringInfo] = useState<CoveringShift | null>(null);
+    const [coveringLoading, setCoveringLoading] = useState(false);
+    const [reportActionBusy, setReportActionBusy] = useState(false);
 
     const [productSummary, setProductSummary] = useState<ProductSalesSummary[]>([]);
     const [summaryLoading, setSummaryLoading] = useState(true);
@@ -301,20 +308,43 @@ export default function InvoiceHistoryPage() {
     };
 
     // --- Admin: move / re-date an invoice ---
+    const reloadMovableShifts = useCallback(async () => {
+        const shifts = await getMovableShifts(20);
+        const mapped = shifts.map(s => ({
+            id: s.id,
+            status: s.status,
+            startTime: s.startTime,
+            endTime: s.endTime ?? null,
+            attendantName: s.attendant?.name ?? null,
+        }));
+        setMovableShifts(mapped);
+        return mapped;
+    }, []);
+
+    // Resolve the shift covering a corrected date (any finalize status) so the dialog can offer
+    // an in-place Un-finalize when that shift's report is FINALIZED (and thus not "movable" yet).
+    const resolveCovering = useCallback(async (dateStr: string) => {
+        if (!dateStr) { setCoveringInfo(null); return; }
+        setCoveringLoading(true);
+        try {
+            // datetime-local omits seconds; append ":00" to form a valid ISO LocalDateTime.
+            const info = await getCoveringShift(`${dateStr}:00`);
+            setCoveringInfo(info);
+        } catch {
+            setCoveringInfo(null);
+        } finally {
+            setCoveringLoading(false);
+        }
+    }, []);
+
     const openMoveInvoice = async (inv: InvoiceBill) => {
         setMoveInvoiceTarget(inv);
         setMoveTargetShiftId(null);
         setMoveBillDate("");
         setMoveError("");
+        setCoveringInfo(null);
         try {
-            const shifts = await getMovableShifts(20);
-            setMovableShifts(shifts.map(s => ({
-                id: s.id,
-                status: s.status,
-                startTime: s.startTime,
-                endTime: s.endTime ?? null,
-                attendantName: s.attendant?.name ?? null,
-            })));
+            await reloadMovableShifts();
         } catch (e) {
             setMoveError(e instanceof Error ? e.message : "Failed to load movable shifts");
             setMovableShifts([]);
@@ -327,6 +357,39 @@ export default function InvoiceHistoryPage() {
         setMoveTargetShiftId(null);
         setMoveBillDate("");
         setMoveError("");
+        setCoveringInfo(null);
+    };
+
+    // Un-finalize the covering shift's report so the bill can be moved into it, then re-select it.
+    const handleUnfinalizeCovering = async () => {
+        if (!coveringInfo?.reportId) return;
+        setReportActionBusy(true);
+        setMoveError("");
+        try {
+            await unfinalizeShiftReport(coveringInfo.reportId, user?.name || user?.username);
+            await reloadMovableShifts();
+            await resolveCovering(moveBillDate);
+            setMoveTargetShiftId(coveringInfo.shiftId);
+        } catch (e) {
+            setMoveError(e instanceof Error ? e.message : "Failed to un-finalize report");
+        } finally {
+            setReportActionBusy(false);
+        }
+    };
+
+    // Recompute the covering shift's (DRAFT) report from source data.
+    const handleRecomputeCovering = async () => {
+        if (!coveringInfo?.reportId) return;
+        setReportActionBusy(true);
+        setMoveError("");
+        try {
+            await recomputeShiftReport(coveringInfo.reportId);
+            await resolveCovering(moveBillDate);
+        } catch (e) {
+            setMoveError(e instanceof Error ? e.message : "Failed to recompute report");
+        } finally {
+            setReportActionBusy(false);
+        }
     };
 
     const submitMoveInvoice = async () => {
@@ -1191,11 +1254,13 @@ export default function InvoiceHistoryPage() {
                                         setMoveBillDate(v);
                                         const cover = coveringShiftFor(v);
                                         setMoveTargetShiftId(cover ? cover.id : null);
+                                        resolveCovering(v);
                                     }}
                                     className="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
                                 />
                                 <p className="text-[10px] text-muted-foreground mt-1">
                                     Pick the date the fuel was actually issued — the matching shift follows.
+                                    {coveringLoading && <span className="ml-1 italic">Checking covering shift…</span>}
                                 </p>
                             </div>
                             <div>
@@ -1221,7 +1286,7 @@ export default function InvoiceHistoryPage() {
                                         No movable shifts. RECONCILED shifts must be un-finalized from their report page first.
                                     </p>
                                 )}
-                                {noCoveringShift && movableShifts.length > 0 && (
+                                {noCoveringShift && movableShifts.length > 0 && !coveringInfo?.reportId && (
                                     <p className="text-xs text-amber-500 mt-2">
                                         No movable shift covers {new Date(moveBillDate).toLocaleString("en-IN")}. Pick one manually, or that day&apos;s shift is finalized and must be un-finalized first.
                                     </p>
@@ -1233,6 +1298,47 @@ export default function InvoiceHistoryPage() {
                                     </p>
                                 )}
                             </div>
+
+                            {/* Covering shift's report actions — un-finalize a finalized shift in place
+                                (so it becomes movable) and/or recompute its DRAFT report. */}
+                            {coveringInfo && coveringInfo.reportId && coveringInfo.shiftId !== moveInvoiceTarget.shiftId && (
+                                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                                    <div className="text-xs text-foreground">
+                                        Covering shift #{coveringInfo.shiftId} — report{" "}
+                                        <span className={coveringInfo.reportStatus === "FINALIZED" ? "font-semibold text-amber-500" : "font-semibold text-emerald-500"}>
+                                            {coveringInfo.reportStatus ?? "none"}
+                                        </span>
+                                    </div>
+                                    {coveringInfo.reportStatus === "FINALIZED" && (
+                                        <p className="text-[11px] text-amber-500">
+                                            This shift&apos;s report is finalized, so the bill can&apos;t be moved into it yet. Un-finalize it here, then move — the report reverts to DRAFT and is audit-logged.
+                                        </p>
+                                    )}
+                                    <div className="flex flex-wrap gap-2">
+                                        {coveringInfo.reportStatus === "FINALIZED" && (
+                                            <button
+                                                onClick={handleUnfinalizeCovering}
+                                                disabled={reportActionBusy}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-500/40 text-amber-500 hover:bg-amber-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                <RotateCcw className="w-3.5 h-3.5" />
+                                                {reportActionBusy ? "Working…" : "Un-finalize report"}
+                                            </button>
+                                        )}
+                                        {coveringInfo.reportStatus === "DRAFT" && (
+                                            <button
+                                                onClick={handleRecomputeCovering}
+                                                disabled={reportActionBusy}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                <RefreshCw className={`w-3.5 h-3.5 ${reportActionBusy ? "animate-spin" : ""}`} />
+                                                {reportActionBusy ? "Recomputing…" : "Recompute report"}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-end gap-2">
                                 <button
                                     onClick={closeMoveInvoice}

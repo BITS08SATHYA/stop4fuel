@@ -142,6 +142,23 @@ public class ShiftService {
                 org.springframework.data.domain.PageRequest.of(0, safeLimit));
     }
 
+    /**
+     * Resolve the shift whose window covers the given timestamp, with its closing-report state,
+     * REGARDLESS of finalize status. Backs the Move dialog's date-first flow: a finalized covering
+     * shift is hidden from {@link #getMovableShifts}, so this lets the dialog surface it and offer
+     * an in-place un-finalize before the move. Returns empty when no shift covers the timestamp.
+     */
+    @Transactional(readOnly = true)
+    public Optional<com.stopforfuel.backend.dto.CoveringShiftDTO> getCoveringShift(LocalDateTime timestamp) {
+        List<Shift> covering = repository.findCoveringShifts(
+                SecurityUtils.getScid(), timestamp,
+                org.springframework.data.domain.PageRequest.of(0, 1));
+        if (covering.isEmpty()) return Optional.empty();
+        Shift shift = covering.get(0);
+        ShiftClosingReport report = shiftClosingReportRepository.findByShift_Id(shift.getId()).orElse(null);
+        return Optional.of(com.stopforfuel.backend.dto.CoveringShiftDTO.from(shift, report));
+    }
+
     @Transactional
     public Shift openShift(Shift shift) {
         repository.findTopByStatusAndScidOrderByIdDesc(ShiftStatus.OPEN, SecurityUtils.getScid()).ifPresent(s -> {

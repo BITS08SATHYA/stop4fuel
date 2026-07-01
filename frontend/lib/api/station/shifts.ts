@@ -261,6 +261,24 @@ export const unfinalizeShiftReport = (reportId: number, performedBy?: string): P
 export const getMovableShifts = (limit = 20): Promise<Shift[]> =>
     fetchWithAuth(`${API_BASE_URL}/shifts/movable?limit=${limit}`).then(handleResponse);
 
+/** The shift covering a given timestamp, plus its closing-report state (any finalize status). */
+export interface CoveringShift {
+    shiftId: number;
+    startTime?: string;
+    endTime?: string | null;
+    status: string;
+    attendantName?: string | null;
+    reportId?: number | null;
+    reportStatus?: 'DRAFT' | 'FINALIZED' | null;
+}
+
+/**
+ * Resolve the shift whose window covers `timestamp` (ISO local, e.g. "2026-07-01T07:04:00"),
+ * with its report state — regardless of finalize status. Returns null when no shift covers it.
+ */
+export const getCoveringShift = (timestamp: string): Promise<CoveringShift | null> =>
+    fetchWithAuth(`${API_BASE_URL}/shifts/covering?timestamp=${encodeURIComponent(timestamp)}`).then(handleResponse);
+
 export const getReportAuditLog = (reportId: number): Promise<ReportAuditLog[]> =>
     fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/audit-log`).then(handleResponse);
 
