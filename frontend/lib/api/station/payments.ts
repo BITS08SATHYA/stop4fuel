@@ -24,6 +24,8 @@ export interface Statement {
     status: 'PAID' | 'NOT_PAID' | 'DRAFT';
     reportLayout?: ReportLayout;
     statementPdfUrl?: string;
+    /** True when a linked bill was edited/moved after this statement was generated — PDF is stale. */
+    needsRegeneration?: boolean;
 }
 
 export interface DayWiseBucket {

@@ -11,7 +11,8 @@ import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
     FileClock, FileCheck2, Receipt, TrendingUp, IndianRupee, Percent, ChevronDown, ChevronRight,
-    CheckCircle2, Zap, Pencil, ArrowUpDown, ArrowUp, ArrowDown, Settings, Hash, FileSpreadsheet
+    CheckCircle2, Zap, Pencil, ArrowUpDown, ArrowUp, ArrowDown, Settings, Hash, FileSpreadsheet,
+    AlertTriangle
 } from "lucide-react";
 import {
     getStatements, generateStatement, regenerateStatement, getStatementBills,
@@ -1280,6 +1281,14 @@ export default function StatementsPage() {
                                                 <Badge variant={stmt.status === "PAID" ? "success" : stmt.status === "DRAFT" ? "outline" : "warning"}>
                                                     {stmt.status === "PAID" ? "PAID" : stmt.status === "DRAFT" ? "DRAFT" : "NOT PAID"}
                                                 </Badge>
+                                                {stmt.needsRegeneration && (
+                                                    <div
+                                                        className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-500"
+                                                        title="A linked bill was edited or moved after this statement was generated. Click Edit / Regenerate to refresh the totals and PDF, then inform the customer."
+                                                    >
+                                                        <AlertTriangle className="w-3 h-3" /> Needs regen
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-3 px-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">

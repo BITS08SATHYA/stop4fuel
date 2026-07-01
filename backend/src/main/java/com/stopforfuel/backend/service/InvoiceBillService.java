@@ -50,6 +50,8 @@ public class InvoiceBillService {
     private final WeightedAverageCostService wacService;
     private final CreditMonitoringService creditMonitoringService;
     private final ShiftClosingReportRepository shiftClosingReportRepository;
+    private final StatementService statementService;
+    private final ShiftClosingReportService shiftClosingReportService;
 
     @Transactional(readOnly = true)
     public List<InvoiceBill> getAllInvoices() {
@@ -738,6 +740,12 @@ public class InvoiceBillService {
                     " — synthetic residual-cash invoices are managed by the shift-close flow.");
         }
 
+        // If this bill is on a statement that already received payments, refuse — money has
+        // changed hands against those numbers. Otherwise remember the statement so we can
+        // resync its totals + flag it for regeneration after the move.
+        statementService.assertBillEditableForStatement(invoice);
+        Statement linkedStatement = invoice.getStatement();
+
         if (targetShiftId == null) {
             throw new BusinessException("Target shift is required");
         }
@@ -791,13 +799,41 @@ public class InvoiceBillService {
 
         invoice.setShiftId(targetShiftId);
         invoice.setDate(newBillDate);
-        return repository.save(invoice);
+        InvoiceBill saved = repository.save(invoice);
+
+        // Keep the affected statement's totals correct and flag it so the operator regenerates
+        // the PDF (which also re-windows the bills onto the correct period).
+        statementService.resyncStatementAfterBillChange(linkedStatement);
+
+        // The moved bill's net amount now belongs to a different shift's credit total — recompute
+        // both source and target closing reports so their cached figures self-correct.
+        shiftClosingReportService.recomputeReportForShiftIfEditable(sourceShiftId, "system:invoice-move");
+        shiftClosingReportService.recomputeReportForShiftIfEditable(targetShiftId, "system:invoice-move");
+
+        return saved;
     }
 
     @Transactional
     public InvoiceBill updateInvoice(Long id, InvoiceBill updated) {
         InvoiceBill existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+
+        // A quantity/rate change alters the bill's net amount, which feeds any statement it's on.
+        // Refuse if that statement has already been paid against; otherwise resync it below.
+        statementService.assertBillEditableForStatement(existing);
+
+        // Likewise, a FINALIZED shift report has locked credit totals we can't recompute — refuse
+        // the edit rather than leave that report silently stale (mirrors the moveInvoice guard).
+        Long editShiftId = existing.getShiftId();
+        if (editShiftId != null) {
+            shiftClosingReportRepository.findByShift_Id(editShiftId).ifPresent(r -> {
+                if ("FINALIZED".equals(r.getStatus())) {
+                    throw new BusinessException(
+                            "Cannot edit bill #" + existing.getBillNo() +
+                            " — shift #" + editShiftId + "'s closing report is FINALIZED. Un-finalize it first.");
+                }
+            });
+        }
 
         // Update basic fields
         existing.setDriverName(updated.getDriverName());
@@ -866,7 +902,14 @@ public class InvoiceBillService {
         existing.setTotalDiscount(totalDiscountSum);
         existing.setNetAmount(totalGross.subtract(totalDiscountSum));
 
-        return repository.save(existing);
+        InvoiceBill saved = repository.save(existing);
+
+        // Net amount may have changed — keep the parent statement's totals in sync (flag it for
+        // regeneration) and refresh the shift's closing report so its credit total stays correct.
+        statementService.resyncStatementAfterBillChange(existing.getStatement());
+        shiftClosingReportService.recomputeReportForShiftIfEditable(existing.getShiftId(), "system:invoice-edit");
+
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -1040,6 +1083,8 @@ public class InvoiceBillService {
                 statement.setNumberOfBills(remainingBills.size());
                 statement.setBalanceAmount(netAmount.subtract(
                         statement.getReceivedAmount() != null ? statement.getReceivedAmount() : java.math.BigDecimal.ZERO));
+                // Cached PDF no longer matches the reduced bill set — prompt regeneration.
+                statement.setNeedsRegeneration(true);
                 statementRepository.save(statement);
             }
         }

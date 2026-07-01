@@ -330,6 +330,7 @@ public class StatementService {
             invoiceBillRepository.save(bill);
         }
         recomputeStatementTotals(saved);
+        saved.setNeedsRegeneration(false);
         saved = statementRepository.save(saved);
 
         // Auto-generate PDF with updated data
@@ -669,6 +670,39 @@ public class StatementService {
     }
 
     /**
+     * Guard for bill edits/moves: a bill that belongs to a statement which has already
+     * received payments must not be edited silently — money has changed hands against those
+     * exact numbers. Callers (updateInvoice / moveInvoice) invoke this before mutating a bill;
+     * no-op when the bill is unlinked or its statement is still fully outstanding.
+     */
+    public void assertBillEditableForStatement(InvoiceBill bill) {
+        Statement stmt = bill.getStatement();
+        if (stmt == null) return;
+        BigDecimal received = stmt.getReceivedAmount();
+        if (received != null && received.compareTo(BigDecimal.ZERO) > 0) {
+            throw new BusinessException(
+                    "Bill #" + bill.getBillNo() + " is on statement " + stmt.getStatementNo() +
+                    " which has already received ₹" + received.stripTrailingZeros().toPlainString() +
+                    ". Reverse or adjust that payment before editing this bill.");
+        }
+    }
+
+    /**
+     * After an allowed edit/move of a statemented bill, keep the statement's cached totals
+     * correct and flag it so the UI prompts a one-click regeneration (which refreshes the PDF
+     * and re-windows the bills). No-op when the bill isn't on a statement.
+     */
+    @Transactional
+    public void resyncStatementAfterBillChange(Statement stmt) {
+        if (stmt == null) return;
+        Statement fresh = statementRepository.findById(stmt.getId()).orElse(null);
+        if (fresh == null) return;
+        recomputeStatementTotals(fresh);
+        fresh.setNeedsRegeneration(true);
+        statementRepository.save(fresh);
+    }
+
+    /**
      * Approve a DRAFT statement: set status to NOT_PAID and auto-generate PDF.
      */
     @Transactional
@@ -797,6 +831,8 @@ public class StatementService {
             }
         }
 
+        // Cached PDF no longer matches the reduced bill set — prompt regeneration.
+        statement.setNeedsRegeneration(true);
         return statementRepository.save(statement);
     }
 

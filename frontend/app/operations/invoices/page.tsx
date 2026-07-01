@@ -2065,7 +2065,6 @@ export default function InvoicesPage() {
                     const tzOffsetMs = d.getTimezoneOffset() * 60_000;
                     return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 16);
                 };
-                const minAttr = selectedStart ? toLocalInput(selectedStart) : undefined;
                 const maxAttr = toLocalInput(selectedEnd);
                 const billDateValid = (() => {
                     if (!moveBillDate || !selectedStart) return false;
@@ -2075,6 +2074,20 @@ export default function InvoicesPage() {
                     if (d > selectedEnd) return false;
                     return true;
                 })();
+                // Date-first UX: given the corrected date, find the movable shift whose window
+                // covers it (excluding the shift the bill is already on). The shift follows the date.
+                const coveringShiftFor = (dateStr: string) => {
+                    if (!dateStr) return null;
+                    const d = new Date(dateStr);
+                    if (Number.isNaN(d.getTime())) return null;
+                    return movableShifts.find(s => {
+                        if (s.id === moveInvoiceTarget.shiftId) return false;
+                        const st = s.startTime ? new Date(s.startTime) : null;
+                        const en = s.endTime ? new Date(s.endTime) : new Date();
+                        return st != null && d >= st && d <= en;
+                    }) ?? null;
+                };
+                const noCoveringShift = !!moveBillDate && !selected;
                 return (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 print:hidden">
                         <div className="bg-card rounded-xl p-6 w-full max-w-lg shadow-2xl">
@@ -2083,18 +2096,34 @@ export default function InvoicesPage() {
                                 Move Invoice {moveInvoiceTarget.billNo || `#${moveInvoiceTarget.id}`}
                             </h3>
                             <p className="text-xs text-muted-foreground mb-4">
-                                Currently on Shift #{moveInvoiceTarget.shiftId ?? "—"}. Pick the correct shift and a bill date inside its window. Audit-logged.
+                                Currently on Shift #{moveInvoiceTarget.shiftId ?? "—"}. Set the correct bill date — the shift that covers it is selected automatically. Audit-logged.
                             </p>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Target shift</label>
+                                    <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Correct bill date/time</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={moveBillDate}
+                                        max={maxAttr}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            setMoveBillDate(v);
+                                            const cover = coveringShiftFor(v);
+                                            setMoveTargetShiftId(cover ? cover.id : null);
+                                        }}
+                                        className="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                        Pick the date the fuel was actually issued — the matching shift follows.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                                        {selected ? "Shift (auto-detected)" : "Shift"}
+                                    </label>
                                     <StyledSelect
                                         value={moveTargetShiftId != null ? String(moveTargetShiftId) : ""}
-                                        onChange={(v) => {
-                                            const id = v ? Number(v) : null;
-                                            setMoveTargetShiftId(id);
-                                            setMoveBillDate("");
-                                        }}
+                                        onChange={(v) => setMoveTargetShiftId(v ? Number(v) : null)}
                                         options={[
                                             { value: "", label: "— Select shift —" },
                                             ...movableShifts
@@ -2111,23 +2140,18 @@ export default function InvoicesPage() {
                                             No movable shifts. RECONCILED shifts must be un-finalized from their report page first.
                                         </p>
                                     )}
-                                </div>
-                                {selected && (
-                                    <div>
-                                        <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">New bill date/time</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={moveBillDate}
-                                            min={minAttr}
-                                            max={maxAttr}
-                                            onChange={(e) => setMoveBillDate(e.target.value)}
-                                            className="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
-                                        />
+                                    {noCoveringShift && movableShifts.length > 0 && (
+                                        <p className="text-xs text-amber-500 mt-2">
+                                            No movable shift covers {new Date(moveBillDate).toLocaleString("en-IN")}. Pick one manually, or that day&apos;s shift is finalized and must be un-finalized first.
+                                        </p>
+                                    )}
+                                    {selected && (
                                         <p className="text-[10px] text-muted-foreground mt-1">
                                             Window: {selectedStart?.toLocaleString("en-IN") ?? "—"} → {selectedEndRaw?.toLocaleString("en-IN") ?? "now"}
+                                            {!billDateValid && " — date is outside this shift"}
                                         </p>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
                                 <button

@@ -309,6 +309,22 @@ public class ShiftClosingReportService {
         return doRecompute(report, performedBy);
     }
 
+    /**
+     * Recompute a shift's closing report from source data if one exists and isn't finalized.
+     * Used after a credit bill is moved/edited between shifts so the affected shifts' cached
+     * credit totals self-correct. No-op when the shift has no report yet (e.g. still OPEN) or
+     * the report is FINALIZED (that case is guarded upstream at the move/edit boundary).
+     */
+    @Transactional
+    public void recomputeReportForShiftIfEditable(Long shiftId, String performedBy) {
+        if (shiftId == null) return;
+        reportRepository.findByShift_Id(shiftId).ifPresent(report -> {
+            if (!"FINALIZED".equals(report.getStatus())) {
+                doRecompute(report, performedBy);
+            }
+        });
+    }
+
     private ShiftClosingReport doRecompute(ShiftClosingReport report, String performedBy) {
         if ("FINALIZED".equals(report.getStatus())) {
             throw new BusinessException("Cannot recompute a finalized report");

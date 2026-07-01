@@ -66,6 +66,14 @@ public class Statement extends BaseEntity {
     @Column(name = "status", nullable = false)
     private String status = "NOT_PAID"; // PAID, NOT_PAID
 
+    /**
+     * Set true when a linked bill's amount/date is edited or the bill is moved, so the
+     * cached PDF no longer matches the (recomputed) totals. Cleared on regenerateStatement.
+     * Drives the "Needs regeneration" badge in the statements UI.
+     */
+    @Column(name = "needs_regeneration")
+    private Boolean needsRegeneration = false;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "report_layout", length = 20)
     private ReportLayout reportLayout = ReportLayout.VEHICLE_WISE;
@@ -105,6 +113,10 @@ public class Statement extends BaseEntity {
         // Legacy rows have NULL report_layout — treat as VEHICLE_WISE so the existing PDF path is used.
         if (this.reportLayout == null) {
             this.reportLayout = ReportLayout.VEHICLE_WISE;
+        }
+        // Legacy rows have NULL needs_regeneration — treat as not-stale.
+        if (this.needsRegeneration == null) {
+            this.needsRegeneration = false;
         }
     }
 }
