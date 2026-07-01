@@ -46,6 +46,9 @@ class InvoiceBillControllerTest {
     @MockBean
     private PaymentRepository paymentRepository;
 
+    @MockBean
+    private com.stopforfuel.backend.service.BillSequenceService billSequenceService;
+
     private InvoiceBill testBill;
 
     @BeforeEach
