@@ -25,4 +25,19 @@ public interface InvoiceProductRepository extends JpaRepository<InvoiceProduct, 
     List<Long> findTopSellingProductIds(@Param("scid") Long scid,
                                         @Param("since") LocalDateTime since,
                                         Pageable pageable);
+
+    @Query("""
+        select cast(ib.date as LocalDate), coalesce(sum(ip.quantity), 0), coalesce(sum(ip.amount), 0)
+        from InvoiceProduct ip join ip.invoiceBill ib
+        where ip.product.id = :productId
+          and ib.scid = :scid
+          and ib.date >= :fromDate
+          and ib.date <= :toDate
+        group by cast(ib.date as LocalDate)
+        order by cast(ib.date as LocalDate)
+        """)
+    List<Object[]> getDailySalesByProduct(@Param("productId") Long productId,
+                                          @Param("scid") Long scid,
+                                          @Param("fromDate") LocalDateTime fromDate,
+                                          @Param("toDate") LocalDateTime toDate);
 }

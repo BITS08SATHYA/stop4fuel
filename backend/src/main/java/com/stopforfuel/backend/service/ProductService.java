@@ -1,5 +1,6 @@
 package com.stopforfuel.backend.service;
 
+import com.stopforfuel.backend.dto.ProductSalesHistoryDTO;
 import com.stopforfuel.backend.entity.GradeType;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.event.FuelPriceChangedEvent;
@@ -16,15 +17,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class ProductService {
+
+    private static final ZoneId APP_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final ProductRepository productRepository;
 
@@ -77,6 +86,89 @@ public class ProductService {
     public Product getProductById(Long id) {
         return productRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public ProductSalesHistoryDTO getSalesHistory(Long productId, LocalDate from, LocalDate to, String granularity) {
+        Product product = getProductById(productId);
+
+        LocalDate toDate = to != null ? to : LocalDate.now(APP_ZONE);
+        LocalDate fromDate = from != null ? from : toDate.minusDays(29);
+        if (fromDate.isAfter(toDate)) {
+            throw new BusinessException("fromDate must be on or before toDate");
+        }
+        if (fromDate.isBefore(toDate.minusYears(3))) {
+            throw new BusinessException("Date range cannot exceed 3 years");
+        }
+        String bucket = granularity == null ? "DAY" : granularity.trim().toUpperCase();
+        if (!List.of("DAY", "WEEK", "MONTH").contains(bucket)) {
+            throw new BusinessException("granularity must be DAY, WEEK or MONTH");
+        }
+
+        // Pre-seed every bucket in range so the chart shows zero-days instead of gaps
+        Map<LocalDate, BigDecimal[]> buckets = new LinkedHashMap<>();
+        LocalDate cursor = bucketStart(fromDate, bucket);
+        LocalDate lastBucket = bucketStart(toDate, bucket);
+        while (!cursor.isAfter(lastBucket)) {
+            buckets.put(cursor, new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            cursor = switch (bucket) {
+                case "WEEK" -> cursor.plusWeeks(1);
+                case "MONTH" -> cursor.plusMonths(1);
+                default -> cursor.plusDays(1);
+            };
+        }
+
+        List<Object[]> rows = invoiceProductRepository.getDailySalesByProduct(
+                productId, SecurityUtils.getScid(), fromDate.atStartOfDay(), toDate.atTime(LocalTime.MAX));
+
+        BigDecimal totalQuantity = BigDecimal.ZERO;
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (Object[] row : rows) {
+            LocalDate day = (LocalDate) row[0];
+            BigDecimal quantity = toBigDecimal(row[1]);
+            BigDecimal amount = toBigDecimal(row[2]);
+            BigDecimal[] acc = buckets.get(bucketStart(day, bucket));
+            if (acc != null) {
+                acc[0] = acc[0].add(quantity);
+                acc[1] = acc[1].add(amount);
+            }
+            totalQuantity = totalQuantity.add(quantity);
+            totalAmount = totalAmount.add(amount);
+        }
+
+        List<ProductSalesHistoryDTO.Point> points = buckets.entrySet().stream()
+                .map(e -> ProductSalesHistoryDTO.Point.builder()
+                        .date(e.getKey().toString())
+                        .quantity(e.getValue()[0])
+                        .amount(e.getValue()[1])
+                        .build())
+                .toList();
+
+        return ProductSalesHistoryDTO.builder()
+                .productId(product.getId())
+                .productName(product.getName())
+                .unit(product.getUnit())
+                .fromDate(fromDate.toString())
+                .toDate(toDate.toString())
+                .granularity(bucket)
+                .totalQuantity(totalQuantity)
+                .totalAmount(totalAmount)
+                .points(points)
+                .build();
+    }
+
+    private static BigDecimal toBigDecimal(Object value) {
+        if (value == null) return BigDecimal.ZERO;
+        if (value instanceof BigDecimal bd) return bd;
+        return new BigDecimal(value.toString());
+    }
+
+    private static LocalDate bucketStart(LocalDate date, String bucket) {
+        return switch (bucket) {
+            case "WEEK" -> date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            case "MONTH" -> date.withDayOfMonth(1);
+            default -> date;
+        };
     }
 
     public Product createProduct(Product product) {

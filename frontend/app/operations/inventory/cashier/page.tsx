@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -211,7 +212,14 @@ export default function CashierStockPage() {
                                                                 <ShoppingBag className="w-4 h-4" />
                                                             </div>
                                                             <div>
-                                                                <div className="text-sm font-bold text-foreground">{stock.product.name}</div>
+                                                                <div className="text-sm font-bold text-foreground">
+                                                                    <Link
+                                                                        href={`/operations/inventory/product-profiles/${stock.product.id}`}
+                                                                        className="hover:text-primary hover:underline underline-offset-2 transition-colors"
+                                                                    >
+                                                                        {stock.product.name}
+                                                                    </Link>
+                                                                </div>
                                                                 <div className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
                                                                     <span>{stock.product.category}</span>
                                                                     {stock.product.brand && (

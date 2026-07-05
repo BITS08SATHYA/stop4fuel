@@ -2,14 +2,17 @@ package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.ProductDTO;
+import com.stopforfuel.backend.dto.ProductSalesHistoryDTO;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +59,16 @@ public class ProductController {
     @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
     public ProductDTO getProductById(@PathVariable Long id) {
         return ProductDTO.from(productService.getProductById(id));
+    }
+
+    @GetMapping("/{id}/sales-history")
+    @PreAuthorize("hasPermission(null, 'PRODUCT_VIEW')")
+    public ProductSalesHistoryDTO getSalesHistory(
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(defaultValue = "DAY") String granularity) {
+        return productService.getSalesHistory(id, fromDate, toDate, granularity);
     }
 
     @PostMapping

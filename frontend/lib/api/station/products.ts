@@ -72,7 +72,41 @@ export function classifyFuel(p: Pick<Product, "name" | "fuelFamily" | "gradeType
 export const isFuelProduct = (p: Pick<Product, "name" | "fuelFamily" | "gradeType">): boolean =>
     classifyFuel(p) !== "OTHER";
 
+// Product sales history (invoiced sales, bucketed by day/week/month)
+export interface ProductSalesPoint {
+    date: string;
+    quantity: number;
+    amount: number;
+}
+
+export interface ProductSalesHistory {
+    productId: number;
+    productName: string;
+    unit?: string;
+    fromDate: string;
+    toDate: string;
+    granularity: "DAY" | "WEEK" | "MONTH";
+    totalQuantity: number;
+    totalAmount: number;
+    points: ProductSalesPoint[];
+}
+
 // Products
+export const getProduct = (id: number): Promise<Product> =>
+    fetchWithAuth(`${API_BASE_URL}/products/${id}`).then(handleResponse);
+
+export const getProductSalesHistory = (
+    id: number,
+    params: { fromDate: string; toDate: string; granularity: "DAY" | "WEEK" | "MONTH" },
+): Promise<ProductSalesHistory> => {
+    const q = new URLSearchParams({
+        fromDate: params.fromDate,
+        toDate: params.toDate,
+        granularity: params.granularity,
+    });
+    return fetchWithAuth(`${API_BASE_URL}/products/${id}/sales-history?${q}`).then(handleResponse);
+};
+
 export const getActiveProducts = (): Promise<Product[]> =>
     fetchWithAuth(`${API_BASE_URL}/products/active`).then(handleResponse);
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
@@ -334,7 +335,18 @@ export default function ProductInventoryPage() {
                                                         <Box className="w-4 h-4" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-bold text-foreground">{inv.product?.name}</div>
+                                                        <div className="text-sm font-bold text-foreground">
+                                                            {inv.product?.id ? (
+                                                                <Link
+                                                                    href={`/operations/inventory/product-profiles/${inv.product.id}`}
+                                                                    className="hover:text-primary hover:underline underline-offset-2 transition-colors"
+                                                                >
+                                                                    {inv.product.name}
+                                                                </Link>
+                                                            ) : (
+                                                                inv.product?.name
+                                                            )}
+                                                        </div>
                                                         <div className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
                                                             <span>{inv.product?.category}</span>
                                                             {inv.product?.brand && (

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -224,7 +225,12 @@ export default function GodownStockPage() {
                                                         </div>
                                                         <div>
                                                             <div className="text-sm font-bold text-foreground flex items-center gap-2">
-                                                                {stock.product.name}
+                                                                <Link
+                                                                    href={`/operations/inventory/product-profiles/${stock.product.id}`}
+                                                                    className="hover:text-primary hover:underline underline-offset-2 transition-colors"
+                                                                >
+                                                                    {stock.product.name}
+                                                                </Link>
                                                                 {isLowStock(stock) && (
                                                                     <span className="px-1.5 py-0.5 text-[9px] font-bold bg-red-500 text-white rounded-full uppercase">Low</span>
                                                                 )}

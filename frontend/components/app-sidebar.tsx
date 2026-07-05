@@ -53,6 +53,7 @@ import {
     Paperclip,
     FileSearch,
     ListOrdered,
+    PackageSearch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -108,6 +109,7 @@ const inventoryManagementNav = [
     { name: "Product Stock", href: "/operations/inventory/products", icon: Archive },
     { name: "Godown Stock", href: "/operations/inventory/godown", icon: Warehouse },
     { name: "Cashier Stock", href: "/operations/inventory/cashier", icon: ShoppingBag },
+    { name: "Product Profiles", href: "/operations/inventory/product-profiles", icon: PackageSearch },
     { name: "Stock Transfer", href: "/operations/inventory/transfers", icon: ArrowLeftRight },
     { name: "Purchase Invoices", href: "/operations/inventory/purchase-invoices", icon: FileText },
 ];
