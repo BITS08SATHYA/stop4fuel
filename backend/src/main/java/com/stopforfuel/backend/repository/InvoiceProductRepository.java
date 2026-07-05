@@ -111,4 +111,16 @@ public interface InvoiceProductRepository extends JpaRepository<InvoiceProduct, 
                                             @Param("customerId") Long customerId,
                                             @Param("fromDate") LocalDateTime fromDate,
                                             @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select ib.customer.id, cast(ib.date as LocalDate), coalesce(sum(ip.quantity), 0)
+        from InvoiceProduct ip join ip.invoiceBill ib
+        where ib.scid = :scid and ib.customer is not null
+          and ib.date >= :fromDate and ib.date <= :toDate
+        group by ib.customer.id, cast(ib.date as LocalDate)
+        order by ib.customer.id, cast(ib.date as LocalDate)
+        """)
+    List<Object[]> getCustomerDailySales(@Param("scid") Long scid,
+                                         @Param("fromDate") LocalDateTime fromDate,
+                                         @Param("toDate") LocalDateTime toDate);
 }

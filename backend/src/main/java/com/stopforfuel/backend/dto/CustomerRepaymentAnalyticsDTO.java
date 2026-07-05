@@ -21,6 +21,11 @@ public class CustomerRepaymentAnalyticsDTO {
     private int overdueCustomers;
     private int activeCreditCustomers;
 
+    private int quietCustomers;
+
+    /** Calendar dates (ISO) for the daily activity strips — same length for every row's dailyLiters. */
+    private List<String> dailyDates;
+
     private List<MonthlyPoint> monthlyTurnover;
     private List<LagBucket> lagHistogram;
     private List<Row> customers;
@@ -64,5 +69,13 @@ public class CustomerRepaymentAnalyticsDTO {
         /** MORE | LESS | NORMAL | NEW (no baseline) */
         private String consumptionTrend;
         private boolean overdue;
+        /** Liters billed per day, aligned to the top-level dailyDates */
+        private List<BigDecimal> dailyLiters;
+        private String lastBillDate;
+        private Integer daysSinceLastBill;
+        /** Median days between fills over the cadence window; null with too little history */
+        private Double typicalIntervalDays;
+        /** True when silent for ≥2× the customer's own typical fill interval */
+        private boolean quiet;
     }
 }

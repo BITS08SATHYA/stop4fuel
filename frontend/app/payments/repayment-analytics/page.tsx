@@ -31,6 +31,7 @@ import {
     ArrowUpRight,
     Clock,
     IndianRupee,
+    Moon,
     Timer,
     TrendingUp,
     Users,
@@ -64,7 +65,34 @@ function formatMonth(ym: string) {
 const toIso = (d: Date) => d.toISOString().split("T")[0];
 
 type Preset = "30d" | "quarter" | "year" | "custom";
-type Filter = "all" | "statement" | "local" | "overdue" | "more" | "less";
+type Filter = "all" | "statement" | "local" | "overdue" | "more" | "less" | "quiet";
+
+/** 30-day activity strip: one cell per day, orange intensity = liters vs the customer's own best day */
+function HeatStrip({ dates, liters }: { dates: string[]; liters: number[] }) {
+    const max = Math.max(...liters, 0);
+    return (
+        <div className="flex items-center gap-[2px]">
+            {liters.map((v, i) => {
+                const ratio = max > 0 ? v / max : 0;
+                const cls =
+                    v <= 0
+                        ? "bg-muted"
+                        : ratio > 0.66
+                          ? "bg-orange-500"
+                          : ratio > 0.33
+                            ? "bg-orange-500/60"
+                            : "bg-orange-500/30";
+                return (
+                    <div
+                        key={dates[i] ?? i}
+                        title={`${dates[i] ?? ""}: ${v.toLocaleString("en-IN", { maximumFractionDigits: 1 })} L`}
+                        className={`w-[5px] h-4 rounded-[2px] ${cls}`}
+                    />
+                );
+            })}
+        </div>
+    );
+}
 
 export default function RepaymentAnalyticsPage() {
     const [data, setData] = useState<CustomerRepaymentAnalytics | null>(null);
@@ -129,10 +157,14 @@ export default function RepaymentAnalyticsPage() {
         if (filter === "overdue") return c.overdue;
         if (filter === "more") return c.consumptionTrend === "MORE";
         if (filter === "less") return c.consumptionTrend === "LESS";
+        if (filter === "quiet") return c.quiet;
         return true;
     });
 
     const consumingMore = data.customers.filter((c) => c.consumptionTrend === "MORE").length;
+    const quietList = data.customers
+        .filter((c) => c.quiet)
+        .sort((a, b) => (b.daysSinceLastBill ?? 0) - (a.daysSinceLastBill ?? 0));
     const kpis = [
         { label: "Turnover (billed)", value: `₹${formatCompact(data.totalBilled)}`, icon: IndianRupee, color: "text-primary", bg: "bg-primary/10" },
         { label: "Collected", value: `₹${formatCompact(data.totalCollected)}`, icon: TrendingUp, color: "text-green-500", bg: "bg-green-500/10" },
@@ -140,6 +172,7 @@ export default function RepaymentAnalyticsPage() {
         { label: "Avg Repayment", value: data.avgRepaymentLagDays != null ? `${data.avgRepaymentLagDays}d` : "—", icon: Timer, color: "text-cyan-500", bg: "bg-cyan-500/10" },
         { label: "Overdue Customers", value: String(data.overdueCustomers), icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
         { label: "Consuming More", value: String(consumingMore), icon: ArrowUpRight, color: "text-purple-500", bg: "bg-purple-500/10" },
+        { label: "Gone Quiet", value: String(data.quietCustomers ?? quietList.length), icon: Moon, color: "text-rose-500", bg: "bg-rose-500/10" },
     ];
 
     const trendChip = (c: CustomerRepaymentRow) => {
@@ -217,7 +250,7 @@ export default function RepaymentAnalyticsPage() {
                 </div>
 
                 {/* KPI cards */}
-                <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
                     {kpis.map((kpi) => (
                         <GlassCard key={kpi.label} className="p-4">
                             <div className={`p-2 ${kpi.bg} rounded-lg w-fit`}>
@@ -282,6 +315,49 @@ export default function RepaymentAnalyticsPage() {
                     </GlassCard>
                 </div>
 
+                {/* Gone-quiet alerts: silent vs their own fill cadence */}
+                {quietList.length > 0 && (
+                    <GlassCard className="p-6 border border-rose-500/30">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="p-2 bg-rose-500/10 rounded-lg">
+                                <Moon className="w-5 h-5 text-rose-500" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-foreground">Gone Quiet — Needs Follow-up</h2>
+                                <p className="text-xs text-muted-foreground">
+                                    Silent for over 2&times; their usual fill interval (learned from the last 90 days)
+                                </p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                            {quietList.map((c) => (
+                                <button
+                                    key={c.customerId}
+                                    onClick={() => openCustomer(c)}
+                                    className="text-left p-3 rounded-xl bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/20 transition-colors"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-bold text-foreground">{c.name}</span>
+                                        <Badge variant={c.partyType === "STATEMENT" ? "default" : "outline"} className="text-[9px]">
+                                            {c.partyType === "STATEMENT" ? "Statement" : "Local"}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Usually fuels every ~{c.typicalIntervalDays}d &middot;{" "}
+                                        <span className="font-semibold text-rose-400">silent {c.daysSinceLastBill}d</span>
+                                        {c.lastBillDate ? ` · last fill ${c.lastBillDate}` : ""}
+                                    </p>
+                                    {c.outstanding > 0 && (
+                                        <p className="text-xs font-semibold text-amber-500 mt-0.5">
+                                            &#8377;{formatCompact(c.outstanding)} outstanding
+                                        </p>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </GlassCard>
+                )}
+
                 {/* Customer table */}
                 <GlassCard className="overflow-hidden border-none p-0">
                     <div className="px-6 py-4 border-b border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -303,6 +379,7 @@ export default function RepaymentAnalyticsPage() {
                                     ["overdue", `Overdue (${data.overdueCustomers})`],
                                     ["more", `Consuming More (${consumingMore})`],
                                     ["less", "Dropping"],
+                                    ["quiet", `Quiet (${quietList.length})`],
                                 ] as [Filter, string][]
                             ).map(([f, label]) => (
                                 <button
@@ -321,7 +398,7 @@ export default function RepaymentAnalyticsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-white/5 border-b border-border/50">
-                                    {["Customer", "Billed", "Liters", "Outstanding", "Allowed", "Avg Repay", "On-Time %", "Oldest Unpaid", "Usage Trend"].map((h) => (
+                                    {["Customer", "Daily (30d)", "Billed", "Liters", "Outstanding", "Allowed", "Avg Repay", "On-Time %", "Oldest Unpaid", "Usage Trend"].map((h) => (
                                         <th key={h} className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             {h}
                                         </th>
@@ -331,7 +408,7 @@ export default function RepaymentAnalyticsPage() {
                             <tbody className="divide-y divide-border/30">
                                 {filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                        <td colSpan={10} className="px-4 py-10 text-center text-sm text-muted-foreground">
                                             No customers match this filter
                                         </td>
                                     </tr>
@@ -353,6 +430,18 @@ export default function RepaymentAnalyticsPage() {
                                                     </Badge>
                                                 </div>
                                                 <div className="text-[10px] text-muted-foreground">{c.billCount} bills</div>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                {c.dailyLiters?.length ? (
+                                                    <HeatStrip dates={data.dailyDates ?? []} liters={c.dailyLiters} />
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">—</span>
+                                                )}
+                                                {c.quiet && (
+                                                    <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-400 mt-1">
+                                                        <Moon className="w-3 h-3" /> silent {c.daysSinceLastBill}d
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-4 py-4 text-sm font-semibold">&#8377;{formatCompact(c.billedInRange)}</td>
                                             <td className="px-4 py-4 text-sm">{formatCompact(c.litersInRange)}</td>

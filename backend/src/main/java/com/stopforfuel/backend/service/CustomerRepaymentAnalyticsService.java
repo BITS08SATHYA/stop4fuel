@@ -41,6 +41,12 @@ public class CustomerRepaymentAnalyticsService {
     private static final double ANOMALY_THRESHOLD_PERCENT = 30;
     /** Baseline = average of this many equal-length periods before the range. */
     private static final int BASELINE_PERIODS = 3;
+    /** Length of the per-customer daily activity strip (always trailing from today). */
+    private static final int ACTIVITY_STRIP_DAYS = 30;
+    /** Window used to learn each customer's typical fill cadence. */
+    private static final int CADENCE_WINDOW_DAYS = 90;
+    /** Need at least this many active days in the cadence window to judge silence. */
+    private static final int MIN_ACTIVE_DAYS_FOR_CADENCE = 4;
 
     private final CustomerRepository customerRepository;
     private final InvoiceBillRepository invoiceBillRepository;
@@ -132,11 +138,28 @@ public class CustomerRepaymentAnalyticsService {
 
         Set<Long> statementCustomerIds = new HashSet<>(statementRepository.findCustomerIdsWithStatements(scid));
 
-        // Assemble per-customer rows
+        // Daily activity (trailing from today, independent of the selected range):
+        // last 30 days feed the heat strips, last 90 days teach each customer's cadence
+        LocalDate stripStart = today.minusDays(ACTIVITY_STRIP_DAYS - 1);
+        LocalDate cadenceStart = today.minusDays(CADENCE_WINDOW_DAYS - 1);
+        Map<Long, java.util.TreeMap<LocalDate, BigDecimal>> dailyByCustomer = new HashMap<>();
+        for (Object[] row : invoiceProductRepository.getCustomerDailySales(
+                scid, cadenceStart.atStartOfDay(), today.atTime(LocalTime.MAX))) {
+            dailyByCustomer.computeIfAbsent((Long) row[0], k -> new java.util.TreeMap<>())
+                    .put((LocalDate) row[1], toBd(row[2]));
+        }
+        List<String> dailyDates = new ArrayList<>(ACTIVITY_STRIP_DAYS);
+        for (LocalDate d = stripStart; !d.isAfter(today); d = d.plusDays(1)) {
+            dailyDates.add(d.toString());
+        }
+
+        // Assemble per-customer rows (recently-active customers included even if
+        // outside the selected range, so a quiet customer never drops off the page)
         Set<Long> ids = new HashSet<>();
         ids.addAll(current.keySet());
         ids.addAll(unpaid.keySet());
         ids.addAll(lagsByCustomer.keySet());
+        ids.addAll(dailyByCustomer.keySet());
         Map<Long, Customer> customers = new HashMap<>();
         for (Customer c : customerRepository.findAllById(ids)) {
             if (scid.equals(c.getScid())) customers.put(c.getId(), c);
@@ -144,6 +167,7 @@ public class CustomerRepaymentAnalyticsService {
 
         BigDecimal totalBilled = BigDecimal.ZERO;
         int overdueCount = 0;
+        int quietCount = 0;
         List<CustomerRepaymentAnalyticsDTO.Row> rows = new ArrayList<>();
         for (Long id : ids) {
             Customer c = customers.get(id);
@@ -197,6 +221,34 @@ public class CustomerRepaymentAnalyticsService {
                     && "Statement".equalsIgnoreCase(c.getParty().getPartyType()))
                     || statementCustomerIds.contains(id);
 
+            // Daily strip + cadence: quiet when silent ≥2× the customer's own median
+            // fill interval (so a daily lorry alerts in days, a weekly one in weeks)
+            java.util.TreeMap<LocalDate, BigDecimal> activeDays = dailyByCustomer.get(id);
+            List<BigDecimal> dailyLiters = new ArrayList<>(ACTIVITY_STRIP_DAYS);
+            for (LocalDate d = stripStart; !d.isAfter(today); d = d.plusDays(1)) {
+                dailyLiters.add(activeDays != null ? activeDays.getOrDefault(d, BigDecimal.ZERO) : BigDecimal.ZERO);
+            }
+            LocalDate lastBillDate = activeDays != null ? activeDays.lastKey() : null;
+            Integer daysSinceLastBill = lastBillDate != null
+                    ? (int) ChronoUnit.DAYS.between(lastBillDate, today) : null;
+            Double typicalInterval = null;
+            boolean quiet = false;
+            if (activeDays != null && activeDays.size() >= MIN_ACTIVE_DAYS_FOR_CADENCE) {
+                List<Long> gaps = new ArrayList<>();
+                LocalDate prev = null;
+                for (LocalDate d : activeDays.keySet()) {
+                    if (prev != null) gaps.add(ChronoUnit.DAYS.between(prev, d));
+                    prev = d;
+                }
+                gaps.sort(Long::compareTo);
+                int n = gaps.size();
+                typicalInterval = n % 2 == 1 ? gaps.get(n / 2)
+                        : (gaps.get(n / 2 - 1) + gaps.get(n / 2)) / 2.0;
+                quiet = daysSinceLastBill != null
+                        && daysSinceLastBill >= Math.max(typicalInterval * 2, typicalInterval + 2);
+            }
+            if (quiet) quietCount++;
+
             rows.add(CustomerRepaymentAnalyticsDTO.Row.builder()
                     .customerId(id)
                     .name(c.getName())
@@ -213,6 +265,11 @@ public class CustomerRepaymentAnalyticsService {
                     .changePercent(changePct)
                     .consumptionTrend(trend)
                     .overdue(overdue)
+                    .dailyLiters(dailyLiters)
+                    .lastBillDate(lastBillDate != null ? lastBillDate.toString() : null)
+                    .daysSinceLastBill(daysSinceLastBill)
+                    .typicalIntervalDays(typicalInterval != null ? round1(typicalInterval) : null)
+                    .quiet(quiet)
                     .build());
         }
         rows.sort((a, b) -> b.getBilledInRange().compareTo(a.getBilledInRange()));
@@ -253,6 +310,8 @@ public class CustomerRepaymentAnalyticsService {
                 .avgRepaymentLagDays(lagWeight > 0 ? round1(lagWeightedSum / lagWeight) : null)
                 .overdueCustomers(overdueCount)
                 .activeCreditCustomers(rows.size())
+                .quietCustomers(quietCount)
+                .dailyDates(dailyDates)
                 .monthlyTurnover(monthlyPoints)
                 .lagHistogram(lagBuckets)
                 .customers(rows)

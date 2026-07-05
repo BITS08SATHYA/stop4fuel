@@ -114,6 +114,11 @@ export interface CustomerRepaymentRow {
     changePercent?: number;
     consumptionTrend: 'MORE' | 'LESS' | 'NORMAL' | 'NEW';
     overdue: boolean;
+    dailyLiters: number[];
+    lastBillDate?: string;
+    daysSinceLastBill?: number;
+    typicalIntervalDays?: number;
+    quiet: boolean;
 }
 
 export interface CustomerRepaymentAnalytics {
@@ -126,6 +131,8 @@ export interface CustomerRepaymentAnalytics {
     avgRepaymentLagDays?: number;
     overdueCustomers: number;
     activeCreditCustomers: number;
+    quietCustomers: number;
+    dailyDates: string[];
     monthlyTurnover: { month: string; billed: number; collected: number }[];
     lagHistogram: { bucket: string; count: number }[];
     customers: CustomerRepaymentRow[];
