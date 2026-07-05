@@ -55,6 +55,7 @@ import {
     ListOrdered,
     PackageSearch,
     TrendingUp,
+    Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -112,6 +113,7 @@ const inventoryManagementNav = [
     { name: "Cashier Stock", href: "/operations/inventory/cashier", icon: ShoppingBag },
     { name: "Product Profiles", href: "/operations/inventory/product-profiles", icon: PackageSearch },
     { name: "Product Analytics", href: "/operations/inventory/product-analytics", icon: TrendingUp },
+    { name: "Tank Analytics", href: "/operations/inventory/tank-analytics", icon: Gauge },
     { name: "Stock Transfer", href: "/operations/inventory/transfers", icon: ArrowLeftRight },
     { name: "Purchase Invoices", href: "/operations/inventory/purchase-invoices", icon: FileText },
 ];

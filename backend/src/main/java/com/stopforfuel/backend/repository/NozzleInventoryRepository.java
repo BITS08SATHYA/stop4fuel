@@ -43,4 +43,20 @@ public interface NozzleInventoryRepository extends ScidRepository<NozzleInventor
            "WHERE ni.shiftId = :shiftId " +
            "GROUP BY t.product.id, t.product.name, t.product.price")
     List<Object[]> sumFuelSalesByShift(@Param("shiftId") Long shiftId);
+
+    @Query("SELECT ni.date, t.id, COALESCE(SUM(ni.sales), 0) " +
+           "FROM NozzleInventory ni JOIN ni.nozzle n JOIN n.tank t " +
+           "WHERE ni.scid = :scid AND ni.date BETWEEN :fromDate AND :toDate " +
+           "GROUP BY ni.date, t.id ORDER BY ni.date")
+    List<Object[]> sumDailySalesByTank(@Param("scid") Long scid,
+                                       @Param("fromDate") LocalDate fromDate,
+                                       @Param("toDate") LocalDate toDate);
+
+    @Query("SELECT ni.date, t.product.name, COALESCE(SUM(ni.sales), 0) " +
+           "FROM NozzleInventory ni JOIN ni.nozzle n JOIN n.tank t " +
+           "WHERE ni.scid = :scid AND ni.date BETWEEN :fromDate AND :toDate " +
+           "GROUP BY ni.date, t.product.name ORDER BY ni.date")
+    List<Object[]> sumDailySalesByProduct(@Param("scid") Long scid,
+                                          @Param("fromDate") LocalDate fromDate,
+                                          @Param("toDate") LocalDate toDate);
 }

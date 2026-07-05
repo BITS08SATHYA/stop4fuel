@@ -16,7 +16,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "@/components/ui/product-image";
 import { TablePagination, useClientPagination } from "@/components/ui/table-pagination";
-import { fmtProductQty } from "@/lib/utils";
+import { fmtProductQty, parseLocalDate } from "@/lib/utils";
 import {
     CashierStock,
     getCashierStockByProduct,
@@ -63,7 +63,7 @@ function autoGranularity(fromDate: string, toDate: string): Granularity {
 }
 
 function formatBucketLabel(dateStr: string, granularity: Granularity) {
-    const d = new Date(dateStr);
+    const d = parseLocalDate(dateStr);
     if (granularity === "MONTH") {
         return d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
     }
@@ -349,7 +349,7 @@ export default function ProductProfilePage() {
                                         pagedInv.map((inv) => (
                                             <tr key={inv.id} className="hover:bg-white/5 transition-colors">
                                                 <td className="px-4 py-4 text-sm font-medium text-foreground whitespace-nowrap">
-                                                    {new Date(inv.date).toLocaleDateString("en-IN", {
+                                                    {parseLocalDate(inv.date).toLocaleDateString("en-IN", {
                                                         day: "2-digit",
                                                         month: "short",
                                                         year: "numeric",
