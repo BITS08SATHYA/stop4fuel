@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Save, Edit, Trash2, Truck, X, ShieldAlert, ShieldCheck, ShieldOff, Tag, Plus, Download, Globe } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Save, Edit, Trash2, Truck, X, ShieldAlert, ShieldCheck, ShieldOff, Tag, Plus, Download, Globe, BookOpen } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +18,8 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { StyledSelect } from "@/components/ui/styled-select";
 import { showToast } from "@/components/ui/toast";
 import { BlockingGatePanel } from "@/components/customers/BlockingGatePanel";
+import { CustomerContactsCard } from "@/components/customers/CustomerContactsCard";
+import { CustomerTransactionHistory } from "@/components/customers/CustomerTransactionHistory";
 
 const API = API_BASE_URL;
 
@@ -803,6 +806,14 @@ export default function CustomerProfilePage() {
                                     </div>
                                 </div>
                             )}
+
+                            <Link
+                                href={`/payments/ledger?customerId=${customer.id}`}
+                                className="flex items-center justify-center gap-2 pt-4 border-t border-border text-sm font-medium text-primary hover:underline"
+                            >
+                                <BookOpen className="w-4 h-4" />
+                                View Full Ledger
+                            </Link>
                         </div>
                     </GlassCard>
                 </div>
@@ -977,8 +988,14 @@ export default function CustomerProfilePage() {
                             </div>
                         </div>
                     </GlassCard>
+
+                    {/* Contact persons: owner/manager/driver phone numbers in one place */}
+                    <CustomerContactsCard customerId={Number(params.id)} />
                 </div>
             </div>
+
+            {/* Transaction History - Full Width */}
+            <CustomerTransactionHistory customerId={Number(params.id)} />
 
             {/* Vehicles Section - Full Width */}
             <GlassCard className="p-6">

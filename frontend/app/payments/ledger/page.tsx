@@ -23,11 +23,32 @@ export default function LedgerPage() {
     const [isDownloading, setIsDownloading] = useState(false);
     const [error, setError] = useState("");
 
+    const [autoLoad, setAutoLoad] = useState(false);
+
     useEffect(() => {
         getCustomersForAutocomplete().then((data) => {
             setCustomers(Array.isArray(data) ? data : []);
+            // Deep link from customer profile: ?customerId=123 preselects and
+            // loads the last 12 months automatically
+            const param = new URLSearchParams(window.location.search).get("customerId");
+            if (param && !Number.isNaN(Number(param))) {
+                const to = new Date();
+                const from = new Date(to);
+                from.setFullYear(from.getFullYear() - 1);
+                setSelectedCustomerId(Number(param));
+                setFromDate(from.toISOString().split("T")[0]);
+                setToDate(to.toISOString().split("T")[0]);
+                setAutoLoad(true);
+            }
         }).finally(() => setInitialLoading(false));
     }, []);
+
+    useEffect(() => {
+        if (!autoLoad || !selectedCustomerId || !fromDate || !toDate) return;
+        setAutoLoad(false);
+        handleSearch();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [autoLoad, selectedCustomerId, fromDate, toDate]);
 
     const handleSearch = async () => {
         if (!selectedCustomerId || !fromDate || !toDate) {

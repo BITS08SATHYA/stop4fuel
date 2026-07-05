@@ -416,3 +416,32 @@ export const updateCreditPolicy = (id: number, policy: Partial<CreditPolicy>): P
 
 export const deleteCreditPolicy = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/credit/policies/${id}`, { method: 'DELETE' }).then(handleResponse);
+
+// --- Customer Contacts (contact persons under a customer) ---
+export interface CustomerContact {
+    id?: number;
+    name: string;
+    contactRole?: string | null;
+    phoneNumber: string;
+    notes?: string | null;
+}
+
+export const getCustomerContacts = (customerId: number): Promise<CustomerContact[]> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/${customerId}/contacts`).then(handleResponse);
+
+export const createCustomerContact = (customerId: number, contact: CustomerContact): Promise<CustomerContact> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/${customerId}/contacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact),
+    }).then(handleResponse);
+
+export const updateCustomerContact = (id: number, contact: CustomerContact): Promise<CustomerContact> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/contacts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact),
+    }).then(handleResponse);
+
+export const deleteCustomerContact = (id: number): Promise<void> =>
+    fetchWithAuth(`${API_BASE_URL}/customers/contacts/${id}`, { method: 'DELETE' }).then(handleResponse);
