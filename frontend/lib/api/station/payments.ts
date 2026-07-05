@@ -26,6 +26,8 @@ export interface Statement {
     statementPdfUrl?: string;
     /** True when a linked bill was edited/moved after this statement was generated — PDF is stale. */
     needsRegeneration?: boolean;
+    /** Distinct vehicle numbers of the linked bills — one entry for vehicle-wise splits */
+    vehicleNumbers?: string[];
 }
 
 export interface DayWiseBucket {

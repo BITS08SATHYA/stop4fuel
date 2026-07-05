@@ -70,9 +70,11 @@ public class StatementController {
                 ? org.springframework.data.domain.Sort.Direction.ASC : org.springframework.data.domain.Sort.Direction.DESC;
         org.springframework.data.domain.Sort sorting = org.springframework.data.domain.Sort.by(dir, sortField)
                 .and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
-        return statementService.getStatements(customerId, status, categoryType, fromDate, toDate, search,
+        Page<StatementDTO> result = statementService.getStatements(customerId, status, categoryType, fromDate, toDate, search,
                 PageRequest.of(page, Math.min(size, 100), sorting))
                 .map(StatementDTO::from);
+        statementService.attachVehicleNumbers(result.getContent());
+        return result;
     }
 
     @GetMapping("/outstanding-search")
@@ -109,7 +111,10 @@ public class StatementController {
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
     public List<StatementDTO> getByCustomer(@PathVariable Long customerId) {
-        return statementService.getStatementsByCustomer(customerId).stream().map(StatementDTO::from).toList();
+        List<StatementDTO> dtos = statementService.getStatementsByCustomer(customerId)
+                .stream().map(StatementDTO::from).toList();
+        statementService.attachVehicleNumbers(dtos);
+        return dtos;
     }
 
     @GetMapping("/customer/{customerId}/recommended-limits")

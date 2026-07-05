@@ -17,6 +17,7 @@ import {
     type Statement,
 } from "@/lib/api/station";
 import { showToast } from "@/components/ui/toast";
+import { StatementVehicleTag } from "@/components/payments/StatementVehicleTag";
 
 function getCurrentMonthRange() {
     const now = new Date();
@@ -484,7 +485,12 @@ export default function StatementReportsPage() {
                                         </td>
                                         <td className="px-3 py-2 text-xs text-muted-foreground text-center">{idx + 1}</td>
                                         <td className="px-3 py-2 font-mono font-bold text-sm">{stmt.statementNo}</td>
-                                        <td className="px-3 py-2 text-sm">{stmt.customer?.name || "-"}</td>
+                                        <td className="px-3 py-2 text-sm">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span>{stmt.customer?.name || "-"}</span>
+                                                <StatementVehicleTag vehicleNumbers={stmt.vehicleNumbers} />
+                                            </div>
+                                        </td>
                                         <td className="px-3 py-2 text-center">{categoryBadge((stmt.customer as any)?.categoryType)}</td>
                                         <td className="px-3 py-2 text-xs text-muted-foreground">{stmt.fromDate} to {stmt.toDate}</td>
                                         <td className="px-3 py-2 text-center font-medium">{stmt.numberOfBills}</td>

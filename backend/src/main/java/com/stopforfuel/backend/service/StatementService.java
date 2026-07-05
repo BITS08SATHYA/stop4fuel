@@ -82,6 +82,41 @@ public class StatementService {
         return statementRepository.findByCustomerId(customerId);
     }
 
+    /**
+     * Fills each DTO's vehicleNumbers from its linked bills (statements don't store
+     * a vehicle; vehicle-wise splits have exactly one distinct number). Best-effort:
+     * a failure here must never break the statement lists, so it degrades to no labels.
+     */
+    @Transactional(readOnly = true)
+    public void attachVehicleNumbers(List<com.stopforfuel.backend.dto.StatementDTO> dtos) {
+        try {
+            List<Long> ids = dtos.stream()
+                    .map(com.stopforfuel.backend.dto.StatementDTO::getId)
+                    .filter(Objects::nonNull)
+                    .toList();
+            if (ids.isEmpty()) return;
+            Map<Long, Set<String>> byStatement = new LinkedHashMap<>();
+            int chunkSize = 1000;
+            for (int i = 0; i < ids.size(); i += chunkSize) {
+                List<Long> chunk = ids.subList(i, Math.min(i + chunkSize, ids.size()));
+                for (Object[] row : invoiceBillRepository.getVehicleNumbersByStatementIds(chunk)) {
+                    if (row[1] != null) {
+                        byStatement.computeIfAbsent((Long) row[0], k -> new java.util.LinkedHashSet<>())
+                                .add((String) row[1]);
+                    }
+                }
+            }
+            for (com.stopforfuel.backend.dto.StatementDTO dto : dtos) {
+                Set<String> vehicles = byStatement.get(dto.getId());
+                if (vehicles != null && !vehicles.isEmpty()) {
+                    dto.setVehicleNumbers(new ArrayList<>(vehicles));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to attach vehicle numbers to statement DTOs", e);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<Statement> getOutstandingStatements() {
         return statementRepository.findByStatusAndScid("NOT_PAID", SecurityUtils.getScid());

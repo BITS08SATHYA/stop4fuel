@@ -4,10 +4,12 @@ import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.entity.Statement;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -28,6 +30,9 @@ public class StatementDTO {
     private String reportLayout;
     private String statementPdfUrl;
     private CustomerSummary customer;
+    /** Distinct vehicle numbers of the linked bills — set post-build by StatementService.attachVehicleNumbers */
+    @Setter
+    private List<String> vehicleNumbers;
     private Long scid;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

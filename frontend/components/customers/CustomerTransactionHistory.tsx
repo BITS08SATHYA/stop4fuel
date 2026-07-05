@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
+import { StatementVehicleTag } from "@/components/payments/StatementVehicleTag";
 import { parseLocalDate } from "@/lib/utils";
 import {
     getCustomerInvoices, getPaymentsByCustomer, getStatementsByCustomer, getCustomerConsumption,
@@ -213,7 +214,12 @@ export function CustomerTransactionHistory({ customerId }: { customerId: number 
                             ) : (
                                 statements.map((s) => (
                                     <tr key={s.id} className="hover:bg-white/5 transition-colors">
-                                        <td className={`${td} font-medium`}>{s.statementNo}</td>
+                                        <td className={`${td} font-medium`}>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span>{s.statementNo}</span>
+                                                <StatementVehicleTag vehicleNumbers={s.vehicleNumbers} />
+                                            </div>
+                                        </td>
                                         <td className={td}>{formatDate(s.fromDate)} – {formatDate(s.toDate)}</td>
                                         <td className={td}>{s.numberOfBills}</td>
                                         <td className={`${td} font-semibold`}>&#8377;{formatAmount(s.netAmount)}</td>

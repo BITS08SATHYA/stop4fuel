@@ -627,4 +627,12 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("low") BigDecimal low,
             @Param("high") BigDecimal high,
             @Param("scid") Long scid);
+
+    // Distinct vehicle numbers per statement, derived from the linked bills
+    // (vehicle-wise splits have exactly one; statements never store a vehicle themselves)
+    @Query("SELECT ib.statement.id, v.vehicleNumber FROM InvoiceBill ib LEFT JOIN ib.vehicle v "
+         + "WHERE ib.statement.id IN :statementIds "
+         + "GROUP BY ib.statement.id, v.vehicleNumber "
+         + "ORDER BY ib.statement.id, v.vehicleNumber")
+    List<Object[]> getVehicleNumbersByStatementIds(@Param("statementIds") List<Long> statementIds);
 }

@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { CustomerAutocomplete } from "@/components/ui/customer-autocomplete";
+import { StatementVehicleTag } from "@/components/payments/StatementVehicleTag";
 import { Fragment } from "react";
 import {
     Plus, Eye, Trash2, Calendar, User, Filter, Search, FileText, Download, Loader2,
@@ -1265,7 +1266,12 @@ export default function StatementsPage() {
                                                     )}
                                                 </span>
                                             </td>
-                                            <td className="py-3 px-4">{stmt.customer?.name || "-"}</td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span>{stmt.customer?.name || "-"}</span>
+                                                    <StatementVehicleTag vehicleNumbers={stmt.vehicleNumbers} />
+                                                </div>
+                                            </td>
                                             <td className="py-3 px-4 text-muted-foreground">{stmt.statementDate}</td>
                                             <td className="py-3 px-4 text-right">{stmt.numberOfBills}</td>
                                             <td className="py-3 px-4 text-right font-medium">
