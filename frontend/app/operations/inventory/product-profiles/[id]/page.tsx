@@ -127,7 +127,7 @@ export default function ProductProfilePage() {
     }, [loadRangeData]);
 
     const sortedInv = [...inventories].sort((a, b) => (a.date < b.date ? 1 : -1));
-    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedInv } = useClientPagination(sortedInv);
+    const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedInv } = useClientPagination(sortedInv, 10);
 
     if (isLoading) {
         return (
@@ -315,149 +315,150 @@ export default function ProductProfilePage() {
                     </div>
                 </GlassCard>
 
-                {/* Profile info */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <GlassCard className="p-6">
-                        <ProductImage name={product.name} size="lg" />
-                    </GlassCard>
-
-                    <GlassCard className="p-6">
-                        <h2 className="text-lg font-semibold text-foreground mb-4">Profile</h2>
-                        <dl className="space-y-3">
-                            {infoRows.map((row) => (
-                                <div key={row.label} className="flex items-center justify-between gap-4">
-                                    <dt className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-                                        {row.label}
-                                    </dt>
-                                    <dd className="text-sm font-semibold text-foreground text-right truncate">{row.value}</dd>
-                                </div>
-                            ))}
-                        </dl>
-                    </GlassCard>
-
-                    <GlassCard className="p-6">
-                        <h2 className="text-lg font-semibold text-foreground mb-4">Current Stock</h2>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-border/50">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-cyan-500/10 rounded-lg">
-                                        <Warehouse className="w-5 h-5 text-cyan-500" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Godown</p>
-                                        <p className="text-lg font-bold text-foreground">
-                                            {godown ? fmtProductQty(godown.currentStock, product.unit) : "—"}
-                                        </p>
-                                    </div>
-                                </div>
-                                {lowGodown && (
-                                    <span className="flex items-center gap-1 text-xs text-amber-500 font-semibold">
-                                        <AlertTriangle className="w-4 h-4" /> Reorder
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-border/50">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-purple-500/10 rounded-lg">
-                                        <ShoppingBag className="w-5 h-5 text-purple-500" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Cashier</p>
-                                        <p className="text-lg font-bold text-foreground">
-                                            {cashier
-                                                ? `${fmtProductQty(cashier.currentStock, product.unit)} / ${fmtProductQty(cashier.maxCapacity, product.unit)}`
-                                                : "—"}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            {!godown && !cashier && (
-                                <p className="text-xs text-muted-foreground">No stock records for this product yet.</p>
-                            )}
+                {/* Two-column layout: inventory log (left) + metadata (right) */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    <GlassCard className="overflow-hidden border-none p-0 lg:col-span-2">
+                        <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+                            <h2 className="text-lg font-semibold text-foreground">Inventory Log</h2>
+                            <span className="text-xs text-muted-foreground">
+                                {fromDate} to {toDate}
+                            </span>
                         </div>
-                    </GlassCard>
-                </div>
-
-                {/* Inventory log */}
-                <GlassCard className="overflow-hidden border-none p-0">
-                    <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
-                        <h2 className="text-lg font-semibold text-foreground">Inventory Log</h2>
-                        <span className="text-xs text-muted-foreground">
-                            {fromDate} to {toDate}
-                        </span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-white/5 border-b border-border/50">
-                                    {["Date", "Open", "Income", "Total", "Close", "Sales", "Rate", "Amount"].map((h) => (
-                                        <th
-                                            key={h}
-                                            className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
-                                        >
-                                            {h}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/30">
-                                {pagedInv.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={8} className="px-6 py-10 text-center text-sm text-muted-foreground">
-                                            No inventory records in this range
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-white/5 border-b border-border/50">
+                                        {["Date", "Open", "Income", "Total", "Close", "Sales", "Rate", "Amount"].map((h) => (
+                                            <th
+                                                key={h}
+                                                className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                                            >
+                                                {h}
+                                            </th>
+                                        ))}
                                     </tr>
-                                ) : (
-                                    pagedInv.map((inv) => (
-                                        <tr key={inv.id} className="hover:bg-white/5 transition-colors">
-                                            <td className="px-6 py-4 text-sm font-medium text-foreground">
-                                                {new Date(inv.date).toLocaleDateString("en-IN", {
-                                                    day: "2-digit",
-                                                    month: "short",
-                                                    year: "numeric",
-                                                })}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm">{fmtProductQty(inv.openStock, product.unit)}</td>
-                                            <td className="px-6 py-4 text-sm">{fmtProductQty(inv.incomeStock, product.unit)}</td>
-                                            <td className="px-6 py-4 text-sm">{fmtProductQty(inv.totalStock, product.unit)}</td>
-                                            <td className="px-6 py-4 text-sm">{fmtProductQty(inv.closeStock, product.unit)}</td>
-                                            <td className="px-6 py-4 text-sm font-semibold text-primary">
-                                                {fmtProductQty(inv.sales, product.unit)}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm">
-                                                {inv.rate != null ? (
-                                                    <span className="inline-flex items-center">
-                                                        <IndianRupee className="w-3 h-3" />
-                                                        {formatCurrency(inv.rate)}
-                                                    </span>
-                                                ) : (
-                                                    "—"
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-semibold">
-                                                {inv.amount != null ? (
-                                                    <span className="inline-flex items-center text-green-500">
-                                                        <IndianRupee className="w-3 h-3" />
-                                                        {formatCurrency(inv.amount)}
-                                                    </span>
-                                                ) : (
-                                                    "—"
-                                                )}
+                                </thead>
+                                <tbody className="divide-y divide-border/30">
+                                    {pagedInv.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                                No inventory records in this range
                                             </td>
                                         </tr>
-                                    ))
+                                    ) : (
+                                        pagedInv.map((inv) => (
+                                            <tr key={inv.id} className="hover:bg-white/5 transition-colors">
+                                                <td className="px-4 py-4 text-sm font-medium text-foreground whitespace-nowrap">
+                                                    {new Date(inv.date).toLocaleDateString("en-IN", {
+                                                        day: "2-digit",
+                                                        month: "short",
+                                                        year: "numeric",
+                                                    })}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm">{fmtProductQty(inv.openStock, product.unit)}</td>
+                                                <td className="px-4 py-4 text-sm">{fmtProductQty(inv.incomeStock, product.unit)}</td>
+                                                <td className="px-4 py-4 text-sm">{fmtProductQty(inv.totalStock, product.unit)}</td>
+                                                <td className="px-4 py-4 text-sm">{fmtProductQty(inv.closeStock, product.unit)}</td>
+                                                <td className="px-4 py-4 text-sm font-semibold text-primary">
+                                                    {fmtProductQty(inv.sales, product.unit)}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm whitespace-nowrap">
+                                                    {inv.rate != null ? (
+                                                        <span className="inline-flex items-center">
+                                                            <IndianRupee className="w-3 h-3" />
+                                                            {formatCurrency(inv.rate)}
+                                                        </span>
+                                                    ) : (
+                                                        "—"
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm font-semibold whitespace-nowrap">
+                                                    {inv.amount != null ? (
+                                                        <span className="inline-flex items-center text-green-500">
+                                                            <IndianRupee className="w-3 h-3" />
+                                                            {formatCurrency(inv.amount)}
+                                                        </span>
+                                                    ) : (
+                                                        "—"
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <TablePagination
+                            page={page}
+                            totalPages={totalPages}
+                            totalElements={totalElements}
+                            pageSize={pageSize}
+                            onPageChange={setPage}
+                        />
+                    </GlassCard>
+
+                    <div className="space-y-6">
+                        <GlassCard className="p-6">
+                            <ProductImage name={product.name} size="lg" />
+                        </GlassCard>
+
+                        <GlassCard className="p-6">
+                            <h2 className="text-lg font-semibold text-foreground mb-4">Profile</h2>
+                            <dl className="space-y-3">
+                                {infoRows.map((row) => (
+                                    <div key={row.label} className="flex items-center justify-between gap-4">
+                                        <dt className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+                                            {row.label}
+                                        </dt>
+                                        <dd className="text-sm font-semibold text-foreground text-right truncate">{row.value}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        </GlassCard>
+
+                        <GlassCard className="p-6">
+                            <h2 className="text-lg font-semibold text-foreground mb-4">Current Stock</h2>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-border/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                            <Warehouse className="w-5 h-5 text-cyan-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Godown</p>
+                                            <p className="text-lg font-bold text-foreground">
+                                                {godown ? fmtProductQty(godown.currentStock, product.unit) : "—"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {lowGodown && (
+                                        <span className="flex items-center gap-1 text-xs text-amber-500 font-semibold">
+                                            <AlertTriangle className="w-4 h-4" /> Reorder
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-border/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-purple-500/10 rounded-lg">
+                                            <ShoppingBag className="w-5 h-5 text-purple-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Cashier</p>
+                                            <p className="text-lg font-bold text-foreground">
+                                                {cashier
+                                                    ? `${fmtProductQty(cashier.currentStock, product.unit)} / ${fmtProductQty(cashier.maxCapacity, product.unit)}`
+                                                    : "—"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {!godown && !cashier && (
+                                    <p className="text-xs text-muted-foreground">No stock records for this product yet.</p>
                                 )}
-                            </tbody>
-                        </table>
+                            </div>
+                        </GlassCard>
                     </div>
-                    <TablePagination
-                        page={page}
-                        totalPages={totalPages}
-                        totalElements={totalElements}
-                        pageSize={pageSize}
-                        onPageChange={setPage}
-                    />
-                </GlassCard>
+                </div>
             </div>
         </div>
     );
