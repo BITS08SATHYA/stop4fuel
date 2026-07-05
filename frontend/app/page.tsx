@@ -68,8 +68,20 @@ export default function RootPage() {
             </nav>
 
             {/* Hero */}
-            <section className="relative min-h-screen flex items-center pt-24 pb-16 px-6">
-                <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center">
+            <section className="relative min-h-screen flex items-center pt-24 pb-16 px-6 overflow-hidden">
+                <div className="absolute inset-0">
+                    <Image
+                        src="/hero-bg.jpg"
+                        alt=""
+                        fill
+                        priority
+                        sizes="100vw"
+                        className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#0D1117] via-[#0D1117]/85 to-[#0D1117]/50" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#0D1117]/70 via-transparent to-[#0D1117]" />
+                </div>
+                <div className="relative z-10 max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center">
                     <div className="lg:text-left text-center">
                         <div className="inline-flex items-center gap-2 bg-[#FFB300]/10 border border-[#FFB300]/20 px-4 py-1.5 rounded-full text-sm font-semibold text-[#FFCA28] mb-6">
                             Trusted Since 1965
@@ -84,7 +96,7 @@ export default function RootPage() {
                             Every Journey
                         </h1>
                         <p className="text-lg text-[#94A3B8] max-w-lg mx-auto lg:mx-0 mb-8">
-                            Chennai&apos;s most trusted fuel station. Premium quality fuel, transparent pricing, and unwavering commitment to every customer.
+                            Rasipuram&apos;s most trusted fuel station. Premium quality fuel, transparent pricing, and unwavering commitment to every customer.
                         </p>
                         <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
                             <button
@@ -107,7 +119,7 @@ export default function RootPage() {
                         ].map((stat) => (
                             <div
                                 key={stat.label}
-                                className="bg-[#161B22] border border-[#21283B] rounded-2xl p-6 text-center hover:border-[#FFB300]/20 transition-colors"
+                                className="bg-[#161B22]/80 backdrop-blur-sm border border-[#21283B] rounded-2xl p-6 text-center hover:border-[#FFB300]/20 transition-colors"
                             >
                                 <div className="text-3xl font-extrabold bg-gradient-to-r from-[#FFCA28] to-[#FFB300] bg-clip-text text-transparent">
                                     {stat.value}
