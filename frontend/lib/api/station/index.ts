@@ -16,3 +16,4 @@ export * from './approvals';
 export * from './audit';
 export * from './bank-statements';
 export * from './orphans';
+export * from './analytics';

@@ -40,4 +40,24 @@ public interface InvoiceProductRepository extends JpaRepository<InvoiceProduct, 
                                           @Param("scid") Long scid,
                                           @Param("fromDate") LocalDateTime fromDate,
                                           @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select ip.product.id, coalesce(sum(ip.quantity), 0), coalesce(sum(ip.amount), 0)
+        from InvoiceProduct ip join ip.invoiceBill ib
+        where ib.scid = :scid
+          and ib.date >= :fromDate
+          and ib.date <= :toDate
+        group by ip.product.id
+        """)
+    List<Object[]> getSalesTotalsByProduct(@Param("scid") Long scid,
+                                           @Param("fromDate") LocalDateTime fromDate,
+                                           @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select ip.product.id, max(ib.date)
+        from InvoiceProduct ip join ip.invoiceBill ib
+        where ib.scid = :scid
+        group by ip.product.id
+        """)
+    List<Object[]> getLastSaleDateByProduct(@Param("scid") Long scid);
 }
