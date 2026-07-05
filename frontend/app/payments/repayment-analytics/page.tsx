@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     Bar,
     BarChart,
@@ -9,7 +10,6 @@ import {
     LabelList,
     Legend,
     Line,
-    ReferenceLine,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -19,10 +19,8 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { parseLocalDate } from "@/lib/utils";
 import {
-    CustomerConsumption,
     CustomerRepaymentAnalytics,
     CustomerRepaymentRow,
-    getCustomerConsumption,
     getCustomerRepaymentAnalytics,
 } from "@/lib/api/station";
 import {
@@ -35,7 +33,6 @@ import {
     Timer,
     TrendingUp,
     Users,
-    X,
 } from "lucide-react";
 
 const TOOLTIP_STYLE = {
@@ -95,14 +92,13 @@ function HeatStrip({ dates, liters }: { dates: string[]; liters: number[] }) {
 }
 
 export default function RepaymentAnalyticsPage() {
+    const router = useRouter();
     const [data, setData] = useState<CustomerRepaymentAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [preset, setPreset] = useState<Preset>("quarter");
     const [{ fromDate, toDate }, setRange] = useState(() => presetRange("quarter"));
     const [filter, setFilter] = useState<Filter>("all");
-    const [selected, setSelected] = useState<CustomerConsumption | null>(null);
-    const [selectedLoading, setSelectedLoading] = useState(false);
 
     function presetRange(p: Exclude<Preset, "custom">) {
         const now = new Date();
@@ -120,11 +116,7 @@ export default function RepaymentAnalyticsPage() {
     }, [fromDate, toDate]);
 
     const openCustomer = (row: CustomerRepaymentRow) => {
-        setSelectedLoading(true);
-        getCustomerConsumption(row.customerId, 12)
-            .then(setSelected)
-            .catch(() => setSelected(null))
-            .finally(() => setSelectedLoading(false));
+        router.push(`/customers/${row.customerId}/transactions`);
     };
 
     if (isLoading && !data) {
@@ -191,9 +183,6 @@ export default function RepaymentAnalyticsPage() {
         if (c.consumptionTrend === "NEW") return <span className="text-xs text-muted-foreground">new</span>;
         return <span className="text-xs text-muted-foreground">{c.changePercent != null ? `${c.changePercent > 0 ? "+" : ""}${c.changePercent}%` : "~"}</span>;
     };
-
-    const selectedMonthly = selected?.monthly.map((m) => ({ month: formatMonth(m.month), quantity: m.quantity, amount: m.amount })) ?? [];
-    const selectedAvgQty = selectedMonthly.length > 0 ? selectedMonthly.reduce((s, m) => s + m.quantity, 0) / selectedMonthly.length : 0;
 
     return (
         <div className="min-h-screen bg-background p-6 md:p-8 transition-colors duration-300">
@@ -367,7 +356,7 @@ export default function RepaymentAnalyticsPage() {
                             </div>
                             <div>
                                 <h2 className="text-lg font-semibold text-foreground">Customer Insights</h2>
-                                <p className="text-xs text-muted-foreground">Click a customer for 12-month consumption &amp; product mix</p>
+                                <p className="text-xs text-muted-foreground">Click a customer to open their full transactions by year</p>
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -477,93 +466,6 @@ export default function RepaymentAnalyticsPage() {
                         </table>
                     </div>
                 </GlassCard>
-
-                {/* Customer drill-down */}
-                {(selected || selectedLoading) && (
-                    <GlassCard className="p-6">
-                        {selectedLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                            </div>
-                        ) : (
-                            selected && (
-                                <>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div>
-                                            <h2 className="text-lg font-semibold text-foreground">{selected.name} — 12 Month Utilization</h2>
-                                            <p className="text-xs text-muted-foreground">
-                                                Monthly quantity consumed; dashed line is the 12-month average
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => setSelected(null)}
-                                            className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-                                            aria-label="Close customer detail"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                                        <div className="lg:col-span-2 h-64">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={selectedMonthly} margin={{ top: 24, right: 16, left: 0, bottom: 0 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                                    <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#888" />
-                                                    <YAxis tick={{ fontSize: 11 }} stroke="#888" tickFormatter={(v) => formatCompact(v)} />
-                                                    <Tooltip
-                                                        contentStyle={TOOLTIP_STYLE}
-                                                        formatter={(v, _name, item) => {
-                                                            const amount = (item?.payload as { amount?: number } | undefined)?.amount ?? 0;
-                                                            return [`${formatCompact(Number(v))} qty · ₹${formatCurrency(amount)}`, "Consumed"];
-                                                        }}
-                                                    />
-                                                    <ReferenceLine y={selectedAvgQty} stroke="#a1a1aa" strokeDasharray="6 4" />
-                                                    <Bar dataKey="quantity" fill="#f97316" radius={[6, 6, 0, 0]} maxBarSize={36}>
-                                                        <LabelList
-                                                            dataKey="quantity"
-                                                            position="top"
-                                                            fontSize={10}
-                                                            fill="#a1a1aa"
-                                                            formatter={(v) => (Number(v) > 0 ? formatCompact(Number(v)) : "")}
-                                                        />
-                                                    </Bar>
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-foreground mb-3">Product Mix (12 mo)</h3>
-                                            {selected.productMix.length === 0 ? (
-                                                <p className="text-sm text-muted-foreground">No purchases recorded.</p>
-                                            ) : (
-                                                <ul className="space-y-2.5">
-                                                    {selected.productMix.slice(0, 8).map((p) => {
-                                                        const maxAmt = selected.productMix[0]?.amount || 1;
-                                                        return (
-                                                            <li key={p.product}>
-                                                                <div className="flex items-center justify-between text-sm mb-1">
-                                                                    <span className="font-medium text-foreground truncate">{p.product}</span>
-                                                                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                                                                        {formatCompact(p.quantity)} · ₹{formatCompact(p.amount)}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                                                    <div
-                                                                        className="h-full rounded-full bg-primary"
-                                                                        style={{ width: `${Math.max((p.amount / maxAmt) * 100, 4)}%` }}
-                                                                    />
-                                                                </div>
-                                                            </li>
-                                                        );
-                                                    })}
-                                                </ul>
-                                            )}
-                                        </div>
-                                    </div>
-                                </>
-                            )
-                        )}
-                    </GlassCard>
-                )}
             </div>
         </div>
     );

@@ -238,4 +238,8 @@ public interface StatementRepository extends ScidRepository<Statement> {
 
     @Query("select distinct s.customer.id from Statement s where s.scid = :scid")
     List<Long> findCustomerIdsWithStatements(@Param("scid") Long scid);
+
+    @Query("select distinct cast(extract(year from s.statementDate) as integer) from Statement s "
+         + "where s.customer.id = :customerId and s.statementDate is not null")
+    List<Integer> findStatementYearsByCustomer(@Param("customerId") Long customerId);
 }

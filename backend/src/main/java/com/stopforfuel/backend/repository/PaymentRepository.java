@@ -191,4 +191,8 @@ public interface PaymentRepository extends ScidRepository<Payment> {
     List<Object[]> getBillPaymentLags(@Param("scid") Long scid,
                                       @Param("fromDate") LocalDateTime fromDate,
                                       @Param("toDate") LocalDateTime toDate);
+
+    @Query("select distinct cast(extract(year from p.paymentDate) as integer) from Payment p "
+         + "where p.customer.id = :customerId")
+    List<Integer> findPaymentYearsByCustomer(@Param("customerId") Long customerId);
 }

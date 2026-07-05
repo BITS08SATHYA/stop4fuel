@@ -56,6 +56,16 @@ public class LedgerController {
     }
 
     /**
+     * Years with any ledger activity for a customer, newest first.
+     * GET /api/ledger/customer/{customerId}/years
+     */
+    @GetMapping("/customer/{customerId}/years")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public ResponseEntity<List<Integer>> getLedgerYears(@PathVariable Long customerId) {
+        return ResponseEntity.ok(ledgerService.getLedgerYears(customerId));
+    }
+
+    /**
      * Get outstanding (unpaid) credit bills for a customer.
      * GET /api/ledger/outstanding/{customerId}
      */

@@ -628,6 +628,11 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("high") BigDecimal high,
             @Param("scid") Long scid);
 
+    // Years with credit-bill activity for a customer (transactions-page year chips)
+    @Query("SELECT DISTINCT CAST(EXTRACT(YEAR FROM ib.date) AS integer) FROM InvoiceBill ib "
+         + "WHERE ib.customer.id = :customerId AND ib.billType = 'CREDIT' AND ib.date IS NOT NULL")
+    List<Integer> findCreditBillYearsByCustomer(@Param("customerId") Long customerId);
+
     // Distinct vehicle numbers per statement, derived from the linked bills
     // (vehicle-wise splits have exactly one; statements never store a vehicle themselves)
     @Query("SELECT ib.statement.id, v.vehicleNumber FROM InvoiceBill ib LEFT JOIN ib.vehicle v "

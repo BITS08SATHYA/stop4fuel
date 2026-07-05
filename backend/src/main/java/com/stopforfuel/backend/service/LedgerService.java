@@ -85,6 +85,7 @@ public class LedgerService {
                 entry.type = "DEBIT";
                 entry.description = "Statement " + (s.getStatementNo() != null ? s.getStatementNo() : "#" + s.getId());
                 entry.referenceId = s.getId();
+                entry.referenceType = "STATEMENT";
                 entry.debitAmount = s.getTotalAmount() != null ? s.getTotalAmount() : BigDecimal.ZERO;
                 entry.creditAmount = BigDecimal.ZERO;
                 entries.add(entry);
@@ -102,6 +103,7 @@ public class LedgerService {
                         ? billLabel + " — " + vehicleNo
                         : billLabel;
                 entry.referenceId = bill.getId();
+                entry.referenceType = "BILL";
                 entry.debitAmount = bill.getNetAmount();
                 entry.creditAmount = BigDecimal.ZERO;
                 entries.add(entry);
@@ -113,13 +115,18 @@ public class LedgerService {
             entry.date = payment.getPaymentDate();
             entry.type = "CREDIT";
 
+            entry.referenceType = "PAYMENT";
             String target = "";
             if (payment.getStatement() != null) {
                 Statement s = payment.getStatement();
                 target = " for Statement " + (s.getStatementNo() != null ? s.getStatementNo() : "#" + s.getId());
+                entry.relatedType = "STATEMENT";
+                entry.relatedId = s.getId();
             } else if (payment.getInvoiceBill() != null) {
                 InvoiceBill b = payment.getInvoiceBill();
                 target = " for Bill " + (b.getBillNo() != null ? b.getBillNo() : "#" + b.getId());
+                entry.relatedType = "BILL";
+                entry.relatedId = b.getId();
                 if (!isStatementCustomer) {
                     String vehicleNo = b.getVehicle() != null ? b.getVehicle().getVehicleNumber() : null;
                     if (vehicleNo != null && !vehicleNo.isBlank()) {
@@ -166,6 +173,20 @@ public class LedgerService {
     }
 
     /**
+     * Years in which the customer has any ledger activity (credit bills,
+     * statements or payments), newest first — drives the year chips on the
+     * customer transactions page.
+     */
+    @Transactional(readOnly = true)
+    public List<Integer> getLedgerYears(Long customerId) {
+        java.util.TreeSet<Integer> years = new java.util.TreeSet<>(Comparator.reverseOrder());
+        years.addAll(invoiceBillRepository.findCreditBillYearsByCustomer(customerId));
+        years.addAll(paymentRepository.findPaymentYearsByCustomer(customerId));
+        years.addAll(statementRepository.findStatementYearsByCustomer(customerId));
+        return new ArrayList<>(years);
+    }
+
+    /**
      * Get outstanding (unpaid) credit bills for a customer.
      */
     @Transactional(readOnly = true)
@@ -190,6 +211,11 @@ public class LedgerService {
         public String type; // DEBIT or CREDIT
         public String description;
         public Long referenceId;
+        /** What referenceId points at: STATEMENT | BILL | PAYMENT */
+        public String referenceType;
+        /** For payments: the statement/bill the payment settles (null for on-account) */
+        public String relatedType;
+        public Long relatedId;
         public BigDecimal debitAmount;
         public BigDecimal creditAmount;
         public BigDecimal runningBalance;

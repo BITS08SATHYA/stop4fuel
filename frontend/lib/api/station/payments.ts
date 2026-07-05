@@ -113,6 +113,11 @@ export interface LedgerEntry {
     type: 'DEBIT' | 'CREDIT';
     description: string;
     referenceId: number;
+    /** What referenceId points at */
+    referenceType?: 'STATEMENT' | 'BILL' | 'PAYMENT';
+    /** For payments: the statement/bill the payment settles */
+    relatedType?: 'STATEMENT' | 'BILL' | null;
+    relatedId?: number | null;
     debitAmount: number;
     creditAmount: number;
     runningBalance: number;
@@ -513,6 +518,9 @@ export const getOpeningBalance = (customerId: number, asOfDate: string): Promise
 
 export const getCustomerLedger = (customerId: number, fromDate: string, toDate: string): Promise<CustomerLedger> =>
     fetchWithAuth(`${API_BASE_URL}/ledger/customer/${customerId}?fromDate=${fromDate}&toDate=${toDate}`).then(handleResponse);
+
+export const getLedgerYears = (customerId: number): Promise<number[]> =>
+    fetchWithAuth(`${API_BASE_URL}/ledger/customer/${customerId}/years`).then(handleResponse);
 
 export const getOutstandingBills = (customerId: number): Promise<InvoiceBill[]> =>
     fetchWithAuth(`${API_BASE_URL}/ledger/outstanding/${customerId}`).then(handleResponse);

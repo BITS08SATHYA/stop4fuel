@@ -277,7 +277,10 @@ export function CustomerTransactionHistory({ customerId }: { customerId: number 
                 </div>
             )}
 
-            <div className="px-6 py-3 border-t border-border/50">
+            <div className="px-6 py-3 border-t border-border/50 flex flex-wrap gap-x-6 gap-y-1">
+                <Link href={`/customers/${customerId}/transactions`} className="text-xs font-medium text-primary hover:underline">
+                    All transactions by year →
+                </Link>
                 <Link href={`/payments/ledger?customerId=${customerId}`} className="text-xs font-medium text-primary hover:underline">
                     View full ledger with running balance →
                 </Link>
