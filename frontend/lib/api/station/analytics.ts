@@ -96,3 +96,59 @@ export const getTankAnalytics = (params?: {
     const qs = q.toString();
     return fetchWithAuth(`${API_BASE_URL}/analytics/tanks${qs ? '?' + qs : ''}`).then(handleResponse);
 };
+
+// --- Customer Repayment Analytics ---
+export interface CustomerRepaymentRow {
+    customerId: number;
+    name: string;
+    repaymentDaysAllowed?: number;
+    billedInRange: number;
+    litersInRange: number;
+    billCount: number;
+    outstanding: number;
+    oldestUnpaidDays?: number;
+    avgRepaymentLagDays?: number;
+    onTimePercent?: number;
+    prevAvgBilled?: number;
+    changePercent?: number;
+    consumptionTrend: 'MORE' | 'LESS' | 'NORMAL' | 'NEW';
+    overdue: boolean;
+}
+
+export interface CustomerRepaymentAnalytics {
+    fromDate: string;
+    toDate: string;
+    rangeDays: number;
+    totalBilled: number;
+    totalCollected: number;
+    totalOutstanding: number;
+    avgRepaymentLagDays?: number;
+    overdueCustomers: number;
+    activeCreditCustomers: number;
+    monthlyTurnover: { month: string; billed: number; collected: number }[];
+    lagHistogram: { bucket: string; count: number }[];
+    customers: CustomerRepaymentRow[];
+}
+
+export interface CustomerConsumption {
+    customerId: number;
+    name: string;
+    fromDate: string;
+    toDate: string;
+    monthly: { month: string; quantity: number; amount: number }[];
+    productMix: { product: string; quantity: number; amount: number }[];
+}
+
+export const getCustomerRepaymentAnalytics = (params?: {
+    fromDate?: string;
+    toDate?: string;
+}): Promise<CustomerRepaymentAnalytics> => {
+    const q = new URLSearchParams();
+    if (params?.fromDate) q.set('fromDate', params.fromDate);
+    if (params?.toDate) q.set('toDate', params.toDate);
+    const qs = q.toString();
+    return fetchWithAuth(`${API_BASE_URL}/analytics/customers${qs ? '?' + qs : ''}`).then(handleResponse);
+};
+
+export const getCustomerConsumption = (customerId: number, months = 12): Promise<CustomerConsumption> =>
+    fetchWithAuth(`${API_BASE_URL}/analytics/customers/${customerId}?months=${months}`).then(handleResponse);

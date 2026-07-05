@@ -1,0 +1,469 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    ComposedChart,
+    LabelList,
+    Legend,
+    Line,
+    ReferenceLine,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
+import { GlassCard } from "@/components/ui/glass-card";
+import { Badge } from "@/components/ui/badge";
+import { parseLocalDate } from "@/lib/utils";
+import {
+    CustomerConsumption,
+    CustomerRepaymentAnalytics,
+    CustomerRepaymentRow,
+    getCustomerConsumption,
+    getCustomerRepaymentAnalytics,
+} from "@/lib/api/station";
+import {
+    AlertTriangle,
+    ArrowDownRight,
+    ArrowUpRight,
+    Clock,
+    IndianRupee,
+    Timer,
+    TrendingUp,
+    Users,
+    X,
+} from "lucide-react";
+
+const TOOLTIP_STYLE = {
+    backgroundColor: "rgba(0,0,0,0.85)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "12px",
+    fontSize: "12px",
+};
+
+function formatCurrency(val?: number | null) {
+    if (val == null) return "0.00";
+    return val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatCompact(val?: number | null) {
+    if (val == null) return "0";
+    if (Math.abs(val) >= 10000000) return (val / 10000000).toFixed(1) + "Cr";
+    if (Math.abs(val) >= 100000) return (val / 100000).toFixed(1) + "L";
+    if (Math.abs(val) >= 1000) return (val / 1000).toFixed(1) + "K";
+    return val.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+function formatMonth(ym: string) {
+    return parseLocalDate(ym + "-01").toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+}
+
+const toIso = (d: Date) => d.toISOString().split("T")[0];
+
+type Preset = "30d" | "quarter" | "year" | "custom";
+type Filter = "all" | "overdue" | "more" | "less";
+
+export default function RepaymentAnalyticsPage() {
+    const [data, setData] = useState<CustomerRepaymentAnalytics | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [preset, setPreset] = useState<Preset>("quarter");
+    const [{ fromDate, toDate }, setRange] = useState(() => presetRange("quarter"));
+    const [filter, setFilter] = useState<Filter>("all");
+    const [selected, setSelected] = useState<CustomerConsumption | null>(null);
+    const [selectedLoading, setSelectedLoading] = useState(false);
+
+    function presetRange(p: Exclude<Preset, "custom">) {
+        const now = new Date();
+        const days = p === "30d" ? 29 : p === "quarter" ? 89 : 364;
+        return { fromDate: toIso(new Date(now.getTime() - days * 86400000)), toDate: toIso(now) };
+    }
+
+    useEffect(() => {
+        if (!fromDate || !toDate || fromDate > toDate) return;
+        setIsLoading(true);
+        getCustomerRepaymentAnalytics({ fromDate, toDate })
+            .then(setData)
+            .catch((err) => setError(err.message || "Failed to load"))
+            .finally(() => setIsLoading(false));
+    }, [fromDate, toDate]);
+
+    const openCustomer = (row: CustomerRepaymentRow) => {
+        setSelectedLoading(true);
+        getCustomerConsumption(row.customerId, 12)
+            .then(setSelected)
+            .catch(() => setSelected(null))
+            .finally(() => setSelectedLoading(false));
+    };
+
+    if (isLoading && !data) {
+        return (
+            <div className="min-h-screen bg-background p-8 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+                <p className="text-muted-foreground animate-pulse">Loading repayment analytics...</p>
+            </div>
+        );
+    }
+
+    if (error || !data) {
+        return (
+            <div className="min-h-screen bg-background p-8 flex flex-col items-center justify-center">
+                <p className="text-red-500 mb-2">Failed to load repayment analytics</p>
+                <p className="text-muted-foreground text-sm">{error}</p>
+            </div>
+        );
+    }
+
+    const monthlyData = data.monthlyTurnover.map((m) => ({
+        month: formatMonth(m.month),
+        billed: m.billed,
+        collected: m.collected,
+    }));
+
+    const filtered = data.customers.filter((c) => {
+        if (filter === "overdue") return c.overdue;
+        if (filter === "more") return c.consumptionTrend === "MORE";
+        if (filter === "less") return c.consumptionTrend === "LESS";
+        return true;
+    });
+
+    const consumingMore = data.customers.filter((c) => c.consumptionTrend === "MORE").length;
+    const kpis = [
+        { label: "Turnover (billed)", value: `₹${formatCompact(data.totalBilled)}`, icon: IndianRupee, color: "text-primary", bg: "bg-primary/10" },
+        { label: "Collected", value: `₹${formatCompact(data.totalCollected)}`, icon: TrendingUp, color: "text-green-500", bg: "bg-green-500/10" },
+        { label: "Outstanding", value: `₹${formatCompact(data.totalOutstanding)}`, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+        { label: "Avg Repayment", value: data.avgRepaymentLagDays != null ? `${data.avgRepaymentLagDays}d` : "—", icon: Timer, color: "text-cyan-500", bg: "bg-cyan-500/10" },
+        { label: "Overdue Customers", value: String(data.overdueCustomers), icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
+        { label: "Consuming More", value: String(consumingMore), icon: ArrowUpRight, color: "text-purple-500", bg: "bg-purple-500/10" },
+    ];
+
+    const trendChip = (c: CustomerRepaymentRow) => {
+        if (c.consumptionTrend === "MORE")
+            return (
+                <span className="inline-flex items-center gap-0.5 text-xs font-bold text-red-400">
+                    <ArrowUpRight className="w-3.5 h-3.5" />+{c.changePercent}%
+                </span>
+            );
+        if (c.consumptionTrend === "LESS")
+            return (
+                <span className="inline-flex items-center gap-0.5 text-xs font-bold text-cyan-400">
+                    <ArrowDownRight className="w-3.5 h-3.5" />{c.changePercent}%
+                </span>
+            );
+        if (c.consumptionTrend === "NEW") return <span className="text-xs text-muted-foreground">new</span>;
+        return <span className="text-xs text-muted-foreground">{c.changePercent != null ? `${c.changePercent > 0 ? "+" : ""}${c.changePercent}%` : "~"}</span>;
+    };
+
+    const selectedMonthly = selected?.monthly.map((m) => ({ month: formatMonth(m.month), quantity: m.quantity, amount: m.amount })) ?? [];
+    const selectedAvgQty = selectedMonthly.length > 0 ? selectedMonthly.reduce((s, m) => s + m.quantity, 0) / selectedMonthly.length : 0;
+
+    return (
+        <div className="min-h-screen bg-background p-6 md:p-8 transition-colors duration-300">
+            <div className="max-w-7xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                        <h1 className="text-4xl font-bold text-foreground tracking-tight">
+                            <span className="text-gradient">Repayment Analytics</span>
+                        </h1>
+                        <p className="text-muted-foreground mt-1">
+                            Customer turnover, repayment behaviour and utilization &middot; {data.fromDate} to {data.toDate}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {(["30d", "quarter", "year"] as const).map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => {
+                                    setPreset(p);
+                                    setRange(presetRange(p));
+                                }}
+                                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                    preset === p
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                }`}
+                            >
+                                {p === "30d" ? "30 Days" : p === "quarter" ? "Quarter" : "Year"}
+                            </button>
+                        ))}
+                        <input
+                            type="date"
+                            value={fromDate}
+                            max={toDate}
+                            onChange={(e) => {
+                                setPreset("custom");
+                                setRange((r) => ({ ...r, fromDate: e.target.value }));
+                            }}
+                            className="px-3 py-2 bg-card border border-border rounded-xl text-sm"
+                        />
+                        <span className="text-muted-foreground text-sm">to</span>
+                        <input
+                            type="date"
+                            value={toDate}
+                            min={fromDate}
+                            onChange={(e) => {
+                                setPreset("custom");
+                                setRange((r) => ({ ...r, toDate: e.target.value }));
+                            }}
+                            className="px-3 py-2 bg-card border border-border rounded-xl text-sm"
+                        />
+                    </div>
+                </div>
+
+                {/* KPI cards */}
+                <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                    {kpis.map((kpi) => (
+                        <GlassCard key={kpi.label} className="p-4">
+                            <div className={`p-2 ${kpi.bg} rounded-lg w-fit`}>
+                                <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
+                            </div>
+                            <h3 className={`text-xl font-bold mt-2 ${kpi.color}`}>{kpi.value}</h3>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">{kpi.label}</p>
+                        </GlassCard>
+                    ))}
+                </div>
+
+                {/* Turnover trend + repayment histogram */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    <GlassCard className="p-6 lg:col-span-2">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <TrendingUp className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-foreground">Turnover vs Collection</h2>
+                                <p className="text-xs text-muted-foreground">Monthly billed amount and payments received</p>
+                            </div>
+                        </div>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={monthlyData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                    <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#888" />
+                                    <YAxis tick={{ fontSize: 11 }} stroke="#888" tickFormatter={(v) => "₹" + formatCompact(v)} width={70} />
+                                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v, name) => [`₹${formatCurrency(Number(v))}`, name === "billed" ? "Billed" : "Collected"]} />
+                                    <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => (v === "billed" ? "Billed" : "Collected")} />
+                                    <Bar dataKey="billed" fill="#f97316" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                                    <Line type="monotone" dataKey="collected" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard className="p-6">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                <Timer className="w-5 h-5 text-cyan-500" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-foreground">Repayment Window</h2>
+                                <p className="text-xs text-muted-foreground">Days from statement to payment</p>
+                            </div>
+                        </div>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data.lagHistogram} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                    <XAxis dataKey="bucket" tick={{ fontSize: 11 }} stroke="#888" />
+                                    <YAxis tick={{ fontSize: 11 }} stroke="#888" allowDecimals={false} />
+                                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [String(v), "Payments"]} />
+                                    <Bar dataKey="count" fill="#06b6d4" radius={[6, 6, 0, 0]} maxBarSize={36}>
+                                        <LabelList dataKey="count" position="top" fontSize={10} fill="#a1a1aa" formatter={(v) => (Number(v) > 0 ? String(v) : "")} />
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </GlassCard>
+                </div>
+
+                {/* Customer table */}
+                <GlassCard className="overflow-hidden border-none p-0">
+                    <div className="px-6 py-4 border-b border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <Users className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-foreground">Customer Insights</h2>
+                                <p className="text-xs text-muted-foreground">Click a customer for 12-month consumption &amp; product mix</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            {(
+                                [
+                                    ["all", `All (${data.customers.length})`],
+                                    ["overdue", `Overdue (${data.overdueCustomers})`],
+                                    ["more", `Consuming More (${consumingMore})`],
+                                    ["less", "Dropping"],
+                                ] as [Filter, string][]
+                            ).map(([f, label]) => (
+                                <button
+                                    key={f}
+                                    onClick={() => setFilter(f)}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                        filter === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-white/5 border-b border-border/50">
+                                    {["Customer", "Billed", "Liters", "Outstanding", "Allowed", "Avg Repay", "On-Time %", "Oldest Unpaid", "Usage Trend"].map((h) => (
+                                        <th key={h} className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                            {h}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/30">
+                                {filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                            No customers match this filter
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filtered.map((c) => (
+                                        <tr
+                                            key={c.customerId}
+                                            onClick={() => openCustomer(c)}
+                                            className="hover:bg-white/5 transition-colors cursor-pointer"
+                                        >
+                                            <td className="px-4 py-4">
+                                                <span className="text-sm font-bold text-foreground hover:text-primary">{c.name}</span>
+                                                <div className="text-[10px] text-muted-foreground">{c.billCount} bills</div>
+                                            </td>
+                                            <td className="px-4 py-4 text-sm font-semibold">&#8377;{formatCompact(c.billedInRange)}</td>
+                                            <td className="px-4 py-4 text-sm">{formatCompact(c.litersInRange)}</td>
+                                            <td className="px-4 py-4 text-sm font-semibold text-amber-500">&#8377;{formatCompact(c.outstanding)}</td>
+                                            <td className="px-4 py-4 text-sm text-muted-foreground">
+                                                {c.repaymentDaysAllowed != null ? `${c.repaymentDaysAllowed}d` : "—"}
+                                            </td>
+                                            <td className="px-4 py-4 text-sm">{c.avgRepaymentLagDays != null ? `${c.avgRepaymentLagDays}d` : "—"}</td>
+                                            <td className="px-4 py-4">
+                                                {c.onTimePercent != null ? (
+                                                    <span className={`text-sm font-bold ${c.onTimePercent >= 80 ? "text-green-500" : c.onTimePercent >= 50 ? "text-amber-500" : "text-red-500"}`}>
+                                                        {c.onTimePercent}%
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-sm text-muted-foreground">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                {c.oldestUnpaidDays != null ? (
+                                                    <span className={`inline-flex items-center gap-1 text-sm font-semibold ${c.overdue ? "text-red-500" : "text-foreground"}`}>
+                                                        {c.overdue && <AlertTriangle className="w-3.5 h-3.5" />}
+                                                        {c.oldestUnpaidDays}d
+                                                    </span>
+                                                ) : (
+                                                    <Badge variant="success" className="text-[10px]">Clear</Badge>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-4">{trendChip(c)}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </GlassCard>
+
+                {/* Customer drill-down */}
+                {(selected || selectedLoading) && (
+                    <GlassCard className="p-6">
+                        {selectedLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                            </div>
+                        ) : (
+                            selected && (
+                                <>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <h2 className="text-lg font-semibold text-foreground">{selected.name} — 12 Month Utilization</h2>
+                                            <p className="text-xs text-muted-foreground">
+                                                Monthly quantity consumed; dashed line is the 12-month average
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setSelected(null)}
+                                            className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                                            aria-label="Close customer detail"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                                        <div className="lg:col-span-2 h-64">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={selectedMonthly} margin={{ top: 24, right: 16, left: 0, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                                    <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#888" />
+                                                    <YAxis tick={{ fontSize: 11 }} stroke="#888" tickFormatter={(v) => formatCompact(v)} />
+                                                    <Tooltip
+                                                        contentStyle={TOOLTIP_STYLE}
+                                                        formatter={(v, _name, item) => {
+                                                            const amount = (item?.payload as { amount?: number } | undefined)?.amount ?? 0;
+                                                            return [`${formatCompact(Number(v))} qty · ₹${formatCurrency(amount)}`, "Consumed"];
+                                                        }}
+                                                    />
+                                                    <ReferenceLine y={selectedAvgQty} stroke="#a1a1aa" strokeDasharray="6 4" />
+                                                    <Bar dataKey="quantity" fill="#f97316" radius={[6, 6, 0, 0]} maxBarSize={36}>
+                                                        <LabelList
+                                                            dataKey="quantity"
+                                                            position="top"
+                                                            fontSize={10}
+                                                            fill="#a1a1aa"
+                                                            formatter={(v) => (Number(v) > 0 ? formatCompact(Number(v)) : "")}
+                                                        />
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-foreground mb-3">Product Mix (12 mo)</h3>
+                                            {selected.productMix.length === 0 ? (
+                                                <p className="text-sm text-muted-foreground">No purchases recorded.</p>
+                                            ) : (
+                                                <ul className="space-y-2.5">
+                                                    {selected.productMix.slice(0, 8).map((p) => {
+                                                        const maxAmt = selected.productMix[0]?.amount || 1;
+                                                        return (
+                                                            <li key={p.product}>
+                                                                <div className="flex items-center justify-between text-sm mb-1">
+                                                                    <span className="font-medium text-foreground truncate">{p.product}</span>
+                                                                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                                                                        {formatCompact(p.quantity)} · ₹{formatCompact(p.amount)}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                                                    <div
+                                                                        className="h-full rounded-full bg-primary"
+                                                                        style={{ width: `${Math.max((p.amount / maxAmt) * 100, 4)}%` }}
+                                                                    />
+                                                                </div>
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )
+                        )}
+                    </GlassCard>
+                )}
+            </div>
+        </div>
+    );
+}

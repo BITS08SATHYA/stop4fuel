@@ -227,4 +227,12 @@ public interface StatementRepository extends ScidRepository<Statement> {
             @Param("low") BigDecimal low,
             @Param("high") BigDecimal high,
             @Param("scid") Long scid);
+
+    @Query("""
+        select s.customer.id, coalesce(sum(s.balanceAmount), 0), min(s.statementDate)
+        from Statement s
+        where s.scid = :scid and s.status <> 'PAID' and s.balanceAmount > 0
+        group by s.customer.id
+        """)
+    List<Object[]> getUnpaidBalancesByCustomer(@Param("scid") Long scid);
 }

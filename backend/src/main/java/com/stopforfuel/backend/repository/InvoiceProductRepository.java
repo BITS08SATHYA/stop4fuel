@@ -60,4 +60,55 @@ public interface InvoiceProductRepository extends JpaRepository<InvoiceProduct, 
         group by ip.product.id
         """)
     List<Object[]> getLastSaleDateByProduct(@Param("scid") Long scid);
+
+    @Query("""
+        select ib.customer.id, coalesce(sum(ip.quantity), 0), coalesce(sum(ip.amount), 0), count(distinct ib.id)
+        from InvoiceProduct ip join ip.invoiceBill ib
+        where ib.scid = :scid and ib.customer is not null
+          and ib.date >= :fromDate and ib.date <= :toDate
+        group by ib.customer.id
+        """)
+    List<Object[]> getCustomerSalesTotals(@Param("scid") Long scid,
+                                          @Param("fromDate") LocalDateTime fromDate,
+                                          @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select extract(year from ib.date), extract(month from ib.date),
+               coalesce(sum(ip.quantity), 0), coalesce(sum(ip.amount), 0)
+        from InvoiceProduct ip join ip.invoiceBill ib
+        where ib.scid = :scid and ib.customer is not null
+          and ib.date >= :fromDate and ib.date <= :toDate
+        group by extract(year from ib.date), extract(month from ib.date)
+        order by extract(year from ib.date), extract(month from ib.date)
+        """)
+    List<Object[]> getMonthlyCustomerBilled(@Param("scid") Long scid,
+                                            @Param("fromDate") LocalDateTime fromDate,
+                                            @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select extract(year from ib.date), extract(month from ib.date),
+               coalesce(sum(ip.quantity), 0), coalesce(sum(ip.amount), 0)
+        from InvoiceProduct ip join ip.invoiceBill ib
+        where ib.scid = :scid and ib.customer.id = :customerId
+          and ib.date >= :fromDate and ib.date <= :toDate
+        group by extract(year from ib.date), extract(month from ib.date)
+        order by extract(year from ib.date), extract(month from ib.date)
+        """)
+    List<Object[]> getMonthlySalesForCustomer(@Param("scid") Long scid,
+                                              @Param("customerId") Long customerId,
+                                              @Param("fromDate") LocalDateTime fromDate,
+                                              @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select ip.product.name, coalesce(sum(ip.quantity), 0), coalesce(sum(ip.amount), 0)
+        from InvoiceProduct ip join ip.invoiceBill ib
+        where ib.scid = :scid and ib.customer.id = :customerId
+          and ib.date >= :fromDate and ib.date <= :toDate
+        group by ip.product.name
+        order by coalesce(sum(ip.amount), 0) desc
+        """)
+    List<Object[]> getProductMixForCustomer(@Param("scid") Long scid,
+                                            @Param("customerId") Long customerId,
+                                            @Param("fromDate") LocalDateTime fromDate,
+                                            @Param("toDate") LocalDateTime toDate);
 }

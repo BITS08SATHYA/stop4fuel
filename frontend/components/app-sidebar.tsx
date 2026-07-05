@@ -56,6 +56,7 @@ import {
     PackageSearch,
     TrendingUp,
     Gauge,
+    Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -137,6 +138,7 @@ const invoiceManagementNav = [
 
 const paymentManagementNav = [
     { name: "Payment Dashboard", href: "/payments/dashboard", icon: PieChart },
+    { name: "Repayment Analytics", href: "/payments/repayment-analytics", icon: Timer },
     { name: "Credit Overview", href: "/payments/credit", icon: Eye },
     { name: "Credit Monitoring", href: "/payments/credit-monitoring", icon: AlertTriangle },
     { name: "Watchlist", href: "/payments/credit/watchlist", icon: Shield },

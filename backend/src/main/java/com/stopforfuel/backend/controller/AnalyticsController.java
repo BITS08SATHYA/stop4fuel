@@ -1,13 +1,17 @@
 package com.stopforfuel.backend.controller;
 
+import com.stopforfuel.backend.dto.CustomerConsumptionDTO;
+import com.stopforfuel.backend.dto.CustomerRepaymentAnalyticsDTO;
 import com.stopforfuel.backend.dto.ProductAnalyticsDTO;
 import com.stopforfuel.backend.dto.TankAnalyticsDTO;
+import com.stopforfuel.backend.service.CustomerRepaymentAnalyticsService;
 import com.stopforfuel.backend.service.ProductAnalyticsService;
 import com.stopforfuel.backend.service.TankAnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,6 +25,7 @@ public class AnalyticsController {
 
     private final ProductAnalyticsService productAnalyticsService;
     private final TankAnalyticsService tankAnalyticsService;
+    private final CustomerRepaymentAnalyticsService customerRepaymentAnalyticsService;
 
     @GetMapping("/products")
     @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
@@ -38,5 +43,21 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "2") int leadTimeDays,
             @RequestParam(defaultValue = "12000") double tankerLoadLiters) {
         return tankAnalyticsService.getTankAnalytics(fromDate, toDate, leadTimeDays, tankerLoadLiters);
+    }
+
+    @GetMapping("/customers")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public CustomerRepaymentAnalyticsDTO getCustomerRepaymentAnalytics(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return customerRepaymentAnalyticsService.getRepaymentAnalytics(fromDate, toDate);
+    }
+
+    @GetMapping("/customers/{id}")
+    @PreAuthorize("hasPermission(null, 'PAYMENT_VIEW')")
+    public CustomerConsumptionDTO getCustomerConsumption(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "12") int months) {
+        return customerRepaymentAnalyticsService.getCustomerConsumption(id, months);
     }
 }
