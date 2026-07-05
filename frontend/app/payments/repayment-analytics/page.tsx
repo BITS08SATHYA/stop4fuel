@@ -64,7 +64,7 @@ function formatMonth(ym: string) {
 const toIso = (d: Date) => d.toISOString().split("T")[0];
 
 type Preset = "30d" | "quarter" | "year" | "custom";
-type Filter = "all" | "overdue" | "more" | "less";
+type Filter = "all" | "statement" | "local" | "overdue" | "more" | "less";
 
 export default function RepaymentAnalyticsPage() {
     const [data, setData] = useState<CustomerRepaymentAnalytics | null>(null);
@@ -124,6 +124,8 @@ export default function RepaymentAnalyticsPage() {
     }));
 
     const filtered = data.customers.filter((c) => {
+        if (filter === "statement") return c.partyType === "STATEMENT";
+        if (filter === "local") return c.partyType === "LOCAL";
         if (filter === "overdue") return c.overdue;
         if (filter === "more") return c.consumptionTrend === "MORE";
         if (filter === "less") return c.consumptionTrend === "LESS";
@@ -261,7 +263,7 @@ export default function RepaymentAnalyticsPage() {
                             </div>
                             <div>
                                 <h2 className="text-lg font-semibold text-foreground">Repayment Window</h2>
-                                <p className="text-xs text-muted-foreground">Days from statement to payment</p>
+                                <p className="text-xs text-muted-foreground">Days from statement (or credit bill) to payment</p>
                             </div>
                         </div>
                         <div className="h-64">
@@ -292,10 +294,12 @@ export default function RepaymentAnalyticsPage() {
                                 <p className="text-xs text-muted-foreground">Click a customer for 12-month consumption &amp; product mix</p>
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             {(
                                 [
                                     ["all", `All (${data.customers.length})`],
+                                    ["statement", `Statement (${data.customers.filter((c) => c.partyType === "STATEMENT").length})`],
+                                    ["local", `Local (${data.customers.filter((c) => c.partyType === "LOCAL").length})`],
                                     ["overdue", `Overdue (${data.overdueCustomers})`],
                                     ["more", `Consuming More (${consumingMore})`],
                                     ["less", "Dropping"],
@@ -339,7 +343,15 @@ export default function RepaymentAnalyticsPage() {
                                             className="hover:bg-white/5 transition-colors cursor-pointer"
                                         >
                                             <td className="px-4 py-4">
-                                                <span className="text-sm font-bold text-foreground hover:text-primary">{c.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-foreground hover:text-primary">{c.name}</span>
+                                                    <Badge
+                                                        variant={c.partyType === "STATEMENT" ? "default" : "outline"}
+                                                        className="text-[9px]"
+                                                    >
+                                                        {c.partyType === "STATEMENT" ? "Statement" : "Local"}
+                                                    </Badge>
+                                                </div>
                                                 <div className="text-[10px] text-muted-foreground">{c.billCount} bills</div>
                                             </td>
                                             <td className="px-4 py-4 text-sm font-semibold">&#8377;{formatCompact(c.billedInRange)}</td>

@@ -181,4 +181,14 @@ public interface PaymentRepository extends ScidRepository<Payment> {
     List<Object[]> getMonthlyCollected(@Param("scid") Long scid,
                                        @Param("fromDate") LocalDateTime fromDate,
                                        @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select ib.customer.id, ib.date, p.paymentDate, p.amount
+        from Payment p join p.invoiceBill ib
+        where p.scid = :scid and ib.customer is not null
+          and p.paymentDate >= :fromDate and p.paymentDate <= :toDate
+        """)
+    List<Object[]> getBillPaymentLags(@Param("scid") Long scid,
+                                      @Param("fromDate") LocalDateTime fromDate,
+                                      @Param("toDate") LocalDateTime toDate);
 }

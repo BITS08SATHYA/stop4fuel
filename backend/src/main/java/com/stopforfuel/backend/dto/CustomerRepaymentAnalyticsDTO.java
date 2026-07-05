@@ -45,6 +45,8 @@ public class CustomerRepaymentAnalyticsDTO {
     public static class Row {
         private Long customerId;
         private String name;
+        /** STATEMENT | LOCAL — Party.partyType, with statements as backstop (matches LedgerService) */
+        private String partyType;
         private Integer repaymentDaysAllowed;
         private BigDecimal billedInRange;
         private BigDecimal litersInRange;

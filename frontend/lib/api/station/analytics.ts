@@ -101,6 +101,7 @@ export const getTankAnalytics = (params?: {
 export interface CustomerRepaymentRow {
     customerId: number;
     name: string;
+    partyType: 'STATEMENT' | 'LOCAL';
     repaymentDaysAllowed?: number;
     billedInRange: number;
     litersInRange: number;

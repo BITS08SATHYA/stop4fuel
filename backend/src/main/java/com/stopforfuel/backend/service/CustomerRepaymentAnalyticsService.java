@@ -6,6 +6,7 @@ import com.stopforfuel.backend.entity.Customer;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.CustomerRepository;
+import com.stopforfuel.backend.repository.InvoiceBillRepository;
 import com.stopforfuel.backend.repository.InvoiceProductRepository;
 import com.stopforfuel.backend.repository.PaymentRepository;
 import com.stopforfuel.backend.repository.StatementRepository;
@@ -42,6 +43,7 @@ public class CustomerRepaymentAnalyticsService {
     private static final int BASELINE_PERIODS = 3;
 
     private final CustomerRepository customerRepository;
+    private final InvoiceBillRepository invoiceBillRepository;
     private final InvoiceProductRepository invoiceProductRepository;
     private final PaymentRepository paymentRepository;
     private final StatementRepository statementRepository;
@@ -74,7 +76,8 @@ public class CustomerRepaymentAnalyticsService {
             prevTotals.put((Long) row[0], toBd(row[2]));
         }
 
-        // Statement repayment lags (payments made within the range)
+        // Repayment lags (payments made within the range):
+        // statement customers → payment vs statement date; local customers → payment vs bill date
         Map<Long, List<double[]>> lagsByCustomer = new HashMap<>();  // [lagDays, amount]
         int[] histogram = new int[5];
         double lagWeightedSum = 0;
@@ -91,14 +94,43 @@ public class CustomerRepaymentAnalyticsService {
             lagWeightedSum += lag * amount;
             lagWeight += amount;
         }
+        for (Object[] row : paymentRepository.getBillPaymentLags(scid, fromTs, toTs)) {
+            Long customerId = (Long) row[0];
+            LocalDateTime billDate = (LocalDateTime) row[1];
+            LocalDateTime paymentDate = (LocalDateTime) row[2];
+            double amount = row[3] != null ? ((BigDecimal) row[3]).doubleValue() : 0;
+            if (billDate == null || paymentDate == null) continue;
+            double lag = Math.max(ChronoUnit.DAYS.between(billDate.toLocalDate(), paymentDate.toLocalDate()), 0);
+            lagsByCustomer.computeIfAbsent(customerId, k -> new ArrayList<>()).add(new double[]{lag, amount});
+            histogram[lagBucket(lag)]++;
+            lagWeightedSum += lag * amount;
+            lagWeight += amount;
+        }
 
-        // Outstanding + oldest unpaid statement per customer
+        // Outstanding + oldest unpaid per customer: statement balances plus
+        // unfiled local credit bills (same definition as Credit Monitoring)
         Map<Long, Object[]> unpaid = new HashMap<>();  // [balance BigDecimal, oldest LocalDate]
         BigDecimal totalOutstanding = BigDecimal.ZERO;
         for (Object[] row : statementRepository.getUnpaidBalancesByCustomer(scid)) {
             unpaid.put((Long) row[0], new Object[]{toBd(row[1]), row[2]});
             totalOutstanding = totalOutstanding.add(toBd(row[1]));
         }
+        for (Object[] row : invoiceBillRepository.getUnpaidLocalCreditByCustomer(scid)) {
+            Long customerId = (Long) row[0];
+            BigDecimal balance = toBd(row[1]);
+            LocalDate oldest = row[2] != null ? ((LocalDateTime) row[2]).toLocalDate() : null;
+            Object[] existing = unpaid.get(customerId);
+            if (existing == null) {
+                unpaid.put(customerId, new Object[]{balance, oldest});
+            } else {
+                existing[0] = ((BigDecimal) existing[0]).add(balance);
+                LocalDate prev = (LocalDate) existing[1];
+                if (oldest != null && (prev == null || oldest.isBefore(prev))) existing[1] = oldest;
+            }
+            totalOutstanding = totalOutstanding.add(balance);
+        }
+
+        Set<Long> statementCustomerIds = new HashSet<>(statementRepository.findCustomerIdsWithStatements(scid));
 
         // Assemble per-customer rows
         Set<Long> ids = new HashSet<>();
@@ -159,9 +191,16 @@ public class CustomerRepaymentAnalyticsService {
                         : changePct <= -ANOMALY_THRESHOLD_PERCENT ? "LESS" : "NORMAL";
             }
 
+            // Canonical classification: Party.partyType == "Statement", with generated
+            // statements as backstop (mirrors LedgerService/CreditMonitoringService)
+            boolean isStatement = (c.getParty() != null
+                    && "Statement".equalsIgnoreCase(c.getParty().getPartyType()))
+                    || statementCustomerIds.contains(id);
+
             rows.add(CustomerRepaymentAnalyticsDTO.Row.builder()
                     .customerId(id)
                     .name(c.getName())
+                    .partyType(isStatement ? "STATEMENT" : "LOCAL")
                     .repaymentDaysAllowed(c.getRepaymentDays())
                     .billedInRange(billed)
                     .litersInRange(cur[0])

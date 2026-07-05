@@ -216,6 +216,16 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
            "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL")
     BigDecimal sumUnpaidLocalCreditAmount(@Param("customerId") Long customerId);
 
+    // Same unpaid-local definition as above, aggregated for every customer at once
+    // (repayment analytics) so local dues match the Credit Monitoring numbers.
+    @Query("SELECT ib.customer.id, COALESCE(SUM(ib.netAmount - " +
+           "   (SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.invoiceBill = ib) " +
+           "), 0), MIN(ib.date) FROM InvoiceBill ib " +
+           "WHERE ib.scid = :scid AND ib.customer IS NOT NULL AND ib.billType = 'CREDIT' " +
+           "AND ib.paymentStatus IN ('NOT_PAID', 'PARTIAL') AND ib.statement IS NULL " +
+           "GROUP BY ib.customer.id")
+    List<Object[]> getUnpaidLocalCreditByCustomer(@Param("scid") Long scid);
+
     // Unpaid local credit bills for a single customer (not linked to statement).
     // Matches the bubble-map aggregate filter exactly so the Credit Monitoring
     // detail panel agrees with the bubble bucket the customer landed in.

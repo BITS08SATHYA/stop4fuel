@@ -235,4 +235,7 @@ public interface StatementRepository extends ScidRepository<Statement> {
         group by s.customer.id
         """)
     List<Object[]> getUnpaidBalancesByCustomer(@Param("scid") Long scid);
+
+    @Query("select distinct s.customer.id from Statement s where s.scid = :scid")
+    List<Long> findCustomerIdsWithStatements(@Param("scid") Long scid);
 }
