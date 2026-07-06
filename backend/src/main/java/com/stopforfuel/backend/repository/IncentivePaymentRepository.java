@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -39,4 +40,20 @@ public interface IncentivePaymentRepository extends ScidRepository<IncentivePaym
     BigDecimal sumByShift(@Param("shiftId") Long shiftId);
 
     List<IncentivePayment> findByInvoiceBillId(Long invoiceBillId);
+
+    // Day-wise totals by the shift's BUSINESS day (shift start date), so the day-wise
+    // report agrees with the shift reports. payment_date is stamped now() at bill time,
+    // and shifts cross midnight — after-midnight incentives belong to the previous
+    // day's shift, not the next calendar day. Shiftless rows fall back to payment_date.
+    @Query("""
+        SELECT COALESCE(CAST(s.startTime AS LocalDate), CAST(ip.paymentDate AS LocalDate)), SUM(ip.amount)
+        FROM IncentivePayment ip LEFT JOIN Shift s ON s.id = ip.shiftId
+        WHERE ip.scid = :scid
+          AND COALESCE(CAST(s.startTime AS LocalDate), CAST(ip.paymentDate AS LocalDate)) BETWEEN :from AND :to
+        GROUP BY COALESCE(CAST(s.startTime AS LocalDate), CAST(ip.paymentDate AS LocalDate))
+        ORDER BY COALESCE(CAST(s.startTime AS LocalDate), CAST(ip.paymentDate AS LocalDate))
+        """)
+    List<Object[]> sumByShiftBusinessDay(@Param("scid") Long scid,
+                                         @Param("from") LocalDate from,
+                                         @Param("to") LocalDate to);
 }

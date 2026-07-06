@@ -11,7 +11,6 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.stopforfuel.backend.service.pdf.PageFooterEvent;
 import com.stopforfuel.backend.entity.Company;
-import com.stopforfuel.backend.entity.IncentivePayment;
 import com.stopforfuel.backend.exception.ReportGenerationException;
 import com.stopforfuel.backend.repository.CompanyRepository;
 import com.stopforfuel.backend.repository.IncentivePaymentRepository;
@@ -35,7 +34,6 @@ import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -91,15 +89,14 @@ public class IncentivePaymentReportService {
 
     private List<DayRow> buildRows(LocalDate fromDate, LocalDate toDate) {
         Long scid = SecurityUtils.getScid();
-        LocalDateTime fromDateTime = fromDate.atStartOfDay();
-        LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
 
+        // Bucket by the shift's business day (shift start date), not payment_date:
+        // shifts cross midnight, so after-midnight incentives belong to the previous
+        // day's shift. This keeps the day-wise report equal to the shift reports.
         Map<LocalDate, BigDecimal> byDay = new TreeMap<>();
-        for (IncentivePayment ip : incentivePaymentRepository.findByDateRange(scid, fromDateTime, toDateTime)) {
-            if (ip.getPaymentDate() == null) continue;
-            LocalDate day = ip.getPaymentDate().toLocalDate();
-            BigDecimal amt = ip.getAmount() != null ? ip.getAmount() : BigDecimal.ZERO;
-            byDay.merge(day, amt, BigDecimal::add);
+        for (Object[] row : incentivePaymentRepository.sumByShiftBusinessDay(scid, fromDate, toDate)) {
+            if (row[0] == null) continue;
+            byDay.merge((LocalDate) row[0], row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO, BigDecimal::add);
         }
 
         List<DayRow> rows = new ArrayList<>();
