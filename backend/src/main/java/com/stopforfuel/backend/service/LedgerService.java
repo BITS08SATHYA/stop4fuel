@@ -90,6 +90,25 @@ public class LedgerService {
                 entry.creditAmount = BigDecimal.ZERO;
                 entries.add(entry);
             }
+            // Hybrid customers: bills never pulled into a statement (e.g. switched to
+            // pay-per-bill) still owe/owed money — without these debits the ledger
+            // shows their payments against nothing and drifts falsely negative.
+            for (InvoiceBill bill : invoiceBillRepository.findUnstatementedCreditBillsForLedger(
+                    customerId, fromDateTime, toDateTime, SecurityUtils.getScid())) {
+                LedgerEntry entry = new LedgerEntry();
+                entry.date = bill.getDate();
+                entry.type = "DEBIT";
+                String billLabel = "Credit Bill " + (bill.getBillNo() != null ? bill.getBillNo() : "#" + bill.getId());
+                String vehicleNo = bill.getVehicle() != null ? bill.getVehicle().getVehicleNumber() : null;
+                entry.description = (vehicleNo != null && !vehicleNo.isBlank())
+                        ? billLabel + " — " + vehicleNo
+                        : billLabel;
+                entry.referenceId = bill.getId();
+                entry.referenceType = "BILL";
+                entry.debitAmount = bill.getNetAmount() != null ? bill.getNetAmount() : BigDecimal.ZERO;
+                entry.creditAmount = BigDecimal.ZERO;
+                entries.add(entry);
+            }
         } else {
             List<InvoiceBill> allCreditBills = invoiceBillRepository.findCreditBillsByCustomerAndDateRange(
                     customerId, fromDateTime, toDateTime, SecurityUtils.getScid());

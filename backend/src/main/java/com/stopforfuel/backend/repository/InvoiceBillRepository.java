@@ -173,6 +173,20 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
             @Param("toDate") LocalDateTime toDate,
             @Param("scid") Long scid);
 
+    // Ledger (statement customers): credit bills never pulled into any statement.
+    // Hybrid customers who switched to pay-per-bill would otherwise show payments
+    // with no matching debits and drift falsely negative. Paid/unpaid both included
+    // (mirrors findCreditBillsByCustomerAndDateRange used for local customers).
+    @Query("SELECT ib FROM InvoiceBill ib WHERE ib.customer.id = :customerId " +
+           "AND ib.billType = 'CREDIT' AND ib.statement IS NULL " +
+           "AND ib.date >= :fromDate AND ib.date <= :toDate " +
+           "AND ib.scid = :scid ORDER BY ib.date ASC")
+    List<InvoiceBill> findUnstatementedCreditBillsForLedger(
+            @Param("customerId") Long customerId,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate,
+            @Param("scid") Long scid);
+
     List<InvoiceBill> findByBillTypeAndPaymentStatusAndScid(BillType billType, PaymentStatus paymentStatus, Long scid);
 
     // Sum of all credit bills for a customer (total credit ever billed)
