@@ -96,9 +96,24 @@ function canvasToWhiteJpeg(src: HTMLCanvasElement, quality = 0.92): string {
     return out.toDataURL("image/jpeg", quality);
 }
 
-function triggerDownload(dataUrl: string, filename: string) {
+/**
+ * Convert a canvas to a Blob object URL. Anchor downloads backed by data URLs
+ * silently fail in Chrome once the URL exceeds ~2MB (a scale-3 PNG card does),
+ * so downloads must go through blob URLs instead.
+ */
+function canvasToBlobUrl(canvas: HTMLCanvasElement, mime: string, quality: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(
+            (blob) => (blob ? resolve(URL.createObjectURL(blob)) : reject(new Error("canvas.toBlob failed"))),
+            mime,
+            quality,
+        );
+    });
+}
+
+function triggerDownload(url: string, filename: string) {
     const a = document.createElement("a");
-    a.href = dataUrl;
+    a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
@@ -143,8 +158,20 @@ export async function exportIdCard(
     const bg = format === "jpeg" ? "#ffffff" : null;
     const ext = format === "jpeg" ? "jpg" : "png";
     const mime = format === "jpeg" ? "image/jpeg" : "image/png";
-    triggerDownload(padCard(front, bg).toDataURL(mime, 0.95), `${baseName}-front.${ext}`);
-    // Stagger the second download — some browsers drop back-to-back programmatic clicks.
-    await new Promise((r) => setTimeout(r, 350));
-    triggerDownload(padCard(back, bg).toDataURL(mime, 0.95), `${baseName}-back.${ext}`);
+    const [frontUrl, backUrl] = await Promise.all([
+        canvasToBlobUrl(padCard(front, bg), mime, 0.95),
+        canvasToBlobUrl(padCard(back, bg), mime, 0.95),
+    ]);
+    try {
+        triggerDownload(frontUrl, `${baseName}-front.${ext}`);
+        // Stagger the second download — some browsers drop back-to-back programmatic clicks.
+        await new Promise((r) => setTimeout(r, 700));
+        triggerDownload(backUrl, `${baseName}-back.${ext}`);
+    } finally {
+        // Give the browser time to start streaming both files before revoking.
+        setTimeout(() => {
+            URL.revokeObjectURL(frontUrl);
+            URL.revokeObjectURL(backUrl);
+        }, 60_000);
+    }
 }

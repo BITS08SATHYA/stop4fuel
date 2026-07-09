@@ -148,13 +148,15 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
 
                     {/* Name + role */}
                     <div style={{ textAlign: "center", fontSize: 27, fontWeight: 800, marginTop: 10, color: WHITE }}>{employee.name}</div>
-                    <div style={{ textAlign: "center", marginTop: 10 }}>
-                        <span style={{ display: "inline-block", background: `linear-gradient(145deg, ${GOLD}, ${GOLD_SOFT})`, color: "#1a1205", fontWeight: 800, fontSize: 13, letterSpacing: 1, padding: "7px 26px", borderRadius: 20 }}>
+                    {/* Explicit height + matching lineHeight (no vertical padding): html2canvas
+                        drops padded inline-block text to the bottom edge of the pill otherwise. */}
+                    <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
+                        <span style={{ display: "block", background: `linear-gradient(145deg, ${GOLD}, ${GOLD_SOFT})`, color: "#1a1205", fontWeight: 800, fontSize: 13, letterSpacing: 1, height: 32, lineHeight: "32px", padding: "0 26px", borderRadius: 20, whiteSpace: "nowrap" }}>
                             {(employee.designation || "STAFF").toUpperCase()}
                         </span>
                     </div>
-                    <div style={{ textAlign: "center", marginTop: 8 }}>
-                        <span style={{ display: "inline-block", border: `1px solid ${GOLD}`, color: GOLD, fontWeight: 700, fontSize: 10.5, letterSpacing: 1, padding: "4px 16px", borderRadius: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+                        <span style={{ display: "block", border: `1px solid ${GOLD}`, color: GOLD, fontWeight: 700, fontSize: 10.5, letterSpacing: 1, height: 24, lineHeight: "24px", padding: "0 16px", borderRadius: 14, whiteSpace: "nowrap" }}>
                             {tenureLabel(employee.joinDate)}
                         </span>
                     </div>
