@@ -57,6 +57,7 @@ import {
     TrendingUp,
     Gauge,
     Timer,
+    BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -84,6 +85,7 @@ const customerManagementNav = [
 
 const employeeManagementNav = [
     { name: "Employees", href: "/employees", icon: UserCog },
+    { name: "Designations & Roles", href: "/employees/designations", icon: BadgeCheck },
     { name: "Attendance", href: "/employees/attendance", icon: CalendarCheck },
     { name: "Leave Management", href: "/employees/leaves", icon: CalendarDays },
     { name: "Salary Processing", href: "/employees/salary", icon: IndianRupee },
