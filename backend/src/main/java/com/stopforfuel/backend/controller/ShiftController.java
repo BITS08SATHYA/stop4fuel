@@ -66,7 +66,7 @@ public class ShiftController {
     }
 
     @GetMapping("/movable")
-    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'SYSTEM_ADMIN')")
     public List<ShiftDTO> getMovable(@RequestParam(name = "limit", defaultValue = "20") int limit) {
         return service.getMovableShifts(limit).stream().map(ShiftDTO::from).toList();
     }
@@ -77,7 +77,7 @@ public class ShiftController {
      * report is FINALIZED so the admin can un-finalize in place before moving the bill.
      */
     @GetMapping("/covering")
-    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'SYSTEM_ADMIN')")
     public CoveringShiftDTO getCovering(@RequestParam(name = "timestamp")
                                         @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
                                         java.time.LocalDateTime timestamp) {
@@ -89,7 +89,7 @@ public class ShiftController {
      * so an admin can target a RECONCILED/finalized shift and un-finalize it in place.
      */
     @GetMapping("/for-move")
-    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'SYSTEM_ADMIN')")
     public List<CoveringShiftDTO> getForMove(@RequestParam(name = "limit", defaultValue = "50") int limit) {
         return service.getShiftsForMove(limit);
     }
@@ -99,7 +99,7 @@ public class ShiftController {
      * a RECONCILED (report-less) shift back to CLOSED. Reversible; no report is generated.
      */
     @PostMapping("/{id}/unfinalize")
-    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'SYSTEM_ADMIN')")
     public CoveringShiftDTO unfinalizeForMove(@PathVariable Long id,
                                               @RequestBody(required = false) Map<String, String> body) {
         String performedBy = body != null ? body.get("performedBy") : null;

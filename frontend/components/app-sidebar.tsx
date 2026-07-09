@@ -314,7 +314,7 @@ export function AppSidebar() {
     };
 
     const isCustomer = user?.role === "CUSTOMER";
-    const isCashier = user?.designation === "Cashier" && user?.role !== "OWNER" && user?.role !== "ADMIN";
+    const isCashier = user?.designation === "Cashier" && user?.role !== "OWNER" && user?.role !== "ADMIN" && user?.role !== "SYSTEM_ADMIN";
     const isEmployee = user?.role === "EMPLOYEE" && !isCashier;
     const activeSections = isCustomer ? customerSections : isCashier ? cashierSections : isEmployee ? employeeSections : sections;
     const filteredSections = activeSections.filter(section => hasPermission(section.permission));

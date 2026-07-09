@@ -25,7 +25,7 @@ public class ShiftCashInvoiceAdminController {
     private final ShiftCashInvoiceAutoService autoService;
 
     @PostMapping("/auto-generate")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
     public ResponseEntity<Map<String, Object>> autoGenerate(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {

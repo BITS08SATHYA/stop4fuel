@@ -99,11 +99,12 @@ const getApiBaseUrl = () => {
 
 export function getDashboardType(designation?: string, role?: string): "owner" | "cashier" | "employee" | "customer" {
     if (role === "CUSTOMER") return "customer";
-    if (role === "OWNER" || role === "ADMIN") return "owner";
+    if (role === "OWNER" || role === "ADMIN" || role === "SYSTEM_ADMIN") return "owner";
 
     const designationMap: Record<string, "owner" | "cashier" | "employee"> = {
         "Manager": "owner",
         "Supervisor": "owner",
+        "System Admin": "owner",
         "Cashier": "cashier",
     };
     return designationMap[designation || ""] || "employee";
@@ -392,7 +393,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hasPermission = useCallback(
         (code: string) => {
             if (!user) return false;
-            if (user.role === "OWNER") return true;
+            if (user.role === "OWNER" || user.role === "SYSTEM_ADMIN") return true;
             return user.permissions.includes(code);
         },
         [user],

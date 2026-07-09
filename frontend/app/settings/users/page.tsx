@@ -49,7 +49,7 @@ function formatRelativeTime(dt: string | null): string {
     return new Date(dt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 }
 
-const ROLES = ["OWNER", "ADMIN", "CASHIER", "EMPLOYEE", "CUSTOMER", "DEALER"];
+const ROLES = ["OWNER", "ADMIN", "SYSTEM_ADMIN", "CASHIER", "EMPLOYEE", "CUSTOMER", "DEALER"];
 const PAGE_SIZE = 7;
 
 export default function UsersPage() {

@@ -26,7 +26,7 @@ public class PermissionService {
     @Transactional(readOnly = true)
     @Cacheable(value = "permissions", key = "#roleType + ':' + #permissionCode")
     public boolean hasPermission(String roleType, String permissionCode) {
-        if ("OWNER".equalsIgnoreCase(roleType)) {
+        if ("OWNER".equalsIgnoreCase(roleType) || "SYSTEM_ADMIN".equalsIgnoreCase(roleType)) {
             return true;
         }
         Roles role = rolesRepository.findByRoleType(roleType).orElse(null);
@@ -37,7 +37,7 @@ public class PermissionService {
     @Transactional(readOnly = true)
     @Cacheable(value = "rolePermissions", key = "#roleType")
     public List<String> getPermissionsForRole(String roleType) {
-        if ("OWNER".equalsIgnoreCase(roleType)) {
+        if ("OWNER".equalsIgnoreCase(roleType) || "SYSTEM_ADMIN".equalsIgnoreCase(roleType)) {
             return permissionRepository.findAll().stream()
                     .map(Permission::getCode)
                     .collect(Collectors.toList());

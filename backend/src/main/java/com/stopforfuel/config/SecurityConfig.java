@@ -71,7 +71,7 @@ public class SecurityConfig {
             http
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/api/actuator/health", "/api/actuator/health/**", "/api/actuator/info", "/health").permitAll()
-                    .requestMatchers("/api/actuator/**").hasAnyRole("OWNER", "ADMIN")
+                    .requestMatchers("/api/actuator/**").hasAnyRole("OWNER", "ADMIN", "SYSTEM_ADMIN")
                     .requestMatchers("/api/auth/login", "/api/auth/logout", "/api/auth/mfa/verify").permitAll()
                     .requestMatchers("/api/auth/signup-callback").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

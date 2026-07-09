@@ -38,7 +38,7 @@ public class StockRoundingAdminController {
     private final CashierStockRepository cashierStockRepository;
 
     @PostMapping("/round-whole-count")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
     @Transactional
     public ResponseEntity<Map<String, Object>> roundWholeCount() {
         Long scid = SecurityUtils.getScid();
@@ -128,7 +128,7 @@ public class StockRoundingAdminController {
      * Legacy rows produced the "Diesel closing -1188.36" artifact on the Product Stock page.
      */
     @PostMapping("/purge-fuel-product-inventory")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
     @Transactional
     public ResponseEntity<Map<String, Object>> purgeFuelProductInventory() {
         Long scid = SecurityUtils.getScid();
