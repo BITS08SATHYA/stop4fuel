@@ -77,12 +77,6 @@ function tenureLabel(joinDate?: string): string {
     return `● ${y}+ YEAR${y === 1 ? "" : "S"}${tier}`;
 }
 
-export function cardSerial(employee: Employee): string {
-    const digits = (employee.employeeCode || "").replace(/\D/g, "");
-    const num = digits ? digits.padStart(4, "0") : String(employee.id).padStart(4, "0");
-    return `SFF-${num}-A`;
-}
-
 function initials(name: string): string {
     return name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 }
@@ -132,7 +126,7 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                     <div style={{ height: 2, background: `linear-gradient(90deg, ${GOLD}, rgba(240,169,61,0))`, marginTop: 12 }} />
 
                     {/* Photo */}
-                    <div style={{ display: "flex", justifyContent: "center", marginTop: 26 }}>
+                    <div style={{ display: "flex", justifyContent: "center", marginTop: 36 }}>
                         <div style={{ width: 160, height: 160, borderRadius: "50%", padding: 4, background: `linear-gradient(145deg, ${GOLD}, ${GOLD_SOFT})`, boxShadow: "0 8px 24px rgba(0,0,0,0.45)" }}>
                             <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "#222732", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 {photoDataUrl ? (
@@ -147,7 +141,7 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                     <div style={{ textAlign: "center", fontSize: 9, letterSpacing: 2.5, color: MUTED, marginTop: 8 }}>PHOTO</div>
 
                     {/* Name + role */}
-                    <div style={{ textAlign: "center", fontSize: 27, fontWeight: 800, marginTop: 10, color: WHITE }}>{employee.name}</div>
+                    <div style={{ textAlign: "center", fontSize: 27, fontWeight: 800, marginTop: 14, color: WHITE }}>{employee.name}</div>
                     {/* Explicit height + matching lineHeight (no vertical padding): html2canvas
                         drops padded inline-block text to the bottom edge of the pill otherwise. */}
                     <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
@@ -162,14 +156,11 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                     </div>
 
                     {/* Detail grid */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: 14, columnGap: 10, marginTop: 22 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: 20, columnGap: 10, marginTop: 34 }}>
                         <Field label="EMPLOYEE ID" value={employee.employeeCode || "—"} />
                         <Field label="PHONE" value={formatPhone(employee.phone)} />
                         <Field label="DATE OF JOINING" value={formatDate(employee.joinDate)} />
                         <Field label="BLOOD GROUP" value={employee.bloodGroup || "—"} valueColor={RED} />
-                    </div>
-                    <div style={{ marginTop: 14 }}>
-                        <Field label="CARD SERIAL" value={cardSerial(employee)} mono />
                     </div>
                 </div>
             </div>
@@ -240,11 +231,11 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
 });
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-function Field({ label, value, valueColor, mono }: { label: string; value: string; valueColor?: string; mono?: boolean }) {
+function Field({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
     return (
         <div>
             <div style={{ fontSize: 9, letterSpacing: 1.5, color: LABEL }}>{label}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: valueColor || WHITE, marginTop: 3, fontFamily: mono ? "'Courier New', monospace" : undefined, letterSpacing: mono ? 1.5 : undefined }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: valueColor || WHITE, marginTop: 3 }}>
                 {value}
             </div>
         </div>
