@@ -6,7 +6,7 @@ import { Download, Loader2, ChevronDown, FileText, ImageIcon } from "lucide-reac
 import { Modal } from "@/components/ui/modal";
 import { getEmployeeFileUrl, API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
-import { IdCard, CARD_W, CARD_H, type IdCardCompany } from "./id-card";
+import { IdCard, CARD_W, CARD_H, type IdCardCompany, type IdCardTemplate } from "./id-card";
 import {
     exportIdCard, imageUrlToDataUrl, buildVCard, generateQrDataUrl, type IdCardFormat,
 } from "@/lib/id-card-export";
@@ -35,6 +35,15 @@ const THEMES: { name: string; bg: string; fg: string }[] = [
 ];
 const DEFAULT_THEME = THEMES[0];
 
+// Accent colour used for pills / rules (classic) and swooshes (modern).
+const ACCENTS = ["#f0a93d", "#e0b400", "#2f7de1", "#0f9d8b", "#d64545", "#7a5cd6", "#2f3a4a"];
+const DEFAULT_ACCENT = ACCENTS[0];
+
+const TEMPLATES: { id: IdCardTemplate; name: string; hint: string }[] = [
+    { id: "classic", name: "Classic", hint: "Round photo, centred layout" },
+    { id: "modern", name: "Modern", hint: "Curved accent bands, barcode" },
+];
+
 export function IdCardModal({ employee, onClose }: IdCardModalProps) {
     const frontRef = useRef<HTMLDivElement>(null);
     const backRef = useRef<HTMLDivElement>(null);
@@ -46,6 +55,8 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
     const [company, setCompany] = useState<IdCardCompany>({ name: "StopForFuel" });
     const [bgColor, setBgColor] = useState(DEFAULT_THEME.bg);
     const [fontColor, setFontColor] = useState(DEFAULT_THEME.fg);
+    const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
+    const [template, setTemplate] = useState<IdCardTemplate>("classic");
 
     useEffect(() => {
         let cancelled = false;
@@ -145,8 +156,8 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
                         <div style={{ position: "relative", width: previewBoxW, height: previewBoxH, flexShrink: 0 }}>
                             {/* Visible preview — scaled down for display only (no refs) */}
                             <div style={{ position: "absolute", top: 0, left: 0, transform: `scale(${PREVIEW_SCALE})`, transformOrigin: "top left", display: "flex", gap: GAP }}>
-                                <IdCard side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} bgColor={bgColor} fontColor={fontColor} />
-                                <IdCard side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} bgColor={bgColor} fontColor={fontColor} />
+                                <IdCard side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} bgColor={bgColor} fontColor={fontColor} accentColor={accentColor} template={template} />
+                                <IdCard side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} bgColor={bgColor} fontColor={fontColor} accentColor={accentColor} template={template} />
                             </div>
                             {/*
                              * Capture source — full-size, un-transformed copies portalled to
@@ -156,8 +167,8 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
                              */}
                             {createPortal(
                                 <div aria-hidden style={{ position: "fixed", top: 0, left: -100000, display: "flex", gap: GAP }}>
-                                    <IdCard ref={frontRef} side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} bgColor={bgColor} fontColor={fontColor} />
-                                    <IdCard ref={backRef} side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} bgColor={bgColor} fontColor={fontColor} />
+                                    <IdCard ref={frontRef} side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} bgColor={bgColor} fontColor={fontColor} accentColor={accentColor} template={template} />
+                                    <IdCard ref={backRef} side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} bgColor={bgColor} fontColor={fontColor} accentColor={accentColor} template={template} />
                                 </div>,
                                 document.body,
                             )}
@@ -170,10 +181,27 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
                     <span style={{ width: CARD_W * PREVIEW_SCALE }} className="text-center">BACK</span>
                 </div>
 
-                {/* Colour customisation */}
+                {/* Template + colour customisation */}
                 {!loading && (
                     <div className="space-y-3 pt-1">
                         <div className="text-xs font-medium text-muted-foreground text-center">
+                            Template
+                        </div>
+                        <div className="flex justify-center gap-2">
+                            {TEMPLATES.map((t) => (
+                                <button
+                                    key={t.id}
+                                    type="button"
+                                    title={t.hint}
+                                    onClick={() => setTemplate(t.id)}
+                                    className={`px-4 py-1.5 rounded-full border text-xs transition-colors ${template === t.id ? "border-primary ring-1 ring-primary text-foreground" : "border-border text-muted-foreground hover:border-primary/60"}`}
+                                >
+                                    {t.name}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="text-xs font-medium text-muted-foreground text-center pt-1">
                             Card colour — try different combinations
                         </div>
                         <div className="flex flex-wrap justify-center gap-2">
@@ -194,6 +222,26 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
                                     </button>
                                 );
                             })}
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                            <span className="text-xs text-muted-foreground mr-1">Accent</span>
+                            {ACCENTS.map((a) => (
+                                <button
+                                    key={a}
+                                    type="button"
+                                    aria-label={`Accent ${a}`}
+                                    onClick={() => setAccentColor(a)}
+                                    className={`w-5 h-5 rounded-full border transition-transform ${accentColor === a ? "ring-2 ring-primary scale-110 border-transparent" : "border-black/20 hover:scale-110"}`}
+                                    style={{ background: a }}
+                                />
+                            ))}
+                            <input
+                                type="color"
+                                value={accentColor}
+                                onChange={(e) => setAccentColor(e.target.value)}
+                                className="w-7 h-6 rounded cursor-pointer bg-transparent border border-border p-0.5"
+                                aria-label="Accent color"
+                            />
                         </div>
                         <div className="flex justify-center gap-8">
                             <label className="flex items-center gap-2 text-xs text-muted-foreground">

@@ -1,113 +1,38 @@
 "use client";
 
 import React from "react";
-import type { Employee } from "./types";
+import { IdCardModern } from "./id-card-modern";
+import {
+    CARD_H, CARD_W, DEFAULT_BG, DEFAULT_FG, GOLD, WHITE,
+    formatDate, formatPhone, initials, isLight, readableOn, shade, signatureInitials, withAlpha,
+    type IdCardCompany, type IdCardProps,
+} from "./id-card-shared";
+
+export { CARD_W, CARD_H };
+export type { IdCardCompany, IdCardProps, IdCardTemplate } from "./id-card-shared";
 
 /**
- * Visual employee ID card (front / back) used for PDF / PNG / JPEG export.
- *
- * IMPORTANT: every element uses explicit inline hex/rgb colors and fixed-px
- * sizing. We deliberately avoid Tailwind classes here because html2canvas
- * (v1.4.1) cannot parse Tailwind v4's `oklch()` color functions and would
- * throw while cloning the node. Keeping the subtree self-contained also makes
- * the captured pixels identical regardless of the app's light/dark theme.
+ * Employee ID card used for the preview and the PDF / PNG / JPEG export.
+ * `IdCard` picks the template; the classic design lives here, the modern one in
+ * ./id-card-modern. Styling rules for both are documented in ./id-card-shared.
  */
 
-export interface IdCardCompany {
-    name: string;
-    address?: string;
-    phone?: string;
-    ownerName?: string;
-    ownerPhone?: string;
-    logoDataUrl?: string | null;
-}
-
-export interface IdCardProps {
-    side: "front" | "back";
-    employee: Employee;
-    company: IdCardCompany;
-    /** Base64 data URL of the employee photo (null → silhouette placeholder). */
-    photoDataUrl?: string | null;
-    /** Base64 data URL of the QR code (back side). */
-    qrDataUrl?: string | null;
-    /** Card background base color (hex). Secondary tones are derived from it. */
-    bgColor?: string;
-    /** Primary text color (hex). Muted/label tones are derived from it. */
-    fontColor?: string;
-}
-
-// ── Dimensions (CR80 ~0.63 ratio) ───────────────────────────────────────────
-export const CARD_W = 366;
-export const CARD_H = 640;
-
-// ── Palette ──────────────────────────────────────────────────────────────────
-// GOLD / RED are fixed accents (readable on both light and dark cards); every
-// other tone is derived at render time from the chosen bg / font colors.
-const GOLD = "#f0a93d";
-const GOLD_SOFT = "#e89b2c";
-const WHITE = "#ffffff";
-const DEFAULT_BG = "#ffffff";
-const DEFAULT_FG = "#101317";
-
-// ── Color helpers (keep output as inline hex/rgba — never oklch) ───────────────
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-    const h = hex.replace("#", "");
-    const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-    const n = parseInt(v, 16);
-    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-function toHex(r: number, g: number, b: number): string {
-    const c = (x: number) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0");
-    return `#${c(r)}${c(g)}${c(b)}`;
-}
-/** Shift a color toward black (amt < 0) or white (amt > 0); amt is -100..100. */
-function shade(hex: string, amt: number): string {
-    const { r, g, b } = hexToRgb(hex);
-    const t = amt < 0 ? 0 : 255;
-    const p = Math.abs(amt) / 100;
-    return toHex(r + (t - r) * p, g + (t - g) * p, b + (t - b) * p);
-}
-function withAlpha(hex: string, a: number): string {
-    const { r, g, b } = hexToRgb(hex);
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
-/** True when the color is bright enough that dark text sits on it. */
-function isLight(hex: string): boolean {
-    const { r, g, b } = hexToRgb(hex);
-    return (0.299 * r + 0.587 * g + 0.114 * b) > 150;
-}
-
-// ── Formatters ────────────────────────────────────────────────────────────────
-function formatDate(iso?: string): string {
-    if (!iso) return "—";
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-    if (!m) return iso;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${parseInt(m[3], 10)} ${months[parseInt(m[2], 10) - 1]} ${m[1]}`;
-}
-
-function formatPhone(p?: string): string {
-    if (!p) return "—";
-    const digits = p.replace(/\D/g, "");
-    if (digits.length === 10) return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
-    if (p.trim().startsWith("+")) return p.trim();
-    return p;
-}
-
-function initials(name: string): string {
-    return name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
-
-function signatureInitials(name: string): string {
-    return name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join(".").toUpperCase();
-}
+// ── Template dispatcher ───────────────────────────────────────────────────────
+export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdCard(props, ref) {
+    return props.template === "modern"
+        ? <IdCardModern ref={ref} {...props} />
+        : <IdCardClassic ref={ref} {...props} />;
+});
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdCard(
-    { side, employee, company, photoDataUrl, qrDataUrl, bgColor, fontColor }, ref,
+const IdCardClassic = React.forwardRef<HTMLDivElement, IdCardProps>(function IdCardClassic(
+    { side, employee, company, photoDataUrl, qrDataUrl, bgColor, fontColor, accentColor }, ref,
 ) {
     const bg = bgColor || DEFAULT_BG;
     const fg = fontColor || DEFAULT_FG;
+    const accent = accentColor || GOLD;
+    const accentSoft = shade(accent, -8);
+    const onAccent = readableOn(accent);
     // Derived tones so any bg/font combo stays legible. Light cards get a much
     // gentler gradient — the dark-card shading would turn a white card grey.
     const lightCard = isLight(bg);
@@ -158,11 +83,11 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                         </div>
                         <LogoBlock company={company} muted={muted} />
                     </div>
-                    <div style={{ height: 2, background: `linear-gradient(90deg, ${GOLD}, rgba(240,169,61,0))`, marginTop: 12 }} />
+                    <div style={{ height: 2, background: `linear-gradient(90deg, ${accent}, ${withAlpha(accent, 0)})`, marginTop: 12 }} />
 
                     {/* Photo */}
                     <div style={{ display: "flex", justifyContent: "center", marginTop: 32 }}>
-                        <div style={{ width: 172, height: 172, borderRadius: "50%", padding: 4, background: `linear-gradient(145deg, ${GOLD}, ${GOLD_SOFT})`, boxShadow: "0 8px 24px rgba(0,0,0,0.28)" }}>
+                        <div style={{ width: 172, height: 172, borderRadius: "50%", padding: 4, background: `linear-gradient(145deg, ${accent}, ${accentSoft})`, boxShadow: "0 8px 24px rgba(0,0,0,0.28)" }}>
                             <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "#222732", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 {photoDataUrl ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -181,8 +106,8 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                         lineHeight matches it — html2canvas ignores flex centring and drops padded
                         inline text to the bottom edge of the pill. */}
                     <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-                        <span style={{ display: "block", background: `linear-gradient(145deg, ${GOLD}, ${GOLD_SOFT})`, height: 34, borderRadius: 20, padding: "0 26px", whiteSpace: "nowrap" }}>
-                            <span style={{ display: "block", height: 34, lineHeight: "34px", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#1a1205", textAlign: "center" }}>
+                        <span style={{ display: "block", background: `linear-gradient(145deg, ${accent}, ${accentSoft})`, height: 34, borderRadius: 20, padding: "0 26px", whiteSpace: "nowrap" }}>
+                            <span style={{ display: "block", height: 34, lineHeight: "34px", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: onAccent, textAlign: "center" }}>
                                 {(employee.designation || "STAFF").toUpperCase()}
                             </span>
                         </span>
@@ -218,21 +143,21 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
 
                 <div style={{ height: 1, background: divider, margin: "16px 0" }} />
 
-                <SectionLabel>EMPLOYEE ADDRESS</SectionLabel>
+                <SectionLabel accent={accent}>EMPLOYEE ADDRESS</SectionLabel>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: soft, lineHeight: 1.4, marginTop: 6 }}>
                     {[employee.address, [employee.city, employee.state].filter(Boolean).join(", "), employee.pincode ? `- ${employee.pincode}` : ""].filter(Boolean).join(" ") || "—"}
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 14, marginTop: 16 }}>
                     <div>
-                        <SectionLabel>EMERGENCY CONTACT</SectionLabel>
+                        <SectionLabel accent={accent}>EMERGENCY CONTACT</SectionLabel>
                         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.5, color: label, marginTop: 10 }}>NAME</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: fg, marginTop: 2 }}>{employee.emergencyContact || "—"}</div>
                         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.5, color: label, marginTop: 8 }}>PHONE</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: fg, marginTop: 2 }}>{formatPhone(employee.emergencyPhone)}</div>
                     </div>
                     <div>
-                        <SectionLabel>OUTLET OWNER</SectionLabel>
+                        <SectionLabel accent={accent}>OUTLET OWNER</SectionLabel>
                         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.5, color: label, marginTop: 10 }}>NAME</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: fg, marginTop: 2 }}>{company.ownerName || "—"}</div>
                         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.5, color: label, marginTop: 8 }}>PHONE</div>
@@ -255,7 +180,7 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                     <div style={{ fontSize: 9.5, fontWeight: 600, color: faint, marginTop: 3 }}>If found, please return to the above address.</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12 }}>
-                    <span style={{ width: 14, height: 14, borderRadius: "50%", background: GOLD, display: "inline-block" }} />
+                    <span style={{ width: 14, height: 14, borderRadius: "50%", background: accent, display: "inline-block" }} />
                     <span style={{ fontSize: 11, color: muted }}>Powered by <b style={{ color: soft }}>StopForFuel</b></span>
                 </div>
             </div>
@@ -275,8 +200,8 @@ function Field({ label, value, valueColor, fg, labelColor, big }: { label: strin
     );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-    return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: GOLD }}>{children}</div>;
+function SectionLabel({ children, accent }: { children: React.ReactNode; accent: string }) {
+    return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: accent }}>{children}</div>;
 }
 
 function LogoBlock({ company, muted }: { company: IdCardCompany; muted: string }) {
