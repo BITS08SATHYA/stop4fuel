@@ -22,6 +22,7 @@ const GAP = 28;
 
 // Quick-pick background / text combinations.
 const THEMES: { name: string; bg: string; fg: string }[] = [
+    { name: "White", bg: "#ffffff", fg: "#101317" },
     { name: "Midnight", bg: "#11141a", fg: "#ffffff" },
     { name: "Charcoal", bg: "#22262e", fg: "#ffffff" },
     { name: "Royal", bg: "#101f45", fg: "#ffffff" },
