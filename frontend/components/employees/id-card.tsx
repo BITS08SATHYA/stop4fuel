@@ -73,14 +73,6 @@ function withAlpha(hex: string, a: number): string {
 }
 
 // ── Formatters ────────────────────────────────────────────────────────────────
-function formatDate(iso?: string): string {
-    if (!iso) return "—";
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-    if (!m) return iso;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${parseInt(m[3], 10)} ${months[parseInt(m[2], 10) - 1]} ${m[1]}`;
-}
-
 function formatPhone(p?: string): string {
     if (!p) return "—";
     const digits = p.replace(/\D/g, "");
@@ -198,7 +190,6 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: 20, columnGap: 10, marginTop: 34 }}>
                         <Field label="EMPLOYEE ID" value={employee.employeeCode || "—"} fg={fg} labelColor={label} />
                         <Field label="PHONE" value={formatPhone(employee.phone)} fg={fg} labelColor={label} />
-                        <Field label="DATE OF JOINING" value={formatDate(employee.joinDate)} fg={fg} labelColor={label} />
                         <Field label="BLOOD GROUP" value={employee.bloodGroup || "—"} valueColor={RED} fg={fg} labelColor={label} />
                     </div>
                 </div>
