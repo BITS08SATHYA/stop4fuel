@@ -20,6 +20,20 @@ interface IdCardModalProps {
 const PREVIEW_SCALE = 0.62;
 const GAP = 28;
 
+// Quick-pick background / text combinations.
+const THEMES: { name: string; bg: string; fg: string }[] = [
+    { name: "Midnight", bg: "#11141a", fg: "#ffffff" },
+    { name: "Charcoal", bg: "#22262e", fg: "#ffffff" },
+    { name: "Royal", bg: "#101f45", fg: "#ffffff" },
+    { name: "Forest", bg: "#0f2a20", fg: "#eafaf1" },
+    { name: "Teal", bg: "#083330", fg: "#e6fbf6" },
+    { name: "Wine", bg: "#2a0f18", fg: "#ffe9ef" },
+    { name: "Espresso", bg: "#241a12", fg: "#f6ecdf" },
+    { name: "Ivory", bg: "#f2efe6", fg: "#20262f" },
+    { name: "Cloud", bg: "#e6ebf1", fg: "#182432" },
+];
+const DEFAULT_THEME = THEMES[0];
+
 export function IdCardModal({ employee, onClose }: IdCardModalProps) {
     const frontRef = useRef<HTMLDivElement>(null);
     const backRef = useRef<HTMLDivElement>(null);
@@ -29,6 +43,8 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
     const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
     const [company, setCompany] = useState<IdCardCompany>({ name: "StopForFuel" });
+    const [bgColor, setBgColor] = useState(DEFAULT_THEME.bg);
+    const [fontColor, setFontColor] = useState(DEFAULT_THEME.fg);
 
     useEffect(() => {
         let cancelled = false;
@@ -128,8 +144,8 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
                         <div style={{ position: "relative", width: previewBoxW, height: previewBoxH, flexShrink: 0 }}>
                             {/* Visible preview — scaled down for display only (no refs) */}
                             <div style={{ position: "absolute", top: 0, left: 0, transform: `scale(${PREVIEW_SCALE})`, transformOrigin: "top left", display: "flex", gap: GAP }}>
-                                <IdCard side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} />
-                                <IdCard side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} />
+                                <IdCard side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} bgColor={bgColor} fontColor={fontColor} />
+                                <IdCard side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} bgColor={bgColor} fontColor={fontColor} />
                             </div>
                             {/*
                              * Capture source — full-size, un-transformed copies portalled to
@@ -139,8 +155,8 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
                              */}
                             {createPortal(
                                 <div aria-hidden style={{ position: "fixed", top: 0, left: -100000, display: "flex", gap: GAP }}>
-                                    <IdCard ref={frontRef} side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} />
-                                    <IdCard ref={backRef} side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} />
+                                    <IdCard ref={frontRef} side="front" employee={employee} company={company} photoDataUrl={photoDataUrl} bgColor={bgColor} fontColor={fontColor} />
+                                    <IdCard ref={backRef} side="back" employee={employee} company={company} qrDataUrl={qrDataUrl} bgColor={bgColor} fontColor={fontColor} />
                                 </div>,
                                 document.body,
                             )}
@@ -152,6 +168,56 @@ export function IdCardModal({ employee, onClose }: IdCardModalProps) {
                     <span style={{ width: CARD_W * PREVIEW_SCALE }} className="text-center">FRONT</span>
                     <span style={{ width: CARD_W * PREVIEW_SCALE }} className="text-center">BACK</span>
                 </div>
+
+                {/* Colour customisation */}
+                {!loading && (
+                    <div className="space-y-3 pt-1">
+                        <div className="text-xs font-medium text-muted-foreground text-center">
+                            Card colour — try different combinations
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {THEMES.map((t) => {
+                                const active = t.bg === bgColor && t.fg === fontColor;
+                                return (
+                                    <button
+                                        key={t.name}
+                                        type="button"
+                                        title={t.name}
+                                        onClick={() => { setBgColor(t.bg); setFontColor(t.fg); }}
+                                        className={`flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full border text-xs transition-colors ${active ? "border-primary ring-1 ring-primary text-foreground" : "border-border text-muted-foreground hover:border-primary/60"}`}
+                                    >
+                                        <span className="flex items-center justify-center w-4 h-4 rounded-full border border-black/20" style={{ background: t.bg }}>
+                                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.fg }} />
+                                        </span>
+                                        {t.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="flex justify-center gap-8">
+                            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                                Background
+                                <input
+                                    type="color"
+                                    value={bgColor}
+                                    onChange={(e) => setBgColor(e.target.value)}
+                                    className="w-9 h-8 rounded cursor-pointer bg-transparent border border-border p-0.5"
+                                    aria-label="Background color"
+                                />
+                            </label>
+                            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                                Text
+                                <input
+                                    type="color"
+                                    value={fontColor}
+                                    onChange={(e) => setFontColor(e.target.value)}
+                                    className="w-9 h-8 rounded cursor-pointer bg-transparent border border-border p-0.5"
+                                    aria-label="Text color"
+                                />
+                            </label>
+                        </div>
+                    </div>
+                )}
 
                 {/* Download dropdown */}
                 <div className="flex justify-center">

@@ -30,6 +30,10 @@ export interface IdCardProps {
     photoDataUrl?: string | null;
     /** Base64 data URL of the QR code (back side). */
     qrDataUrl?: string | null;
+    /** Card background base color (hex). Secondary tones are derived from it. */
+    bgColor?: string;
+    /** Primary text color (hex). Muted/label tones are derived from it. */
+    fontColor?: string;
 }
 
 // ── Dimensions (CR80 ~0.63 ratio) ───────────────────────────────────────────
@@ -37,13 +41,36 @@ export const CARD_W = 366;
 export const CARD_H = 640;
 
 // ── Palette ──────────────────────────────────────────────────────────────────
+// GOLD / RED are fixed accents (readable on both light and dark cards); every
+// other tone is derived at render time from the chosen bg / font colors.
 const GOLD = "#f0a93d";
 const GOLD_SOFT = "#e89b2c";
 const WHITE = "#ffffff";
-const MUTED = "#8a93a4";
-const LABEL = "#7c8696";
 const RED = "#ff5d5d";
-const PANEL_BG = "linear-gradient(160deg, #1b1f27 0%, #11141a 55%, #0a0c10 100%)";
+const DEFAULT_BG = "#11141a";
+
+// ── Color helpers (keep output as inline hex/rgba — never oklch) ───────────────
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+    const h = hex.replace("#", "");
+    const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+    const n = parseInt(v, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function toHex(r: number, g: number, b: number): string {
+    const c = (x: number) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0");
+    return `#${c(r)}${c(g)}${c(b)}`;
+}
+/** Shift a color toward black (amt < 0) or white (amt > 0); amt is -100..100. */
+function shade(hex: string, amt: number): string {
+    const { r, g, b } = hexToRgb(hex);
+    const t = amt < 0 ? 0 : 255;
+    const p = Math.abs(amt) / 100;
+    return toHex(r + (t - r) * p, g + (t - g) * p, b + (t - b) * p);
+}
+function withAlpha(hex: string, a: number): string {
+    const { r, g, b } = hexToRgb(hex);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 function formatDate(iso?: string): string {
@@ -87,17 +114,29 @@ function signatureInitials(name: string): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdCard(
-    { side, employee, company, photoDataUrl, qrDataUrl }, ref,
+    { side, employee, company, photoDataUrl, qrDataUrl, bgColor, fontColor }, ref,
 ) {
+    const bg = bgColor || DEFAULT_BG;
+    const fg = fontColor || WHITE;
+    // Derived tones so any bg/font combo stays legible.
+    const panelBg = `linear-gradient(160deg, ${shade(bg, 12)} 0%, ${bg} 55%, ${shade(bg, -45)} 100%)`;
+    const headerBg = shade(bg, -55);
+    const notch = shade(bg, 28);
+    const muted = withAlpha(fg, 0.56);
+    const label = withAlpha(fg, 0.5);
+    const soft = withAlpha(fg, 0.82);
+    const faint = withAlpha(fg, 0.4);
+    const divider = withAlpha(fg, 0.14);
+
     const shell: React.CSSProperties = {
         width: CARD_W,
         height: CARD_H,
         borderRadius: 26,
-        background: PANEL_BG,
+        background: panelBg,
         position: "relative",
         overflow: "hidden",
         fontFamily: "'Helvetica Neue', Arial, sans-serif",
-        color: WHITE,
+        color: fg,
         boxSizing: "border-box",
     };
 
@@ -105,23 +144,23 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
         return (
             <div ref={ref} style={shell}>
                 {/* lanyard notch */}
-                <div style={{ position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)", width: 54, height: 9, borderRadius: 6, background: "#33373f" }} />
+                <div style={{ position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)", width: 54, height: 9, borderRadius: 6, background: notch }} />
 
                 <div style={{ padding: "40px 28px 26px" }}>
                     {/* Header */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                         <div style={{ flex: 1, minWidth: 0, overflowWrap: "break-word" }}>
-                            <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.12, color: WHITE }}>
+                            <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.12, color: fg }}>
                                 {(company.name || "Company").split(" ").slice(0, 2).join(" ")}
                             </div>
-                            <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.12, color: WHITE }}>
+                            <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.12, color: fg }}>
                                 {(company.name || "").split(" ").slice(2).join(" ")}
                             </div>
-                            <div style={{ fontSize: 9.5, letterSpacing: 2.5, color: MUTED, marginTop: 6 }}>
+                            <div style={{ fontSize: 9.5, letterSpacing: 2.5, color: muted, marginTop: 6 }}>
                                 EMPLOYEE IDENTITY CARD
                             </div>
                         </div>
-                        <LogoBlock company={company} />
+                        <LogoBlock company={company} muted={muted} />
                     </div>
                     <div style={{ height: 2, background: `linear-gradient(90deg, ${GOLD}, rgba(240,169,61,0))`, marginTop: 12 }} />
 
@@ -138,10 +177,10 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                             </div>
                         </div>
                     </div>
-                    <div style={{ textAlign: "center", fontSize: 9, letterSpacing: 2.5, color: MUTED, marginTop: 8 }}>PHOTO</div>
+                    <div style={{ textAlign: "center", fontSize: 9, letterSpacing: 2.5, color: muted, marginTop: 8 }}>PHOTO</div>
 
                     {/* Name + role */}
-                    <div style={{ textAlign: "center", fontSize: 27, fontWeight: 800, marginTop: 14, color: WHITE }}>{employee.name}</div>
+                    <div style={{ textAlign: "center", fontSize: 27, fontWeight: 800, marginTop: 14, color: fg }}>{employee.name}</div>
                     {/* Explicit height + matching lineHeight (no vertical padding): html2canvas
                         drops padded inline-block text to the bottom edge of the pill otherwise. */}
                     <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
@@ -157,10 +196,10 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
 
                     {/* Detail grid */}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: 20, columnGap: 10, marginTop: 34 }}>
-                        <Field label="EMPLOYEE ID" value={employee.employeeCode || "—"} />
-                        <Field label="PHONE" value={formatPhone(employee.phone)} />
-                        <Field label="DATE OF JOINING" value={formatDate(employee.joinDate)} />
-                        <Field label="BLOOD GROUP" value={employee.bloodGroup || "—"} valueColor={RED} />
+                        <Field label="EMPLOYEE ID" value={employee.employeeCode || "—"} fg={fg} labelColor={label} />
+                        <Field label="PHONE" value={formatPhone(employee.phone)} fg={fg} labelColor={label} />
+                        <Field label="DATE OF JOINING" value={formatDate(employee.joinDate)} fg={fg} labelColor={label} />
+                        <Field label="BLOOD GROUP" value={employee.bloodGroup || "—"} valueColor={RED} fg={fg} labelColor={label} />
                     </div>
                 </div>
             </div>
@@ -170,7 +209,7 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
     // ── Back ──
     return (
         <div ref={ref} style={shell}>
-            <div style={{ height: 64, background: "#0b0d11" }} />
+            <div style={{ height: 64, background: headerBg }} />
             <div style={{ padding: "0 28px 18px" }}>
                 {/* QR */}
                 <div style={{ display: "flex", justifyContent: "center", marginTop: -10 }}>
@@ -181,29 +220,29 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                         ) : null}
                     </div>
                 </div>
-                <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 1.5, color: MUTED, marginTop: 8 }}>Scan to save contact</div>
+                <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 1.5, color: muted, marginTop: 8 }}>Scan to save contact</div>
 
-                <div style={{ height: 1, background: "#2a2f39", margin: "16px 0" }} />
+                <div style={{ height: 1, background: divider, margin: "16px 0" }} />
 
                 <SectionLabel>EMPLOYEE ADDRESS</SectionLabel>
-                <div style={{ fontSize: 12.5, color: "#d7dbe2", lineHeight: 1.4, marginTop: 6 }}>
+                <div style={{ fontSize: 12.5, color: soft, lineHeight: 1.4, marginTop: 6 }}>
                     {[employee.address, [employee.city, employee.state].filter(Boolean).join(", "), employee.pincode ? `- ${employee.pincode}` : ""].filter(Boolean).join(" ") || "—"}
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 14, marginTop: 16 }}>
                     <div>
                         <SectionLabel>EMERGENCY CONTACT</SectionLabel>
-                        <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: LABEL, marginTop: 10 }}>NAME</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: WHITE, marginTop: 2 }}>{employee.emergencyContact || "—"}</div>
-                        <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: LABEL, marginTop: 8 }}>PHONE</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: WHITE, marginTop: 2 }}>{formatPhone(employee.emergencyPhone)}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: label, marginTop: 10 }}>NAME</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: fg, marginTop: 2 }}>{employee.emergencyContact || "—"}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: label, marginTop: 8 }}>PHONE</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: fg, marginTop: 2 }}>{formatPhone(employee.emergencyPhone)}</div>
                     </div>
                     <div>
                         <SectionLabel>OUTLET OWNER</SectionLabel>
-                        <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: LABEL, marginTop: 10 }}>NAME</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: WHITE, marginTop: 2 }}>{company.ownerName || "—"}</div>
-                        <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: LABEL, marginTop: 8 }}>PHONE</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: WHITE, marginTop: 2 }}>{formatPhone(company.ownerPhone)}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: label, marginTop: 10 }}>NAME</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: fg, marginTop: 2 }}>{company.ownerName || "—"}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: 1.5, color: label, marginTop: 8 }}>PHONE</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: fg, marginTop: 2 }}>{formatPhone(company.ownerPhone)}</div>
                     </div>
                 </div>
 
@@ -217,13 +256,13 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
 
                 {/* Footer */}
                 <div style={{ textAlign: "center", marginTop: 14 }}>
-                    <div style={{ fontSize: 10.5, color: MUTED }}>Property of {company.name}</div>
-                    {company.address ? <div style={{ fontSize: 9.5, color: "#5f6775", marginTop: 3 }}>{company.address}</div> : null}
-                    <div style={{ fontSize: 9.5, color: "#5f6775", marginTop: 3 }}>If found, please return to the above address.</div>
+                    <div style={{ fontSize: 10.5, color: muted }}>Property of {company.name}</div>
+                    {company.address ? <div style={{ fontSize: 9.5, color: faint, marginTop: 3 }}>{company.address}</div> : null}
+                    <div style={{ fontSize: 9.5, color: faint, marginTop: 3 }}>If found, please return to the above address.</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12 }}>
                     <span style={{ width: 14, height: 14, borderRadius: "50%", background: GOLD, display: "inline-block" }} />
-                    <span style={{ fontSize: 11, color: MUTED }}>Powered by <b style={{ color: "#cfd4dc" }}>StopForFuel</b></span>
+                    <span style={{ fontSize: 11, color: muted }}>Powered by <b style={{ color: soft }}>StopForFuel</b></span>
                 </div>
             </div>
         </div>
@@ -231,11 +270,11 @@ export const IdCard = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
 });
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-function Field({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+function Field({ label, value, valueColor, fg, labelColor }: { label: string; value: string; valueColor?: string; fg: string; labelColor: string }) {
     return (
         <div>
-            <div style={{ fontSize: 9, letterSpacing: 1.5, color: LABEL }}>{label}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: valueColor || WHITE, marginTop: 3 }}>
+            <div style={{ fontSize: 9, letterSpacing: 1.5, color: labelColor }}>{label}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: valueColor || fg, marginTop: 3 }}>
                 {value}
             </div>
         </div>
@@ -246,7 +285,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: GOLD }}>{children}</div>;
 }
 
-function LogoBlock({ company }: { company: IdCardCompany }) {
+function LogoBlock({ company, muted }: { company: IdCardCompany; muted: string }) {
     if (company.logoDataUrl) {
         return (
             <div style={{ width: 92, height: 66, borderRadius: 8, background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: "5px 7px", boxSizing: "border-box", boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }}>
@@ -256,7 +295,7 @@ function LogoBlock({ company }: { company: IdCardCompany }) {
         );
     }
     return (
-        <div style={{ width: 76, textAlign: "right", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: MUTED, lineHeight: 1.25 }}>
+        <div style={{ width: 76, textAlign: "right", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: muted, lineHeight: 1.25 }}>
             {(company.name || "STOPFORFUEL").toUpperCase()}
         </div>
     );
