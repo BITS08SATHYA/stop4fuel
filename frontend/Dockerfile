@@ -27,6 +27,11 @@ RUN npm run build
 
 # --- Stage 3: Run ---
 FROM node:20-alpine
+# The standalone Next.js server runs via `node server.js` and never needs npm.
+# Remove the bundled npm/corepack (and their vendored deps like `tar`) so the
+# runtime image carries no unused, vulnerability-prone tooling.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+           /usr/local/lib/node_modules/corepack /usr/local/bin/corepack
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 
