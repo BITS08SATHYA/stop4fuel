@@ -4,7 +4,7 @@ import React from "react";
 import { IdCardModern } from "./id-card-modern";
 import {
     CARD_H, CARD_W, DEFAULT_BG, DEFAULT_FG, GOLD, WHITE,
-    formatDate, formatPhone, initials, isLight, readableOn, shade, signatureInitials, withAlpha,
+    fitFont, formatDate, formatPhone, initials, isLight, readableOn, shade, signatureInitials, withAlpha,
     type IdCardCompany, type IdCardProps,
 } from "./id-card-shared";
 
@@ -101,13 +101,17 @@ const IdCardClassic = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                     <div style={{ textAlign: "center", fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: muted, marginTop: 8 }}>PHOTO</div>
 
                     {/* Name + role */}
-                    <div style={{ textAlign: "center", fontSize: 27, fontWeight: 800, marginTop: 14, color: fg }}>{employee.name}</div>
+                    {/* Auto-fitted so a long name stays on one line and never
+                        reflows the pill / detail grid below it. */}
+                    <div style={{ textAlign: "center", fontSize: fitFont(employee.name || "", CARD_W - 60, 27, 14, 0.62), fontWeight: 800, marginTop: 14, color: fg, height: 34, lineHeight: "34px", whiteSpace: "nowrap" }}>
+                        {employee.name}
+                    </div>
                     {/* The pill text is centred with an explicit height + a nested block whose
                         lineHeight matches it — html2canvas ignores flex centring and drops padded
                         inline text to the bottom edge of the pill. */}
                     <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
                         <span style={{ display: "block", background: `linear-gradient(145deg, ${accent}, ${accentSoft})`, height: 34, borderRadius: 20, padding: "0 26px", whiteSpace: "nowrap" }}>
-                            <span style={{ display: "block", height: 34, lineHeight: "34px", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: onAccent, textAlign: "center" }}>
+                            <span style={{ display: "block", height: 34, lineHeight: "34px", fontSize: fitFont((employee.designation || "STAFF").toUpperCase(), 246, 13, 9, 0.8), fontWeight: 800, letterSpacing: 1, color: onAccent, textAlign: "center" }}>
                                 {(employee.designation || "STAFF").toUpperCase()}
                             </span>
                         </span>

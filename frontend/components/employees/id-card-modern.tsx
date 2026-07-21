@@ -3,7 +3,7 @@
 import React from "react";
 import {
     CARD_W, CARD_H, DEFAULT_BG, DEFAULT_FG, GOLD, WHITE,
-    code39Elements, formatDate, formatPhone, initials, readableOn, shade, signatureInitials, withAlpha,
+    code39Elements, fitFont, formatDate, formatPhone, initials, readableOn, shade, signatureInitials, withAlpha,
     type IdCardProps,
 } from "./id-card-shared";
 
@@ -26,6 +26,8 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
     const label = withAlpha(fg, 0.55);
     const muted = withAlpha(fg, 0.66);
     const divider = withAlpha(fg, 0.12);
+    const name = (employee.name || "").toUpperCase();
+    const designation = (employee.designation || "STAFF").toUpperCase();
 
     const shell: React.CSSProperties = {
         width: CARD_W,
@@ -87,12 +89,14 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
                 </div>
 
                 {/* Name + designation */}
-                <div style={{ position: "absolute", top: 282, left: 0, width: CARD_W, textAlign: "center" }}>
-                    <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 0.5, color: fg, lineHeight: 1.15 }}>
-                        {(employee.name || "").toUpperCase()}
+                {/* Name + designation sit in a fixed-height block and the type
+                    auto-fits, so a long name can never push into the rows. */}
+                <div style={{ position: "absolute", top: 280, left: 20, width: CARD_W - 40, textAlign: "center" }}>
+                    <div style={{ fontSize: fitFont(name, CARD_W - 56, 26, 13, 0.74), fontWeight: 800, letterSpacing: 0.5, color: fg, height: 34, lineHeight: "34px", whiteSpace: "nowrap" }}>
+                        {name}
                     </div>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: 2, color: accentDeep, marginTop: 6 }}>
-                        {(employee.designation || "STAFF").toUpperCase()}
+                    <div style={{ fontSize: fitFont(designation, CARD_W - 64, 12.5, 8, 0.95), fontWeight: 700, letterSpacing: 2, color: accentDeep, height: 20, lineHeight: "20px", marginTop: 3, whiteSpace: "nowrap" }}>
+                        {designation}
                     </div>
                 </div>
 
@@ -105,8 +109,12 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
                 </div>
 
                 {/* Barcode */}
+                {/* Barcode always sits on a white plate with dark bars — a light
+                    barcode on a dark card is unscannable. */}
                 <div style={{ position: "absolute", bottom: 84, left: 0, width: CARD_W, textAlign: "center" }}>
-                    <Barcode text={employee.employeeCode || employee.name || "EMPLOYEE"} color={fg} />
+                    <div style={{ width: 300, height: 52, margin: "0 auto", background: WHITE, borderRadius: 6, boxSizing: "border-box", paddingTop: 5 }}>
+                        <Barcode text={employee.employeeCode || employee.name || "EMPLOYEE"} color="#111111" />
+                    </div>
                     <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 3, color: muted, marginTop: 5 }}>
                         {(employee.employeeCode || "").toUpperCase()}
                     </div>
@@ -150,7 +158,9 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
 
                 <div style={{ marginTop: 14 }}>
                     <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.5, color: label }}>EMPLOYEE ADDRESS</div>
-                    <div style={{ fontSize: 11.5, fontWeight: 600, color: muted, lineHeight: 1.4, marginTop: 3 }}>
+                    {/* Fixed 2-line box: a long address must not push the QR
+                        block into the footer swoosh. */}
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: muted, lineHeight: "16px", height: 32, overflow: "hidden", marginTop: 3 }}>
                         {[employee.address, [employee.city, employee.state].filter(Boolean).join(", "), employee.pincode ? `- ${employee.pincode}` : ""].filter(Boolean).join(" ") || "—"}
                     </div>
                 </div>

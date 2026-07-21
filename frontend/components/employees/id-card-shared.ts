@@ -103,6 +103,19 @@ export function formatPhone(p?: string): string {
     return p;
 }
 
+/**
+ * Largest font size (clamped to `base`…`min`) at which `text` still fits on one
+ * line inside `maxWidth`. `ratio` is the average glyph width as a fraction of
+ * the font size — ~0.58 for bold sans-serif, higher when letter-spaced.
+ * Approximate on purpose: the cards must never depend on measuring the DOM,
+ * because html2canvas captures an offscreen clone.
+ */
+export function fitFont(text: string, maxWidth: number, base: number, min: number, ratio = 0.58): number {
+    const n = Math.max(1, (text || "").length);
+    const size = maxWidth / (n * ratio);
+    return Math.round(Math.max(min, Math.min(base, size)) * 2) / 2;
+}
+
 export function initials(name: string): string {
     return name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 }
