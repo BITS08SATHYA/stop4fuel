@@ -28,6 +28,10 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
     const divider = withAlpha(fg, 0.12);
     const name = (employee.name || "").toUpperCase();
     const designation = (employee.designation || "STAFF").toUpperCase();
+    // Header company name: three steps, so it stays large on typical names and
+    // still fits three lines above the photo when the name is very long.
+    const companyLen = (company.name || "").length;
+    const companyNameSize = companyLen <= 26 ? 18 : companyLen <= 46 ? 16.5 : 14.5;
 
     const shell: React.CSSProperties = {
         width: CARD_W,
@@ -57,9 +61,9 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
                 </svg>
 
                 {/* Company logo */}
-                <div style={{ position: "absolute", top: 18, right: 20 }}>
+                <div style={{ position: "absolute", top: 16, right: 18 }}>
                     {company.logoDataUrl ? (
-                        <div style={{ width: 84, height: 60, borderRadius: 8, background: WHITE, display: "flex", alignItems: "center", justifyContent: "center", padding: "5px 7px", boxSizing: "border-box", boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}>
+                        <div style={{ width: 96, height: 68, borderRadius: 9, background: WHITE, display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 8px", boxSizing: "border-box", boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={company.logoDataUrl} alt="logo" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
                         </div>
@@ -67,9 +71,11 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
                 </div>
 
                 {/* Company name over the swoosh */}
-                <div style={{ position: "absolute", top: 22, left: 22, width: 200 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.15, color: onAccent }}>{company.name || "Company"}</div>
-                    <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, color: withAlpha(onAccent, 0.75), marginTop: 4 }}>
+                {/* Sized down in steps for longer names so the block still clears
+                    the logo and the photo below it. */}
+                <div style={{ position: "absolute", top: 20, left: 22, width: 214 }}>
+                    <div style={{ fontSize: companyNameSize, fontWeight: 800, lineHeight: 1.16, color: onAccent }}>{company.name || "Company"}</div>
+                    <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 2, color: withAlpha(onAccent, 0.75), marginTop: 5 }}>
                         EMPLOYEE IDENTITY CARD
                     </div>
                 </div>
