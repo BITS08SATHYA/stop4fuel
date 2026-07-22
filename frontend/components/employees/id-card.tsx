@@ -148,7 +148,7 @@ const IdCardClassic = React.forwardRef<HTMLDivElement, IdCardProps>(function IdC
                 <div style={{ height: 1, background: divider, margin: "16px 0" }} />
 
                 <SectionLabel accent={accent}>EMPLOYEE ADDRESS</SectionLabel>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: soft, lineHeight: 1.4, marginTop: 6 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: fg, lineHeight: "17px", marginTop: 6 }}>
                     {[employee.address, [employee.city, employee.state].filter(Boolean).join(", "), employee.pincode ? `- ${employee.pincode}` : ""].filter(Boolean).join(" ") || "—"}
                 </div>
 

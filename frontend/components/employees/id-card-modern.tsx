@@ -128,12 +128,11 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
     }
 
     // ── Back ──
-    const terms = [
-        "This card is company property and is non-transferable.",
-        "Wear it visibly at all times while on duty.",
-        "Report loss or damage to the management immediately.",
-        "Surrender the card on your last working day.",
-    ];
+    const addressText = [
+        employee.address,
+        [employee.city, employee.state].filter(Boolean).join(", "),
+        employee.pincode ? `- ${employee.pincode}` : "",
+    ].filter(Boolean).join(" ") || "—";
 
     return (
         <div ref={ref} style={shell}>
@@ -145,27 +144,20 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
                 <path d={`M0 ${CARD_H - 30} C${CARD_W * 0.34} ${CARD_H - 72} ${CARD_W * 0.7} ${CARD_H - 8} ${CARD_W} ${CARD_H - 48} V${CARD_H} H0 Z`} fill={accentDeep} opacity={0.5} />
             </svg>
             <div style={{ position: "absolute", top: 20, left: 0, width: CARD_W, textAlign: "center", fontSize: 14, fontWeight: 800, letterSpacing: 1.5, color: onAccent }}>
-                TERMS AND CONDITIONS
+                EMPLOYEE DETAILS
             </div>
 
-            <div style={{ position: "absolute", top: 118, left: 26, right: 26 }}>
-                {terms.map((t) => (
-                    <div key={t} style={{ display: "flex", gap: 8, marginBottom: 7 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: accent, marginTop: 5, flexShrink: 0 }} />
-                        <span style={{ fontSize: 10.5, fontWeight: 600, lineHeight: 1.45, color: muted }}>{t}</span>
-                    </div>
-                ))}
-
-                <div style={{ marginTop: 14 }}>
+            <div style={{ position: "absolute", top: 124, left: 26, right: 26 }}>
+                <div>
                     <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.5, color: label }}>EMPLOYEE ADDRESS</div>
-                    {/* Fixed 2-line box: a long address must not push the QR
-                        block into the footer swoosh. */}
-                    <div style={{ fontSize: 11.5, fontWeight: 600, color: muted, lineHeight: "16px", height: 32, overflow: "hidden", marginTop: 3 }}>
-                        {[employee.address, [employee.city, employee.state].filter(Boolean).join(", "), employee.pincode ? `- ${employee.pincode}` : ""].filter(Boolean).join(" ") || "—"}
+                    {/* Fixed 4-line box: enough room for a full address, while a
+                        very long one still cannot push the QR into the footer. */}
+                    <div style={{ fontSize: 12, fontWeight: 800, color: fg, lineHeight: "17px", height: 68, overflow: "hidden", marginTop: 4 }}>
+                        {addressText}
                     </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 12, marginTop: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 12, marginTop: 18 }}>
                     <div>
                         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 1.5, color: label }}>EMERGENCY CONTACT</div>
                         <div style={{ fontSize: 12.5, fontWeight: 800, color: fg, marginTop: 3 }}>{employee.emergencyContact || "—"}</div>
@@ -179,7 +171,7 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
                 </div>
 
                 {/* Signature */}
-                <div style={{ marginTop: 12, textAlign: "right" }}>
+                <div style={{ marginTop: 16, textAlign: "right" }}>
                     <div style={{ fontFamily: "'Segoe Script', 'Brush Script MT', cursive", fontStyle: "italic", fontSize: 24, fontWeight: 700, color: fg, height: 30, lineHeight: "30px" }}>
                         {signatureInitials(employee.name || "")}
                     </div>
@@ -188,8 +180,8 @@ export const IdCardModern = React.forwardRef<HTMLDivElement, IdCardProps>(functi
                 </div>
 
                 {/* QR */}
-                <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
-                    <div style={{ width: 96, height: 96, background: WHITE, border: `1px solid ${divider}`, borderRadius: 10, padding: 6, boxSizing: "border-box" }}>
+                <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+                    <div style={{ width: 118, height: 118, background: WHITE, border: `1px solid ${divider}`, borderRadius: 10, padding: 7, boxSizing: "border-box" }}>
                         {qrDataUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={qrDataUrl} alt="QR" style={{ width: "100%", height: "100%" }} />
