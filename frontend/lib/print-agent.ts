@@ -41,36 +41,68 @@ function toBase64(bytes: Uint8Array): string {
     return btoa(s);
 }
 
-/** True if the local print agent answers a health check. Never throws. */
-export async function probePrintAgent(): Promise<boolean> {
-    const { signal, done } = withTimeout(1200);
+export interface PrintAgentHealth {
+    version: string;
+    printer: string;
+}
+
+/**
+ * The agent's /health payload, or null if it didn't answer. Never throws.
+ *
+ * Timeouts here are deliberately loose. Loopback answers in milliseconds when
+ * the machine is idle, but these calls fire while a counter PC is loading the
+ * whole app, and an abort is indistinguishable from "no agent installed" — the
+ * app then hides the printer picker and prints through the browser dialog for
+ * the rest of the session. Waiting an extra second beats being wrong about that.
+ */
+export async function getPrintAgentHealth(): Promise<PrintAgentHealth | null> {
+    const { signal, done } = withTimeout(4000);
     try {
         const res = await fetch(agentBaseUrl() + "/health", { signal, cache: "no-store" });
-        return res.ok;
+        if (!res.ok) return null;
+        const body = await res.json();
+        return { version: String(body?.version || "?"), printer: String(body?.printer || "") };
     } catch (_) {
-        return false;
+        return null;
     } finally {
         done();
     }
+}
+
+/** True if the local print agent answers a health check. Never throws. */
+export async function probePrintAgent(): Promise<boolean> {
+    return (await getPrintAgentHealth()) !== null;
 }
 
 /**
  * List the Windows printers the agent can see. Returns [] on any failure
  * (agent down, old version without /printers, network error) so callers can
  * fall back to a free-text printer name. Never throws.
+ *
+ * Retries once, because this one is genuinely slow — the agent shells out to
+ * PowerShell for a CIM query — and it runs on page mount, in competition with
+ * everything else the app is loading. A single miss leaves the cashier typing a
+ * printer name by hand all session instead of picking it from a list.
  */
 export async function listPrintAgentPrinters(): Promise<string[]> {
-    const { signal, done } = withTimeout(3000);
-    try {
-        const res = await fetch(agentBaseUrl() + "/printers", { signal, cache: "no-store" });
-        if (!res.ok) return [];
-        const body = await res.json();
-        return Array.isArray(body?.printers) ? body.printers.filter((p: unknown) => typeof p === "string") : [];
-    } catch (_) {
-        return [];
-    } finally {
-        done();
+    for (let attempt = 0; attempt < 2; attempt++) {
+        if (attempt) await new Promise((r) => setTimeout(r, 1500));
+        const { signal, done } = withTimeout(8000);
+        try {
+            const res = await fetch(agentBaseUrl() + "/printers", { signal, cache: "no-store" });
+            if (!res.ok) continue;
+            const body = await res.json();
+            const names = Array.isArray(body?.printers)
+                ? body.printers.filter((p: unknown): p is string => typeof p === "string")
+                : [];
+            if (names.length) return names;
+        } catch (_) {
+            // fall through to the retry
+        } finally {
+            done();
+        }
     }
+    return [];
 }
 
 /**

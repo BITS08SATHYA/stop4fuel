@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Settings2, Printer, RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Settings2, Printer, RotateCcw, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import {
     DOT_MATRIX_FORM_DEFAULTS,
     generateDotMatrixTestSlip,
@@ -10,8 +10,8 @@ import {
     setDotMatrixForm,
     type DotMatrixForm,
 } from "@/lib/escp-dotmatrix";
-import { getDotMatrixPrinter, type CompanyInfo } from "@/lib/invoice-print";
-import { probePrintAgent, sendToPrintAgent } from "@/lib/print-agent";
+import { getDotMatrixPrinter, refreshPrintAgentState, type CompanyInfo } from "@/lib/invoice-print";
+import { getPrintAgentHealth, listPrintAgentPrinters, sendToPrintAgent, type PrintAgentHealth } from "@/lib/print-agent";
 import { showToast } from "@/components/ui/toast";
 
 // Alignment controls for the MSP 250's pre-printed slip.
@@ -26,6 +26,8 @@ import { showToast } from "@/components/ui/toast";
 // behaves like the other dropdowns on the page.
 interface Props {
     company?: CompanyInfo | null;
+    /** Lets a successful recheck hand the page a printer list it failed to get on mount. */
+    onPrintersFound?: (names: string[]) => void;
 }
 
 const NUMBERS: { key: keyof DotMatrixForm; label: string; hint: string; min: number; max: number }[] = [
@@ -35,15 +37,39 @@ const NUMBERS: { key: keyof DotMatrixForm; label: string; hint: string; min: num
     { key: "pageLines", label: "Page lines", hint: "Form height in lines. 4.5in at 6 LPI = 27.", min: 10, max: 72 },
 ];
 
-export function DotMatrixSettings({ company }: Props) {
+export function DotMatrixSettings({ company, onPrintersFound }: Props) {
     const [isOpen, setIsOpen] = useState(false);
     const [form, setForm] = useState<DotMatrixForm>(DOT_MATRIX_FORM_DEFAULTS);
     const [testing, setTesting] = useState(false);
+    const [health, setHealth] = useState<PrintAgentHealth | null>(null);
+    const [checking, setChecking] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
     // Seeded with the defaults for SSR, then hydrated from this machine's saved
     // geometry on mount (localStorage is not available during render).
     useEffect(() => { setForm(getDotMatrixForm()); }, []);
+
+    // Re-probe the agent and re-read its printer list. The page only does this
+    // once on mount, so a miss there (agent still starting, PC busy) otherwise
+    // stands until reload — which reads at the counter as "Print stopped working".
+    const recheck = useCallback(async () => {
+        setChecking(true);
+        try {
+            const h = await getPrintAgentHealth();
+            setHealth(h);
+            await refreshPrintAgentState();
+            if (h && onPrintersFound) {
+                const names = await listPrintAgentPrinters();
+                if (names.length) onPrintersFound(names);
+            }
+        } finally {
+            setChecking(false);
+        }
+    }, [onPrintersFound]);
+
+    // Check whenever the panel is opened: whoever opens this is already
+    // wondering why printing is misbehaving.
+    useEffect(() => { if (isOpen) void recheck(); }, [isOpen, recheck]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -63,7 +89,7 @@ export function DotMatrixSettings({ company }: Props) {
     const printTest = async () => {
         setTesting(true);
         try {
-            if (!(await probePrintAgent())) {
+            if (!(await refreshPrintAgentState())) {
                 showToast.error("Print agent not running on this PC — start it, then try the test slip again.");
                 return;
             }
@@ -93,6 +119,33 @@ export function DotMatrixSettings({ company }: Props) {
                 <div className="absolute right-0 top-full z-[9999] mt-1 w-80 p-4 bg-card border border-border rounded-xl shadow-2xl">
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
                         Dot-matrix slip
+                    </div>
+
+                    {/* Agent status. Without this the cashier has no way to tell a
+                        dead agent from a misaligned form — both just look like
+                        "the printer is wrong". */}
+                    <div className={`flex items-start gap-2 p-2 mb-3 rounded-lg border text-[11px] ${
+                        checking ? "border-border text-muted-foreground"
+                            : health ? "border-green-500/30 text-green-600 dark:text-green-400"
+                                : "border-red-500/30 text-red-600 dark:text-red-400"
+                    }`}>
+                        {checking
+                            ? <RefreshCw className="w-3.5 h-3.5 mt-px shrink-0 animate-spin" />
+                            : health ? <CheckCircle2 className="w-3.5 h-3.5 mt-px shrink-0" />
+                                : <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" />}
+                        <div className="flex-1 leading-snug">
+                            {checking ? "Checking print agent..."
+                                : health ? <>Print agent connected (v{health.version}). Default printer: {health.printer || "Windows default"}.</>
+                                    : <>Print agent not reachable. Bills will print through the browser dialog — slowly, and cropped at the edges.</>}
+                        </div>
+                        <button
+                            onClick={recheck}
+                            disabled={checking}
+                            title="Check the print agent again"
+                            className="shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
                     </div>
 
                     <label className="block text-[11px] font-semibold text-foreground mb-1">Print quality</label>

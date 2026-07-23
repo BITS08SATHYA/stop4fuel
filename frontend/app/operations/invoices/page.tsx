@@ -1802,7 +1802,7 @@ export default function InvoicesPage() {
                                             />
                                         )
                                     )}
-                                    {printTarget === "dotmatrix" && <DotMatrixSettings company={companyInfo} />}
+                                    {printTarget === "dotmatrix" && <DotMatrixSettings company={companyInfo} onPrintersFound={setAgentPrinters} />}
                                     <button
                                         onClick={() => {
                                             setPrinterTarget(printTarget);

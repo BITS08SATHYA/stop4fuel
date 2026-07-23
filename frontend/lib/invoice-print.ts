@@ -725,6 +725,21 @@ function notifyDotMatrixFallback(rejected: string): void {
     );
 }
 
+/**
+ * Re-probe the agent and adopt the answer, returning whether it is up.
+ *
+ * The load-time probe below is a single shot, and a miss (agent still starting,
+ * PC busy) sticks for the whole session — which is what a cashier experiences as
+ * "Print just opens a dialog now". This gives them a way to correct it from the
+ * printer settings panel without reloading the page.
+ */
+export async function refreshPrintAgentState(): Promise<boolean> {
+    const up = await probePrintAgent();
+    agentKnownUp = up;
+    dmFallbackWarned = false; // state genuinely changed — let it warn again if it recurs
+    return up;
+}
+
 // Probe the local print agent once when this module loads (the invoices page
 // imports it), so the first Print click already knows whether to go direct.
 let agentKnownUp: boolean | null = null;

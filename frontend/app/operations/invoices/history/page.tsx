@@ -680,7 +680,7 @@ export default function InvoiceHistoryPage() {
                         beside the printer pickers because it is the same job:
                         getting a bill onto the right paper, in the right place. */}
                     <div className="self-end pb-[1px]">
-                        <DotMatrixSettings company={companyInfo} />
+                        <DotMatrixSettings company={companyInfo} onPrintersFound={setAgentPrinters} />
                     </div>
                 </div>
             </GlassCard>
