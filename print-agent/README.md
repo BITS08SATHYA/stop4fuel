@@ -108,5 +108,23 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
   names; copy the name verbatim into `config.json`.
 - **Garbled output** — the printer isn't in ESC/POS mode. Set the TVS RP3150
   to ESC/POS (not STAR-line) emulation in its utility/DIP settings.
+- **Dot-matrix slip is slow and clipped at the edges** — that is the browser
+  fallback, not the agent path. The agent sends the MSP 250 plain ESC/P text,
+  which prints in a couple of seconds and cannot overrun the carriage; the
+  browser sends a rasterised page, which the 9-pin head plots dot by dot and
+  the OS driver crops at its unprintable margins. The app now says which
+  failure it hit — "agent is not running" (restart it) versus "could not
+  print: …" (the dot-matrix printer name beside the Printer selector doesn't
+  match a `/printers` name). Once the agent path is live, speed and alignment
+  are tuned in the app: Invoices → History → the gear beside the printer
+  pickers (quality Draft/NLQ, pitch, margins, and a test slip).
+- **Restarting the agent needs the process killed, not the task stopped** — the
+  scheduled task launches the exe detached and then exits, so
+  `Stop-ScheduledTask` does nothing and a fresh start dies on "port in use":
+
+  ```powershell
+  Get-Process StopForFuelPrintAgent | Stop-Process -Force
+  Start-ScheduledTask -TaskName "StopForFuel Print Agent"
+  ```
 - **Port 17777 in use** — change `"port"` in `config.json`, and set the same
   on each browser via `localStorage.setItem('printAgentUrl','http://127.0.0.1:<port>')`.

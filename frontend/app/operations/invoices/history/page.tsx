@@ -13,6 +13,7 @@ import { listPrintAgentPrinters } from "@/lib/print-agent";
 import { FormErrorBanner } from "@/components/ui/field-error";
 import { StyledSelect } from "@/components/ui/styled-select";
 import { PrintMenuButton } from "@/components/ui/print-menu-button";
+import { DotMatrixSettings } from "@/components/ui/dotmatrix-settings";
 import { PermissionGate } from "@/components/permission-gate";
 import {
     getInvoiceHistory, getProductSalesSummary, updateInvoice, deleteInvoice,
@@ -674,6 +675,12 @@ export default function InvoiceHistoryPage() {
                                 className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
                             />
                         )}
+                    </div>
+                    {/* Speed + alignment for the pre-printed MSP 250 slip. Sits
+                        beside the printer pickers because it is the same job:
+                        getting a bill onto the right paper, in the right place. */}
+                    <div className="self-end pb-[1px]">
+                        <DotMatrixSettings company={companyInfo} />
                     </div>
                 </div>
             </GlassCard>

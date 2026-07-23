@@ -2,6 +2,7 @@ import { InvoiceBill } from "@/lib/api/station";
 import { buildInvoiceRaster } from "@/lib/escpos-raster";
 import { generateDotMatrixEscP } from "@/lib/escp-dotmatrix";
 import { sendToPrintAgent, probePrintAgent } from "@/lib/print-agent";
+import { showToast } from "@/components/ui/toast";
 
 // Number to words (Indian system)
 export function numberToWords(num: number): string {
@@ -532,32 +533,40 @@ export function generateDotMatrixHTML(invoice: InvoiceBill, company: CompanyInfo
     /* 6x4.5" fanfold slip on the 9-pin MSP 250. Width is left at 100% of the
        @page content box (page margins do the insetting) so nothing centred can
        spill past the carriage edges. No -webkit-text-stroke: at 900 weight it
-       made the dot-matrix glyphs print muddy/doubled. */
-    @page { size: 6in 4.5in; margin: 3mm 4mm; }
+       made the dot-matrix glyphs print muddy/doubled.
+
+       Margins are deliberately generous. The MSP 250 cannot print within roughly
+       a quarter inch of either carriage edge, and the browser has no idea that
+       dead zone exists — with the old 4mm side margins the leading character of
+       every line and the trailing digits of the Amount column were struck outside
+       the platen and simply never appeared on paper. 10mm clears it on both
+       sides; the extra top margin drops the header off the perforation. Type
+       sizes come down to pay for the narrower content box so nothing re-wraps. */
+    @page { size: 6in 4.5in; margin: 6mm 10mm 3mm 10mm; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', Courier, monospace; font-size: 11pt; font-weight: 900; line-height: 1.15; color: #000; background: #fff; width: 100%; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 10pt; font-weight: 900; line-height: 1.12; color: #000; background: #fff; width: 100%; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    td { vertical-align: top; font-size: 11pt; font-weight: 900; word-break: break-word; }
+    td { vertical-align: top; font-size: 10pt; font-weight: 900; word-break: break-word; }
     .center { text-align: center; }
     .right { text-align: right; }
-    .big { font-size: 15pt; font-weight: 900; }
-    .xs { font-size: 9pt; font-weight: 900; color: #000; }
-    hr { border: none; border-top: 2px solid #000; margin: 2px 0; }
+    .big { font-size: 13pt; font-weight: 900; }
+    .xs { font-size: 8pt; font-weight: 900; color: #000; }
+    hr { border: none; border-top: 2px solid #000; margin: 1px 0; }
     hr.solid { border-top: 3px solid #000; }
-    .badge { display: inline-block; border: 2px solid #000; padding: 0 8px; font-size: 11pt; font-weight: 900; letter-spacing: 1px; }
-    .info td { font-size: 10pt; font-weight: 900; padding: 0; }
+    .badge { display: inline-block; border: 2px solid #000; padding: 0 6px; font-size: 10pt; font-weight: 900; letter-spacing: 1px; }
+    .info td { font-size: 9pt; font-weight: 900; padding: 0; }
     .info td:first-child { width: 30%; white-space: nowrap; }
     .info td:last-child { word-break: break-word; }
-    .items th { font-size: 11pt; font-weight: 900; border-bottom: 2px solid #000; padding: 2px 0; text-transform: uppercase; }
+    .items th { font-size: 10pt; font-weight: 900; border-bottom: 2px solid #000; padding: 1px 0; text-transform: uppercase; }
     .items td { padding: 1px 0; }
     .totals { margin-top: 2px; }
-    .totals td { font-size: 12pt; font-weight: 900; padding: 0; }
+    .totals td { font-size: 11pt; font-weight: 900; padding: 0; }
     .totals .label { text-align: right; padding-right: 8px; }
     .totals .val { text-align: right; width: 28%; }
-    .totals .grand td { font-size: 14pt; border-top: 2px solid #000; border-bottom: 3px double #000; padding: 2px 0; }
-    .sign-line { margin-top: 14px; border-top: 1px solid #000; text-align: center; }
-    .audit { margin-top: 6px; font-size: 10pt; font-weight: 900; display: flex; justify-content: space-between; gap: 6px; }
+    .totals .grand td { font-size: 12pt; border-top: 2px solid #000; border-bottom: 3px double #000; padding: 1px 0; }
+    .sign-line { margin-top: 8px; border-top: 1px solid #000; text-align: center; }
+    .audit { margin-top: 4px; font-size: 9pt; font-weight: 900; display: flex; justify-content: space-between; gap: 6px; }
     .audit span { border-bottom: 1px dotted #000; flex: 1; padding: 0 2px; }
 </style>
 </head>
@@ -701,6 +710,21 @@ function browserPrint(html: string, popupFeatures: string, preOpened?: Window | 
     }, 5000);
 }
 
+// Warn once per page load when a dot-matrix job drops to browser printing.
+// Once per load, not once per bill: a busy counter would otherwise stack a toast
+// on every slip, and the cashier only needs to be told to restart the agent once.
+let dmFallbackWarned = false;
+function notifyDotMatrixFallback(rejected: string): void {
+    if (dmFallbackWarned) return;
+    dmFallbackWarned = true;
+    showToast.error(
+        (rejected
+            ? `Print agent could not print: ${rejected}. Check the dot-matrix printer name beside the Printer selector. `
+            : "Print agent is not running on this PC. Restart StopForFuel Print Agent. ") +
+        "Until then bills go through the browser dialog, which prints the slip slowly and can clip its edges."
+    );
+}
+
 // Probe the local print agent once when this module loads (the invoices page
 // imports it), so the first Print click already knows whether to go direct.
 let agentKnownUp: boolean | null = null;
@@ -740,12 +764,18 @@ export async function printInvoice(
     // the OS print dialog with the HTML slip when the agent is unreachable.
     if (target === "dotmatrix") {
         const dmPrinter = getDotMatrixPrinter();
+        const job = () => sendToPrintAgent(generateDotMatrixEscP(invoice, company), `Invoice ${invoice.billNo || ""}`, dmPrinter);
+        // Why the agent was skipped, if it was. An unreachable agent and an agent
+        // that rejected the job land in the same browser-print fallback but need
+        // opposite fixes, so keep them apart all the way to the message.
+        let rejected = "";
         if (agentKnownUp === true) {
             try {
-                await sendToPrintAgent(generateDotMatrixEscP(invoice, company), `Invoice ${invoice.billNo || ""}`, dmPrinter);
+                await job();
                 return;
-            } catch (_) {
-                agentKnownUp = false; // agent went away — fall through to browser print
+            } catch (e) {
+                agentKnownUp = false; // agent went away, or refused — fall through
+                rejected = e instanceof Error ? e.message : "";
             }
         }
         const preOpenedDm = window.open("", "_blank", "width=650,height=900");
@@ -753,14 +783,25 @@ export async function printInvoice(
             const up = await probePrintAgent();
             if (up) {
                 agentKnownUp = true;
-                await sendToPrintAgent(generateDotMatrixEscP(invoice, company), `Invoice ${invoice.billNo || ""}`, dmPrinter);
-                try { preOpenedDm?.close(); } catch (_) { /* ignore */ }
-                return;
+                try {
+                    await job();
+                    try { preOpenedDm?.close(); } catch (_) { /* ignore */ }
+                    return;
+                } catch (e) {
+                    // Agent answers /health but won't print: almost always the
+                    // dot-matrix printer name, not the agent itself.
+                    rejected = e instanceof Error ? e.message : "print rejected";
+                }
             }
         } catch (_) {
             // ignore — fall back to browser print below
         }
         agentKnownUp = false;
+        // Say so out loud. Browser printing drives the 9-pin in graphics mode: it
+        // takes the better part of a minute per slip and the OS driver clips the
+        // carriage edges, so a counter silently stuck on this path looks like "the
+        // printer settings changed" rather than "the print agent is not running".
+        notifyDotMatrixFallback(rejected);
         browserPrint(generateDotMatrixHTML(invoice, company), "width=650,height=900", preOpenedDm);
         return;
     }

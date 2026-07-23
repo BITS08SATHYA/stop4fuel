@@ -93,7 +93,13 @@ export async function sendToPrintAgent(bytes: Uint8Array, jobName: string, print
             cache: "no-store",
         });
         if (!res.ok) {
-            throw new Error(`print agent responded ${res.status}`);
+            // Surface the agent's own error text, not just the status. It names the
+            // printer the spooler rejected, which is the difference between "the
+            // agent is down" and "config.json still points at a printer that was
+            // unplugged months ago" — two failures that otherwise look identical.
+            let detail = "";
+            try { detail = String((await res.json())?.error || ""); } catch (_) { /* no JSON body */ }
+            throw new Error(detail || `print agent responded ${res.status}`);
         }
     } finally {
         done();

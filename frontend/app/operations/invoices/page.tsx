@@ -31,6 +31,7 @@ import {
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
 import { listPrintAgentPrinters } from "@/lib/print-agent";
+import { DotMatrixSettings } from "@/components/ui/dotmatrix-settings";
 import { useAuth } from "@/lib/auth/auth-context";
 
 interface PostableShift {
@@ -1801,6 +1802,7 @@ export default function InvoicesPage() {
                                             />
                                         )
                                     )}
+                                    {printTarget === "dotmatrix" && <DotMatrixSettings company={companyInfo} />}
                                     <button
                                         onClick={() => {
                                             setPrinterTarget(printTarget);
