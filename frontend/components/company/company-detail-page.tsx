@@ -184,7 +184,7 @@ export function CompanyDetailPage({ companyId, initialEditMode = false }: Compan
     }
 
     return (
-        <div className="p-6 bg-background min-h-screen">
+        <div className="p-6 bg-background min-h-dvh">
             <div className="max-w-5xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">

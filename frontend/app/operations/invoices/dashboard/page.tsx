@@ -95,7 +95,7 @@ export default function InvoiceDashboardPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-background p-8 flex flex-col items-center justify-center">
+            <div className="min-h-dvh bg-background p-8 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
                 <p className="text-muted-foreground animate-pulse">Loading invoice analytics...</p>
             </div>
@@ -104,7 +104,7 @@ export default function InvoiceDashboardPage() {
 
     if (error || !data) {
         return (
-            <div className="min-h-screen bg-background p-8 flex flex-col items-center justify-center">
+            <div className="min-h-dvh bg-background p-8 flex flex-col items-center justify-center">
                 <p className="text-red-500 mb-2">Failed to load invoice analytics</p>
                 <p className="text-muted-foreground text-sm">{error}</p>
             </div>
@@ -133,7 +133,7 @@ export default function InvoiceDashboardPage() {
     const maxHourly = Math.max(...data.hourlyDistribution.map((h) => h.count), 1);
 
     return (
-        <div className="min-h-screen bg-background p-6 md:p-8 transition-colors duration-300">
+        <div className="min-h-dvh bg-background p-6 md:p-8 transition-colors duration-300">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header + Date Range */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

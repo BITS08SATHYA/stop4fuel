@@ -116,7 +116,7 @@ export default function AttendancePage() {
 
     if (isLoading) {
         return (
-            <div className="p-6 h-screen overflow-hidden bg-background flex items-center justify-center">
+            <div className="p-6 h-full overflow-hidden bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center">
                     <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
                     <p className="animate-pulse text-muted-foreground">Loading attendance...</p>
@@ -126,7 +126,7 @@ export default function AttendancePage() {
     }
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
+        <div className="p-6 h-full overflow-hidden bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto h-full flex flex-col">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">

@@ -49,7 +49,7 @@ export default function AuthCallbackPage() {
     }, [router]);
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
+        <div className="flex flex-col items-center justify-center min-h-dvh bg-background gap-4">
             <Fuel className="w-12 h-12 text-primary" />
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             {error ? (

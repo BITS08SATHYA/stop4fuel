@@ -263,7 +263,7 @@ export default function CreditCustomerProfilePage() {
 
     if (loading) {
         return (
-            <div className="p-6 flex items-center justify-center min-h-screen">
+            <div className="p-6 flex items-center justify-center min-h-dvh">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
         );
@@ -274,7 +274,7 @@ export default function CreditCustomerProfilePage() {
         || !!customer.statementFrequency;
 
     return (
-        <div className="p-4 h-screen bg-background overflow-hidden flex flex-col">
+        <div className="p-4 h-full bg-background overflow-hidden flex flex-col">
             <div className="flex flex-col flex-1 min-h-0 space-y-3">
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between">
@@ -551,7 +551,7 @@ export default function CreditCustomerProfilePage() {
                         </div>
 
                         {/* Tab content */}
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-auto">
                             {activeTab === "invoices" && (
                                 <InvoiceTable
                                     invoices={invoices} loading={invoiceLoading}

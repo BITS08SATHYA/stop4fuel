@@ -131,7 +131,7 @@ export default function SuppliersPage() {
     };
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background">
+        <div className="p-6 h-full overflow-hidden bg-background">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -249,7 +249,7 @@ export default function SuppliersPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <PermissionGate permission="STATION_UPDATE">
-                                                    <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex justify-center gap-2 row-actions transition-opacity">
                                                         <button
                                                             onClick={() => handleEdit(s)}
                                                             className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground"

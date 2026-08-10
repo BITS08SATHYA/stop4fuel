@@ -428,7 +428,7 @@ export default function RecordPaymentPage() {
                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
                                 </div>
                             ) : payTarget === "statement" ? (
-                                <div className="max-h-[calc(100vh-380px)] overflow-y-auto border border-border rounded-lg divide-y divide-border/50">
+                                <div className="max-h-[calc(100dvh-380px)] overflow-y-auto border border-border rounded-lg divide-y divide-border/50">
                                     {filteredStatements.length === 0 ? (
                                         <div className="px-4 py-12 text-center text-muted-foreground text-sm">
                                             No outstanding statements found
@@ -468,7 +468,7 @@ export default function RecordPaymentPage() {
                                     })}
                                 </div>
                             ) : (
-                                <div className="max-h-[calc(100vh-380px)] overflow-y-auto border border-border rounded-lg divide-y divide-border/50">
+                                <div className="max-h-[calc(100dvh-380px)] overflow-y-auto border border-border rounded-lg divide-y divide-border/50">
                                     {filteredBills.length === 0 ? (
                                         <div className="px-4 py-12 text-center text-muted-foreground text-sm">
                                             No unpaid credit bills found

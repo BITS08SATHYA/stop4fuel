@@ -52,6 +52,7 @@ export default function CustomerPaymentsPage() {
                 ) : payments.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-12">No payments found</p>
                 ) : (
+                    <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border bg-muted/30 text-muted-foreground text-xs">
@@ -82,6 +83,7 @@ export default function CustomerPaymentsPage() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </GlassCard>
             {totalPages > 1 && (

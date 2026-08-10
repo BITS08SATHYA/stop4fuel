@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -19,6 +19,14 @@ export const metadata: Metadata = {
   description: "Fuel Station Management System",
 };
 
+// No maximumScale/userScalable limits — pinch-zoom stays available for the
+// dense tables. viewportFit lets the shell reach under tablet display cutouts.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthenticatedLayout } from "@/components/authenticated-layout";
 
@@ -30,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${jakartaSans.variable} ${jetbrainsMono.variable} antialiased h-screen overflow-hidden bg-background text-foreground`}
+        className={`${jakartaSans.variable} ${jetbrainsMono.variable} antialiased h-dvh overflow-hidden bg-background text-foreground`}
         style={{ fontFamily: "var(--font-body), system-ui, sans-serif" }}
       >
         <ThemeProvider

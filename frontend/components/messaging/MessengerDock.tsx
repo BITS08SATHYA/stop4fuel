@@ -71,7 +71,7 @@ export function MessengerDock() {
 
     return (
         <>
-            <div className="fixed bottom-4 right-4 z-[60] w-[360px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100vh-2rem)] glass-card rounded-2xl shadow-2xl border border-border overflow-hidden flex flex-col">
+            <div className="fixed bottom-4 right-4 z-[60] w-[360px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100dvh-2rem)] glass-card rounded-2xl shadow-2xl border border-border overflow-hidden flex flex-col">
                 {view === "list" && (
                     <>
                         <div className="flex items-center justify-between px-3 py-2 border-b border-border">

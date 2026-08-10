@@ -122,7 +122,7 @@ export function AdvanceTable({ filtered, onOpenDetail, onOpenReturn, onCancel }:
                                                         <button
                                                             onClick={() => onOpenReturn(adv)}
                                                             title="Record return"
-                                                            className="p-1.5 rounded-lg hover:bg-green-500/10 text-muted-foreground hover:text-green-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                            className="p-1.5 rounded-lg hover:bg-green-500/10 text-muted-foreground hover:text-green-500 row-actions transition-all"
                                                         >
                                                             <Undo2 className="w-3.5 h-3.5" />
                                                         </button>
@@ -133,7 +133,7 @@ export function AdvanceTable({ filtered, onOpenDetail, onOpenReturn, onCancel }:
                                                         <button
                                                             onClick={() => onCancel(adv)}
                                                             title="Cancel advance"
-                                                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 row-actions transition-all"
                                                         >
                                                             <XCircle className="w-3.5 h-3.5" />
                                                         </button>

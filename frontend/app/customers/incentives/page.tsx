@@ -250,7 +250,7 @@ export default function IncentivesPage() {
     };
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
+        <div className="p-6 h-full overflow-hidden bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
@@ -414,14 +414,14 @@ export default function IncentivesPage() {
                                                                 <button
                                                                     onClick={() => handleOpenEdit(inc)}
                                                                     title="Edit"
-                                                                    className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                                    className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 row-actions transition-all"
                                                                 >
                                                                     <Edit3 className="w-3.5 h-3.5" />
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleToggleActive(inc)}
                                                                     title={inc.active ? "Deactivate" : "Activate"}
-                                                                    className={`p-1.5 rounded-lg opacity-100 md:opacity-0 group-hover:opacity-100 transition-all ${
+                                                                    className={`p-1.5 rounded-lg row-actions transition-all ${
                                                                         inc.active
                                                                             ? "hover:bg-amber-500/10 text-muted-foreground hover:text-amber-500"
                                                                             : "hover:bg-green-500/10 text-muted-foreground hover:text-green-500"
@@ -436,7 +436,7 @@ export default function IncentivesPage() {
                                                                 <button
                                                                     onClick={() => handleDelete(inc)}
                                                                     title="Delete"
-                                                                    className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                                    className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 row-actions transition-all"
                                                                 >
                                                                     <Trash2 className="w-3.5 h-3.5" />
                                                                 </button>

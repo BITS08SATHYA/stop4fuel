@@ -126,7 +126,7 @@ export default function TanksPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-dvh bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -332,7 +332,7 @@ export default function TanksPage() {
                                 </div>
 
                                 <PermissionGate permission="STATION_UPDATE">
-                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex justify-end gap-2 row-actions transition-opacity">
                                         <button onClick={() => openModal(tank)} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition-colors">
                                             <Edit2 className="w-4 h-4" />
                                         </button>

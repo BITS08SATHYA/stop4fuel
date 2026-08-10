@@ -335,7 +335,7 @@ export default function VehiclesPage() {
     };
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background text-foreground">
+        <div className="p-6 h-full overflow-hidden bg-background text-foreground">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>

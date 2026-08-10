@@ -997,7 +997,7 @@ export default function StatementsPage() {
 
     if (loading) {
         return (
-            <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center h-screen">
+            <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
         );
@@ -1258,7 +1258,7 @@ export default function StatementsPage() {
                                                             <button
                                                                 onClick={() => openRename(stmt)}
                                                                 title="Rename statement number"
-                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                                                                className="row-actions transition-opacity p-0.5 rounded hover:bg-muted"
                                                             >
                                                                 <Hash className="w-3 h-3 text-muted-foreground hover:text-foreground" />
                                                             </button>
@@ -1868,7 +1868,7 @@ export default function StatementsPage() {
                                 </div>
                             )}
 
-                            <div className="max-h-72 overflow-y-auto">
+                            <div className="max-h-72 overflow-auto">
                                 <table className="w-full text-xs">
                                     <thead>
                                         <tr className="border-b border-border text-muted-foreground sticky top-0 bg-card">
@@ -2045,7 +2045,7 @@ export default function StatementsPage() {
                                     No unlinked credit bills match the selected filters
                                 </div>
                             ) : (
-                                <div className="max-h-60 overflow-y-auto">
+                                <div className="max-h-60 overflow-auto">
                                     <table className="w-full text-xs">
                                         <thead>
                                             <tr className="border-b border-border text-muted-foreground sticky top-0 bg-card">

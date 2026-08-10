@@ -113,6 +113,46 @@
   }
 }
 
+/* Touch / tablet ergonomics.
+   Deliberately unlayered so these win over Tailwind's opacity and sizing
+   utilities regardless of class order in the markup. */
+
+/* Row actions. Revealed on row hover for mouse users; permanently visible on
+   touch, where :hover never fires and the buttons would otherwise be invisible. */
+.row-actions {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row-actions {
+    opacity: 0;
+  }
+
+  .group:hover .row-actions,
+  .row-actions:focus-within {
+    opacity: 1;
+  }
+}
+
+/* Grows a small icon button to the 44px touch minimum. No-op on a mouse, so
+   desktop density is unchanged. Row-action buttons get this for free; the
+   `tap-target` class is for one-off buttons elsewhere.
+   Note the button/a qualifiers — `.row-actions` is sometimes applied straight
+   to an SVG icon, which must keep its own width and height utilities. */
+@media (pointer: coarse) {
+  .tap-target,
+  button.row-actions,
+  a.row-actions,
+  .row-actions button,
+  .row-actions a {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* Print styles for Shift Closing Report — Legal Landscape */
 @media print {
   /* Hide sidebar, header, footer, scrollbars */

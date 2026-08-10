@@ -122,7 +122,7 @@ export default function CreditOverviewPage() {
 
     if (loading) {
         return (
-            <div className="p-6 flex items-center justify-center min-h-screen">
+            <div className="p-6 flex items-center justify-center min-h-dvh">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
         );
@@ -131,7 +131,7 @@ export default function CreditOverviewPage() {
     if (!overview) return <div className="p-6 text-muted-foreground">Failed to load data.</div>;
 
     return (
-        <div className="p-4 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 min-h-dvh bg-background transition-colors duration-300">
             <div className="max-w-[1600px] mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3">
@@ -205,7 +205,7 @@ export default function CreditOverviewPage() {
                 </div>
 
                 {/* Main Split Layout */}
-                <div className="flex gap-3 h-[calc(100vh-230px)]">
+                <div className="flex gap-3 h-[calc(100dvh-230px)]">
                     {/* Left Panel: Customer List */}
                     <div className="w-[380px] flex-shrink-0 flex flex-col">
                         {/* Search + filter */}
@@ -240,7 +240,7 @@ export default function CreditOverviewPage() {
                         </div>
 
                         {/* Customer List */}
-                        <GlassCard className="!p-0 flex-1 overflow-y-auto">
+                        <GlassCard className="!p-0 flex-1 overflow-auto">
                             <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-3 py-2 border-b border-border bg-muted/30 sticky top-0 flex items-center gap-1">
                                 <Users className="w-3 h-3" />
                                 {filteredCustomers.length} customers
@@ -476,7 +476,7 @@ export default function CreditOverviewPage() {
                                 </div>
 
                                 {/* Tab Content */}
-                                <GlassCard className="!p-0 flex-1 overflow-y-auto !rounded-tl-none">
+                                <GlassCard className="!p-0 flex-1 overflow-auto !rounded-tl-none">
                                     {activeTab === "bills" && (
                                         <BillsTable unpaidBills={detail.unpaidBills} paidBills={detail.paidBills} />
                                     )}

@@ -247,7 +247,7 @@ export default function CreditMonitoringPage() {
         : 0;
 
     return (
-        <div className="p-6 min-h-screen bg-background text-foreground">
+        <div className="p-6 min-h-dvh bg-background text-foreground">
             <div className={`max-w-7xl mx-auto transition-all ${selectedDetail ? "mr-[380px]" : ""}`}>
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">

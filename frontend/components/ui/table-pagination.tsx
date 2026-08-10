@@ -18,7 +18,7 @@ export function TablePagination({ page, totalPages, totalElements, pageSize, onP
     const end = Math.min((page + 1) * pageSize, totalElements);
 
     return (
-        <div className="flex items-center justify-between p-4 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-t border-border">
             <p className="text-sm text-muted-foreground">
                 Showing {start}-{end} of {totalElements}
             </p>
@@ -26,7 +26,7 @@ export function TablePagination({ page, totalPages, totalElements, pageSize, onP
                 <button
                     onClick={() => onPageChange(Math.max(0, page - 1))}
                     disabled={page === 0}
-                    className="px-3 py-1.5 text-sm rounded-md border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                    className="tap-target px-3 py-1.5 text-sm rounded-md border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
                 >
                     <ChevronLeft className="w-4 h-4" />
                     Previous
@@ -37,7 +37,7 @@ export function TablePagination({ page, totalPages, totalElements, pageSize, onP
                 <button
                     onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
                     disabled={page >= totalPages - 1}
-                    className="px-3 py-1.5 text-sm rounded-md border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                    className="tap-target px-3 py-1.5 text-sm rounded-md border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
                 >
                     Next
                     <ChevronRight className="w-4 h-4" />

@@ -18,7 +18,7 @@ export default function RootPage() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#0D1117]">
+            <div className="flex items-center justify-center min-h-dvh bg-[#0D1117]">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFB300]" />
             </div>
         );
@@ -38,7 +38,7 @@ export default function RootPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#0D1117] text-white">
+        <div className="min-h-dvh bg-[#0D1117] text-white">
             {/* Ambient effects */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute -top-48 -right-48 w-[600px] h-[600px] bg-[#FFB300] rounded-full opacity-[0.03] blur-[120px]" />
@@ -68,7 +68,7 @@ export default function RootPage() {
             </nav>
 
             {/* Hero */}
-            <section className="relative min-h-screen flex items-center pt-24 pb-16 px-6 overflow-hidden">
+            <section className="relative min-h-dvh flex items-center pt-24 pb-16 px-6 overflow-hidden">
                 <div className="absolute inset-0">
                     <Image
                         src="/hero-bg.jpg"

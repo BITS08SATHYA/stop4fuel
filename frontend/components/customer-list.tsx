@@ -140,7 +140,13 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
 
     const handleContextMenu = (e: React.MouseEvent, customerId: number) => {
         e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY, customerId });
+        // Clamp into the viewport — an unclamped menu opened near the right or
+        // bottom edge renders partly off-screen with no way to scroll to it.
+        const MENU_W = 160;
+        const MENU_H = 132;
+        const x = Math.max(8, Math.min(e.clientX, window.innerWidth - MENU_W - 8));
+        const y = Math.max(8, Math.min(e.clientY, window.innerHeight - MENU_H - 8));
+        setContextMenu({ x, y, customerId });
     };
 
     const handleRowClick = (customerId: number) => {
@@ -331,7 +337,7 @@ export function CustomerList({ refreshTrigger, onDataChange }: { refreshTrigger?
                                     </td>
                                     <td className="p-4 text-right">
                                         <PermissionGate permission="CUSTOMER_UPDATE">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex justify-end gap-2 row-actions transition-opacity">
                                                 <button className="p-2 hover:bg-accent/10 hover:text-accent rounded-md transition-colors" title="Edit">
                                                     <Edit className="w-4 h-4" />
                                                 </button>

@@ -131,7 +131,7 @@ export default function ProductProfilePage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-background p-8 flex flex-col items-center justify-center">
+            <div className="min-h-dvh bg-background p-8 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
                 <p className="text-muted-foreground animate-pulse">Loading product profile...</p>
             </div>
@@ -140,7 +140,7 @@ export default function ProductProfilePage() {
 
     if (error || !product) {
         return (
-            <div className="min-h-screen bg-background p-8 flex flex-col items-center justify-center">
+            <div className="min-h-dvh bg-background p-8 flex flex-col items-center justify-center">
                 <p className="text-red-500 mb-2">Failed to load product</p>
                 <p className="text-muted-foreground text-sm mb-4">{error}</p>
                 <button
@@ -179,7 +179,7 @@ export default function ProductProfilePage() {
     const lowGodown = godown != null && godown.reorderLevel != null && godown.currentStock <= godown.reorderLevel;
 
     return (
-        <div className="min-h-screen bg-background p-6 md:p-8 transition-colors duration-300">
+        <div className="min-h-dvh bg-background p-6 md:p-8 transition-colors duration-300">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">

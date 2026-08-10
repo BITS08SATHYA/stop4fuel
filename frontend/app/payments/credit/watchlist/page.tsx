@@ -81,14 +81,14 @@ export default function WatchlistPage() {
 
     if (loading) {
         return (
-            <div className="p-6 flex items-center justify-center min-h-screen">
+            <div className="p-6 flex items-center justify-center min-h-dvh">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
         );
     }
 
     return (
-        <div className="p-4 min-h-screen bg-background overflow-hidden">
+        <div className="p-4 min-h-dvh bg-background overflow-hidden">
             <div className="w-full">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3">
@@ -168,7 +168,7 @@ export default function WatchlistPage() {
                 </div>
 
                 {/* Main Split: Left list + Right detail */}
-                <div className="flex gap-3 overflow-hidden" style={{ height: "calc(100vh - 270px)" }}>
+                <div className="flex gap-3 overflow-hidden" style={{ height: "calc(100dvh - 270px)" }}>
                     {/* Left Panel: Two-section customer list */}
                     <div className="w-[340px] min-w-[340px] max-w-[340px] flex flex-col overflow-y-auto space-y-3">
                         {/* URGENT Section */}

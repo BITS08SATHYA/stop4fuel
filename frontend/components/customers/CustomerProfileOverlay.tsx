@@ -228,7 +228,7 @@ export function CustomerProfileOverlay({
                 </div>
 
                 {/* Tab Content */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-auto">
                     {activeTab === "invoices" && (
                         <InvoicesTabContent
                             invoices={invoices}
@@ -359,7 +359,7 @@ function InvoicesTabContent({
                     No invoices found
                 </div>
             ) : (
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-auto">
                     <table className="w-full text-[11px]">
                         <thead>
                             <tr className="border-b border-border text-muted-foreground sticky top-0 bg-card">

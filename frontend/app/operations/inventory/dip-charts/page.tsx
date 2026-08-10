@@ -110,7 +110,7 @@ export default function DipChartsPage() {
     };
 
     return (
-        <div className="p-6 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-6 min-h-dvh bg-background transition-colors duration-300">
             <div className="max-w-5xl mx-auto">
                 <Link href="/operations/inventory/tanks" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
                     <ArrowLeft className="w-4 h-4" /> Back to Tank Dip Readings

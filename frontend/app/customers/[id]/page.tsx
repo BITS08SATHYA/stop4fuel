@@ -322,7 +322,7 @@ export default function CustomerProfilePage() {
     };
 
     if (loading) return (
-        <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center min-h-screen">
+        <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center min-h-dvh">
             <div className="flex flex-col items-center gap-4">
                 <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                 <p className="text-muted-foreground animate-pulse">Loading customer...</p>

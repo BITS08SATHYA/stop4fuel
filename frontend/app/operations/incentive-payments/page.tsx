@@ -297,7 +297,7 @@ export default function IncentivePaymentsPage() {
     };
 
     return (
-        <div className="p-6 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-6 min-h-dvh bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
@@ -507,7 +507,7 @@ export default function IncentivePaymentsPage() {
                                                     <PermissionGate permission="SHIFT_DELETE">
                                                         <button
                                                             onClick={() => p.id && handleDelete(p.id)}
-                                                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all"
+                                                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 row-actions transition-all"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                         </button>

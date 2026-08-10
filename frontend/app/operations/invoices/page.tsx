@@ -795,7 +795,7 @@ export default function InvoicesPage() {
                                                         c.status === "BLOCKED" ? "bg-red-500/10 text-red-500" : "bg-yellow-500/10 text-yellow-500"
                                                     }`}>{c.status}</span>
                                                 )}
-                                                <Plus size={18} className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all" />
+                                                <Plus size={18} className="text-muted-foreground group-hover:text-primary row-actions transition-all" />
                                             </div>
                                         </button>
                                     ))}
@@ -1834,7 +1834,7 @@ export default function InvoicesPage() {
     );
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-dvh bg-background">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-10">
                     <div>

@@ -370,7 +370,7 @@ export default function EAdvancesPage() {
     };
 
     return (
-        <div className="p-6 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-6 min-h-dvh bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
@@ -536,7 +536,7 @@ export default function EAdvancesPage() {
                                                         {entry.shiftId ? `#${entry.shiftId}` : "-"}
                                                     </td>
                                                     <td className="px-5 py-3 text-center">
-                                                        <div className="flex items-center justify-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all">
+                                                        <div className="flex items-center justify-center gap-1 row-actions transition-all">
                                                             <PermissionGate permission="SHIFT_UPDATE">
                                                                 <button
                                                                     onClick={() => handleOpenEdit(entry)}

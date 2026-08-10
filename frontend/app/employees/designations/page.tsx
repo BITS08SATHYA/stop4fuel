@@ -219,7 +219,7 @@ export default function DesignationsPage() {
     ];
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-dvh bg-background">
             <div className="max-w-7xl mx-auto">
                 <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
                     <div>
@@ -309,7 +309,7 @@ export default function DesignationsPage() {
                                         <div className="p-3 rounded-2xl bg-primary/10 text-primary shadow-inner">
                                             <UserCog className="w-8 h-8" />
                                         </div>
-                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-2 row-actions transition-opacity">
                                             <PermissionGate permission="EMPLOYEE_UPDATE">
                                                 <button
                                                     onClick={() => handleEditDesignation(d)}
@@ -359,7 +359,7 @@ export default function DesignationsPage() {
                                             <ShieldCheck className="w-7 h-7" />
                                         </div>
                                         {!isProtected && (
-                                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex gap-2 row-actions transition-opacity">
                                                 <PermissionGate permission="EMPLOYEE_UPDATE">
                                                     <button
                                                         onClick={() => handleEditRole(r)}

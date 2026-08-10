@@ -21,21 +21,23 @@ export function Modal({ isOpen, onClose, title, children, size = "default" }: Mo
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className={`relative w-full ${SIZE_CLASS[size]} bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+            <div className={`relative w-full ${SIZE_CLASS[size]} bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[90dvh] overflow-y-auto`}>
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+                <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-border bg-muted/30">
                     <h3 className="text-lg font-semibold text-foreground">{title}</h3>
                     <button
                         onClick={onClose}
-                        className="text-muted-foreground hover:text-white transition-colors"
+                        aria-label="Close"
+                        className="tap-target shrink-0 -mr-1 p-1 rounded-md text-muted-foreground hover:text-white transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="p-6">
+                {/* Content — overflow-x-auto so wide tables scroll inside the
+                    modal instead of being clipped by its rounded overflow-hidden. */}
+                <div className="p-4 sm:p-6 overflow-x-auto">
                     {children}
                 </div>
             </div>

@@ -71,7 +71,7 @@ export default function CompanyListPage() {
     };
 
     return (
-        <div className="p-6 h-screen flex flex-col bg-background transition-colors duration-300 overflow-hidden">
+        <div className="p-6 h-full flex flex-col bg-background transition-colors duration-300 overflow-hidden">
             <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6 flex-shrink-0">
@@ -113,6 +113,7 @@ export default function CompanyListPage() {
                             <p className="text-sm">Add your first company to get started.</p>
                         </div>
                     ) : (
+                        <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b bg-muted/30">
@@ -178,6 +179,7 @@ export default function CompanyListPage() {
                                 ))}
                             </tbody>
                         </table>
+                        </div>
                     )}
                 </div>
             </div>

@@ -494,7 +494,7 @@ export default function ShiftsPage() {
     const meterGrandTotal = Object.values(productTotals).reduce((sum, pt) => sum + pt.amount, 0);
 
     return (
-        <div className="p-4 md:p-6 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 md:p-6 min-h-dvh bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -695,7 +695,7 @@ export default function ShiftsPage() {
                                                                         <PermissionGate permission="SHIFT_DELETE">
                                                                             <button
                                                                                 onClick={() => handleDeleteEAdvance(ea.id!)}
-                                                                                className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                                                className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 row-actions transition-all"
                                                                             >
                                                                                 <Trash2 className="w-3 h-3" />
                                                                             </button>
@@ -781,7 +781,7 @@ export default function ShiftsPage() {
                                                                     <PermissionGate permission="SHIFT_DELETE">
                                                                         <button
                                                                             onClick={() => handleDeleteExpense(exp.id!)}
-                                                                            className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                                            className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 row-actions transition-all"
                                                                         >
                                                                             <Trash2 className="w-3 h-3" />
                                                                         </button>

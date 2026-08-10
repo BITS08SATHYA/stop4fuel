@@ -94,7 +94,7 @@ export default function PumpsPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-dvh bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -161,7 +161,7 @@ export default function PumpsPage() {
                                 <h3 className="text-2xl font-bold text-foreground mb-4">{pump.name}</h3>
                                 
                                 <PermissionGate permission="STATION_UPDATE">
-                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex justify-end gap-2 row-actions transition-opacity">
                                         <button onClick={() => openModal(pump)} className="p-2 bg-orange-500/10 text-orange-500 rounded-lg hover:bg-orange-500/20 transition-colors">
                                             <Edit2 className="w-4 h-4" />
                                         </button>

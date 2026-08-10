@@ -45,7 +45,7 @@ export default function OperationalAdvancesPage() {
     } = useAdvances();
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
+        <div className="p-6 h-full overflow-hidden bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">

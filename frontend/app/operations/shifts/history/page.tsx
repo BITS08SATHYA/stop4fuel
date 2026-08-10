@@ -137,7 +137,7 @@ export default function ShiftHistoryPage() {
     const { page, setPage, pageSize, paginatedData, totalPages, totalElements } = useClientPagination(filtered, 10);
 
     return (
-        <div className="p-6 min-h-screen bg-background text-foreground">
+        <div className="p-6 min-h-dvh bg-background text-foreground">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
@@ -223,7 +223,7 @@ export default function ShiftHistoryPage() {
                                                         title="Change attendant"
                                                     >
                                                         {shift.attendant?.name || "—"}
-                                                        <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        <Pencil className="w-3 h-3 row-actions transition-opacity" />
                                                     </button>
                                                 </td>
                                                 <td className="px-4 py-3">

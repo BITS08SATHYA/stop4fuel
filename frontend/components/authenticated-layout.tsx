@@ -57,7 +57,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     useApprovalNotificationPermission();
     useNotificationStream();
     return (
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex h-dvh overflow-hidden">
             <AppSidebar />
             {open && (
                 <div

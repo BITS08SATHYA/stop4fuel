@@ -208,7 +208,7 @@ export default function ProductsPage() {
     const { page, setPage, totalPages, totalElements, pageSize, paginatedData: pagedProducts } = useClientPagination(filtered);
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
+        <div className="p-6 h-full overflow-hidden bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -374,7 +374,7 @@ export default function ProductsPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <PermissionGate permission="PRODUCT_UPDATE">
-                                                    <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex justify-center gap-2 row-actions transition-opacity">
                                                         <button
                                                             onClick={() => openModal(product)}
                                                             className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground"

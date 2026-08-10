@@ -106,7 +106,7 @@ export default function OilTypesPage() {
     });
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-dvh bg-background">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -172,7 +172,7 @@ export default function OilTypesPage() {
                                         <Droplets className="w-8 h-8" />
                                     </div>
                                     <PermissionGate permission="PRODUCT_UPDATE">
-                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-2 row-actions transition-opacity">
                                             <button
                                                 onClick={() => handleEdit(oilType)}
                                                 className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"

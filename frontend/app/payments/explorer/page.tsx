@@ -336,7 +336,7 @@ export default function ExplorerPage() {
 
     return (
         <PermissionGate permission="PAYMENT_VIEW">
-            <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden gap-3">
+            <div className="flex flex-col h-full overflow-hidden gap-3">
                 {/* Page Header */}
                 <div className="flex items-center justify-between shrink-0">
                     <div>

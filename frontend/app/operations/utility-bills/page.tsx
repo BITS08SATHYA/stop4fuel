@@ -184,7 +184,7 @@ export default function UtilityBillsPage() {
 
     if (isLoading) {
         return (
-            <div className="p-6 h-screen overflow-hidden bg-background flex items-center justify-center">
+            <div className="p-6 h-full overflow-hidden bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center">
                     <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
                     <p className="animate-pulse text-muted-foreground">Loading bills...</p>
@@ -194,7 +194,7 @@ export default function UtilityBillsPage() {
     }
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
+        <div className="p-6 h-full overflow-hidden bg-background transition-colors duration-300">
             <div className="max-w-7xl mx-auto h-full flex flex-col">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
@@ -338,7 +338,7 @@ export default function UtilityBillsPage() {
                                                 </Badge>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex justify-center gap-2 row-actions transition-opacity">
                                                     <PermissionGate permission="FINANCE_UPDATE">
                                                         <button onClick={() => handleEdit(b)} className="p-2 rounded-lg hover:bg-white/10"><Pencil className="w-4 h-4" /></button>
                                                     </PermissionGate>

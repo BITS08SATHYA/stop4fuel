@@ -423,14 +423,14 @@ export default function PaymentsPage() {
 
     if (loading && payments.length === 0) {
         return (
-            <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center h-screen">
+            <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
         );
     }
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background transition-colors duration-300">
+        <div className="p-6 h-full overflow-hidden bg-background transition-colors duration-300">
             <div className="max-w-[1400px] mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">

@@ -187,7 +187,7 @@ export default function NotificationSettingsPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-background p-8 flex items-center justify-center">
+            <div className="min-h-dvh bg-background p-8 flex items-center justify-center">
                 <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
         );
@@ -196,7 +196,7 @@ export default function NotificationSettingsPage() {
     const visible = ALERT_TYPES.filter((a) => !a.requiresPermission || hasPermission(a.requiresPermission));
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background transition-colors duration-300">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-dvh bg-background transition-colors duration-300">
             <div className="max-w-4xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold text-foreground tracking-tight">

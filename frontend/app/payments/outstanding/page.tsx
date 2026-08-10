@@ -91,7 +91,7 @@ export default function OutstandingExplorerPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-background">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-dvh bg-background">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-6">
                     <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">

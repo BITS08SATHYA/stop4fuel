@@ -157,7 +157,7 @@ export default function AiAnalyticsPage() {
             {/* Two-panel layout */}
             <div
                 className="grid grid-cols-1 lg:grid-cols-5 gap-6"
-                style={{ minHeight: "calc(100vh - 200px)" }}
+                style={{ minHeight: "calc(100dvh - 200px)" }}
             >
                 {/* LEFT: Insights (2/5 ≈ 40%) */}
                 <div className="lg:col-span-2 flex flex-col space-y-3">

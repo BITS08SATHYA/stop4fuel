@@ -299,7 +299,7 @@ export default function StatementReportsPage() {
     };
 
     return (
-        <div className="p-6 h-screen overflow-hidden bg-background flex flex-col">
+        <div className="p-6 h-full overflow-hidden bg-background flex flex-col">
             {/* Header */}
             <div className="mb-4">
                 <h1 className="text-3xl font-bold">

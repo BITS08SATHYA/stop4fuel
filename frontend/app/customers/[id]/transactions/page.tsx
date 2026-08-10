@@ -159,7 +159,7 @@ export default function CustomerTransactionsPage() {
         : [];
 
     return (
-        <div className="min-h-screen bg-background p-6 md:p-8 transition-colors duration-300">
+        <div className="min-h-dvh bg-background p-6 md:p-8 transition-colors duration-300">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">

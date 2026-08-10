@@ -103,14 +103,14 @@ function LoginContent() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#0D1117]">
+            <div className="flex items-center justify-center min-h-dvh bg-[#0D1117]">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFB300]" />
             </div>
         );
     }
 
     return (
-        <div className="flex min-h-screen">
+        <div className="flex min-h-dvh">
             {/* Left panel — branding */}
             <div className="hidden lg:flex lg:w-1/2 bg-[#0D1117] relative overflow-hidden flex-col items-center justify-center p-12">
                 {/* Ambient glow */}
@@ -330,7 +330,7 @@ function LoginContent() {
 export default function LoginPage() {
     return (
         <Suspense fallback={
-            <div className="flex items-center justify-center min-h-screen bg-[#0D1117]">
+            <div className="flex items-center justify-center min-h-dvh bg-[#0D1117]">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFB300]" />
             </div>
         }>

@@ -396,9 +396,18 @@ function ProfilePhoto({ employee, onUploaded }: { employee: Employee; onUploaded
                 <EmployeeAvatar employeeId={employee.id} name={employee.name} photoUrl={employee.photoUrl} size="lg" refreshKey={refreshKey} />
                 <label
                     title={employee.photoUrl ? "Change photo" : "Upload photo"}
-                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    aria-label={employee.photoUrl ? "Change photo" : "Upload photo"}
+                    className="absolute inset-0 rounded-full cursor-pointer"
                 >
-                    {uploading ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
+                    {/* Mouse: dim the whole avatar on hover. */}
+                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {uploading ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <Camera className="w-6 h-6 text-white" />}
+                    </span>
+                    {/* Touch: :hover never fires, so the affordance has to be permanent.
+                        A corner chip keeps the photo itself visible. */}
+                    <span className="hidden pointer-coarse:flex absolute -bottom-0.5 -right-0.5 w-8 h-8 items-center justify-center rounded-full bg-accent text-accent-foreground border-2 border-card shadow">
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                    </span>
                     <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleUpload} disabled={uploading} />
                 </label>
             </div>

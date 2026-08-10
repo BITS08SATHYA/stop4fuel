@@ -303,7 +303,7 @@ export default function StatementOrderPage() {
     const saveDisabled = isSaving || dupOrders.size > 0 || totalDirty === 0;
 
     return (
-        <div className="p-6 h-screen flex flex-col bg-background overflow-hidden">
+        <div className="p-6 h-full flex flex-col bg-background overflow-hidden">
             <div className="max-w-[1600px] mx-auto w-full flex flex-col flex-1 min-h-0">
                 {/* Header */}
                 <div className="flex justify-between items-start mb-4 flex-shrink-0 gap-4">
