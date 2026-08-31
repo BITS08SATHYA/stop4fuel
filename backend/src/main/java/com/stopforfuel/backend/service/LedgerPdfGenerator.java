@@ -23,8 +23,11 @@ public class LedgerPdfGenerator {
 
     // Colors
     private static final Color BLACK = new Color(33, 37, 41);
-    private static final Color HEADER_BG = new Color(52, 58, 64);
-    private static final Color HEADER_FG = Color.WHITE;
+    // Light header band instead of a solid dark fill: same column separation at a
+    // fraction of the toner/ink. Matches the #E0E0E0 headers used by the shift report.
+    private static final Color HEADER_BG = new Color(224, 224, 224);
+    private static final Color HEADER_FG = new Color(33, 37, 41);
+    private static final Color HEADER_BORDER = new Color(150, 150, 150);
     private static final Color ALT_ROW = new Color(248, 249, 250);
     private static final Color BORDER = new Color(180, 180, 180);
     private static final Color MUTED = new Color(108, 117, 125);
@@ -265,7 +268,7 @@ public class LedgerPdfGenerator {
         cell.setBackgroundColor(HEADER_BG);
         cell.setHorizontalAlignment(align);
         cell.setPadding(6);
-        cell.setBorderColor(HEADER_BG);
+        cell.setBorderColor(HEADER_BORDER);
         table.addCell(cell);
     }
 

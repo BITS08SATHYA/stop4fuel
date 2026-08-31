@@ -25,8 +25,11 @@ import java.util.Set;
 public class IncentivePaymentPdfGenerator {
 
     private static final Color BLACK = new Color(33, 37, 41);
-    private static final Color HEADER_BG = new Color(52, 58, 64);
-    private static final Color HEADER_FG = Color.WHITE;
+    // Light header band instead of a solid dark fill: same column separation at a
+    // fraction of the toner/ink. Matches the #E0E0E0 headers used by the shift report.
+    private static final Color HEADER_BG = new Color(224, 224, 224);
+    private static final Color HEADER_FG = new Color(33, 37, 41);
+    private static final Color HEADER_BORDER = new Color(150, 150, 150);
     private static final Color ALT_ROW = new Color(248, 249, 250);
     private static final Color BORDER = new Color(180, 180, 180);
     private static final Color LIGHT_BORDER = new Color(220, 220, 220);
@@ -165,7 +168,7 @@ public class IncentivePaymentPdfGenerator {
             PdfPCell cell = new PdfPCell(new Phrase(COL_HEADERS[i], F_TH));
             cell.setBackgroundColor(HEADER_BG);
             cell.setPadding(4);
-            cell.setBorderColor(HEADER_BG);
+            cell.setBorderColor(HEADER_BORDER);
             int align = CENTER_ALIGN.contains(i) ? Element.ALIGN_CENTER
                     : RIGHT_ALIGN.contains(i) ? Element.ALIGN_RIGHT
                     : Element.ALIGN_LEFT;

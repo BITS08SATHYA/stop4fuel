@@ -789,9 +789,11 @@ public class StatementExcelService {
             f.setBold(true);
             f.setFontHeightInPoints((short) 11);
             s.setFont(f);
-            s.setFillForegroundColor(new XSSFColor(new byte[]{(byte) 52, (byte) 58, (byte) 64}, null));
+            // Light band rather than a solid dark fill — these sheets get printed.
+            // A shade darker than the column headers so the section bar still leads.
+            s.setFillForegroundColor(new XSSFColor(new byte[]{(byte) 200, (byte) 200, (byte) 200}, null));
             s.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            f.setColor(new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 255}, null));
+            f.setColor(new XSSFColor(new byte[]{(byte) 33, (byte) 37, (byte) 41}, null));
             s.setAlignment(HorizontalAlignment.CENTER);
             s.setVerticalAlignment(VerticalAlignment.CENTER);
             applyAllBorders(s);
@@ -817,9 +819,10 @@ public class StatementExcelService {
             XSSFFont f = wb.createFont();
             f.setBold(true);
             f.setFontHeightInPoints((short) 10);
-            f.setColor(new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 255}, null));
+            f.setColor(new XSSFColor(new byte[]{(byte) 33, (byte) 37, (byte) 41}, null));
             s.setFont(f);
-            s.setFillForegroundColor(new XSSFColor(new byte[]{(byte) 52, (byte) 58, (byte) 64}, null));
+            // Light band rather than a solid dark fill — these sheets get printed.
+            s.setFillForegroundColor(new XSSFColor(new byte[]{(byte) 224, (byte) 224, (byte) 224}, null));
             s.setFillPattern(FillPatternType.SOLID_FOREGROUND);
             s.setAlignment(HorizontalAlignment.CENTER);
             s.setVerticalAlignment(VerticalAlignment.CENTER);
