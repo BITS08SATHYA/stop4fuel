@@ -148,10 +148,25 @@ public class InvoiceBillController {
                 .map(InvoiceBillDTO::from);
     }
 
+    // Permanently exclude the bill from statement auto-gen and allow direct payment.
     @PatchMapping("/{id}/independent")
     @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
     public InvoiceBillDTO markIndependent(@PathVariable Long id) {
         return InvoiceBillDTO.from(service.markIndependent(id));
+    }
+
+    // Undo the above — put the bill back in the pool statement auto-gen draws from.
+    @DeleteMapping("/{id}/independent")
+    @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
+    public InvoiceBillDTO clearIndependent(@PathVariable Long id) {
+        return InvoiceBillDTO.from(service.clearIndependent(id));
+    }
+
+    // Detach from the current statement WITHOUT excluding it from future ones.
+    @PatchMapping("/{id}/unlink-statement")
+    @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
+    public InvoiceBillDTO unlinkFromStatement(@PathVariable Long id) {
+        return InvoiceBillDTO.from(service.unlinkFromStatement(id));
     }
 
     @DeleteMapping("/{id}")

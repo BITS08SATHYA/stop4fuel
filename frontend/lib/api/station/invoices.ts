@@ -108,8 +108,17 @@ export const moveInvoice = (
 export const deleteInvoice = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/invoices/${id}`, { method: 'DELETE' }).then(handleResponse);
 
+// Permanently excludes the bill from statement auto-gen. Reverse with clearInvoiceIndependent.
 export const markInvoiceIndependent = (id: number): Promise<InvoiceBill> =>
     fetchWithAuth(`${API_BASE_URL}/invoices/${id}/independent`, { method: 'PATCH' }).then(handleResponse);
+
+// Undo markInvoiceIndependent — returns the bill to the statement pool.
+export const clearInvoiceIndependent = (id: number): Promise<InvoiceBill> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}/independent`, { method: 'DELETE' }).then(handleResponse);
+
+// Detach from the current statement but stay eligible for future ones.
+export const unlinkInvoiceFromStatement = (id: number): Promise<InvoiceBill> =>
+    fetchWithAuth(`${API_BASE_URL}/invoices/${id}/unlink-statement`, { method: 'PATCH' }).then(handleResponse);
 
 export const uploadInvoiceFile = (id: number, type: string, file: File): Promise<InvoiceBill> => {
     const formData = new FormData();

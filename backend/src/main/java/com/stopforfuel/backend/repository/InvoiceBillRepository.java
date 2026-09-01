@@ -269,15 +269,22 @@ public interface InvoiceBillRepository extends ScidRepository<InvoiceBill> {
     //       statement and isn't marked independent — the orange "awaiting statement" banner
     //       case in the explorer. Both share the same recovery flow (assign covering shift,
     //       optionally attach to a covering DRAFT statement, recompute totals).
-    // Filter: only NOT_PAID + non-independent (matches the recovery scope used on prod 2026-05-04).
+    //   OR (3) the customer is a Statement-party customer but the bill carries
+    //       independent = true, so every statement-candidate query skips it and no statement
+    //       will ever claim it. Usually a mis-click on the explorer's old "Unlink" button,
+    //       which used to set the independent flag. Recovery = clear the flag, then (2).
+    // Filter: only NOT_PAID. Case (3) is the ONLY reason an independent bill is listed —
+    // a Local customer's independent bill is working as intended and stays hidden.
     // Caller passes :cutoffDate — typically 2026-01-01 to hide the 501 legacy MySQL-import bills.
     @EntityGraph(attributePaths = {"customer", "statement"})
     @Query("SELECT ib FROM InvoiceBill ib LEFT JOIN ib.customer.party p " +
            "WHERE ib.scid = :scid " +
            "AND ib.billType = 'CREDIT' " +
            "AND ib.paymentStatus = 'NOT_PAID' " +
-           "AND ib.independent = false " +
-           "AND (ib.shiftId IS NULL OR (LOWER(p.partyType) = 'statement' AND ib.statement IS NULL)) " +
+           "AND ( (ib.independent = false " +
+           "       AND (ib.shiftId IS NULL OR (LOWER(p.partyType) = 'statement' AND ib.statement IS NULL))) " +
+           "   OR (ib.independent = true " +
+           "       AND LOWER(p.partyType) = 'statement' AND ib.statement IS NULL) ) " +
            "AND ib.date >= :cutoffDate " +
            "ORDER BY ib.customer.id ASC, ib.date ASC, ib.id ASC")
     List<InvoiceBill> findOrphanBills(

@@ -92,9 +92,21 @@ public class OrphanBillService {
         Long oldShiftId = bill.getShiftId();
         boolean nullShift = bill.getShiftId() == null;
         boolean isStatementCust = isStatementCustomer(bill);
+
+        // Step 0: a Statement customer's bill flagged independent is invisible to every
+        // statement query, so clear the flag before anything else — otherwise the link
+        // below can never happen. Local customers keep their flag (working as intended).
+        boolean wronglyIndependent = bill.isIndependent() && isStatementCust && bill.getStatement() == null;
+        if (wronglyIndependent) {
+            bill.setIndependent(false);
+            invoiceBillRepository.save(bill);
+            log.info("Cleared independent flag on bill {} ({}) — Statement customer {}",
+                    bill.getId(), bill.getBillNo(), bill.getCustomer().getId());
+        }
+
         boolean noStatement = bill.getStatement() == null && isStatementCust && !bill.isIndependent();
 
-        if (!nullShift && !noStatement) {
+        if (!nullShift && !noStatement && !wronglyIndependent) {
             return AutoFixResultDTO.builder()
                     .billId(billId).billNo(bill.getBillNo())
                     .action("NOOP").reason("Bill is no longer an orphan")
@@ -166,10 +178,11 @@ public class OrphanBillService {
                     .build();
         }
 
-        // Local customer or independent — only the shift was set.
+        // Local customer, or a Statement bill whose only defect was the independent flag.
         return AutoFixResultDTO.builder()
                 .billId(billId).billNo(bill.getBillNo())
                 .action(isStatementCust ? "FIXED" : "SHIFT_ASSIGNED_LOCAL")
+                .reason(wronglyIndependent ? "Independent flag cleared — bill is back in the statement pool" : null)
                 .oldShiftId(oldShiftId).newShiftId(newShiftId)
                 .build();
     }

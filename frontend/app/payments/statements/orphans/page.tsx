@@ -29,12 +29,14 @@ import {
     BulkAutoFixResult,
 } from "@/lib/api/station";
 
-type FailureFilter = "ALL" | "NULL_SHIFT" | "NO_STATEMENT" | "BOTH";
+type FailureFilter = "ALL" | "NULL_SHIFT" | "NO_STATEMENT" | "BOTH" | "WRONGLY_INDEPENDENT";
 
 const FAILURE_LABELS: Record<OrphanBill["failureType"], { label: string; tone: string }> = {
     NULL_SHIFT: { label: "Missing shift", tone: "bg-amber-500/10 text-amber-500 border-amber-500/30" },
     NO_STATEMENT: { label: "Awaiting statement", tone: "bg-amber-500/10 text-amber-500 border-amber-500/30" },
     BOTH: { label: "Missing both", tone: "bg-rose-500/10 text-rose-500 border-rose-500/30" },
+    // Worse than the others: nothing will ever pick these up on its own.
+    WRONGLY_INDEPENDENT: { label: "Wrongly independent", tone: "bg-rose-500/10 text-rose-500 border-rose-500/30" },
 };
 
 const ACTION_LABELS: Record<AutoFixResult["action"], { label: string; tone: string; icon: React.ReactNode }> = {
@@ -136,7 +138,8 @@ export default function OrphanBillsPage() {
     };
 
     const handleAutoFixAll = async () => {
-        const fixableCount = filtered.filter(b => b.suggestedShiftId != null || b.suggestedStatementId != null).length;
+        const fixableCount = filtered.filter(b => b.failureType === "WRONGLY_INDEPENDENT"
+            || b.suggestedShiftId != null || b.suggestedStatementId != null).length;
         if (fixableCount === 0) {
             toast.info("No bills with auto-fixable suggestions in current filter");
             return;
@@ -303,6 +306,7 @@ export default function OrphanBillsPage() {
                                 <option value="ALL">All failures</option>
                                 <option value="NULL_SHIFT">Missing shift only</option>
                                 <option value="NO_STATEMENT">Awaiting statement only</option>
+                                <option value="WRONGLY_INDEPENDENT">Wrongly independent only</option>
                                 <option value="BOTH">Missing both</option>
                             </select>
                         </div>
@@ -376,9 +380,12 @@ export default function OrphanBillsPage() {
                                             }
                                             const b = entry.row!;
                                             const failureMeta = FAILURE_LABELS[b.failureType];
-                                            const canAutoFix = b.suggestedShiftId != null || b.suggestedStatementId != null
-                                                || (b.shiftId != null && b.suggestedStatementId != null);
+                                            // Clearing a wrong independent flag is a fix in its own right — it
+                                            // returns the bill to the pool even when no DRAFT statement covers it yet.
+                                            const canAutoFix = b.failureType === "WRONGLY_INDEPENDENT"
+                                                || b.suggestedShiftId != null || b.suggestedStatementId != null;
                                             const suggestion = [
+                                                b.failureType === "WRONGLY_INDEPENDENT" ? "Clear independent flag" : null,
                                                 b.suggestedShiftId ? `Shift ${b.suggestedShiftId}` : null,
                                                 b.suggestedStatementNo ? `→ ${b.suggestedStatementNo}` : null,
                                             ].filter(Boolean).join(" ");

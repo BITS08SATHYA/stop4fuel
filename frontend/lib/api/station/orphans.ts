@@ -1,7 +1,7 @@
 import { API_BASE_URL, handleResponse } from './common';
 import { fetchWithAuth } from '../fetch-with-auth';
 
-/** Mirrors backend OrphanBillDTO. failureType: NULL_SHIFT | NO_STATEMENT | BOTH. */
+/** Mirrors backend OrphanBillDTO. failureType: NULL_SHIFT | NO_STATEMENT | BOTH | WRONGLY_INDEPENDENT. */
 export interface OrphanBill {
     id: number;
     billNo?: string;
@@ -14,7 +14,8 @@ export interface OrphanBill {
     shiftId?: number | null;
     statementId?: number | null;
     statementNo?: string | null;
-    failureType: 'NULL_SHIFT' | 'NO_STATEMENT' | 'BOTH';
+    independent?: boolean;
+    failureType: 'NULL_SHIFT' | 'NO_STATEMENT' | 'BOTH' | 'WRONGLY_INDEPENDENT';
     suggestedShiftId?: number | null;
     suggestedStatementId?: number | null;
     suggestedStatementNo?: string | null;

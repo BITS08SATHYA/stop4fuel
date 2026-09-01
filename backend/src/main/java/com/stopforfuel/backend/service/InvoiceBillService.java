@@ -1059,8 +1059,29 @@ public class InvoiceBillService {
     }
 
     /**
-     * Mark an invoice as independent — allows direct payment and excludes from future statements.
-     * If the invoice is linked to a statement, it is unlinked and the statement is recalculated.
+     * Detach a bill from its statement and resync that statement's cached totals
+     * (including totalQuantity) so the UI prompts a PDF regeneration. Deletes the
+     * statement outright when no bills are left on it. No-op when already unlinked.
+     */
+    private void detachFromStatement(InvoiceBill bill) {
+        Statement statement = bill.getStatement();
+        if (statement == null) return;
+
+        bill.setStatement(null);
+        repository.saveAndFlush(bill); // flush so the recompute below sees the detach
+
+        if (repository.findByStatementId(statement.getId()).isEmpty()) {
+            statementRepository.delete(statement);
+        } else {
+            statementService.resyncStatementAfterBillChange(statement);
+        }
+    }
+
+    /**
+     * Mark an invoice as independent — allows direct payment and PERMANENTLY excludes it
+     * from statement auto-generation (every candidate query filters independent = false).
+     * If the invoice is on a statement it is detached first and that statement recalculated.
+     * Reversible only via {@link #clearIndependent(Long)}.
      */
     @Transactional
     public InvoiceBill markIndependent(Long invoiceBillId) {
@@ -1071,41 +1092,55 @@ public class InvoiceBillService {
             throw new BusinessException("Invoice is already marked as independent");
         }
 
-        // If linked to a statement, unlink and recalculate
-        Statement statement = bill.getStatement();
-        if (statement != null) {
-            bill.setStatement(null);
+        detachFromStatement(bill);
+        bill.setIndependent(true);
+        return repository.save(bill);
+    }
 
-            // Recalculate statement totals
-            java.util.List<InvoiceBill> remainingBills = repository.findByStatementId(statement.getId());
-            remainingBills.remove(bill); // remove current bill from list
+    /**
+     * Detach a bill from its statement WITHOUT excluding it from future statements — the
+     * non-destructive counterpart to {@link #markIndependent(Long)}. The bill returns to the
+     * unlinked pool and the next auto-gen run re-picks it up.
+     *
+     * Refuses when the statement has already received money: recomputing its totals after
+     * pulling a bill out would leave receivedAmount above netAmount (a negative balance).
+     */
+    @Transactional
+    public InvoiceBill unlinkFromStatement(Long invoiceBillId) {
+        InvoiceBill bill = repository.findById(invoiceBillId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
 
-            if (remainingBills.isEmpty()) {
-                // No bills left — delete the statement
-                statementRepository.delete(statement);
-            } else {
-                java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
-                for (InvoiceBill rb : remainingBills) {
-                    if (rb.getNetAmount() != null) {
-                        totalAmount = totalAmount.add(rb.getNetAmount());
-                    }
-                }
-                java.math.BigDecimal netAmount = totalAmount.setScale(0, java.math.RoundingMode.HALF_UP);
-                java.math.BigDecimal roundingAmount = netAmount.subtract(totalAmount);
-
-                statement.setTotalAmount(totalAmount);
-                statement.setNetAmount(netAmount);
-                statement.setRoundingAmount(roundingAmount);
-                statement.setNumberOfBills(remainingBills.size());
-                statement.setBalanceAmount(netAmount.subtract(
-                        statement.getReceivedAmount() != null ? statement.getReceivedAmount() : java.math.BigDecimal.ZERO));
-                // Cached PDF no longer matches the reduced bill set — prompt regeneration.
-                statement.setNeedsRegeneration(true);
-                statementRepository.save(statement);
-            }
+        if (bill.getStatement() == null) {
+            throw new BusinessException("Invoice is not linked to any statement");
         }
 
-        bill.setIndependent(true);
+        statementService.assertBillEditableForStatement(bill);
+        detachFromStatement(bill);
+        return repository.save(bill);
+    }
+
+    /**
+     * Undo {@link #markIndependent(Long)} — the escape hatch for a bill flagged independent
+     * by mistake. Returns it to the unlinked pool so statement auto-gen can claim it.
+     *
+     * Refuses once the bill has been paid directly: that payment was only legal BECAUSE the
+     * bill was independent, and folding a settled bill back onto a statement would double-bill
+     * the customer. Reverse the payment first.
+     */
+    @Transactional
+    public InvoiceBill clearIndependent(Long invoiceBillId) {
+        InvoiceBill bill = repository.findById(invoiceBillId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice bill not found"));
+
+        if (!bill.isIndependent()) {
+            throw new BusinessException("Invoice is not marked as independent");
+        }
+        if (bill.getPaymentStatus() != com.stopforfuel.backend.enums.PaymentStatus.NOT_PAID) {
+            throw new BusinessException("Invoice " + bill.getBillNo() + " has already received a direct"
+                    + " payment. Reverse it before returning the bill to the statement flow.");
+        }
+
+        bill.setIndependent(false);
         return repository.save(bill);
     }
 }

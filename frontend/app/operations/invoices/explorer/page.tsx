@@ -19,6 +19,7 @@ import {
     getInvoiceHistory, getCustomerInvoices, getInvoiceById,
     getPaymentsByBill, recordBillPayment, getBillPaymentSummary,
     getCustomerCreditInfo, PAYMENT_MODES, markInvoiceIndependent,
+    clearInvoiceIndependent, unlinkInvoiceFromStatement,
     submitApprovalRequest, getPendingRequestsForInvoice,
     type InvoiceBill, type Payment,
     type PageResponse, type BillPaymentSummary, type ApprovalRequest
@@ -304,18 +305,36 @@ export default function InvoiceExplorerPage() {
     };
 
     // Mark invoice as independent
-    const handleMarkIndependent = async (invoiceId: number) => {
+    // Shared runner for the three statement-linkage actions. They differ only in the call
+    // they make and the message shown on failure.
+    const runStatementAction = async (
+        action: (id: number) => Promise<InvoiceBill>,
+        invoiceId: number,
+        failureMessage: string,
+    ) => {
         setMarkingIndependent(true);
         try {
-            const updated = await markInvoiceIndependent(invoiceId);
+            const updated = await action(invoiceId);
             setSelectedInvoice(updated);
             fetchInvoices();
         } catch (err: any) {
-            setPaymentError(err?.message || "Failed to mark independent");
+            setPaymentError(err?.message || failureMessage);
         } finally {
             setMarkingIndependent(false);
         }
     };
+
+    // Destructive: permanently excludes the bill from every future statement.
+    const handleMarkIndependent = (invoiceId: number) =>
+        runStatementAction(markInvoiceIndependent, invoiceId, "Failed to mark independent");
+
+    // Non-destructive: detaches from this statement, stays eligible for the next auto-gen.
+    const handleUnlinkStatement = (invoiceId: number) =>
+        runStatementAction(unlinkInvoiceFromStatement, invoiceId, "Failed to unlink from statement");
+
+    // Escape hatch: undo an independent flag set by mistake.
+    const handleClearIndependent = (invoiceId: number) =>
+        runStatementAction(clearInvoiceIndependent, invoiceId, "Failed to return bill to statement flow");
 
     // Compute balance for selected invoice. Round to strip floating-point
     // artifacts (e.g. 8903.455000000002) that would otherwise exceed the
@@ -633,6 +652,8 @@ export default function InvoiceExplorerPage() {
                                                 canPay={canPayDirectly(selectedInvoice)}
                                                 onRecordPayment={() => { setActiveTab("payments"); setShowPaymentForm(true); }}
                                                 onMarkIndependent={() => handleMarkIndependent(selectedInvoice.id!)}
+                                                onUnlinkStatement={() => handleUnlinkStatement(selectedInvoice.id!)}
+                                                onClearIndependent={() => handleClearIndependent(selectedInvoice.id!)}
                                                 markingIndependent={markingIndependent}
                                                 requestMode={requestMode}
                                             />
@@ -673,7 +694,8 @@ export default function InvoiceExplorerPage() {
 
 // --- Details Tab ---
 function InvoiceDetailsTab({
-    invoice, payments, pendingRequests, balance, canPay, onRecordPayment, onMarkIndependent, markingIndependent, requestMode
+    invoice, payments, pendingRequests, balance, canPay, onRecordPayment, onMarkIndependent,
+    onUnlinkStatement, onClearIndependent, markingIndependent, requestMode
 }: {
     invoice: InvoiceBill;
     payments: Payment[];
@@ -682,6 +704,8 @@ function InvoiceDetailsTab({
     canPay: boolean;
     onRecordPayment: () => void;
     onMarkIndependent: () => void;
+    onUnlinkStatement: () => void;
+    onClearIndependent: () => void;
     markingIndependent: boolean;
     requestMode: boolean;
 }) {
@@ -735,6 +759,20 @@ function InvoiceDetailsTab({
             {/* Statement link status */}
             {invoice.billType === "CREDIT" && (() => {
                 const isStatementCustomer = invoice.customer?.partyType === "Statement";
+
+                // "Independent" is a one-way exclusion from every future statement, so it always
+                // asks first. Plain "Unlink" is reversible and doesn't need a confirm.
+                const confirmMarkIndependent = () => {
+                    if (!confirm(
+                        `Mark ${invoice.billNo} as independent?\n\n` +
+                        `This permanently removes it from statement generation — no future statement ` +
+                        `will ever include this bill, and it must be collected directly from the customer.\n\n` +
+                        `To simply detach it from the current statement and let it be picked up again, ` +
+                        `use "Unlink" instead.`
+                    )) return;
+                    onMarkIndependent();
+                };
+
                 if (invoice.statement) {
                     // Linked to a statement
                     return (
@@ -743,16 +781,46 @@ function InvoiceDetailsTab({
                                 <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
                                 <span>Linked to statement <span className="font-bold">{invoice.statement.statementNo}</span> — pay via statement</span>
                             </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <button
+                                    onClick={onUnlinkStatement}
+                                    disabled={markingIndependent}
+                                    title="Detach from this statement. The bill stays eligible and the next auto-gen run will pick it up again."
+                                    className="px-2 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-xs font-medium hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                                >
+                                    {markingIndependent ? "..." : "Unlink"}
+                                </button>
+                                <button
+                                    onClick={confirmMarkIndependent}
+                                    disabled={markingIndependent}
+                                    title="Permanently exclude this bill from all statements and collect it directly."
+                                    className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs font-medium hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                                >
+                                    Make Independent
+                                </button>
+                            </div>
+                        </div>
+                    );
+                } else if (isStatementCustomer && invoice.independent) {
+                    // The silent-loss case: a statement customer's bill that was flagged independent.
+                    // No statement will ever claim it, so surface it as a problem, not as "fine".
+                    return (
+                        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs bg-red-500/10 text-red-400 border border-red-500/20">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span>Statement customer, but marked <span className="font-bold">independent</span> — excluded from all statements</span>
+                            </div>
                             <button
-                                onClick={onMarkIndependent}
+                                onClick={onClearIndependent}
                                 disabled={markingIndependent}
-                                className="px-2 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-xs font-medium hover:bg-amber-500/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                                title="Clear the independent flag so statement auto-generation can claim this bill again."
+                                className="px-2 py-1 bg-primary/20 text-primary border border-primary/30 rounded text-xs font-medium hover:bg-primary/30 transition-colors disabled:opacity-50 flex-shrink-0"
                             >
-                                {markingIndependent ? "..." : "Unlink"}
+                                {markingIndependent ? "..." : "Return to Statement"}
                             </button>
                         </div>
                     );
-                } else if (isStatementCustomer && !invoice.independent) {
+                } else if (isStatementCustomer) {
                     // Statement customer, not linked yet, not independent
                     return (
                         <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -761,7 +829,7 @@ function InvoiceDetailsTab({
                                 <span>Statement customer — awaiting statement</span>
                             </div>
                             <button
-                                onClick={onMarkIndependent}
+                                onClick={confirmMarkIndependent}
                                 disabled={markingIndependent}
                                 className="px-2 py-1 bg-primary/20 text-primary border border-primary/30 rounded text-xs font-medium hover:bg-primary/30 transition-colors disabled:opacity-50 flex-shrink-0"
                             >
@@ -770,7 +838,7 @@ function InvoiceDetailsTab({
                         </div>
                     );
                 } else {
-                    // Local customer or independent invoice
+                    // Local customer — never statemented, direct payment is the normal path.
                     return (
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-green-500/10 text-green-400 border border-green-500/20">
                             <Link2Off className="w-3.5 h-3.5" />
