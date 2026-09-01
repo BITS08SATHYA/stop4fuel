@@ -54,6 +54,15 @@ public class DevJwtAuthFilter extends OncePerRequestFilter {
 
             if (claims != null) {
                 try {
+                    // The half-finished login token from /api/auth/login is signed with the same
+                    // key and would otherwise pass as a full session, letting a correct passcode
+                    // alone bypass TOTP for its 5-minute lifetime. Only /api/auth/mfa/verify may
+                    // accept it, and that endpoint checks the purpose claim itself.
+                    if (JwtTokenProvider.MFA_PURPOSE.equals(claims.getStringClaim("purpose"))) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
                     String role = claims.getStringClaim("custom:role");
                     Map<String, Object> principal = Map.of(
                             "sub", claims.getSubject(),

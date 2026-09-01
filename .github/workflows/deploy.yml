@@ -168,13 +168,18 @@ jobs:
           # already carries) so the deploy user needs no secretsmanager read permission — only
           # the ECS execution role reads it at runtime. Update this if the secret is recreated.
           MFA_SECRET_ARN="arn:aws:secretsmanager:ap-south-1:607856468014:secret:stopforfuel/mfa-encryption-key-Immtx1"
+          # HS256 signing key for the self-issued passcode session JWTs that DevJwtAuthFilter
+          # validates. Without this the app falls back to the default compiled into
+          # JwtTokenProvider, which is in source control — anyone with repo access could forge
+          # an OWNER session. Same hardcoded-ARN rationale as MFA_SECRET_ARN above.
+          JWT_SECRET_ARN="arn:aws:secretsmanager:ap-south-1:607856468014:secret:stopforfuel/jwt-secret-lTtNyt"
           # Fetch current task def, swap image to digest-pinned URI, register new revision.
           # MFA is enforced in prod: pin MFA_ENABLED=true and inject the encryption-key secret
           # (set MFA_ENABLED to "false" here to disable). Both persist across future deploys.
           aws ecs describe-task-definition \
             --task-definition stopforfuel-backend \
             --query 'taskDefinition' \
-            | jq --arg img "$IMAGE_URI" --arg mfaArn "$MFA_SECRET_ARN" '
+            | jq --arg img "$IMAGE_URI" --arg mfaArn "$MFA_SECRET_ARN" --arg jwtArn "$JWT_SECRET_ARN" '
                 .containerDefinitions[0].image = $img
                 | .containerDefinitions[0].environment = (
                     (.containerDefinitions[0].environment // [])
@@ -184,8 +189,9 @@ jobs:
                   )
                 | .containerDefinitions[0].secrets = (
                     (.containerDefinitions[0].secrets // [])
-                    | map(select(.name != "MFA_ENCRYPTION_KEY"))
-                    + [{"name": "MFA_ENCRYPTION_KEY", "valueFrom": $mfaArn}]
+                    | map(select(.name != "MFA_ENCRYPTION_KEY" and .name != "APP_JWT_SECRET"))
+                    + [{"name": "MFA_ENCRYPTION_KEY", "valueFrom": $mfaArn},
+                       {"name": "APP_JWT_SECRET", "valueFrom": $jwtArn}]
                   )
                 | .runtimePlatform = {"cpuArchitecture":"ARM64","operatingSystemFamily":"LINUX"}
                 | {family, networkMode, containerDefinitions, executionRoleArn, taskRoleArn,
