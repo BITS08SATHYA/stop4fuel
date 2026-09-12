@@ -18,7 +18,14 @@ configurations {
 }
 
 ext['spring-security.version'] = '6.5.9'
-ext['tomcat.version'] = '10.1.55'
+// Tomcat 10.1.55 carries CVE-2026-65182 (security-constraint bypass), CVE-2026-65905
+// (authentication bypass) and CVE-2026-68525. Two of those are auth bypasses, which would
+// undercut the role hierarchy this service depends on. Trivy names 10.1.58 as the fix, but
+// Apache never published it — 10.1.57 is followed by 10.1.59. Patch release, same minor line.
+ext['tomcat.version'] = '10.1.59'
+// netty-handler 4.1.119.Final carries CVE-2026-75595. Pulled in transitively; pinned here
+// because the Spring Boot 3.4.4 BOM still manages the vulnerable version.
+ext['netty.version'] = '4.1.137.Final'
 
 repositories {
 	mavenCentral()
