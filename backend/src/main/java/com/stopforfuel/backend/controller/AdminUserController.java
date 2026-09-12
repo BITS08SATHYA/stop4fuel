@@ -73,14 +73,14 @@ public class AdminUserController {
     }
 
     @PostMapping("/{id}/reset-passcode")
-    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<Map<String, String>> resetPasscode(@PathVariable Long id) {
         String newPasscode = adminUserService.resetPasscode(id);
         return ResponseEntity.ok(Map.of("passcode", newPasscode));
     }
 
     @PostMapping("/{id}/reset-mfa")
-    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<Map<String, String>> resetMfa(@PathVariable Long id) {
         adminUserService.resetMfa(id);
         return ResponseEntity.ok(Map.of("message", "MFA reset. The user will re-enroll on next login."));
@@ -101,7 +101,7 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'USER_DELETE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<Void> disableUser(@PathVariable Long id) {
         adminUserService.disableUser(id);
         return ResponseEntity.ok().build();
@@ -130,7 +130,7 @@ public class AdminUserController {
     }
 
     @PostMapping("/passcode-reset-requests/{id}/approve")
-    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<Map<String, Object>> approveResetRequest(@PathVariable Long id) {
         PasscodeResetRequest request = resetRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reset request not found"));
@@ -155,7 +155,7 @@ public class AdminUserController {
     }
 
     @PostMapping("/passcode-reset-requests/{id}/reject")
-    @PreAuthorize("hasPermission(null, 'USER_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<Void> rejectResetRequest(@PathVariable Long id) {
         PasscodeResetRequest request = resetRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reset request not found"));

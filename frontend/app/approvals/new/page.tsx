@@ -14,7 +14,8 @@ import {
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 
-type BuilderType = Exclude<ApprovalRequestType, "RECORD_STATEMENT_PAYMENT" | "RECORD_INVOICE_PAYMENT">;
+// PRIVILEGED_ACTION is raised by the server when a delete is blocked — never composed by hand.
+type BuilderType = Exclude<ApprovalRequestType, "RECORD_STATEMENT_PAYMENT" | "RECORD_INVOICE_PAYMENT" | "PRIVILEGED_ACTION">;
 
 const TABS: { type: BuilderType; label: string; icon: React.ComponentType<{ className?: string }>; hint: string }[] = [
     { type: "ADD_VEHICLE",         label: "Add Vehicle",         icon: Truck,      hint: "Request admin to register a new vehicle under a customer" },

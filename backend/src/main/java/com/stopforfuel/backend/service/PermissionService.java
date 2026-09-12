@@ -3,6 +3,7 @@ package com.stopforfuel.backend.service;
 import com.stopforfuel.backend.entity.Permission;
 import com.stopforfuel.backend.entity.RolePermission;
 import com.stopforfuel.backend.entity.Roles;
+import com.stopforfuel.config.RoleHierarchy;
 import com.stopforfuel.backend.repository.PermissionRepository;
 import com.stopforfuel.backend.repository.RolePermissionRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
@@ -26,7 +27,12 @@ public class PermissionService {
     @Transactional(readOnly = true)
     @Cacheable(value = "permissions", key = "#roleType + ':' + #permissionCode")
     public boolean hasPermission(String roleType, String permissionCode) {
-        if ("OWNER".equalsIgnoreCase(roleType) || "SYSTEM_ADMIN".equalsIgnoreCase(roleType)) {
+        // PRIME and SYSTEM_ADMIN keep an unconditional grant: PRIME is the tenant's
+        // break-glass tier and must survive any edit to role_permissions, SYSTEM_ADMIN is
+        // vendor support. OWNER deliberately does NOT bypass any more — its permissions are
+        // real rows seeded by DataInitializer.materializeOwnerPermissions(), so they can be
+        // audited and trimmed like any other role.
+        if (RoleHierarchy.isPrime(roleType) || RoleHierarchy.SYSTEM_ADMIN.equalsIgnoreCase(roleType)) {
             return true;
         }
         Roles role = rolesRepository.findByRoleType(roleType).orElse(null);
@@ -37,7 +43,7 @@ public class PermissionService {
     @Transactional(readOnly = true)
     @Cacheable(value = "rolePermissions", key = "#roleType")
     public List<String> getPermissionsForRole(String roleType) {
-        if ("OWNER".equalsIgnoreCase(roleType) || "SYSTEM_ADMIN".equalsIgnoreCase(roleType)) {
+        if (RoleHierarchy.isPrime(roleType) || RoleHierarchy.SYSTEM_ADMIN.equalsIgnoreCase(roleType)) {
             return permissionRepository.findAll().stream()
                     .map(Permission::getCode)
                     .collect(Collectors.toList());

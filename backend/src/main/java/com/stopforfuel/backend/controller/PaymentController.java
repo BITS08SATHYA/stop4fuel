@@ -191,7 +191,7 @@ public class PaymentController {
      * PATCH /api/payments/{id}/date  body: { "paymentDate": "ISO-8601" }
      */
     @PatchMapping("/{id}/date")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<PaymentDTO> updatePaymentDate(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {

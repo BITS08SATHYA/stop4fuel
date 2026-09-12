@@ -261,7 +261,7 @@ public class StatementController {
      * document under the original number.
      */
     @PatchMapping("/{id}/statement-no")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public StatementDTO renameStatement(@PathVariable Long id,
                                         @RequestBody Map<String, String> body) {
         String newNo = body != null ? body.get("statementNo") : null;
@@ -283,7 +283,7 @@ public class StatementController {
      * Forward-only by design: existing statement numbers are not renumbered.
      */
     @PutMapping("/sequence/next")
-    @PreAuthorize("hasPermission(null, 'PAYMENT_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public BillSequenceService.NextBillNoView setStatementSequence(@RequestBody Map<String, Long> body) {
         Long next = body != null ? body.get("nextNumber") : null;
         if (next == null) {

@@ -3,11 +3,13 @@ package com.stopforfuel.config;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.DuplicateResourceException;
 import com.stopforfuel.backend.exception.ReportGenerationException;
+import com.stopforfuel.backend.exception.PrivilegeException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.TransactionSystemException;
@@ -53,6 +55,29 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    /**
+     * Denials from {@code @PreAuthorize} are {@link AccessDeniedException}s, which are
+     * RuntimeExceptions — so without this they fell through to the catch-all below and came
+     * back as 500. Callers could not tell "you are not allowed" from "the server broke".
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN,
+                "You do not have permission to perform this action.");
+    }
+
+    /** An unmapped URL is a 404, not a server fault — the catch-all was reporting it as 500. */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResource(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, "No such endpoint: " + ex.getResourcePath());
+    }
+
+    @ExceptionHandler(PrivilegeException.class)
+    public ResponseEntity<Map<String, Object>> handlePrivilege(PrivilegeException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
     @ExceptionHandler(BusinessException.class)

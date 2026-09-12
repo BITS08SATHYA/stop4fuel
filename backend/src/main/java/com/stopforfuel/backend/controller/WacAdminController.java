@@ -19,13 +19,13 @@ public class WacAdminController {
     private final WeightedAverageCostService wacService;
 
     @PostMapping("/recompute")
-    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('PRIME', 'SYSTEM_ADMIN')")
     public ResponseEntity<Map<Long, BigDecimal>> recompute() {
         return ResponseEntity.ok(wacService.recomputeFromHistory());
     }
 
     @PostMapping("/recompute-sales")
-    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('PRIME', 'SYSTEM_ADMIN')")
     public ResponseEntity<Map<String, Integer>> recomputeSales() {
         return ResponseEntity.ok(wacService.recomputeSalesFromHistory());
     }

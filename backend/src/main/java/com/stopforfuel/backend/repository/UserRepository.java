@@ -18,6 +18,8 @@ public interface UserRepository extends ScidRepository<User> {
 
     List<User> findByRoleRoleTypeAndScidAndStatus(String roleType, Long scid, EntityStatus status);
 
+    long countByRoleRoleTypeAndScidAndStatus(String roleType, Long scid, EntityStatus status);
+
     @Query("SELECT u FROM User u JOIN u.phoneNumbers p WHERE p = :phone")
     Optional<User> findByPhoneNumber(@Param("phone") String phone);
 

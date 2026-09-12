@@ -55,6 +55,15 @@ app:
     user-pool-id: ${COGNITO_USER_POOL_ID:}
     client-id: ${COGNITO_CLIENT_ID:}
     region: ${AWS_REGION:ap-south-1}
+  security:
+    # Deletes are hard in this schema, so anyone below PRIME gets a rolling-24h budget.
+    # Past it the attempt becomes an approval request to PRIME rather than a flat refusal.
+    delete-limit-per-day: ${DELETE_LIMIT_PER_DAY:5}
+    grant-validity-minutes: ${GRANT_VALIDITY_MINUTES:30}
+    # Promotes this phone number to PRIME when the tenant has no active PRIME yet. The role
+    # hierarchy is closed — nobody can assign a role at or above their own rank — so without
+    # this there is no in-app path to create the first PRIME. No-op after the first run.
+    prime-bootstrap-phone: ${PRIME_BOOTSTRAP_PHONE:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   debug:

@@ -29,6 +29,9 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     long countByActionAndScidAndPerformedAtAfter(String action, Long scid, LocalDateTime after);
 
+    long countByPerformedByIdAndActionAndOutcomeAndScidAndPerformedAtAfter(
+            Long performedById, String action, String outcome, Long scid, LocalDateTime after);
+
     @Query("SELECT a FROM AuditLog a WHERE a.scid = :scid AND a.action IN ('LOGIN_SUCCESS', 'LOGIN_FAILED') " +
            "ORDER BY a.performedAt DESC")
     List<AuditLog> findRecentLogins(@Param("scid") Long scid, Pageable pageable);

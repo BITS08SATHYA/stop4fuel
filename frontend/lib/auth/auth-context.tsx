@@ -99,7 +99,7 @@ const getApiBaseUrl = () => {
 
 export function getDashboardType(designation?: string, role?: string): "owner" | "cashier" | "employee" | "customer" {
     if (role === "CUSTOMER") return "customer";
-    if (role === "OWNER" || role === "ADMIN" || role === "SYSTEM_ADMIN") return "owner";
+    if (role === "PRIME" || role === "OWNER" || role === "ADMIN" || role === "SYSTEM_ADMIN") return "owner";
 
     const designationMap: Record<string, "owner" | "cashier" | "employee"> = {
         "Manager": "owner",
@@ -393,7 +393,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hasPermission = useCallback(
         (code: string) => {
             if (!user) return false;
-            if (user.role === "OWNER" || user.role === "SYSTEM_ADMIN") return true;
+            // Mirrors PermissionService on the backend: only PRIME and SYSTEM_ADMIN hold an
+            // unconditional grant. OWNER is data-driven now, so bypassing here would show it
+            // buttons that the API then refuses with a 403.
+            if (user.role === "PRIME" || user.role === "SYSTEM_ADMIN") return true;
             return user.permissions.includes(code);
         },
         [user],

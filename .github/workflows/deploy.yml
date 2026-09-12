@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.env.outputs.environment }}
+      prime_bootstrap_phone: ${{ steps.config.outputs.prime_bootstrap_phone }}
       deploy_target: ${{ steps.config.outputs.deploy_target }}
       ecr_registry: ${{ steps.config.outputs.ecr_registry }}
       api_url: ${{ steps.config.outputs.api_url }}
@@ -73,6 +74,10 @@ jobs:
             echo "ecs_cluster=$(fetch_param /stopforfuel/ecs-cluster)" >> $GITHUB_OUTPUT
             echo "ecs_backend_service=$(fetch_param /stopforfuel/ecs-backend-service)" >> $GITHUB_OUTPUT
             echo "ecs_frontend_service=$(fetch_param /stopforfuel/ecs-frontend-service)" >> $GITHUB_OUTPUT
+            # Phone promoted to PRIME on boot when the tenant has no active PRIME. The role
+            # hierarchy is closed — nobody can assign a rank at or above their own — so this is
+            # the only way the first PRIME can exist. Kept in SSM rather than in the repo.
+            echo "prime_bootstrap_phone=$(fetch_param /stopforfuel/prod/prime-bootstrap-phone)" >> $GITHUB_OUTPUT
           fi
 
           # EC2-specific params (only exist in dev)
@@ -162,6 +167,7 @@ jobs:
           CLUSTER: ${{ needs.setup.outputs.ecs_cluster }}
           SERVICE: ${{ needs.setup.outputs.ecs_backend_service }}
           IMAGE_URI: ${{ steps.build-backend.outputs.image_uri }}
+          PRIME_BOOTSTRAP_PHONE: ${{ needs.setup.outputs.prime_bootstrap_phone }}
         run: |
           set -euo pipefail
           # MFA encryption-key secret ARN. Hardcoded (like the other secret ARNs the task def
@@ -179,13 +185,16 @@ jobs:
           aws ecs describe-task-definition \
             --task-definition stopforfuel-backend \
             --query 'taskDefinition' \
-            | jq --arg img "$IMAGE_URI" --arg mfaArn "$MFA_SECRET_ARN" --arg jwtArn "$JWT_SECRET_ARN" '
+            | jq --arg img "$IMAGE_URI" --arg mfaArn "$MFA_SECRET_ARN" --arg jwtArn "$JWT_SECRET_ARN" \
+                 --arg primePhone "$PRIME_BOOTSTRAP_PHONE" '
                 .containerDefinitions[0].image = $img
                 | .containerDefinitions[0].environment = (
                     (.containerDefinitions[0].environment // [])
-                    | map(select(.name != "TZ" and .name != "MFA_ENABLED"))
+                    | map(select(.name != "TZ" and .name != "MFA_ENABLED"
+                                 and .name != "PRIME_BOOTSTRAP_PHONE"))
                     + [{"name": "TZ", "value": "Asia/Kolkata"},
-                       {"name": "MFA_ENABLED", "value": "true"}]
+                       {"name": "MFA_ENABLED", "value": "true"},
+                       {"name": "PRIME_BOOTSTRAP_PHONE", "value": $primePhone}]
                   )
                 | .containerDefinitions[0].secrets = (
                     (.containerDefinitions[0].secrets // [])

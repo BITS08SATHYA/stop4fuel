@@ -52,4 +52,11 @@ public class ApprovalRequest extends BaseEntity {
 
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
+
+    /**
+     * When an approved {@code PRIVILEGED_ACTION} grant was spent. A grant is single-use, so
+     * one approval buys exactly one retry of the action that was blocked.
+     */
+    @Column(name = "consumed_at")
+    private LocalDateTime consumedAt;
 }

@@ -5,6 +5,8 @@ import com.stopforfuel.backend.enums.EntityStatus;
 import com.stopforfuel.backend.repository.DesignationRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
 import com.stopforfuel.backend.repository.UserRepository;
+import com.stopforfuel.backend.exception.PrivilegeException;
+import com.stopforfuel.config.RoleHierarchy;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +37,75 @@ public class AdminUserService {
 
     @Value("${app.auth.enabled:true}")
     private boolean authEnabled;
+
+    // --- Seniority guards -------------------------------------------------------------
+    // Permissions answer "may this role touch user management at all". These answer the
+    // question a permission bit cannot: "may this particular caller touch this particular
+    // user". Without them an OWNER with USER_UPDATE could demote the proprietor, promote
+    // themselves, or hand OWNER to an accomplice.
+
+    private String callerRole() {
+        String role = SecurityUtils.getCurrentRole();
+        if (role == null) {
+            throw new PrivilegeException("Not authenticated");
+        }
+        return role;
+    }
+
+    /**
+     * Refuse when the caller is not senior enough to act on this user.
+     *
+     * Seniority is strict — an OWNER cannot touch another OWNER — with one deliberate
+     * exception: PRIME may act on a peer PRIME. Nothing sits above the top tier, so without
+     * peer governance a second PRIME (added by mistake, or gone bad) could never be removed
+     * by anyone. {@link #assertNotLastPrime} keeps that from emptying the tier.
+     */
+    private void assertOutranks(User target, String action) {
+        String caller = callerRole();
+        String targetRole = target.getRole() != null ? target.getRole().getRoleType() : null;
+
+        if (RoleHierarchy.isPrime(caller) && RoleHierarchy.isPrime(targetRole)) return;
+
+        if (!RoleHierarchy.outranks(caller, targetRole)) {
+            throw new PrivilegeException(
+                    "A " + caller + " cannot " + action + " a " + (targetRole == null ? "user" : targetRole)
+                            + ". This action is reserved for a more senior role.");
+        }
+    }
+
+    /**
+     * Refuse when the caller is trying to hand out a role above their own rank, or a peer rank
+     * they are not entitled to mint. PRIME may appoint another PRIME — succession has to be
+     * possible, and it is what makes {@link #assertNotLastPrime} survivable.
+     */
+    private void assertMayAssign(String newRoleType) {
+        String caller = callerRole();
+        if (RoleHierarchy.isPrime(caller) && RoleHierarchy.isPrime(newRoleType)) return;
+        if (!RoleHierarchy.outranks(caller, newRoleType)) {
+            throw new PrivilegeException(
+                    "A " + caller + " cannot assign the " + newRoleType + " role. You may only assign roles "
+                            + "below your own.");
+        }
+    }
+
+    /**
+     * Refuse to remove the tenant's last active PRIME. PRIME is the only tier that can undo
+     * an OWNER's mistakes, so an empty PRIME tier is an unrecoverable state — the hierarchy
+     * is closed and nothing in the app could mint a replacement.
+     */
+    private void assertNotLastPrime(User target) {
+        String targetRole = target.getRole() != null ? target.getRole().getRoleType() : null;
+        if (!RoleHierarchy.isPrime(targetRole)) return;
+        if (target.getStatus() != EntityStatus.ACTIVE) return;
+
+        long activePrimes = userRepository.countByRoleRoleTypeAndScidAndStatus(
+                RoleHierarchy.PRIME, SecurityUtils.getScid(), EntityStatus.ACTIVE);
+        if (activePrimes <= 1) {
+            throw new PrivilegeException(
+                    "This is the last active PRIME user. Promote another user to PRIME before "
+                            + "removing this one.");
+        }
+    }
 
     @Transactional(readOnly = true)
     public List<User> getAllUsers() {
@@ -91,6 +162,7 @@ public class AdminUserService {
      */
     public Map<String, Object> createUserWithPhone(String name, String phoneNumber, String roleType,
                                                     String designationName, String userType) {
+        assertMayAssign(roleType);
         Roles role = rolesRepository.findByRoleType(roleType)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleType));
 
@@ -141,6 +213,10 @@ public class AdminUserService {
     public String resetPasscode(Long userId) {
         User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        // A reset hands back the plaintext code, so it is a login as that user in all but
+        // name. Restricted to PRIME at the controller, and still rank-checked here so a
+        // PRIME cannot be taken over by another PRIME-equivalent tier.
+        assertOutranks(user, "reset the passcode of");
 
         String plainPasscode = String.format("%04d", random.nextInt(10000));
         user.setPasscode(passwordEncoder.encode(plainPasscode));
@@ -156,6 +232,7 @@ public class AdminUserService {
     public void resetMfa(Long userId) {
         User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        assertOutranks(user, "reset MFA for");
 
         user.setTotpSecret(null);
         user.setMfaEnrolled(false);
@@ -163,6 +240,7 @@ public class AdminUserService {
     }
 
     public User createUser(String username, String email, String name, String roleType, String tempPassword) {
+        assertMayAssign(roleType);
         Roles role = rolesRepository.findByRoleType(roleType)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleType));
 
@@ -218,6 +296,12 @@ public class AdminUserService {
         Roles newRole = rolesRepository.findByRoleType(newRoleType)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + newRoleType));
 
+        // Both halves matter: you may not act on a peer or superior, and you may not hand
+        // out a rank you do not outrank. Either check alone leaves an escalation path.
+        assertOutranks(user, "change the role of");
+        assertMayAssign(newRoleType);
+        assertNotLastPrime(user);
+
         user.setRole(newRole);
 
         // Update designation if user is an Employee
@@ -249,6 +333,8 @@ public class AdminUserService {
     public User toggleUserStatus(Long userId) {
         User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        assertOutranks(user, "activate or deactivate");
+        assertNotLastPrime(user);
         if (user.getStatus() == EntityStatus.ACTIVE) {
             user.setStatus(EntityStatus.INACTIVE);
         } else {
@@ -260,6 +346,8 @@ public class AdminUserService {
     public void disableUser(Long userId) {
         User user = userRepository.findByIdAndScid(userId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        assertOutranks(user, "disable");
+        assertNotLastPrime(user);
 
         user.setStatus(EntityStatus.INACTIVE);
         userRepository.save(user);

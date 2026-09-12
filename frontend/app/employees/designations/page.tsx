@@ -29,7 +29,7 @@ interface RoleItem {
 }
 
 // Seeded roles the backend refuses to rename/delete
-const PROTECTED_ROLES = new Set(["CUSTOMER", "EMPLOYEE", "DEALER", "OWNER", "ADMIN", "CASHIER"]);
+const PROTECTED_ROLES = new Set(["CUSTOMER", "EMPLOYEE", "DEALER", "PRIME", "SYSTEM_ADMIN", "OWNER", "ADMIN", "CASHIER"]);
 
 async function readErrorMessage(res: Response, fallback: string): Promise<string> {
     try {

@@ -33,7 +33,7 @@ public class PermissionController {
     }
 
     @PutMapping("/role/{roleType}")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<Void> updatePermissionsForRole(
             @PathVariable String roleType,
             @RequestBody Map<String, List<String>> request) {
@@ -43,7 +43,7 @@ public class PermissionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(null, 'SETTINGS_CREATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<List<Permission>> createModulePermissions(
             @Valid @RequestBody CreateModulePermissionsRequest request) {
         List<Permission> created = permissionService.createModulePermissions(
@@ -52,7 +52,7 @@ public class PermissionController {
     }
 
     @DeleteMapping("/module/{module}")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_DELETE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<Void> deleteModulePermissions(@PathVariable String module) {
         permissionService.deleteModulePermissions(module);
         return ResponseEntity.ok().build();
@@ -66,7 +66,7 @@ public class PermissionController {
     }
 
     @PostMapping("/patch-cashier")
-    @PreAuthorize("hasPermission(null, 'SETTINGS_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ResponseEntity<Map<String, Object>> patchCashier() {
         List<String> added = new java.util.ArrayList<>();
         var codes = List.of("CUSTOMER_VIEW", "VEHICLE_VIEW", "PRODUCT_VIEW", "STATION_VIEW",

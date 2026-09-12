@@ -166,7 +166,7 @@ public class ShiftController {
     }
 
     @PostMapping("/{id}/reopen")
-    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public ShiftDTO reopen(@PathVariable Long id) {
         return ShiftDTO.from(service.reopenForReview(id));
     }

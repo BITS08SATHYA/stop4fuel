@@ -132,6 +132,9 @@ public class ApprovalRequestService {
                     Long.valueOf(payload.get("statementId").toString()), buildPayment(payload));
             case RECORD_INVOICE_PAYMENT -> paymentService.recordBillPayment(
                     Long.valueOf(payload.get("invoiceBillId").toString()), buildPayment(payload));
+            // Nothing to apply: approval issues a grant that PrivilegedActionAspect spends
+            // when the original requester retries the action themselves.
+            case PRIVILEGED_ACTION -> { }
         }
 
         req.setStatus(ApprovalRequestStatus.APPROVED);

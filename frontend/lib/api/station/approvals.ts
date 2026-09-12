@@ -7,7 +7,9 @@ export type ApprovalRequestType =
     | 'RAISE_CREDIT_LIMIT'
     | 'RAISE_VEHICLE_LIMIT'
     | 'RECORD_STATEMENT_PAYMENT'
-    | 'RECORD_INVOICE_PAYMENT';
+    | 'RECORD_INVOICE_PAYMENT'
+    /** Raised by the server, not by a person: an action blocked by the delete limit. */
+    | 'PRIVILEGED_ACTION';
 
 export type ApprovalRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 

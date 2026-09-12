@@ -229,7 +229,7 @@ public class InvoiceBillController {
      * would re-issue a number already on a bill (would create a duplicate bill_no).
      */
     @PutMapping("/sequence/next")
-    @PreAuthorize("hasPermission(null, 'INVOICE_UPDATE')")
+    @PreAuthorize("hasRole('PRIME')")
     public com.stopforfuel.backend.service.BillSequenceService.NextBillNoView setSequence(
             @RequestBody Map<String, Object> body) {
         BillType billType = BillType.valueOf(String.valueOf(body.get("billType")));

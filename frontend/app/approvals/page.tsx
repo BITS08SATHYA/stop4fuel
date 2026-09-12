@@ -9,7 +9,7 @@ import { showToast } from "@/components/ui/toast";
 import { PermissionGate } from "@/components/permission-gate";
 import {
     CheckCircle2, XCircle, Clock, Loader2, RefreshCw,
-    Truck, ShieldOff, TrendingUp, Gauge, Receipt, FileText,
+    Truck, ShieldOff, TrendingUp, Gauge, Receipt, FileText, ShieldAlert,
 } from "lucide-react";
 import {
     listPendingApprovals,
@@ -26,6 +26,7 @@ const TYPE_META: Record<ApprovalRequestType, { label: string; icon: React.Compon
     RAISE_VEHICLE_LIMIT:      { label: "Raise Vehicle Limit",   icon: Gauge,      tone: "bg-indigo-500/15 text-indigo-400" },
     RECORD_STATEMENT_PAYMENT: { label: "Statement Payment",     icon: Receipt,    tone: "bg-purple-500/15 text-purple-400" },
     RECORD_INVOICE_PAYMENT:   { label: "Invoice Payment",       icon: FileText,   tone: "bg-cyan-500/15 text-cyan-400" },
+    PRIVILEGED_ACTION:        { label: "Privileged Action",     icon: ShieldAlert, tone: "bg-red-500/15 text-red-400" },
 };
 
 function formatDateTime(dateStr?: string | null) {
@@ -64,6 +65,11 @@ function listSubtitle(req: ApprovalRequest): string | null {
         }
         case "UNBLOCK_CUSTOMER":
             return req.customerName ?? null;
+        case "PRIVILEGED_ACTION": {
+            const p = req.payload || {};
+            const parts = [strOrNull(p.role), strOrNull(p.action)].filter(Boolean) as string[];
+            return parts.join(" \u00B7 ") || null;
+        }
         case "RAISE_CREDIT_LIMIT": {
             const bits: string[] = [];
             if (req.customerName) bits.push(req.customerName);
@@ -100,6 +106,11 @@ function renderDetailRows(req: ApprovalRequest): Array<[string, string]> {
     };
 
     switch (req.requestType) {
+        case "PRIVILEGED_ACTION":
+            pushIf("Blocked action", strOrNull(p.action));
+            pushIf("Requested by role", strOrNull(p.role));
+            pushIf("Deletes used in last 24h", p.deletesUsed != null ? String(p.deletesUsed) : null);
+            break;
         case "RECORD_INVOICE_PAYMENT":
             pushIf("Bill No", req.billNo);
             pushIf("Customer", req.customerName);

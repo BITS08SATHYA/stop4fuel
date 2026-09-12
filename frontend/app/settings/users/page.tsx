@@ -49,7 +49,7 @@ function formatRelativeTime(dt: string | null): string {
     return new Date(dt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 }
 
-const ROLES = ["OWNER", "ADMIN", "SYSTEM_ADMIN", "CASHIER", "EMPLOYEE", "CUSTOMER", "DEALER"];
+const ROLES = ["PRIME", "OWNER", "ADMIN", "SYSTEM_ADMIN", "CASHIER", "EMPLOYEE", "CUSTOMER", "DEALER"];
 const PAGE_SIZE = 7;
 
 export default function UsersPage() {
@@ -242,6 +242,7 @@ export default function UsersPage() {
                         onChange={(val) => setRoleFilter(val)}
                         options={[
                             { value: "", label: "All Roles" },
+                            { value: "PRIME", label: "Prime" },
                             { value: "OWNER", label: "Owner" },
                             { value: "ADMIN", label: "Admin" },
                             { value: "CASHIER", label: "Cashier" },

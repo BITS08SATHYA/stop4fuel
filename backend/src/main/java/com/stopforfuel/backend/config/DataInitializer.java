@@ -12,6 +12,13 @@ import com.stopforfuel.backend.repository.PartyRepository;
 import com.stopforfuel.backend.repository.PermissionRepository;
 import com.stopforfuel.backend.repository.RolePermissionRepository;
 import com.stopforfuel.backend.repository.RolesRepository;
+import com.stopforfuel.backend.repository.DesignationRepository;
+import com.stopforfuel.backend.repository.UserRepository;
+import com.stopforfuel.backend.entity.Designation;
+import com.stopforfuel.backend.entity.User;
+import com.stopforfuel.config.RoleHierarchy;
+import com.stopforfuel.config.SecurityUtils;
+import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -38,6 +45,24 @@ public class DataInitializer implements ApplicationRunner {
     private final com.stopforfuel.backend.repository.BillSequenceRepository billSequenceRepository;
     private final com.stopforfuel.backend.repository.StatementRepository statementRepository;
     private final jakarta.persistence.EntityManager entityManager;
+    private final DesignationRepository designationRepository;
+    private final UserRepository userRepository;
+    private final software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient cognitoClient;
+
+    @Value("${app.cognito.user-pool-id:}")
+    private String cognitoUserPoolId;
+
+    @Value("${app.auth.enabled:true}")
+    private boolean authEnabled;
+
+    /**
+     * Phone number of the user to promote to PRIME on startup when the tenant has no PRIME
+     * yet. Without this the first deploy of the PRIME tier would leave nobody able to reach
+     * the PRIME-only endpoints, since OWNER can no longer mint a role at or above its own
+     * rank. Set once, in SSM; it is a no-op on every run after the first.
+     */
+    @Value("${app.security.prime-bootstrap-phone:}")
+    private String primeBootstrapPhone;
 
     @Override
     @Transactional
@@ -50,13 +75,16 @@ public class DataInitializer implements ApplicationRunner {
         seedRolePermissions();
         patchMissingPermissions();
         patchCashierPermissions();
+        materializeOwnerPermissions();
+        seedPrimeDesignation();
+        bootstrapPrimeUser();
         patchStatementSequence();
         backfillStatementQuantity();
         backfillIncentiveCustomerNames();
     }
 
     private void seedRoles() {
-        for (String roleType : List.of("CUSTOMER", "EMPLOYEE", "DEALER", "OWNER", "ADMIN", "CASHIER")) {
+        for (String roleType : List.of("CUSTOMER", "EMPLOYEE", "DEALER", "PRIME", "SYSTEM_ADMIN", "OWNER", "ADMIN", "CASHIER")) {
             if (rolesRepository.findByRoleType(roleType).isEmpty()) {
                 Roles role = new Roles();
                 role.setRoleType(roleType);
@@ -307,6 +335,148 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     /**
+     * Permissions OWNER must never hold. These are the levers that let a compromised or
+     * departing OWNER cover their tracks or lock the proprietor out: removing users, and
+     * rewriting the permission model itself (which would otherwise let OWNER grant the rest
+     * straight back). Reserved for PRIME.
+     */
+    private static final Set<String> OWNER_DENIED_PERMISSIONS = Set.of(
+            "USER_DELETE",
+            "SETTINGS_DELETE"
+    );
+
+    /**
+     * Turn OWNER from a hardcoded bypass into an ordinary, data-driven role.
+     *
+     * {@code PermissionService.hasPermission} used to return true for OWNER unconditionally,
+     * so role_permissions held no OWNER rows at all and the role could not be audited or
+     * trimmed. This grants OWNER every permission except {@link #OWNER_DENIED_PERMISSIONS},
+     * idempotently, and revokes any denied row that a previous run or a manual edit left
+     * behind. Runs after the permission catalogue is seeded so new codes are picked up on
+     * the deploy that introduces them.
+     */
+    private void materializeOwnerPermissions() {
+        Roles owner = rolesRepository.findByRoleType(RoleHierarchy.OWNER).orElse(null);
+        if (owner == null) return;
+
+        int granted = 0;
+        int revoked = 0;
+        for (Permission p : permissionRepository.findAll()) {
+            boolean allowed = !OWNER_DENIED_PERMISSIONS.contains(p.getCode());
+            boolean held = rolePermissionRepository.existsByRoleIdAndPermissionCode(owner.getId(), p.getCode());
+
+            if (allowed && !held) {
+                RolePermission rp = new RolePermission();
+                rp.setRole(owner);
+                rp.setPermission(p);
+                rolePermissionRepository.save(rp);
+                granted++;
+            } else if (!allowed && held) {
+                rolePermissionRepository.deleteByRoleIdAndPermissionId(owner.getId(), p.getId());
+                revoked++;
+                log.warn("Revoked OWNER permission {} — reserved for PRIME", p.getCode());
+            }
+        }
+
+        if (granted > 0 || revoked > 0) {
+            log.info("Materialized OWNER permissions: {} granted, {} revoked", granted, revoked);
+            var permCache = cacheManager.getCache("permissions");
+            if (permCache != null) permCache.clear();
+            var roleCache = cacheManager.getCache("rolePermissions");
+            if (roleCache != null) roleCache.clear();
+        }
+    }
+
+    /** Designation to pair with the PRIME role so it shows correctly on the user list. */
+    private void seedPrimeDesignation() {
+        if (designationRepository.findByName("Prime").isPresent()) return;
+        Designation d = new Designation();
+        d.setName("Prime");
+        d.setDefaultRole(RoleHierarchy.PRIME);
+        d.setDescription("Proprietor. Top of the hierarchy — the only role that can remove an owner, "
+                + "reset a passcode, or reach the endpoints that rewrite financial history.");
+        designationRepository.save(d);
+        log.info("Seeded designation: Prime");
+    }
+
+    /**
+     * Promote the configured bootstrap user to PRIME when the tenant has no active PRIME.
+     *
+     * This exists because the hierarchy is deliberately closed: nobody can assign a role at
+     * or above their own rank, so once OWNER stops bypassing permissions there is no in-app
+     * path to create the first PRIME. Runs once, then no-ops forever.
+     */
+    private void bootstrapPrimeUser() {
+        if (primeBootstrapPhone == null || primeBootstrapPhone.isBlank()) return;
+        // A security convenience must never be able to keep the application from starting —
+        // one malformed user row would otherwise take the whole service down on deploy.
+        try {
+            doBootstrapPrimeUser();
+        } catch (Exception e) {
+            log.error("PRIME bootstrap failed; nobody was promoted. Promote manually before relying "
+                    + "on PRIME-only endpoints. Cause: {}", e.getMessage(), e);
+        }
+    }
+
+    private void doBootstrapPrimeUser() {
+        Long scid = SecurityUtils.getScid();
+        long existingPrimes = userRepository.countByRoleRoleTypeAndScidAndStatus(
+                RoleHierarchy.PRIME, scid, com.stopforfuel.backend.enums.EntityStatus.ACTIVE);
+        if (existingPrimes > 0) return;
+
+        String phone = primeBootstrapPhone.trim();
+        User user = userRepository.findByPhoneNumberAndScid(phone, scid).orElse(null);
+        if (user == null) {
+            log.error("PRIME bootstrap: no user with phone {} in tenant {} — nobody was promoted. "
+                    + "Check app.security.prime-bootstrap-phone.", phone, scid);
+            return;
+        }
+
+        Roles prime = rolesRepository.findByRoleType(RoleHierarchy.PRIME).orElse(null);
+        if (prime == null) return;
+
+        String previous = user.getRole() != null ? user.getRole().getRoleType() : "none";
+        user.setRole(prime);
+        designationRepository.findByName("Prime").ifPresent(d -> {
+            if (user instanceof com.stopforfuel.backend.entity.Employee emp) {
+                emp.setDesignationEntity(d);
+            }
+        });
+        userRepository.save(user);
+
+        // The DB row is not what authorizes a request — DbPermissionEvaluator reads the
+        // custom:role claim off the token, which Cognito issues. Promoting only in the database
+        // would leave the new PRIME carrying an OWNER claim indefinitely, i.e. no PRIME at all
+        // as far as every endpoint is concerned.
+        syncRoleToCognito(user, RoleHierarchy.PRIME);
+
+        log.info("PRIME bootstrap: promoted user {} ({}) from {} to PRIME. They must sign out and "
+                + "back in for the new role to appear in their token.", user.getId(), user.getName(), previous);
+    }
+
+    private void syncRoleToCognito(User user, String roleType) {
+        if (!authEnabled || user.getCognitoId() == null
+                || cognitoUserPoolId == null || cognitoUserPoolId.isBlank()) {
+            return;
+        }
+        try {
+            cognitoClient.adminUpdateUserAttributes(
+                    software.amazon.awssdk.services.cognitoidentityprovider.model
+                            .AdminUpdateUserAttributesRequest.builder()
+                            .userPoolId(cognitoUserPoolId)
+                            .username(user.getUsername())
+                            .userAttributes(software.amazon.awssdk.services.cognitoidentityprovider.model
+                                    .AttributeType.builder().name("custom:role").value(roleType).build())
+                            .build());
+            log.info("PRIME bootstrap: synced custom:role={} to Cognito for {}", roleType, user.getUsername());
+        } catch (Exception e) {
+            log.error("PRIME bootstrap: promoted user {} in the database but could NOT update their "
+                    + "Cognito custom:role. They will keep their old role in the app until this is "
+                    + "fixed manually. Cause: {}", user.getId(), e.getMessage());
+        }
+    }
+
+    /**
      * Ensure the global STMT sequence continues from the max new-system (2025+) statement number.
      * Old-format statements (S26/1, etc.) are left as-is — no renaming.
      */
@@ -353,7 +523,9 @@ public class DataInitializer implements ApplicationRunner {
                 "REPORT_VIEW"
             ),
             "ADMIN", Set.of(), // gets all except SETTINGS_DELETE, USER_DELETE, STOCK_NOTIFICATION_CONFIGURE — handled below
-            "OWNER", Set.of(), // gets all permissions — handled below
+            // OWNER is intentionally absent: materializeOwnerPermissions() owns that role's
+            // grants and runs on every boot, so seeding it here would just grant the reserved
+            // permissions for materialize to revoke moments later.
             "EMPLOYEE", Set.of(
                 "DASHBOARD_VIEW", "SHIFT_VIEW", "INVENTORY_VIEW"
             )
@@ -378,14 +550,6 @@ public class DataInitializer implements ApplicationRunner {
                         rp.setPermission(p);
                         rolePermissionRepository.save(rp);
                     }
-                }
-            } else if ("OWNER".equals(roleType)) {
-                // Owner gets every permission
-                for (Permission p : permissionRepository.findAll()) {
-                    RolePermission rp = new RolePermission();
-                    rp.setRole(role);
-                    rp.setPermission(p);
-                    rolePermissionRepository.save(rp);
                 }
             } else {
                 for (String code : entry.getValue()) {

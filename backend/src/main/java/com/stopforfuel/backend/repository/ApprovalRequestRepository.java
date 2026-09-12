@@ -17,4 +17,11 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
 
     List<ApprovalRequest> findByStatusAndRequestTypeOrderByCreatedAtAsc(
             ApprovalRequestStatus status, ApprovalRequestType requestType);
+
+    /** Unspent PRIVILEGED_ACTION grants for a requester, newest first. */
+    List<ApprovalRequest> findByRequestedByAndRequestTypeAndStatusAndConsumedAtIsNullOrderByReviewedAtDesc(
+            Long requestedBy, ApprovalRequestType requestType, ApprovalRequestStatus status);
+
+    List<ApprovalRequest> findByRequestedByAndRequestTypeAndStatusOrderByCreatedAtDesc(
+            Long requestedBy, ApprovalRequestType requestType, ApprovalRequestStatus status);
 }
