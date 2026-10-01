@@ -859,15 +859,20 @@ public class InvoiceBillService {
         existing.setVehicleKM(updated.getVehicleKM());
         existing.setBillDesc(updated.getBillDesc());
 
-        // Update billType, customer, vehicle if provided
+        // Update billType, customer, vehicle if provided. The client sends {id}-only stubs —
+        // resolve them to managed entities. A detached stub on a managed bill breaks the next
+        // query that fetches the association (resyncStatementAfterBillChange's entity graph):
+        // Hibernate fails with "possible non-threadsafe access to the session" and the edit 500s.
         if (updated.getBillType() != null) {
             existing.setBillType(updated.getBillType());
         }
-        if (updated.getCustomer() != null) {
-            existing.setCustomer(updated.getCustomer());
+        if (updated.getCustomer() != null && updated.getCustomer().getId() != null) {
+            existing.setCustomer(customerRepository.findById(updated.getCustomer().getId())
+                    .orElseThrow(() -> new RuntimeException("Customer not found")));
         }
-        if (updated.getVehicle() != null) {
-            existing.setVehicle(updated.getVehicle());
+        if (updated.getVehicle() != null && updated.getVehicle().getId() != null) {
+            existing.setVehicle(vehicleRepository.findById(updated.getVehicle().getId())
+                    .orElseThrow(() -> new RuntimeException("Vehicle not found")));
         }
 
         // Update products — clear old and add new
@@ -888,6 +893,12 @@ public class InvoiceBillService {
                 // update response carries the real product name, not "Product".
                 ip.setProduct(productRepository.findById(ip.getProduct().getId())
                         .orElseThrow(() -> new RuntimeException("Product not found")));
+                if (ip.getNozzle() != null && ip.getNozzle().getId() != null) {
+                    ip.setNozzle(nozzleRepository.findById(ip.getNozzle().getId())
+                            .orElseThrow(() -> new RuntimeException("Nozzle not found")));
+                } else {
+                    ip.setNozzle(null);
+                }
                 ip.setInvoiceBill(existing);
 
                 BigDecimal qty = ip.getQuantity() != null ? ip.getQuantity() : BigDecimal.ZERO;
