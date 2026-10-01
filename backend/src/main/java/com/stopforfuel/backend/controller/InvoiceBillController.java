@@ -103,7 +103,7 @@ public class InvoiceBillController {
     }
 
     @PutMapping("/{id}/move")
-    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('PRIME', 'SYSTEM_ADMIN', 'OWNER', 'ADMIN')")
     public InvoiceBillDTO move(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         Object targetRaw = body.get("targetShiftId");
         Object dateRaw = body.get("newBillDate");

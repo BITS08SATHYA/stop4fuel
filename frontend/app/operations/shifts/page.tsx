@@ -65,7 +65,7 @@ import {
     User,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 import { showToast } from "@/components/ui/toast";
 
 // --- Constants ---
@@ -285,7 +285,7 @@ export default function ShiftsPage() {
     };
 
     const handleOpenShift = async () => {
-        const isOwnerOrAdmin = user?.role === "OWNER" || user?.role === "ADMIN";
+        const isOwnerOrAdmin = isRoleAtLeast(user?.role, "ADMIN");
         if (isOwnerOrAdmin) {
             showCashierSelection("open");
         } else {

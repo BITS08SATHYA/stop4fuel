@@ -20,7 +20,7 @@ import { generateStatementPdf, getStatementPdfUrl } from "@/lib/api/station/paym
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 import { showToast } from "@/components/ui/toast";
 
 const API = API_BASE_URL;
@@ -310,7 +310,7 @@ export default function CreditCustomerProfilePage() {
                             {customer.status === "BLOCKED" ? <><Unlock className="w-3 h-3" /> Unblock</> : <><Lock className="w-3 h-3" /> Block</>}
                         </button>
                     </PermissionGate>
-                    {user?.role === "OWNER" && (
+                    {isRoleAtLeast(user?.role, "OWNER") && (
                         <button
                             onClick={handleForceUnblock}
                             className={`text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-colors ${

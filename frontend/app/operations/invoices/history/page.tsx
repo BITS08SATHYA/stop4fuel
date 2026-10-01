@@ -26,7 +26,7 @@ import {
     API_BASE_URL
 } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 
 interface PostableShift {
     id: number;
@@ -67,7 +67,7 @@ interface EditLine {
 
 export default function InvoiceHistoryPage() {
     const { user } = useAuth();
-    const isShiftPickerAllowed = user?.role === "OWNER" || user?.role === "ADMIN";
+    const isShiftPickerAllowed = isRoleAtLeast(user?.role, "ADMIN");
 
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
     const [page, setPage] = useState(0);

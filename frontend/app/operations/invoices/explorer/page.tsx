@@ -24,7 +24,7 @@ import {
     type InvoiceBill, type Payment,
     type PageResponse, type BillPaymentSummary, type ApprovalRequest
 } from "@/lib/api/station";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 
 function formatCurrency(val?: number | null) {
     if (val == null) return "0.00";
@@ -63,7 +63,7 @@ const PAYMENT_MODE_COLORS: Record<string, string> = {
 
 export default function InvoiceExplorerPage() {
     const { user } = useAuth();
-    const requestMode = user?.designation === "Cashier" && user?.role !== "OWNER" && user?.role !== "ADMIN";
+    const requestMode = user?.designation === "Cashier" && !isRoleAtLeast(user?.role, "ADMIN");
 
     // Filters
     const [customerId, setCustomerId] = useState<number | "">("");

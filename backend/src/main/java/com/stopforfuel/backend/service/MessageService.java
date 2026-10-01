@@ -17,6 +17,7 @@ import com.stopforfuel.backend.repository.ConversationRepository;
 import com.stopforfuel.backend.repository.EmployeeRepository;
 import com.stopforfuel.backend.repository.MessageRepository;
 import com.stopforfuel.backend.repository.UserRepository;
+import com.stopforfuel.config.RoleHierarchy;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -290,9 +291,10 @@ public class MessageService {
             // Admins/owners see cashiers.
             candidates.addAll(findActiveCashiers(scid));
         } else {
-            // Cashiers see admins and owners.
+            // Cashiers see admins, owners and the PRIME holder.
             candidates.addAll(userRepository.findByRoleRoleTypeAndScidAndStatus("ADMIN", scid, EntityStatus.ACTIVE));
             candidates.addAll(userRepository.findByRoleRoleTypeAndScidAndStatus("OWNER", scid, EntityStatus.ACTIVE));
+            candidates.addAll(userRepository.findByRoleRoleTypeAndScidAndStatus("PRIME", scid, EntityStatus.ACTIVE));
         }
 
         return candidates.stream()
@@ -327,7 +329,8 @@ public class MessageService {
 
     private boolean isAdminOrOwner(User u) {
         String r = u.getRole() != null ? u.getRole().getRoleType() : null;
-        return r != null && (r.equalsIgnoreCase("ADMIN") || r.equalsIgnoreCase("OWNER"));
+        return r != null && (r.equalsIgnoreCase("ADMIN") || r.equalsIgnoreCase("OWNER")
+                || RoleHierarchy.isPrime(r));
     }
 
     private boolean isCashier(User u) {

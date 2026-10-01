@@ -97,9 +97,22 @@ const getApiBaseUrl = () => {
     return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 };
 
+// Mirrors backend RoleHierarchy.RANKS. Compare by rank, never by listing role names —
+// a list written before a role existed (PRIME) silently locks that role out.
+const ROLE_RANKS: Record<string, number> = {
+    PRIME: 100, SYSTEM_ADMIN: 90, OWNER: 80, ADMIN: 60,
+    CASHIER: 40, EMPLOYEE: 20, DEALER: 15, CUSTOMER: 10,
+};
+
+/** True when `role` ranks at or above `min` (e.g. isRoleAtLeast(user?.role, "OWNER")). */
+export function isRoleAtLeast(role: string | undefined | null, min: string): boolean {
+    if (!role) return false;
+    return (ROLE_RANKS[role.toUpperCase()] ?? 0) >= (ROLE_RANKS[min] ?? Infinity);
+}
+
 export function getDashboardType(designation?: string, role?: string): "owner" | "cashier" | "employee" | "customer" {
     if (role === "CUSTOMER") return "customer";
-    if (role === "PRIME" || role === "OWNER" || role === "ADMIN" || role === "SYSTEM_ADMIN") return "owner";
+    if (isRoleAtLeast(role, "ADMIN")) return "owner";
 
     const designationMap: Record<string, "owner" | "cashier" | "employee"> = {
         "Manager": "owner",

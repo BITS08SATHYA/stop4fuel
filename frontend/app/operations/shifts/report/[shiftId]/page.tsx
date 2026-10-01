@@ -21,7 +21,7 @@ import {
     ReportAuditLog,
     ShiftReportPrintData,
 } from "@/lib/api/station";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 import { showToast } from "@/components/ui/toast";
 import {
     FileText,
@@ -90,7 +90,7 @@ export default function ShiftReportPage() {
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
     const [showUnfinalizeConfirm, setShowUnfinalizeConfirm] = useState(false);
     const { user } = useAuth();
-    const isAdmin = user?.role === "OWNER" || user?.role === "ADMIN";
+    const isAdmin = isRoleAtLeast(user?.role, "ADMIN");
 
     const loadData = useCallback(async () => {
         try {

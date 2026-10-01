@@ -21,7 +21,7 @@ import java.util.Set;
 public class RolesController {
 
     // Seeded roles referenced by code paths (user sync, employee account creation) — not deletable/renamable
-    private static final Set<String> PROTECTED_ROLES = Set.of("CUSTOMER", "EMPLOYEE", "DEALER", "OWNER", "ADMIN", "CASHIER");
+    private static final Set<String> PROTECTED_ROLES = Set.of("CUSTOMER", "EMPLOYEE", "DEALER", "PRIME", "SYSTEM_ADMIN", "OWNER", "ADMIN", "CASHIER");
 
     private final RolesRepository rolesRepository;
 

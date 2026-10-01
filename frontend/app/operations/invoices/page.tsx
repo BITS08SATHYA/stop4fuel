@@ -32,7 +32,7 @@ import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
 import { listPrintAgentPrinters } from "@/lib/print-agent";
 import { DotMatrixSettings } from "@/components/ui/dotmatrix-settings";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 
 interface PostableShift {
     id: number;
@@ -86,7 +86,7 @@ import { PermissionGate } from "@/components/permission-gate";
 export default function InvoicesPage() {
     const toast = useToast();
     const { user } = useAuth();
-    const isShiftPickerAllowed = user?.role === "OWNER" || user?.role === "ADMIN";
+    const isShiftPickerAllowed = isRoleAtLeast(user?.role, "ADMIN");
     const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [topProducts, setTopProducts] = useState<Product[]>([]);

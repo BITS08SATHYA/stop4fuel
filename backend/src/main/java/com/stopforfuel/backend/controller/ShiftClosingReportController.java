@@ -76,7 +76,7 @@ public class ShiftClosingReportController {
     }
 
     @PostMapping("/{reportId}/unfinalize")
-    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('PRIME', 'SYSTEM_ADMIN', 'OWNER', 'ADMIN')")
     public ShiftClosingReport unfinalizeReport(@PathVariable Long reportId,
                                                @RequestBody(required = false) Map<String, String> body) {
         String performedBy = body != null ? body.get("performedBy") : null;

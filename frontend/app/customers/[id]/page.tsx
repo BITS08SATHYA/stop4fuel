@@ -14,7 +14,7 @@ import {
 import { API_BASE_URL } from "@/lib/api/station";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { PermissionGate } from "@/components/permission-gate";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 import { StyledSelect } from "@/components/ui/styled-select";
 import { showToast } from "@/components/ui/toast";
 import { BlockingGatePanel } from "@/components/customers/BlockingGatePanel";
@@ -387,7 +387,7 @@ export default function CustomerProfilePage() {
                         {customerStatus === "INACTIVE" && <><ShieldOff className="w-4 h-4" /> Activate</>}
                         {customerStatus === "BLOCKED" && <><ShieldAlert className="w-4 h-4" /> Unblock</>}
                     </button>
-                    {user?.role === "OWNER" && (
+                    {isRoleAtLeast(user?.role, "OWNER") && (
                         <button
                             onClick={handleForceUnblock}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
