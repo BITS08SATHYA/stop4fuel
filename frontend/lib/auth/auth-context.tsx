@@ -110,6 +110,19 @@ export function isRoleAtLeast(role: string | undefined | null, min: string): boo
     return (ROLE_RANKS[role.toUpperCase()] ?? 0) >= (ROLE_RANKS[min] ?? Infinity);
 }
 
+/**
+ * Mirrors backend SeniorityGuard.assertMayAssign: a caller may hand out only roles strictly
+ * below their own (PRIME may also appoint PRIME). Use it to filter every role / designation
+ * dropdown so nobody is offered a role the server will refuse.
+ */
+export function canAssignRole(callerRole: string | undefined | null, role: string | undefined | null): boolean {
+    if (!callerRole) return false;
+    const target = (role || "EMPLOYEE").toUpperCase();
+    const caller = callerRole.toUpperCase();
+    if (caller === "PRIME" && target === "PRIME") return true;
+    return (ROLE_RANKS[caller] ?? 0) > (ROLE_RANKS[target] ?? 0);
+}
+
 export function getDashboardType(designation?: string, role?: string): "owner" | "cashier" | "employee" | "customer" {
     if (role === "CUSTOMER") return "customer";
     if (isRoleAtLeast(role, "ADMIN")) return "owner";

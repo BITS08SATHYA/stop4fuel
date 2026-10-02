@@ -71,8 +71,9 @@ public class EmployeeController {
         return EmployeeDetailDTO.from(employeeService.createEmployee(employee));
     }
 
+    // Editing an existing employee edits a login, so it also needs USER_UPDATE.
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE') and hasPermission(null, 'USER_UPDATE')")
     // No @Valid here: the update merges editable fields into the loaded employee (which
     // keeps its existing username). Validating the incoming partial body would fail on the
     // server-managed username the client never sends. The merged entity is bean-validated

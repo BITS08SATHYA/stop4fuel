@@ -32,7 +32,7 @@ resource "aws_db_instance" "main" {
 
   enabled_cloudwatch_logs_exports = ["iam-db-auth-error", "postgresql", "upgrade"]
 
-  backup_retention_period = 7
+  backup_retention_period = 30
   backup_window           = "23:26-23:56"
   maintenance_window      = "thu:06:02-thu:06:32"
 

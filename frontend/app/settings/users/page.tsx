@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { RouteGuard } from "@/components/route-guard";
 import { PermissionGate } from "@/components/permission-gate";
+import { useAuth, canAssignRole } from "@/lib/auth/auth-context";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { Plus, Search, RotateCcw, Loader2, Pencil, X, Save } from "lucide-react";
 import { CreateUserModal } from "@/components/users/create-user-modal";
@@ -34,6 +35,7 @@ interface UserItem {
 interface DesignationOption {
     id: number;
     name: string;
+    defaultRole?: string | null;
 }
 
 function formatRelativeTime(dt: string | null): string {
@@ -64,6 +66,7 @@ export default function UsersPage() {
     const [page, setPage] = useState(0);
 
     // Edit modal state
+    const { user } = useAuth();
     const [editUser, setEditUser] = useState<UserItem | null>(null);
     const [editRole, setEditRole] = useState("");
     const [editDesignation, setEditDesignation] = useState("");
@@ -359,7 +362,7 @@ export default function UsersPage() {
                                     <StyledSelect
                                         value={editRole}
                                         onChange={(val) => setEditRole(val)}
-                                        options={ROLES.map(r => ({ value: r, label: r }))}
+                                        options={ROLES.filter(r => canAssignRole(user?.role, r)).map(r => ({ value: r, label: r }))}
                                         className="w-full"
                                     />
                                 </div>
@@ -372,7 +375,9 @@ export default function UsersPage() {
                                             onChange={(val) => setEditDesignation(val)}
                                             options={[
                                                 { value: "", label: "No designation" },
-                                                ...designations.map(d => ({ value: d.name, label: d.name })),
+                                                ...designations
+                                                    .filter(d => canAssignRole(user?.role, d.defaultRole))
+                                                    .map(d => ({ value: d.name, label: d.name })),
                                             ]}
                                             placeholder="No designation"
                                             className="w-full"

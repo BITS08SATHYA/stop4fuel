@@ -2,6 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
+import { useAuth, canAssignRole } from "@/lib/auth/auth-context";
+
+const ASSIGNABLE_ROLES = [
+    { value: "PRIME", label: "Prime" },
+    { value: "OWNER", label: "Owner" },
+    { value: "ADMIN", label: "Admin" },
+    { value: "CASHIER", label: "Cashier" },
+    { value: "EMPLOYEE", label: "Employee" },
+    { value: "CUSTOMER", label: "Customer" },
+];
 import { X, Loader2, Phone } from "lucide-react";
 
 const getApiBaseUrl = () => {
@@ -26,6 +36,7 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
     const [name, setName] = useState("");
     const [phone, setPhone] = useState("");
     const [userType, setUserType] = useState<"EMPLOYEE" | "CUSTOMER">("EMPLOYEE");
+    const { user } = useAuth();
     const [designation, setDesignation] = useState("");
     const [roleType, setRoleType] = useState("");
     const [designations, setDesignations] = useState<Designation[]>([]);
@@ -191,7 +202,7 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
                                 className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                             >
                                 <option value="">Select designation</option>
-                                {designations.map((d) => (
+                                {designations.filter((d) => canAssignRole(user?.role, d.defaultRole)).map((d) => (
                                     <option key={d.id} value={d.name}>
                                         {d.name} {d.defaultRole ? `(${d.defaultRole})` : ""}
                                     </option>
@@ -208,10 +219,9 @@ export function CreateUserModal({ onClose, onCreated }: CreateUserModalProps) {
                             className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         >
                             <option value="">Select role</option>
-                            <option value="ADMIN">Admin</option>
-                            <option value="CASHIER">Cashier</option>
-                            <option value="EMPLOYEE">Employee</option>
-                            <option value="CUSTOMER">Customer</option>
+                            {ASSIGNABLE_ROLES.filter((r) => canAssignRole(user?.role, r.value)).map((r) => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
+                            ))}
                         </select>
                         {designation && roleType && (
                             <p className="text-xs text-muted-foreground">

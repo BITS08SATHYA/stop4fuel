@@ -44,7 +44,7 @@ public class RolesController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE')")
+    @PreAuthorize("hasPermission(null, 'EMPLOYEE_UPDATE') and hasPermission(null, 'USER_UPDATE')")
     public ResponseEntity<Roles> update(@PathVariable Long id, @Valid @RequestBody Roles details) {
         Roles role = rolesRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));

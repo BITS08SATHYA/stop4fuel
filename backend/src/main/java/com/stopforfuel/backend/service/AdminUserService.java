@@ -61,16 +61,7 @@ public class AdminUserService {
      * by anyone. {@link #assertNotLastPrime} keeps that from emptying the tier.
      */
     private void assertOutranks(User target, String action) {
-        String caller = callerRole();
-        String targetRole = target.getRole() != null ? target.getRole().getRoleType() : null;
-
-        if (RoleHierarchy.isPrime(caller) && RoleHierarchy.isPrime(targetRole)) return;
-
-        if (!RoleHierarchy.outranks(caller, targetRole)) {
-            throw new PrivilegeException(
-                    "A " + caller + " cannot " + action + " a " + (targetRole == null ? "user" : targetRole)
-                            + ". This action is reserved for a more senior role.");
-        }
+        SeniorityGuard.assertOutranks(target.getRole() != null ? target.getRole().getRoleType() : null, action);
     }
 
     /**
@@ -79,13 +70,7 @@ public class AdminUserService {
      * possible, and it is what makes {@link #assertNotLastPrime} survivable.
      */
     private void assertMayAssign(String newRoleType) {
-        String caller = callerRole();
-        if (RoleHierarchy.isPrime(caller) && RoleHierarchy.isPrime(newRoleType)) return;
-        if (!RoleHierarchy.outranks(caller, newRoleType)) {
-            throw new PrivilegeException(
-                    "A " + caller + " cannot assign the " + newRoleType + " role. You may only assign roles "
-                            + "below your own.");
-        }
+        SeniorityGuard.assertMayAssign(newRoleType);
     }
 
     /**

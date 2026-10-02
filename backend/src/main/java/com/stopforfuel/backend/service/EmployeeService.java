@@ -101,6 +101,9 @@ public class EmployeeService {
                     .orElseGet(() -> rolesRepository.findByRoleType("EMPLOYEE").orElseThrow());
             employee.setRole(role);
         }
+        // The role may come from the request body or from the designation's default role;
+        // either way it is a login being minted, so it must sit below the creator's rank.
+        SeniorityGuard.assertMayAssign(employee.getRole().getRoleType());
         if (employee.getJoinDate() == null) {
             employee.setJoinDate(LocalDate.now());
         }
@@ -118,6 +121,7 @@ public class EmployeeService {
     public Employee updateEmployee(Long id, Employee details) {
         Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        assertMayEdit(employee, details);
 
         // Business validations
         validateEmployeeBusinessRules(details);
@@ -139,7 +143,9 @@ public class EmployeeService {
         employee.setAdditionalPhones(details.getAdditionalPhones());
         employee.setSalary(details.getSalary());
         employee.setJoinDate(details.getJoinDate());
-        employee.setStatus(details.getStatus());
+        if (details.getStatus() != null) {
+            employee.setStatus(details.getStatus());
+        }
         employee.setAadharNumber(details.getAadharNumber());
         employee.setCity(details.getCity());
         employee.setState(details.getState());
@@ -169,6 +175,26 @@ public class EmployeeService {
         }
 
         return employeeRepository.save(employee);
+    }
+
+    /**
+     * An employee is a login, so editing one follows the User Management seniority rule:
+     * only someone who outranks them may edit them. The one exception is your own record,
+     * minus the status field — nobody may block or unblock themselves.
+     */
+    private void assertMayEdit(Employee target, Employee details) {
+        boolean self = target.getId().equals(SecurityUtils.getCurrentUserId());
+        boolean statusChange = details.getStatus() != null && details.getStatus() != target.getStatus();
+        if (self && !statusChange) return;
+        SeniorityGuard.assertOutranks(target.getRole() != null ? target.getRole().getRoleType() : null, "edit");
+    }
+
+    /** Called for photo / document uploads, which edit an existing employee too. */
+    public void assertMayEdit(Long employeeId) {
+        Employee target = employeeRepository.findByIdAndScid(employeeId, SecurityUtils.getScid())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        if (target.getId().equals(SecurityUtils.getCurrentUserId())) return;
+        SeniorityGuard.assertOutranks(target.getRole() != null ? target.getRole().getRoleType() : null, "edit");
     }
 
     public void deleteEmployee(Long id) {
@@ -218,6 +244,9 @@ public class EmployeeService {
     // ── File Uploads ────────────────────────────────────────────────
 
     public Employee uploadPhoto(Long id, MultipartFile file) throws IOException {
+        // Documents can be attached by anyone senior to the employee (the create flow uploads
+        // right after saving), but never onto a peer's or a superior's record.
+        assertMayEdit(id);
         validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp"}, 5 * 1024 * 1024);
         Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
@@ -232,6 +261,7 @@ public class EmployeeService {
     }
 
     public Employee uploadAadharDoc(Long id, MultipartFile file) throws IOException {
+        assertMayEdit(id);
         validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp", "application/pdf"}, 10 * 1024 * 1024);
         Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
@@ -246,6 +276,7 @@ public class EmployeeService {
     }
 
     public Employee uploadPanDoc(Long id, MultipartFile file) throws IOException {
+        assertMayEdit(id);
         validateFileType(file, new String[]{"image/jpeg", "image/png", "image/webp", "application/pdf"}, 10 * 1024 * 1024);
         Employee employee = employeeRepository.findByIdAndScid(id, SecurityUtils.getScid())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));

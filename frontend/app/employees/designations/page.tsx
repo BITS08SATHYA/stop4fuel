@@ -7,6 +7,7 @@ import { StyledSelect } from "@/components/ui/styled-select";
 import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { BadgeCheck, ShieldCheck, Plus, Edit2, Trash2, Search, FileText, Lock, UserCog } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
+import { useAuth, canAssignRole } from "@/lib/auth/auth-context";
 import { showToast } from "@/components/ui/toast";
 
 const getApiBaseUrl = () => {
@@ -45,6 +46,7 @@ export default function DesignationsPage() {
     const [designations, setDesignations] = useState<Designation[]>([]);
     const [roles, setRoles] = useState<RoleItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { user } = useAuth();
     const [searchQuery, setSearchQuery] = useState("");
 
     // Designation modal state
@@ -215,7 +217,9 @@ export default function DesignationsPage() {
 
     const roleOptions = [
         { value: "", label: "None — defaults to EMPLOYEE" },
-        ...roles.map((r) => ({ value: r.roleType, label: r.roleType })),
+        ...roles
+            .filter((r) => canAssignRole(user?.role, r.roleType))
+            .map((r) => ({ value: r.roleType, label: r.roleType })),
     ];
 
     return (
@@ -310,14 +314,14 @@ export default function DesignationsPage() {
                                             <UserCog className="w-8 h-8" />
                                         </div>
                                         <div className="flex gap-2 row-actions transition-opacity">
-                                            <PermissionGate permission="EMPLOYEE_UPDATE">
+                                            <PermissionGate permission="EMPLOYEE_UPDATE"><PermissionGate permission="USER_UPDATE">
                                                 <button
                                                     onClick={() => handleEditDesignation(d)}
                                                     className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
                                                 >
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
-                                            </PermissionGate>
+                                            </PermissionGate></PermissionGate>
                                             <PermissionGate permission="EMPLOYEE_DELETE">
                                                 <button
                                                     onClick={() => handleDeleteDesignation(d)}
@@ -360,14 +364,14 @@ export default function DesignationsPage() {
                                         </div>
                                         {!isProtected && (
                                             <div className="flex gap-2 row-actions transition-opacity">
-                                                <PermissionGate permission="EMPLOYEE_UPDATE">
+                                                <PermissionGate permission="EMPLOYEE_UPDATE"><PermissionGate permission="USER_UPDATE">
                                                     <button
                                                         onClick={() => handleEditRole(r)}
                                                         className="p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                </PermissionGate>
+                                                </PermissionGate></PermissionGate>
                                                 <PermissionGate permission="EMPLOYEE_DELETE">
                                                     <button
                                                         onClick={() => handleDeleteRole(r)}

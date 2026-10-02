@@ -169,8 +169,10 @@ export function EmployeeList() {
                                 <td className="p-4 text-right">
                                     <div className="flex justify-end gap-2">
                                         <button onClick={() => setProfileEmployee(emp)} className="p-2 hover:bg-muted rounded-md" title="View Profile"><Eye className="w-4 h-4" /></button>
-                                        <PermissionGate permission="EMPLOYEE_UPDATE">
+                                        <PermissionGate permission="EMPLOYEE_UPDATE"><PermissionGate permission="USER_UPDATE">
                                             <button onClick={() => openEdit(emp)} className="p-2 hover:bg-muted rounded-md" title="Edit"><Pencil className="w-4 h-4" /></button>
+                                        </PermissionGate></PermissionGate>
+                                        <PermissionGate permission="EMPLOYEE_DELETE">
                                             <button onClick={() => handleDelete(emp.id)} className="p-2 hover:bg-red-100 text-red-600 rounded-md" title="Delete"><Trash2 className="w-4 h-4" /></button>
                                         </PermissionGate>
                                     </div>
