@@ -76,6 +76,7 @@ public class DataInitializer implements ApplicationRunner {
         patchMissingPermissions();
         patchCashierPermissions();
         materializeOwnerPermissions();
+        revokeAdminDeniedPermissions();
         seedPrimeDesignation();
         bootstrapPrimeUser();
         patchStatementSequence();
@@ -380,6 +381,43 @@ public class DataInitializer implements ApplicationRunner {
 
         if (granted > 0 || revoked > 0) {
             log.info("Materialized OWNER permissions: {} granted, {} revoked", granted, revoked);
+            var permCache = cacheManager.getCache("permissions");
+            if (permCache != null) permCache.clear();
+            var roleCache = cacheManager.getCache("rolePermissions");
+            if (roleCache != null) roleCache.clear();
+        }
+    }
+
+    /**
+     * True for permissions ADMIN must never hold: every delete, and USER_UPDATE (changing a
+     * user's role or activating/deactivating them). Passcode reset and permission editing
+     * are already PRIME-only at the controller, so they need no entry here.
+     */
+    static boolean isAdminDenied(String permissionCode) {
+        return permissionCode.endsWith("_DELETE") || "USER_UPDATE".equals(permissionCode);
+    }
+
+    /**
+     * Strip the denied permissions from ADMIN on every boot. Revoke-only — ADMIN's other
+     * grants stay data-driven and editable — but a denied row that a seed, a patch or a
+     * manual edit put back is removed again on the next deploy.
+     */
+    private void revokeAdminDeniedPermissions() {
+        Roles admin = rolesRepository.findByRoleType("ADMIN").orElse(null);
+        if (admin == null) return;
+
+        int revoked = 0;
+        for (Permission p : permissionRepository.findAll()) {
+            if (isAdminDenied(p.getCode())
+                    && rolePermissionRepository.existsByRoleIdAndPermissionCode(admin.getId(), p.getCode())) {
+                rolePermissionRepository.deleteByRoleIdAndPermissionId(admin.getId(), p.getId());
+                revoked++;
+                log.warn("Revoked ADMIN permission {} — deletes and user status/role changes are reserved", p.getCode());
+            }
+        }
+
+        if (revoked > 0) {
+            log.info("Revoked {} denied ADMIN permissions", revoked);
             var permCache = cacheManager.getCache("permissions");
             if (permCache != null) permCache.clear();
             var roleCache = cacheManager.getCache("rolePermissions");

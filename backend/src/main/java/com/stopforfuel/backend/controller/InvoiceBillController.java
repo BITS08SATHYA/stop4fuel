@@ -169,8 +169,10 @@ public class InvoiceBillController {
         return InvoiceBillDTO.from(service.unlinkFromStatement(id));
     }
 
+    // Cashiers keep their delete (they hold INVOICE_CREATE, not INVOICE_DELETE); every other
+    // role needs the real delete permission, so revoking INVOICE_DELETE actually stops them.
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasPermission(null, 'INVOICE_CREATE')")
+    @PreAuthorize("hasPermission(null, 'INVOICE_DELETE') or (hasRole('CASHIER') and hasPermission(null, 'INVOICE_CREATE'))")
     public void delete(@PathVariable Long id) {
         service.deleteInvoice(id);
     }
