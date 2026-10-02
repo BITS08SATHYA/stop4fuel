@@ -1,5 +1,7 @@
 package com.stopforfuel.config;
 
+import com.stopforfuel.backend.enums.EntityStatus;
+import com.stopforfuel.backend.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -11,7 +13,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class DevJwtAuthFilterTest {
 
@@ -23,9 +30,24 @@ class DevJwtAuthFilterTest {
         return provider;
     }
 
+    private static UserRepository usersReturning(EntityStatus status, String roleType) {
+        UserRepository repo = mock(UserRepository.class);
+        UserRepository.SessionState state = new UserRepository.SessionState() {
+            public EntityStatus getStatus() { return status; }
+            public String getRoleType() { return roleType; }
+        };
+        when(repo.findSessionStateById(anyLong())).thenReturn(Optional.of(state));
+        return repo;
+    }
+
     private Authentication authenticateWith(String header, Cookie cookie) throws Exception {
+        return authenticateWith(header, cookie, usersReturning(EntityStatus.ACTIVE, "CASHIER"), new MockHttpServletResponse());
+    }
+
+    private Authentication authenticateWith(String header, Cookie cookie, UserRepository users,
+                                            MockHttpServletResponse response) throws Exception {
         JwtTokenProvider provider = providerWithSecret();
-        DevJwtAuthFilter filter = new DevJwtAuthFilter(provider);
+        DevJwtAuthFilter filter = new DevJwtAuthFilter(provider, users);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         if (header != null) {
@@ -34,7 +56,7 @@ class DevJwtAuthFilterTest {
         if (cookie != null) {
             request.setCookies(cookie);
         }
-        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+        filter.doFilter(request, response, new MockFilterChain());
         return SecurityContextHolder.getContext().getAuthentication();
     }
 
@@ -81,5 +103,41 @@ class DevJwtAuthFilterTest {
 
         assertNull(authenticateWith(foreign, null),
                 "Rotating the signing key must invalidate tokens minted with the old one.");
+    }
+
+    @Test
+    void signsOutADeactivatedUserMidSession() throws Exception {
+        String session = providerWithSecret()
+                .generateToken(42L, "CASHIER", 1L, "Test User", "9999999999", "Cashier");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        Authentication auth = authenticateWith(session, null, usersReturning(EntityStatus.INACTIVE, "CASHIER"), response);
+
+        assertNull(auth, "A deactivated user's still-valid token must stop working immediately.");
+        assertEquals(401, response.getStatus());
+    }
+
+    @Test
+    void signsOutAUserWhoseRoleChangedSinceLogin() throws Exception {
+        String session = providerWithSecret()
+                .generateToken(42L, "PRIME", 1L, "Test User", "9999999999", "Prime");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        Authentication auth = authenticateWith(session, null, usersReturning(EntityStatus.ACTIVE, "ADMIN"), response);
+
+        assertNull(auth, "A demoted user must not keep acting on the role baked into an old token.");
+        assertEquals(401, response.getStatus());
+    }
+
+    @Test
+    void signsOutADeletedUser() throws Exception {
+        String session = providerWithSecret()
+                .generateToken(42L, "CASHIER", 1L, "Test User", "9999999999", "Cashier");
+        UserRepository users = mock(UserRepository.class);
+        when(users.findSessionStateById(anyLong())).thenReturn(Optional.empty());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertNull(authenticateWith(session, null, users, response));
+        assertEquals(401, response.getStatus());
     }
 }

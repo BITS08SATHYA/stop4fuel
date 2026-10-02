@@ -1,6 +1,8 @@
 package com.stopforfuel.config;
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.stopforfuel.backend.enums.EntityStatus;
+import com.stopforfuel.backend.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -21,9 +23,11 @@ import java.util.*;
 public class DevJwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
-    public DevJwtAuthFilter(JwtTokenProvider jwtTokenProvider) {
+    public DevJwtAuthFilter(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userRepository = userRepository;
     }
 
     private static final String AUTH_COOKIE_NAME = "sff-auth-session";
@@ -64,6 +68,15 @@ public class DevJwtAuthFilter extends OncePerRequestFilter {
                     }
 
                     String role = claims.getStringClaim("custom:role");
+
+                    // The token lives 8h, so status and role in it go stale. Re-check the user on
+                    // every request: a deactivated user, or one whose role changed since login,
+                    // is signed out now rather than when the token expires.
+                    if (!sessionStillValid(claims.getSubject(), role)) {
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Session ended. Please sign in again.");
+                        return;
+                    }
+
                     Map<String, Object> principal = Map.of(
                             "sub", claims.getSubject(),
                             "name", claims.getStringClaim("name") != null ? claims.getStringClaim("name") : "",
@@ -100,5 +113,19 @@ public class DevJwtAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean sessionStillValid(String subject, String tokenRole) {
+        long userId;
+        try {
+            userId = Long.parseLong(subject);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return userRepository.findSessionStateById(userId)
+                .map(state -> state.getStatus() == EntityStatus.ACTIVE
+                        && state.getRoleType() != null
+                        && state.getRoleType().equalsIgnoreCase(tokenRole))
+                .orElse(false);
     }
 }

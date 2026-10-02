@@ -34,4 +34,13 @@ public interface UserRepository extends ScidRepository<User> {
         )
     """)
     List<Long> findUserIdsByPermissionCode(@Param("permissionCode") String permissionCode);
+
+    /** What the per-request session check needs: a PK lookup, without loading the whole user. */
+    interface SessionState {
+        EntityStatus getStatus();
+        String getRoleType();
+    }
+
+    @Query("SELECT u.status AS status, r.roleType AS roleType FROM User u LEFT JOIN u.role r WHERE u.id = :id")
+    Optional<SessionState> findSessionStateById(@Param("id") Long id);
 }
