@@ -241,12 +241,9 @@ export const transferReportEntry = (reportId: number, lineItemId: number, target
         body: JSON.stringify({ lineItemId, targetReportId, reason }),
     }).then(handleResponse);
 
-export const finalizeShiftReport = (reportId: number, finalizedBy?: string): Promise<ShiftClosingReport> =>
-    fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/finalize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ finalizedBy }),
-    }).then(handleResponse);
+// The server records the signed-in user as the closer.
+export const finalizeShiftReport = (reportId: number): Promise<ShiftClosingReport> =>
+    fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/finalize`, { method: 'POST' }).then(handleResponse);
 
 export const recomputeShiftReport = (reportId: number): Promise<ShiftClosingReport> =>
     fetchWithAuth(`${API_BASE_URL}/shift-reports/${reportId}/recompute`, { method: 'POST' }).then(handleResponse);

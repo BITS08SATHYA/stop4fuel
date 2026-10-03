@@ -8,7 +8,9 @@ import {
     Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getBlockingStatus, type BlockingStatus, type BlockingGate, type GateState } from "@/lib/api/station/customers";
+import { useAuth } from "@/lib/auth/auth-context";
+import { showToast } from "@/components/ui/toast";
+import { getBlockingStatus, unblockCustomer, type BlockingStatus, type BlockingGate, type GateState } from "@/lib/api/station/customers";
 
 interface BlockingGatePanelProps {
     customerId: number;
@@ -17,6 +19,9 @@ interface BlockingGatePanelProps {
     invoiceLiters?: number;
     variant?: "inline" | "section" | "modal";
     onForceUnblockClick?: () => void;
+    // Called after the user unblocks the customer from this panel, so the host can
+    // refresh its own copy of the customer status.
+    onUnblocked?: () => void;
     className?: string;
     // Bump to force a refetch after actions that change the server-side state
     // but don't change any of the other props (e.g. toggling force-unblock).
@@ -115,10 +120,14 @@ export function BlockingGatePanel({
     invoiceLiters,
     variant = "section",
     onForceUnblockClick,
+    onUnblocked,
     className,
     refreshKey,
 }: BlockingGatePanelProps) {
+    const { hasPermission } = useAuth();
     const [status, setStatus] = useState<BlockingStatus | null>(null);
+    const [unblocking, setUnblocking] = useState(false);
+    const [localRefresh, setLocalRefresh] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,7 +161,26 @@ export function BlockingGatePanel({
         return () => {
             if (debounceRef.current) clearTimeout(debounceRef.current);
         };
-    }, [customerId, vehicleId, roundedAmount, roundedLiters, refreshKey]);
+    }, [customerId, vehicleId, roundedAmount, roundedLiters, refreshKey, localRefresh]);
+
+    const canUnblock = hasPermission("CUSTOMER_UNBLOCK") || hasPermission("CUSTOMER_UPDATE");
+    const statusBlocked = status?.gates.some(g => g.key === "CUSTOMER_STATUS" && g.value === "BLOCKED") ?? false;
+
+    const handleUnblock = async () => {
+        const reason = prompt("Reason for unblocking this customer:")?.trim();
+        if (!reason) return;
+        setUnblocking(true);
+        try {
+            await unblockCustomer(customerId, reason);
+            showToast.success("Customer unblocked");
+            setLocalRefresh(n => n + 1);
+            onUnblocked?.();
+        } catch (e: unknown) {
+            showToast.error(e instanceof Error ? e.message : "Failed to unblock customer");
+        } finally {
+            setUnblocking(false);
+        }
+    };
 
     if (!customerId) return null;
 
@@ -246,6 +274,15 @@ export function BlockingGatePanel({
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                     Action: {status.suggestedAction}
                 </p>
+                {canUnblock && statusBlocked && (
+                    <button
+                        onClick={handleUnblock}
+                        disabled={unblocking}
+                        className="mt-2 mr-2 inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-500 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                    >
+                        {unblocking ? "Unblocking…" : "Unblock Customer"}
+                    </button>
+                )}
                 {onForceUnblockClick && status.overall === "BLOCKED" && !status.forceUnblocked && (
                     <button
                         onClick={onForceUnblockClick}

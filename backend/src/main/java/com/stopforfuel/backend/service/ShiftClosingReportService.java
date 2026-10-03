@@ -32,6 +32,7 @@ public class ShiftClosingReportService {
     private final S3StorageService s3StorageService;
     private final ShiftSalesCalculationService salesCalculationService;
     private final ShiftFinancialCalculationService financialCalculationService;
+    private final UserRepository userRepository;
 
     @Transactional
     public ShiftClosingReport generateReport(Long shiftId) {
@@ -124,7 +125,7 @@ public class ShiftClosingReportService {
         log.setLineItemId(lineItemId);
         log.setPreviousValue(oldAmount);
         log.setNewValue(newAmount);
-        log.setPerformedBy("manager");
+        log.setPerformedBy(currentUserName());
         auditLogRepository.save(log);
 
         // Recompute totals from existing line items (don't re-aggregate from source)
@@ -181,7 +182,7 @@ public class ShiftClosingReportService {
         sourceLog.setAction("ENTRY_TRANSFERRED_OUT");
         sourceLog.setDescription(reason != null ? reason : "Entry transferred out: " + lineItem.getLabel());
         sourceLog.setLineItemId(lineItemId);
-        sourceLog.setPerformedBy("manager");
+        sourceLog.setPerformedBy(currentUserName());
         auditLogRepository.save(sourceLog);
 
         ReportAuditLog targetLog = new ReportAuditLog();
@@ -189,7 +190,7 @@ public class ShiftClosingReportService {
         targetLog.setAction("ENTRY_TRANSFERRED_IN");
         targetLog.setDescription(reason != null ? reason : "Entry transferred in: " + lineItem.getLabel());
         targetLog.setLineItemId(newItem.getId());
-        targetLog.setPerformedBy("manager");
+        targetLog.setPerformedBy(currentUserName());
         auditLogRepository.save(targetLog);
 
         // Recompute both reports
@@ -201,8 +202,16 @@ public class ShiftClosingReportService {
         return sourceReport;
     }
 
+    /** The single way a shift is closed: finalize its report and mark the shift RECONCILED. */
     @Transactional
-    public ShiftClosingReport finalizeReport(Long reportId, String finalizedBy) {
+    public ShiftClosingReport closeShiftForShiftId(Long shiftId) {
+        ShiftClosingReport report = reportRepository.findByShift_Id(shiftId)
+                .orElseThrow(() -> new ResourceNotFoundException("Report not found for shift: " + shiftId));
+        return finalizeReport(report.getId());
+    }
+
+    @Transactional
+    public ShiftClosingReport finalizeReport(Long reportId) {
         ShiftClosingReport report = reportRepository.findByIdAndScid(reportId, SecurityUtils.getScid())
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
@@ -210,12 +219,22 @@ public class ShiftClosingReportService {
             throw new BusinessException("Report is already finalized");
         }
 
+        Shift shift = report.getShift();
+        com.stopforfuel.backend.enums.ShiftStatus shiftStatus = shift != null ? shift.getStatus() : null;
+        // A cashier closes their own shift straight from REVIEW. CLOSED-with-a-DRAFT-report is the
+        // admin correction path (after Un-finalize), so only ADMIN and above may finalize from there.
+        boolean elevated = com.stopforfuel.config.RoleHierarchy.rank(SecurityUtils.getCurrentRole())
+                >= com.stopforfuel.config.RoleHierarchy.rank("ADMIN");
+        if (shiftStatus != com.stopforfuel.backend.enums.ShiftStatus.REVIEW
+                && !(elevated && shiftStatus == com.stopforfuel.backend.enums.ShiftStatus.CLOSED)) {
+            throw new BusinessException("Only a shift waiting in REVIEW can be closed (current: " + shiftStatus + ")");
+        }
+
         report.setStatus("FINALIZED");
-        report.setFinalizedBy(finalizedBy != null ? finalizedBy : "manager");
+        report.setFinalizedBy(currentUserName());
         report.setFinalizedAt(LocalDateTime.now());
 
         // Mark the shift as RECONCILED
-        Shift shift = report.getShift();
         if (shift != null) {
             shift.setStatus(com.stopforfuel.backend.enums.ShiftStatus.RECONCILED);
             shiftRepository.save(shift);
@@ -248,6 +267,17 @@ public class ShiftClosingReportService {
         auditLogRepository.save(log);
 
         return reportRepository.save(report);
+    }
+
+    /** Name of the signed-in user for the report's audit fields; never trusts a client-sent name. */
+    private String currentUserName() {
+        Long id = SecurityUtils.getCurrentUserId();
+        if (id != null) {
+            Optional<User> user = userRepository.findById(id);
+            if (user.isPresent() && user.get().getName() != null) return user.get().getName();
+        }
+        String role = SecurityUtils.getCurrentRole();
+        return role != null ? role : "unknown";
     }
 
     /**

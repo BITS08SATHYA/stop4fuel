@@ -32,6 +32,7 @@ import { fetchWithAuth } from "@/lib/api/fetch-with-auth";
 import { printInvoice, getPrinterTarget, setPrinterTarget, getDotMatrixPrinter, setDotMatrixPrinter, type PrinterTarget } from "@/lib/invoice-print";
 import { listPrintAgentPrinters } from "@/lib/print-agent";
 import { DotMatrixSettings } from "@/components/ui/dotmatrix-settings";
+import { AddStockPrompt } from "@/components/inventory/AddStockPrompt";
 import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 
 interface PostableShift {
@@ -859,6 +860,7 @@ export default function InvoicesPage() {
                                 return litres > 0 ? litres : undefined;
                             })()}
                             variant="inline"
+                            onUnblocked={() => setSelectedCustomer(c => c && { ...c, status: "ACTIVE" })}
                         />
                     </div>
                 )}
@@ -1655,7 +1657,10 @@ export default function InvoicesPage() {
                     {error && (
                         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
                             <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+                            <div className="min-w-0">
+                                <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+                                <AddStockPrompt error={error} lines={selectedProducts} onAdded={() => setError("")} />
+                            </div>
                         </div>
                     )}
 

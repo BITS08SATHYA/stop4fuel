@@ -151,8 +151,9 @@ public class ShiftController {
         return ShiftDTO.from(service.submitForReview(id, dto));
     }
 
+    // Same close as the report's Finalize button — one path, one permission check.
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasPermission(null, 'SHIFT_UPDATE')")
+    @PreAuthorize("hasPermission(null, 'SHIFT_APPROVE') or hasPermission(null, 'REPORT_GENERATE')")
     public ShiftDTO approve(@PathVariable Long id) {
         return ShiftDTO.from(service.approveAndClose(id));
     }

@@ -1,13 +1,16 @@
 package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.entity.CashierStock;
+import com.stopforfuel.backend.entity.ManualStockReceipt;
 import com.stopforfuel.backend.entity.Product;
 import com.stopforfuel.backend.entity.Shift;
 import com.stopforfuel.backend.entity.ProductInventory;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.repository.CashierStockRepository;
+import com.stopforfuel.backend.repository.ManualStockReceiptRepository;
 import com.stopforfuel.backend.repository.ProductInventoryRepository;
 import com.stopforfuel.backend.repository.ProductRepository;
+import com.stopforfuel.backend.repository.UserRepository;
 import com.stopforfuel.backend.util.UnitUtils;
 import com.stopforfuel.config.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,8 @@ public class ProductInventoryService {
     private final ProductRepository productRepository;
     private final CashierStockRepository cashierStockRepository;
     private final ShiftService shiftService;
+    private final ManualStockReceiptRepository manualStockReceiptRepository;
+    private final UserRepository userRepository;
 
     // Fuel is tracked in TankInventory; never surface fuel rows on the Product Stock page
     // (legacy rows exist from before autoCreateForShift skipped fuel).
@@ -137,31 +142,108 @@ public class ProductInventoryService {
                 continue;
             }
 
-            // Primary source: CashierStock (the real counter balance)
-            double openStock;
-            Optional<CashierStock> cashierOpt = cashierStockRepository.findByProductIdAndScid(product.getId(), SecurityUtils.getScid());
-            if (cashierOpt.isPresent()) {
-                openStock = cashierOpt.get().getCurrentStock() != null ? cashierOpt.get().getCurrentStock() : 0.0;
-            } else {
-                // Fallback: previous ProductInventory closeStock
-                ProductInventory prev = repository.findTopByProductIdAndScidOrderByDateDescIdDesc(product.getId(), SecurityUtils.getScid());
-                openStock = (prev != null && prev.getCloseStock() != null) ? prev.getCloseStock() : 0.0;
-            }
-
-            ProductInventory inv = new ProductInventory();
-            inv.setDate(today);
-            inv.setProduct(product);
-            inv.setOpenStock(openStock);
-            inv.setIncomeStock(0.0);
-            inv.setTotalStock(openStock);
-            inv.setCloseStock(openStock);
-            inv.setSales(0.0);
-            inv.setRate(product.getPrice());
-            inv.setAmount(BigDecimal.ZERO);
-            inv.setShiftId(shift.getId());
-            inv.setScid(shift.getScid());
-            repository.save(inv);
+            repository.save(newShiftRow(product, shift, today));
         }
+    }
+
+    /** A fresh shift row for a product, opening at the current counter balance. */
+    private ProductInventory newShiftRow(Product product, Shift shift, LocalDate date) {
+        // Primary source: CashierStock (the real counter balance)
+        double openStock;
+        Optional<CashierStock> cashierOpt = cashierStockRepository.findByProductIdAndScid(product.getId(), SecurityUtils.getScid());
+        if (cashierOpt.isPresent()) {
+            openStock = cashierOpt.get().getCurrentStock() != null ? cashierOpt.get().getCurrentStock() : 0.0;
+        } else {
+            // Fallback: previous ProductInventory closeStock
+            ProductInventory prev = repository.findTopByProductIdAndScidOrderByDateDescIdDesc(product.getId(), SecurityUtils.getScid());
+            openStock = (prev != null && prev.getCloseStock() != null) ? prev.getCloseStock() : 0.0;
+        }
+
+        ProductInventory inv = new ProductInventory();
+        inv.setDate(date);
+        inv.setProduct(product);
+        inv.setOpenStock(openStock);
+        inv.setIncomeStock(0.0);
+        inv.setTotalStock(openStock);
+        inv.setCloseStock(openStock);
+        inv.setSales(0.0);
+        inv.setRate(product.getPrice());
+        inv.setAmount(BigDecimal.ZERO);
+        inv.setShiftId(shift.getId());
+        inv.setScid(shift.getScid());
+        return inv;
+    }
+
+    /**
+     * Cashier adds stock by hand into the open shift — typically because an invoice was refused
+     * for insufficient stock. Goes in as incomeStock on the shift's row (so sales stay correct)
+     * and onto the counter balance, and leaves a ManualStockReceipt naming who and why.
+     */
+    @Transactional
+    public ManualStockReceipt addManualStock(Long productId, Double quantity, String reason) {
+        if (quantity == null || quantity <= 0) {
+            throw new BusinessException("Quantity must be greater than zero.");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new BusinessException("A reason is required when adding stock by hand.");
+        }
+        Shift shift = shiftService.getActiveShift();
+        if (shift == null) {
+            throw new BusinessException("No active shift. Please open a shift before adding stock.");
+        }
+        Long scid = SecurityUtils.getScid();
+        Product product = productRepository.findByIdAndScid(productId, scid)
+                .orElseThrow(() -> new BusinessException("Product not found: " + productId));
+        if ("FUEL".equalsIgnoreCase(product.getCategory())) {
+            throw new BusinessException("Fuel stock comes from tank dips and cannot be added by hand.");
+        }
+        double qty = UnitUtils.roundIfWholeCount(product.getUnit(), quantity);
+        if (qty <= 0) {
+            throw new BusinessException("Quantity must be greater than zero.");
+        }
+
+        // Products activated mid-shift have no row yet; create it the same way shift-open does.
+        ProductInventory row = repository.findByProductIdAndShiftIdForUpdate(productId, shift.getId());
+        if (row == null) {
+            row = newShiftRow(product, shift, LocalDate.now());
+        }
+        double income = row.getIncomeStock() != null ? row.getIncomeStock() : 0.0;
+        double close = row.getCloseStock() != null ? row.getCloseStock() : 0.0;
+        row.setIncomeStock(income + qty);
+        row.setCloseStock(close + qty);
+        calculateFields(row);
+        repository.save(row);
+
+        CashierStock cashier = cashierStockRepository.findByProductIdAndScidForUpdate(productId, scid)
+                .orElseGet(() -> {
+                    CashierStock cs = new CashierStock();
+                    cs.setProduct(product);
+                    cs.setCurrentStock(0.0);
+                    cs.setMaxCapacity(0.0);
+                    cs.setScid(scid);
+                    return cs;
+                });
+        double current = cashier.getCurrentStock() != null ? cashier.getCurrentStock() : 0.0;
+        cashier.setCurrentStock(current + qty);
+        cashierStockRepository.save(cashier);
+
+        ManualStockReceipt receipt = new ManualStockReceipt();
+        receipt.setProduct(product);
+        receipt.setQuantity(qty);
+        receipt.setReason(reason.trim());
+        receipt.setShiftId(shift.getId());
+        receipt.setScid(scid);
+        Long actorId = SecurityUtils.getCurrentUserId();
+        receipt.setAddedById(actorId);
+        if (actorId != null) {
+            userRepository.findById(actorId).ifPresent(u -> receipt.setAddedByName(u.getName()));
+        }
+        return manualStockReceiptRepository.save(receipt);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ManualStockReceipt> getManualReceiptsForShift(Long shiftId) {
+        return manualStockReceiptRepository.findByShiftIdOrderByIdAsc(shiftId);
     }
 
     /**

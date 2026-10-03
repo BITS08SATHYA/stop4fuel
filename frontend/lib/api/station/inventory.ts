@@ -259,6 +259,30 @@ export const createProductInventory = (inventory: Partial<ProductInventory>): Pr
         body: JSON.stringify(inventory),
     }).then(handleResponse);
 
+// Stock a cashier added by hand at the counter (e.g. to clear an "insufficient stock" invoice block)
+export interface ManualStockReceipt {
+    id: number;
+    shiftId: number;
+    productId: number;
+    productName: string;
+    unit?: string;
+    quantity: number;
+    reason: string;
+    addedById?: number;
+    addedByName?: string;
+    createdAt: string;
+}
+
+export const addManualStock = (body: { productId: number; quantity: number; reason: string }): Promise<ManualStockReceipt> =>
+    fetchWithAuth(`${API_BASE_URL}/inventory/products/manual-receipts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then(handleResponse);
+
+export const getManualStockReceipts = (shiftId: number): Promise<ManualStockReceipt[]> =>
+    fetchWithAuth(`${API_BASE_URL}/inventory/products/manual-receipts?shiftId=${shiftId}`).then(handleResponse);
+
 export const deleteProductInventory = (id: number): Promise<void> =>
     fetchWithAuth(`${API_BASE_URL}/inventory/products/${id}`, { method: 'DELETE' }).then(handleResponse);
 

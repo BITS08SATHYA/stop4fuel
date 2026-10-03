@@ -20,11 +20,10 @@ import {
     getPaymentsByBill, recordBillPayment, getBillPaymentSummary,
     getCustomerCreditInfo, PAYMENT_MODES, markInvoiceIndependent,
     clearInvoiceIndependent, unlinkInvoiceFromStatement,
-    submitApprovalRequest, getPendingRequestsForInvoice,
+    getPendingRequestsForInvoice,
     type InvoiceBill, type Payment,
     type PageResponse, type BillPaymentSummary, type ApprovalRequest
 } from "@/lib/api/station";
-import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 
 function formatCurrency(val?: number | null) {
     if (val == null) return "0.00";
@@ -62,8 +61,6 @@ const PAYMENT_MODE_COLORS: Record<string, string> = {
 };
 
 export default function InvoiceExplorerPage() {
-    const { user } = useAuth();
-    const requestMode = user?.designation === "Cashier" && !isRoleAtLeast(user?.role, "ADMIN");
 
     // Filters
     const [customerId, setCustomerId] = useState<number | "">("");
@@ -206,47 +203,12 @@ export default function InvoiceExplorerPage() {
         }
     };
 
-    // Record payment (or submit approval request when cashier)
+    // Record payment
     const handleRecordPayment = async () => {
         if (!selectedInvoice || !paymentAmount || !paymentModeId) return;
         setPaymentSubmitting(true);
         setPaymentError("");
         try {
-            if (requestMode) {
-                const submitted = await submitApprovalRequest({
-                    requestType: "RECORD_INVOICE_PAYMENT",
-                    customerId: selectedInvoice.customer?.id ?? null,
-                    payload: {
-                        invoiceBillId: selectedInvoice.id,
-                        amount: Number(paymentAmount),
-                        paymentMode: paymentModeId,
-                        referenceNo: paymentRef || undefined,
-                        remarks: paymentRemarks || undefined,
-                    },
-                });
-                // Optimistic: show the freshly-submitted request in the banner immediately.
-                // submitted is the raw entity (payload as string); synthesize the DTO-shape fields the UI reads.
-                const optimistic: ApprovalRequest = {
-                    ...(submitted as unknown as ApprovalRequest),
-                    amount: Number(paymentAmount),
-                    paymentMode: paymentModeId,
-                    billNo: selectedInvoice.billNo,
-                    payload: {
-                        invoiceBillId: selectedInvoice.id,
-                        amount: Number(paymentAmount),
-                        paymentMode: paymentModeId,
-                    },
-                };
-                setPendingRequests(prev => [optimistic, ...prev]);
-                showToast.success("Request submitted — admin will review it shortly");
-                setShowPaymentForm(false);
-                setPaymentAmount("");
-                setPaymentModeId("");
-                setPaymentRef("");
-                setPaymentRemarks("");
-                return;
-            }
-
             await recordBillPayment(selectedInvoice.id!, {
                 amount: Number(paymentAmount),
                 paymentMode: paymentModeId,
@@ -267,7 +229,7 @@ export default function InvoiceExplorerPage() {
             setPaymentRemarks("");
             fetchInvoices(); // refresh list to update statuses
         } catch (err: any) {
-            setPaymentError(err?.message || (requestMode ? "Submit failed" : "Payment failed"));
+            setPaymentError(err?.message || "Payment failed");
         } finally {
             setPaymentSubmitting(false);
         }
@@ -655,7 +617,6 @@ export default function InvoiceExplorerPage() {
                                                 onUnlinkStatement={() => handleUnlinkStatement(selectedInvoice.id!)}
                                                 onClearIndependent={() => handleClearIndependent(selectedInvoice.id!)}
                                                 markingIndependent={markingIndependent}
-                                                requestMode={requestMode}
                                             />
                                         ) : (
                                             <InvoicePaymentsTab
@@ -678,7 +639,6 @@ export default function InvoiceExplorerPage() {
                                                 error={paymentError}
                                                 onSubmit={handleRecordPayment}
                                                 onCancel={() => { setShowPaymentForm(false); setPaymentError(""); }}
-                                                requestMode={requestMode}
                                             />
                                         )}
                                     </div>
@@ -695,7 +655,7 @@ export default function InvoiceExplorerPage() {
 // --- Details Tab ---
 function InvoiceDetailsTab({
     invoice, payments, pendingRequests, balance, canPay, onRecordPayment, onMarkIndependent,
-    onUnlinkStatement, onClearIndependent, markingIndependent, requestMode
+    onUnlinkStatement, onClearIndependent, markingIndependent
 }: {
     invoice: InvoiceBill;
     payments: Payment[];
@@ -707,7 +667,6 @@ function InvoiceDetailsTab({
     onUnlinkStatement: () => void;
     onClearIndependent: () => void;
     markingIndependent: boolean;
-    requestMode: boolean;
 }) {
     const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
     const pendingTotal = pendingRequests.reduce((s, r) => s + (r.amount || 0), 0);
@@ -933,7 +892,7 @@ function InvoiceDetailsTab({
                     onClick={onRecordPayment}
                     className="w-full mt-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                 >
-                    <CreditCard className="w-4 h-4" /> {requestMode ? "Request Payment" : "Record Payment"}
+                    <CreditCard className="w-4 h-4" /> Record Payment
                 </button>
             )}
         </div>
@@ -945,7 +904,7 @@ function InvoicePaymentsTab({
     invoice, payments, balance, canPay, showForm, onShowForm,
     paymentModes, paymentAmount, onAmountChange, paymentModeId, onModeChange,
     paymentRef, onRefChange, paymentRemarks, onRemarksChange,
-    submitting, error, onSubmit, onCancel, requestMode
+    submitting, error, onSubmit, onCancel
 }: {
     invoice: InvoiceBill;
     payments: Payment[];
@@ -966,7 +925,6 @@ function InvoicePaymentsTab({
     error: string;
     onSubmit: () => void;
     onCancel: () => void;
-    requestMode: boolean;
 }) {
     const totalReceived = payments.reduce((s, p) => s + (p.amount || 0), 0);
 
@@ -1002,12 +960,12 @@ function InvoicePaymentsTab({
 
             {/* Record / Request payment button */}
             {canPay && balance > 0 && !showForm && (
-                <PermissionGate permission={requestMode ? "APPROVAL_REQUEST_CREATE" : "PAYMENT_CREATE"}>
+                <PermissionGate permission={"PAYMENT_CREATE"}>
                     <button
                         onClick={() => onShowForm(true)}
                         className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                     >
-                        <CreditCard className="w-4 h-4" /> {requestMode ? "Request Payment" : "Record Payment"}
+                        <CreditCard className="w-4 h-4" /> Record Payment
                     </button>
                 </PermissionGate>
             )}
@@ -1015,7 +973,7 @@ function InvoicePaymentsTab({
             {/* Payment form */}
             {showForm && canPay && (
                 <div className="border border-primary/30 rounded-lg p-4 space-y-3 bg-card/50">
-                    <h4 className="text-sm font-semibold text-foreground">{requestMode ? "Request Payment (admin approval required)" : "Record Payment"}</h4>
+                    <h4 className="text-sm font-semibold text-foreground">Record Payment</h4>
 
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -1081,7 +1039,7 @@ function InvoicePaymentsTab({
                             className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                            {submitting ? (requestMode ? "Submitting…" : "Processing...") : (requestMode ? "Submit Request" : "Submit Payment")}
+                            {submitting ? "Processing..." : "Submit Payment"}
                         </button>
                         <button
                             onClick={onCancel}

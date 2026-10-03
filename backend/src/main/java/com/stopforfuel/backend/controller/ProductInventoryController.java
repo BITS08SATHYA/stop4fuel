@@ -2,6 +2,7 @@ package com.stopforfuel.backend.controller;
 
 import jakarta.validation.Valid;
 import com.stopforfuel.backend.dto.ProductInventoryDTO;
+import com.stopforfuel.backend.entity.ManualStockReceipt;
 import com.stopforfuel.backend.entity.ProductInventory;
 import com.stopforfuel.backend.service.ProductInventoryService;
 import com.stopforfuel.backend.service.ProductInventoryReportService;
@@ -82,6 +83,31 @@ public class ProductInventoryController {
     @PreAuthorize("hasPermission(null, 'INVENTORY_CREATE')")
     public ProductInventoryDTO create(@Valid @RequestBody ProductInventory inventory) {
         return ProductInventoryDTO.from(service.save(inventory));
+    }
+
+    /** Cashier adds counter stock by hand (narrow INVENTORY_RECEIVE, not general INVENTORY_CREATE). */
+    @PostMapping("/manual-receipts")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_CREATE') or hasPermission(null, 'INVENTORY_RECEIVE')")
+    public ManualReceiptView addManualStock(@RequestBody ManualReceiptRequest request) {
+        return ManualReceiptView.from(service.addManualStock(request.productId(), request.quantity(), request.reason()));
+    }
+
+    @GetMapping("/manual-receipts")
+    @PreAuthorize("hasPermission(null, 'INVENTORY_VIEW')")
+    public List<ManualReceiptView> getManualReceipts(@RequestParam Long shiftId) {
+        return service.getManualReceiptsForShift(shiftId).stream().map(ManualReceiptView::from).toList();
+    }
+
+    public record ManualReceiptRequest(Long productId, Double quantity, String reason) {}
+
+    public record ManualReceiptView(Long id, Long shiftId, Long productId, String productName, String unit,
+                                    Double quantity, String reason, Long addedById, String addedByName,
+                                    java.time.LocalDateTime createdAt) {
+        static ManualReceiptView from(ManualStockReceipt r) {
+            return new ManualReceiptView(r.getId(), r.getShiftId(), r.getProduct().getId(), r.getProduct().getName(),
+                    r.getProduct().getUnit(), r.getQuantity(), r.getReason(), r.getAddedById(), r.getAddedByName(),
+                    r.getCreatedAt());
+        }
     }
 
     @PutMapping("/{id}")

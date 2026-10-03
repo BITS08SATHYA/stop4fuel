@@ -20,6 +20,8 @@ import {
     ReportLineItem,
     ReportAuditLog,
     ShiftReportPrintData,
+    getManualStockReceipts,
+    type ManualStockReceipt,
 } from "@/lib/api/station";
 import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 import { showToast } from "@/components/ui/toast";
@@ -74,6 +76,7 @@ export default function ShiftReportPage() {
     const [report, setReport] = useState<ShiftClosingReport | null>(null);
     const [printData, setPrintData] = useState<ShiftReportPrintData | null>(null);
     const [auditLogs, setAuditLogs] = useState<ReportAuditLog[]>([]);
+    const [manualReceipts, setManualReceipts] = useState<ManualStockReceipt[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showAuditLog, setShowAuditLog] = useState(false);
@@ -89,15 +92,20 @@ export default function ShiftReportPage() {
     const [draftReports, setDraftReports] = useState<ShiftClosingReport[]>([]);
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
     const [showUnfinalizeConfirm, setShowUnfinalizeConfirm] = useState(false);
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const isAdmin = isRoleAtLeast(user?.role, "ADMIN");
 
     const loadData = useCallback(async () => {
         try {
             setIsLoading(true);
-            const [rpt, pd] = await Promise.all([getShiftReport(shiftId), getShiftReportPrintData(shiftId)]);
+            const [rpt, pd, receipts] = await Promise.all([
+                getShiftReport(shiftId),
+                getShiftReportPrintData(shiftId),
+                getManualStockReceipts(shiftId).catch(() => [] as ManualStockReceipt[]),
+            ]);
             setReport(rpt);
             setPrintData(pd);
+            setManualReceipts(receipts);
             setError(null);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Failed to load report");
@@ -119,7 +127,7 @@ export default function ShiftReportPage() {
     };
     const handleFinalize = async () => {
         if (!report) return;
-        try { await finalizeShiftReport(report.id, "manager"); setShowFinalizeConfirm(false); router.push("/operations/shifts"); } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
+        try { await finalizeShiftReport(report.id); setShowFinalizeConfirm(false); router.push("/operations/shifts"); } catch (e: unknown) { showToast.error(e instanceof Error ? e.message : "Failed"); }
     };
     const handleUnfinalize = async () => {
         if (!report) return;
@@ -159,6 +167,14 @@ export default function ShiftReportPage() {
     );
 
     const isDraft = report.status === "DRAFT";
+    // Editing/recomputing the report is back-office work (REPORT_GENERATE); a cashier only closes it.
+    const canEditReport = isDraft && hasPermission("REPORT_GENERATE");
+    // Mirrors the server: anyone with SHIFT_APPROVE closes from REVIEW; CLOSED-with-a-draft
+    // (after Un-finalize) is the admin correction path.
+    const canClose = isDraft && (
+        (report.shift?.status === "REVIEW" && (hasPermission("SHIFT_APPROVE") || hasPermission("REPORT_GENERATE")))
+        || (report.shift?.status === "CLOSED" && isAdmin)
+    );
     const revenueItems = (report.lineItems || []).filter(i => i.section === "REVENUE" && !i.transferredToReportId).sort((a, b) => a.sortOrder - b.sortOrder);
     const advanceItems = (report.lineItems || []).filter(i => i.section === "ADVANCE" && !i.transferredToReportId).sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -189,10 +205,15 @@ export default function ShiftReportPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isDraft ? "bg-amber-500/10 text-amber-500" : "bg-green-500/10 text-green-500"}`}>{report.status}</span>
-                    {isDraft && (<>
+                    {!isDraft && report.finalizedBy && (
+                        <span className="text-xs text-muted-foreground">Closed by {report.finalizedBy}{report.finalizedAt && <> · {fmtDT(report.finalizedAt)}</>}</span>
+                    )}
+                    {canEditReport && (
                         <button onClick={handleRecompute} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"><RefreshCw className="w-4 h-4" />Recompute</button>
-                        <button onClick={() => setShowFinalizeConfirm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-green-500/10 text-green-600 hover:bg-green-500/20"><Lock className="w-4 h-4" />Finalize</button>
-                    </>)}
+                    )}
+                    {canClose && (
+                        <button onClick={() => setShowFinalizeConfirm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-green-500/10 text-green-600 hover:bg-green-500/20"><Lock className="w-4 h-4" />Close Shift</button>
+                    )}
                     {!isDraft && isAdmin && (
                         <button onClick={() => setShowUnfinalizeConfirm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20" title="Revert FINALIZED → DRAFT to allow edits/recompute"><Unlock className="w-4 h-4" />Un-finalize</button>
                     )}
@@ -217,10 +238,10 @@ export default function ShiftReportPage() {
                     <h2 className="text-base font-semibold mb-3 text-green-500">Revenue (Money IN)</h2>
                     <table className="w-full text-sm"><thead><tr className="border-b border-border text-muted-foreground text-xs">
                         <th className="text-left py-1.5 px-2">Item</th><th className="text-right py-1.5 px-2">Litres</th><th className="text-right py-1.5 px-2">Rate</th><th className="text-right py-1.5 px-2">Amount</th>
-                        {isDraft && <th className="w-16"/>}
+                        {canEditReport && <th className="w-16"/>}
                     </tr></thead><tbody>
-                        {revenueItems.map(item => <EditableRow key={item.id} item={item} isDraft={isDraft} editingItemId={editingItemId} editAmount={editAmount} editQty={editQty} editRate={editRate} editReason={editReason} setEditingItemId={setEditingItemId} setEditAmount={setEditAmount} setEditQty={setEditQty} setEditRate={setEditRate} setEditReason={setEditReason} onSave={handleEditSave} onTransfer={openTransferModal} showQty />)}
-                        <tr className="border-t-2 border-border font-bold"><td className="py-1.5 px-2" colSpan={3}>TOTAL</td><td className="py-1.5 px-2 text-right text-green-500">{fmtCur(report.totalRevenue)}</td>{isDraft && <td/>}</tr>
+                        {revenueItems.map(item => <EditableRow key={item.id} item={item} isDraft={canEditReport} editingItemId={editingItemId} editAmount={editAmount} editQty={editQty} editRate={editRate} editReason={editReason} setEditingItemId={setEditingItemId} setEditAmount={setEditAmount} setEditQty={setEditQty} setEditRate={setEditRate} setEditReason={setEditReason} onSave={handleEditSave} onTransfer={openTransferModal} showQty />)}
+                        <tr className="border-t-2 border-border font-bold"><td className="py-1.5 px-2" colSpan={3}>TOTAL</td><td className="py-1.5 px-2 text-right text-green-500">{fmtCur(report.totalRevenue)}</td>{canEditReport && <td/>}</tr>
                     </tbody></table>
                 </div></GlassCard>
 
@@ -229,10 +250,10 @@ export default function ShiftReportPage() {
                     <h2 className="text-base font-semibold mb-3 text-red-500">Advances (Money OUT)</h2>
                     <table className="w-full text-sm"><thead><tr className="border-b border-border text-muted-foreground text-xs">
                         <th className="text-left py-1.5 px-2">Item</th><th className="text-right py-1.5 px-2">Amount</th>
-                        {isDraft && <th className="w-16"/>}
+                        {canEditReport && <th className="w-16"/>}
                     </tr></thead><tbody>
-                        {advanceItems.map(item => <EditableRow key={item.id} item={item} isDraft={isDraft} editingItemId={editingItemId} editAmount={editAmount} editQty={editQty} editRate={editRate} editReason={editReason} setEditingItemId={setEditingItemId} setEditAmount={setEditAmount} setEditQty={setEditQty} setEditRate={setEditRate} setEditReason={setEditReason} onSave={handleEditSave} onTransfer={openTransferModal} />)}
-                        <tr className="border-t-2 border-border font-bold"><td className="py-1.5 px-2">TOTAL</td><td className="py-1.5 px-2 text-right text-red-500">{fmtCur(report.totalAdvances)}</td>{isDraft && <td/>}</tr>
+                        {advanceItems.map(item => <EditableRow key={item.id} item={item} isDraft={canEditReport} editingItemId={editingItemId} editAmount={editAmount} editQty={editQty} editRate={editRate} editReason={editReason} setEditingItemId={setEditingItemId} setEditAmount={setEditAmount} setEditQty={setEditQty} setEditRate={setEditRate} setEditReason={setEditReason} onSave={handleEditSave} onTransfer={openTransferModal} />)}
+                        <tr className="border-t-2 border-border font-bold"><td className="py-1.5 px-2">TOTAL</td><td className="py-1.5 px-2 text-right text-red-500">{fmtCur(report.totalAdvances)}</td>{canEditReport && <td/>}</tr>
                     </tbody></table>
                 </div></GlassCard>
             </div>
@@ -398,6 +419,21 @@ export default function ShiftReportPage() {
                         <td className="py-0.5 px-1.5 text-right">{fmtQty(s.openStock)}</td><td className="py-0.5 px-1.5 text-right">{fmtQty(s.receipt)}</td><td className="py-0.5 px-1.5 text-right">{fmtQty(s.totalStock)}</td><td className="py-0.5 px-1.5 text-right">{fmtQty(s.sales)}</td><td className="py-0.5 px-1.5 text-right">{fmtCur(s.rate)}</td><td className="py-0.5 px-1.5 text-right font-semibold">{fmtCur(s.amount)}</td></tr>)}
                     </tbody></table>
                 </div></GlassCard>
+
+                {/* Stock the cashier added by hand during the shift */}
+                {manualReceipts.length > 0 && (
+                <GlassCard><div className="p-4">
+                    <h2 className="text-base font-semibold mb-3 text-amber-500">Stock Added by Hand ({manualReceipts.length})</h2>
+                    <table className="w-full text-xs"><thead><tr className="border-b border-border text-muted-foreground">
+                        <th className="text-left py-1 px-1.5">Time</th><th className="text-left py-1 px-1.5">Product</th><th className="text-right py-1 px-1.5">Qty</th><th className="text-left py-1 px-1.5">By</th><th className="text-left py-1 px-1.5">Reason</th>
+                    </tr></thead><tbody>
+                        {manualReceipts.map(r => <tr key={r.id} className="border-b border-border/30">
+                        <td className="py-0.5 px-1.5 whitespace-nowrap">{new Date(r.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</td>
+                        <td className="py-0.5 px-1.5">{r.productName}</td><td className="py-0.5 px-1.5 text-right font-semibold">{fmtQty(r.quantity)}</td>
+                        <td className="py-0.5 px-1.5">{r.addedByName || "—"}</td><td className="py-0.5 px-1.5">{r.reason}</td></tr>)}
+                    </tbody></table>
+                </div></GlassCard>
+                )}
 
                 {/* Stock Position (Godown + Cashier) */}
                 {printData.stockPosition && printData.stockPosition.length > 0 && (
@@ -637,11 +673,12 @@ export default function ShiftReportPage() {
         {showFinalizeConfirm && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 print:hidden">
                 <div className="bg-card rounded-xl p-6 w-full max-w-sm shadow-2xl">
-                    <h3 className="text-lg font-semibold mb-2">Finalize Report?</h3>
-                    <p className="text-sm text-muted-foreground mb-5">This will lock the report permanently. The shift will be marked as RECONCILED.</p>
+                    <h3 className="text-lg font-semibold mb-2">Close this shift?</h3>
+                    <p className="text-sm text-muted-foreground mb-2">This locks the report and closes the shift under your name.</p>
+                    <p className="text-sm text-muted-foreground mb-5">Shift balance to hand over: <span className="font-semibold text-foreground">{fmtCur(report.balance)}</span>. To fix a reading, cancel and reopen the shift for editing instead — after closing, only the owner can reopen it.</p>
                     <div className="flex justify-end gap-2">
                         <button onClick={() => setShowFinalizeConfirm(false)} className="px-4 py-2 text-sm rounded-lg bg-muted text-muted-foreground">Cancel</button>
-                        <button onClick={handleFinalize} className="px-4 py-2 text-sm rounded-lg bg-green-600 text-white"><CheckCircle2 className="w-4 h-4 inline mr-1" />Finalize</button>
+                        <button onClick={handleFinalize} className="px-4 py-2 text-sm rounded-lg bg-green-600 text-white"><CheckCircle2 className="w-4 h-4 inline mr-1" />Close Shift</button>
                     </div>
                 </div>
             </div>

@@ -70,7 +70,7 @@ TASKDEF=$(cat <<JSON
       "image": "$IMAGE",
       "essential": true,
       "entryPoint": ["sh", "-c"],
-      "command": ["echo \"\$SQL\" | psql \"host=\$DB_HOST port=5432 dbname=\$DB_NAME user=\$DB_USER password=\$DB_PASSWORD sslmode=require\" -v ON_ERROR_STOP=1"],
+      "command": ["echo \"SQL bytes received: \${#SQL}\"; printf '%s\\\\n' \"\$SQL\" | psql \"host=\$DB_HOST port=5432 dbname=\$DB_NAME user=\$DB_USER password=\$DB_PASSWORD sslmode=require\" -v ON_ERROR_STOP=1 -e"],
       "secrets": [
         {"name": "DB_HOST",     "valueFrom": "$SECRET_ARN:host::"},
         {"name": "DB_USER",     "valueFrom": "$SECRET_ARN:username::"},
@@ -117,10 +117,16 @@ STOP_REASON=$(aws ecs describe-tasks --region "$REGION" --cluster "$CLUSTER" --t
   --query 'tasks[0].stoppedReason' --output text)
 
 echo "==> Logs"
-aws logs get-log-events --region "$REGION" \
-  --log-group-name "$LOG_GROUP" \
-  --log-stream-name "psql/psql/$TASK_ID" \
-  --query 'events[].message' --output text || true
+# CloudWatch ingestion lags the task stop by a few seconds; poll until events show up.
+for _ in 1 2 3 4 5 6; do
+  LOGS=$(aws logs get-log-events --region "$REGION" \
+    --log-group-name "$LOG_GROUP" \
+    --log-stream-name "psql/psql/$TASK_ID" --start-from-head \
+    --query 'events[].message' --output json 2>/dev/null || echo '[]')
+  [[ "$(echo "$LOGS" | jq length)" -gt 0 ]] && break
+  sleep 5
+done
+echo "$LOGS" | jq -r '.[]'
 
 echo
 echo "==> Exit: $EXIT_CODE  ($STOP_REASON)"

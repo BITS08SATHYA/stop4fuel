@@ -40,6 +40,7 @@ public class CustomerService {
 
     private final com.stopforfuel.backend.repository.CustomerBlockEventRepository blockEventRepository;
     private final StatementRepository statementRepository;
+    private final com.stopforfuel.backend.repository.UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Customer> getCustomers(String search, Long groupId, String status, String categoryType, org.springframework.data.domain.Pageable pageable) {
@@ -235,8 +236,10 @@ public class CustomerService {
         event.setScid(saved.getScid());
         event.setEventType("UNBLOCKED");
         event.setTriggerType("MANUAL");
-        event.setReason("Manual unblock by admin");
+        event.setReason("Manual unblock");
         event.setNotes(notes);
+        Long actorId = SecurityUtils.getCurrentUserId();
+        if (actorId != null) userRepository.findById(actorId).ifPresent(event::setPerformedBy);
         event.setPreviousStatus("BLOCKED");
         blockEventRepository.save(event);
 

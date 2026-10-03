@@ -2,16 +2,13 @@ package com.stopforfuel.backend.service;
 
 import com.stopforfuel.backend.dto.ShiftClosingDataDTO;
 import com.stopforfuel.backend.dto.ShiftClosingSubmitDTO;
-import com.stopforfuel.backend.dto.ShiftReportPrintData;
 import com.stopforfuel.backend.entity.*;
 import com.stopforfuel.backend.enums.AdvanceStatus;
 import com.stopforfuel.backend.enums.ShiftStatus;
-import com.stopforfuel.backend.event.ShiftClosedEvent;
 import com.stopforfuel.backend.exception.BusinessException;
 import com.stopforfuel.backend.exception.ResourceNotFoundException;
 import com.stopforfuel.backend.repository.*;
 import com.stopforfuel.config.SecurityUtils;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,14 +40,9 @@ public class ShiftService {
     private final IncentivePaymentRepository incentivePaymentRepository;
     private final ExternalCashInflowRepository inflowRepository;
     private final CashInflowRepaymentRepository repaymentRepository;
-    private final ShiftReportPdfGenerator pdfGenerator;
-    private final S3StorageService s3StorageService;
     private final ShiftClosingReportRepository shiftClosingReportRepository;
-    private final StatementAutoGenerationService statementAutoGenerationService;
-    private final ShiftCashInvoiceAutoService shiftCashInvoiceAutoService;
     private final com.stopforfuel.backend.repository.UserRepository userRepository;
     private final com.stopforfuel.config.BusinessMetrics metrics;
-    private final ApplicationEventPublisher eventPublisher;
 
     public ShiftService(ShiftRepository repository,
                         @Lazy ShiftClosingReportService shiftClosingReportService,
@@ -69,14 +61,9 @@ public class ShiftService {
                         IncentivePaymentRepository incentivePaymentRepository,
                         ExternalCashInflowRepository inflowRepository,
                         CashInflowRepaymentRepository repaymentRepository,
-                        ShiftReportPdfGenerator pdfGenerator,
-                        S3StorageService s3StorageService,
                         ShiftClosingReportRepository shiftClosingReportRepository,
-                        @Lazy StatementAutoGenerationService statementAutoGenerationService,
-                        @Lazy ShiftCashInvoiceAutoService shiftCashInvoiceAutoService,
                         com.stopforfuel.backend.repository.UserRepository userRepository,
-                        com.stopforfuel.config.BusinessMetrics metrics,
-                        ApplicationEventPublisher eventPublisher) {
+                        com.stopforfuel.config.BusinessMetrics metrics) {
         this.repository = repository;
         this.shiftClosingReportService = shiftClosingReportService;
         this.productInventoryService = productInventoryService;
@@ -94,14 +81,9 @@ public class ShiftService {
         this.incentivePaymentRepository = incentivePaymentRepository;
         this.inflowRepository = inflowRepository;
         this.repaymentRepository = repaymentRepository;
-        this.pdfGenerator = pdfGenerator;
-        this.s3StorageService = s3StorageService;
         this.shiftClosingReportRepository = shiftClosingReportRepository;
-        this.statementAutoGenerationService = statementAutoGenerationService;
-        this.shiftCashInvoiceAutoService = shiftCashInvoiceAutoService;
         this.userRepository = userRepository;
         this.metrics = metrics;
-        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -445,62 +427,13 @@ public class ShiftService {
     }
 
     private Shift doApproveAndClose(Long shiftId) {
-        Shift shift = repository.findById(shiftId)
-                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
-
-        if (shift.getStatus() != ShiftStatus.REVIEW) {
-            throw new BusinessException("Only a shift in REVIEW can be approved and closed");
-        }
-
-        shift.setStatus(ShiftStatus.CLOSED);
-        Shift saved = repository.save(shift);
-
-        // Finalize report and generate PDF → upload to S3
-        try {
-            var report = shiftClosingReportService.getReport(shiftId);
-            report.setStatus("FINALIZED");
-            report.setFinalizedBy("ADMIN");
-            report.setFinalizedAt(LocalDateTime.now());
-
-            // Generate PDF
-            ShiftReportPrintData printData = shiftClosingReportService.getPrintData(shiftId);
-            byte[] pdfBytes = pdfGenerator.generate(printData, report);
-
-            // Upload to S3
-            LocalDateTime shiftStart = shift.getStartTime() != null ? shift.getStartTime() : LocalDateTime.now();
-            Long scid = shift.getScid() != null ? shift.getScid() : 1L;
-            String key = String.format("reports/shift-closing/%d/%d/%02d/%02d/shift-%d.pdf",
-                    scid, shiftStart.getYear(), shiftStart.getMonthValue(),
-                    shiftStart.getDayOfMonth(), shiftId);
-
-            s3StorageService.upload(key, pdfBytes, "application/pdf");
-            report.setReportPdfUrl(key);
-            shiftClosingReportRepository.save(report);
-        } catch (Exception e) {
-            // PDF generation/upload is best-effort; shift is still closed
-            System.err.println("Failed to generate/upload shift report PDF: " + e.getMessage());
-        }
-
-        // Auto-generate DRAFT statements if shift crosses a statement boundary
-        try {
-            statementAutoGenerationService.onShiftClosed(saved);
-        } catch (Exception e) {
-            System.err.println("Failed to auto-generate statement drafts: " + e.getMessage());
-        }
-
-        // Auto-generate synthetic cash invoices for residual fuel (meter − invoiced).
-        // Best-effort: must not block the cashier's close flow.
-        try {
-            shiftCashInvoiceAutoService.generateForShift(shiftId);
-        } catch (Exception e) {
-            log.error("Failed to auto-generate synthetic cash invoices for shift {}", shiftId, e);
-        }
-
-        // Fan-out stock summary (SSE/push/email) via @TransactionalEventListener AFTER_COMMIT.
-        eventPublisher.publishEvent(new ShiftClosedEvent(saved.getId(), saved.getScid()));
-
+        // Delegates to the report's Finalize so there is exactly one way to close a shift
+        // (report FINALIZED, shift RECONCILED, closer recorded). Cash bills are generated from
+        // the closing workspace and statement drafts by the nightly job, as they are today.
+        shiftClosingReportService.closeShiftForShiftId(shiftId);
         metrics.shiftClosed();
-        return saved;
+        return repository.findById(shiftId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
     }
 
     @Transactional

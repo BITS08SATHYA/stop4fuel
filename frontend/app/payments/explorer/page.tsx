@@ -20,11 +20,9 @@ import {
     getStatements, getStatementBills, getPaymentsByStatement,
     getStatementStats, getStatementPdfUrl, getBillPaymentSummary,
     getCustomerCreditInfo, recordStatementPayment, deletePayment, PAYMENT_MODES,
-    submitApprovalRequest,
     type Statement, type Payment, type InvoiceBill, type StatementStats,
     type PageResponse, type BillPaymentSummary
 } from "@/lib/api/station";
-import { useAuth, isRoleAtLeast } from "@/lib/auth/auth-context";
 
 function formatCurrency(val?: number | null) {
     if (val == null) return "0.00";
@@ -62,8 +60,6 @@ const PAYMENT_MODE_COLORS: Record<string, string> = {
 };
 
 export default function ExplorerPage() {
-    const { user } = useAuth();
-    const requestMode = user?.designation === "Cashier" && !isRoleAtLeast(user?.role, "ADMIN");
 
     // KPI
     const [stats, setStats] = useState<StatementStats | null>(null);
@@ -231,33 +227,12 @@ export default function ExplorerPage() {
         }
     };
 
-    // Record statement payment (or submit approval request when cashier)
+    // Record statement payment
     const handleRecordStatementPayment = async () => {
         if (!selectedStatement || !paymentAmount || !paymentModeId) return;
         setPaymentSubmitting(true);
         setPaymentError("");
         try {
-            if (requestMode) {
-                await submitApprovalRequest({
-                    requestType: "RECORD_STATEMENT_PAYMENT",
-                    customerId: selectedStatement.customer?.id ?? null,
-                    payload: {
-                        statementId: selectedStatement.id,
-                        amount: Number(paymentAmount),
-                        paymentMode: paymentModeId,
-                        referenceNo: paymentRef || undefined,
-                        remarks: paymentRemarks || undefined,
-                    },
-                });
-                showToast.success("Request submitted — admin will review it shortly");
-                setShowPaymentForm(false);
-                setPaymentAmount("");
-                setPaymentModeId("");
-                setPaymentRef("");
-                setPaymentRemarks("");
-                return;
-            }
-
             await recordStatementPayment(selectedStatement.id!, {
                 amount: Number(paymentAmount),
                 paymentMode: paymentModeId,
@@ -281,7 +256,7 @@ export default function ExplorerPage() {
             setPaymentRemarks("");
             getStatementStats().then(setStats).catch(console.error);
         } catch (err: any) {
-            setPaymentError(err?.message || (requestMode ? "Submit failed" : "Payment failed"));
+            setPaymentError(err?.message || "Payment failed");
         } finally {
             setPaymentSubmitting(false);
         }
@@ -677,7 +652,6 @@ export default function ExplorerPage() {
                                                 onDownloadPdf={() => handleDownloadPdf(selectedStatement.id!)}
                                                 pdfLoading={pdfLoading}
                                                 onRecordPayment={() => { setActiveTab("payments"); setShowPaymentForm(true); }}
-                                                requestMode={requestMode}
                                             />
                                         ) : activeTab === "bills" ? (
                                             <BillsTab
@@ -707,7 +681,6 @@ export default function ExplorerPage() {
                                                 onSubmit={handleRecordStatementPayment}
                                                 onCancel={() => { setShowPaymentForm(false); setPaymentError(""); }}
                                                 onDeletePayment={handleDeletePayment}
-                                                requestMode={requestMode}
                                             />
                                         )}
                                     </div>
@@ -723,7 +696,7 @@ export default function ExplorerPage() {
 
 // --- Summary Tab ---
 function SummaryTab({
-    statement, billCount, paymentCount, progressPercent, onDownloadPdf, pdfLoading, onRecordPayment, requestMode
+    statement, billCount, paymentCount, progressPercent, onDownloadPdf, pdfLoading, onRecordPayment
 }: {
     statement: Statement;
     billCount: number;
@@ -732,7 +705,6 @@ function SummaryTab({
     onDownloadPdf: () => void;
     pdfLoading: boolean;
     onRecordPayment: () => void;
-    requestMode: boolean;
 }) {
     return (
         <div className="space-y-4">
@@ -813,12 +785,12 @@ function SummaryTab({
 
             {/* Record / Request Payment */}
             {statement.status === "NOT_PAID" && (statement.balanceAmount || 0) > 0 && (
-                <PermissionGate permission={requestMode ? "APPROVAL_REQUEST_CREATE" : "PAYMENT_CREATE"}>
+                <PermissionGate permission={"PAYMENT_CREATE"}>
                     <button
                         onClick={onRecordPayment}
                         className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                     >
-                        <CreditCard className="w-4 h-4" /> {requestMode ? "Request Payment" : "Record Payment"}
+                        <CreditCard className="w-4 h-4" /> Record Payment
                     </button>
                 </PermissionGate>
             )}
@@ -959,7 +931,7 @@ function PaymentsTab({
     payments, statement, showForm, onShowForm,
     paymentModes, paymentAmount, onAmountChange, paymentModeId, onModeChange,
     paymentRef, onRefChange, paymentRemarks, onRemarksChange,
-    submitting, error, onSubmit, onCancel, onDeletePayment, requestMode
+    submitting, error, onSubmit, onCancel, onDeletePayment
 }: {
     payments: Payment[];
     statement: Statement;
@@ -979,7 +951,6 @@ function PaymentsTab({
     onSubmit: () => void;
     onCancel: () => void;
     onDeletePayment: (id: number) => void;
-    requestMode: boolean;
 }) {
     const totalReceived = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
     const canPay = statement.status === "NOT_PAID" && (statement.balanceAmount || 0) > 0;
@@ -1006,12 +977,12 @@ function PaymentsTab({
 
             {/* Record / Request payment button */}
             {canPay && !showForm && (
-                <PermissionGate permission={requestMode ? "APPROVAL_REQUEST_CREATE" : "PAYMENT_CREATE"}>
+                <PermissionGate permission={"PAYMENT_CREATE"}>
                     <button
                         onClick={() => onShowForm(true)}
                         className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                     >
-                        <CreditCard className="w-4 h-4" /> {requestMode ? "Request Payment" : "Record Payment"}
+                        <CreditCard className="w-4 h-4" /> Record Payment
                     </button>
                 </PermissionGate>
             )}
@@ -1019,7 +990,7 @@ function PaymentsTab({
             {/* Payment form */}
             {showForm && canPay && (
                 <div className="border border-primary/30 rounded-lg p-4 space-y-3 bg-card/50">
-                    <h4 className="text-sm font-semibold text-foreground">{requestMode ? "Request Payment (admin approval required)" : "Record Payment"}</h4>
+                    <h4 className="text-sm font-semibold text-foreground">Record Payment</h4>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <div className="flex items-center justify-between mb-1">
@@ -1084,7 +1055,7 @@ function PaymentsTab({
                             className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                            {submitting ? (requestMode ? "Submitting…" : "Processing...") : (requestMode ? "Submit Request" : "Submit Payment")}
+                            {submitting ? "Processing..." : "Submit Payment"}
                         </button>
                         <button
                             onClick={onCancel}

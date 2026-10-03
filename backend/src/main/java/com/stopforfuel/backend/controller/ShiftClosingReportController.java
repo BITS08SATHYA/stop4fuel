@@ -67,12 +67,13 @@ public class ShiftClosingReportController {
         return reportService.transferEntry(reportId, lineItemId, targetReportId, reason);
     }
 
+    // Finalizing is closing the shift. SHIFT_APPROVE lets a cashier close their own shift without
+    // also getting REPORT_GENERATE (line-item edits, transfers, recompute). The closer's name is
+    // taken from the session, not the request body.
     @PostMapping("/{reportId}/finalize")
-    @PreAuthorize("hasPermission(null, 'REPORT_GENERATE')")
-    public ShiftClosingReport finalizeReport(@PathVariable Long reportId,
-                                              @RequestBody(required = false) Map<String, String> body) {
-        String finalizedBy = body != null ? body.get("finalizedBy") : null;
-        return reportService.finalizeReport(reportId, finalizedBy);
+    @PreAuthorize("hasPermission(null, 'SHIFT_APPROVE') or hasPermission(null, 'REPORT_GENERATE')")
+    public ShiftClosingReport finalizeReport(@PathVariable Long reportId) {
+        return reportService.finalizeReport(reportId);
     }
 
     @PostMapping("/{reportId}/unfinalize")

@@ -385,12 +385,12 @@ public class CustomerBlockingStatusService {
                             .noneMatch(other -> "FAIL".equals(other.getState()));
                     if (otherGatesAllPass) {
                         if (classification.stickyManual) {
-                            return "Manual block — admin must click Unblock. The system will not auto-unblock manually blocked customers.";
+                            return "Manual block — click Unblock (needs a reason). The system will not auto-unblock manually blocked customers.";
                         }
                         if (classification.noCreditLimit) {
-                            return "All credit triggers cleared, but no credit limit is configured — admin must click Unblock.";
+                            return "All credit triggers cleared, but no credit limit is configured — click Unblock.";
                         }
-                        return "All credit triggers have cleared — pending auto-unblock at the next 6 AM scan. Admin can also click Unblock now.";
+                        return "All credit triggers have cleared — pending auto-unblock at the next 6 AM scan. You can also click Unblock now.";
                     }
                     return "Admin must unblock the customer before invoicing";
                 case "CREDIT_AMOUNT":

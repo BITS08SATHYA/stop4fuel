@@ -157,8 +157,10 @@ public class CustomerController {
         return CustomerDetailDTO.from(customerService.blockCustomer(id, notes));
     }
 
+    // CUSTOMER_UNBLOCK lets a cashier reopen credit without also handing them the rest of
+    // CUSTOMER_UPDATE (credit limits, force-unblock, profile edits).
     @PatchMapping("/{id}/unblock")
-    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE')")
+    @PreAuthorize("hasPermission(null, 'CUSTOMER_UPDATE') or hasPermission(null, 'CUSTOMER_UNBLOCK')")
     public CustomerDetailDTO unblockCustomer(@PathVariable Long id,
             @RequestBody(required = false) java.util.Map<String, String> body) {
         String notes = body != null ? body.get("notes") : null;
