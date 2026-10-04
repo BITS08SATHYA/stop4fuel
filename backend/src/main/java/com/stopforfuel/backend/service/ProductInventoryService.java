@@ -35,6 +35,9 @@ public class ProductInventoryService {
     private final ManualStockReceiptRepository manualStockReceiptRepository;
     private final UserRepository userRepository;
 
+    /** Smallest auto top-up when a non-fuel bill outruns the book stock. */
+    public static final double AUTO_TOP_UP_MIN = 10.0;
+
     // Fuel is tracked in TankInventory; never surface fuel rows on the Product Stock page
     // (legacy rows exist from before autoCreateForShift skipped fuel).
     private static boolean isNonFuel(ProductInventory pi) {
@@ -201,6 +204,42 @@ public class ProductInventoryService {
         if (qty <= 0) {
             throw new BusinessException("Quantity must be greater than zero.");
         }
+        return addStockToShift(product, shift, qty, reason.trim());
+    }
+
+    /**
+     * A non-fuel invoice is never refused for stock: the goods are on the counter, the book is
+     * what's wrong. When the bill's shift row can't cover {@code requiredQty}, top it up by the
+     * shortfall — at least {@link #AUTO_TOP_UP_MIN} — logged as a ManualStockReceipt so the
+     * "Stock Added by Hand" card shows it. Must run before the invoice's own deduction.
+     */
+    @Transactional
+    public void topUpForInvoice(Product product, Shift shift, double requiredQty, String billNo) {
+        if (requiredQty <= 0 || "FUEL".equalsIgnoreCase(product.getCategory())) {
+            return;
+        }
+        ProductInventory row = repository.findByProductIdAndShiftIdForUpdate(product.getId(), shift.getId());
+        double available = row != null
+                ? (row.getCloseStock() != null ? row.getCloseStock() : 0.0)
+                : newShiftRow(product, shift, LocalDate.now()).getCloseStock();
+        double shortfall = requiredQty - available;
+        if (shortfall <= 0) {
+            return;
+        }
+        double qty = Math.max(AUTO_TOP_UP_MIN, Math.ceil(shortfall));
+        addStockToShift(product, shift, qty,
+                "Auto-added on bill " + billNo + ": billed " + fmtQty(requiredQty)
+                + " with " + fmtQty(available) + " in stock");
+    }
+
+    private static String fmtQty(double v) {
+        return BigDecimal.valueOf(v).setScale(2, java.math.RoundingMode.HALF_UP)
+                .stripTrailingZeros().toPlainString();
+    }
+
+    private ManualStockReceipt addStockToShift(Product product, Shift shift, double qty, String reason) {
+        Long productId = product.getId();
+        Long scid = shift.getScid() != null ? shift.getScid() : SecurityUtils.getScid();
 
         // Products activated mid-shift have no row yet; create it the same way shift-open does.
         ProductInventory row = repository.findByProductIdAndShiftIdForUpdate(productId, shift.getId());
@@ -230,7 +269,7 @@ public class ProductInventoryService {
         ManualStockReceipt receipt = new ManualStockReceipt();
         receipt.setProduct(product);
         receipt.setQuantity(qty);
-        receipt.setReason(reason.trim());
+        receipt.setReason(reason);
         receipt.setShiftId(shift.getId());
         receipt.setScid(scid);
         Long actorId = SecurityUtils.getCurrentUserId();

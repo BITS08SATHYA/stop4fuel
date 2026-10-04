@@ -31,6 +31,7 @@ public class InvoiceBillService {
     private final TankInventoryRepository tankInventoryRepository;
     private final NozzleInventoryRepository nozzleInventoryRepository;
     private final ProductInventoryRepository productInventoryRepository;
+    private final ProductInventoryService productInventoryService;
     private final com.stopforfuel.backend.repository.NozzleRepository nozzleRepository;
     private final ProductRepository productRepository;
     private final CashierStockRepository cashierStockRepository;
@@ -237,27 +238,8 @@ public class InvoiceBillService {
                             }
                         }
 
-                        // Check product inventory (non-fuel only — fuel stock is tracked via tank dip readings)
-                        boolean isFuelProduct = "FUEL".equalsIgnoreCase(prod.getCategory())
-                                || (ip.getNozzle() != null && ip.getNozzle().getId() != null);
-                        if (!isFuelProduct) {
-                            ProductInventory productInv = productInventoryRepository
-                                    .findTopByProductIdAndScidOrderByDateDescIdDesc(prod.getId(), SecurityUtils.getScid());
-                            if (productInv != null) {
-                                double available = productInv.getCloseStock() != null ? productInv.getCloseStock() : 0.0;
-                                if (available <= 0) {
-                                    throw new BusinessException(
-                                            "Cannot create invoice: Product '" + prod.getName()
-                                            + "' is out of stock (0 available).");
-                                }
-                                if (available < requiredQty.doubleValue()) {
-                                    throw new BusinessException(
-                                            "Cannot create invoice: Insufficient stock for product '"
-                                            + prod.getName() + "'. Available: " + String.format("%.2f", available)
-                                            + ", Required: " + requiredQty + ".");
-                                }
-                            }
-                        }
+                        // Non-fuel stock never blocks the bill — a shortfall is topped up after
+                        // save (topUpForInvoice). Fuel stock is tracked via tank dip readings.
                     }
                 }
             }
@@ -372,6 +354,28 @@ public class InvoiceBillService {
         // --- Update consumed liters on vehicle and customer ---
         if (totalLiters.compareTo(BigDecimal.ZERO) > 0) {
             updateConsumedLiters(invoice.getVehicle(), invoice.getCustomer(), totalLiters);
+        }
+
+        // --- Top up non-fuel stock the book can't cover, so the deduction below lands on a real count ---
+        if (saved.getProducts() != null) {
+            // Summed per product: two lines of the same item must be covered together.
+            java.util.Map<Long, Double> nonFuelQty = new java.util.LinkedHashMap<>();
+            java.util.Map<Long, Product> nonFuelProducts = new java.util.HashMap<>();
+            for (InvoiceProduct ip : saved.getProducts()) {
+                boolean isFuel = "FUEL".equalsIgnoreCase(ip.getProduct().getCategory())
+                        || (ip.getNozzle() != null && ip.getNozzle().getId() != null);
+                if (!isFuel && ip.getQuantity() != null && ip.getQuantity().signum() > 0) {
+                    nonFuelQty.merge(ip.getProduct().getId(), ip.getQuantity().doubleValue(), Double::sum);
+                    nonFuelProducts.put(ip.getProduct().getId(), ip.getProduct());
+                }
+            }
+            if (!nonFuelQty.isEmpty()) {
+                Long billShiftId = saved.getShiftId();
+                Shift billShift = shiftService.findById(billShiftId)
+                        .orElseThrow(() -> new BusinessException("Shift " + billShiftId + " not found"));
+                nonFuelQty.forEach((productId, qty) -> productInventoryService.topUpForInvoice(
+                        nonFuelProducts.get(productId), billShift, qty, billNo));
+            }
         }
 
         // --- Auto-deduct inventory (use saved entity to ensure products are persisted) ---

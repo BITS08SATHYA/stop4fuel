@@ -124,4 +124,59 @@ class ProductInventoryManualStockTest {
         assertThrows(BusinessException.class, () -> service.addManualStock(40L, 5.0, "x"));
         verify(manualStockReceiptRepository, never()).save(any());
     }
+    @Test
+    void invoiceShortfallTopsUpAtLeastTen() {
+        ProductInventory row = new ProductInventory();
+        row.setProduct(oil);
+        row.setOpenStock(0.0);
+        row.setIncomeStock(0.0);
+        row.setTotalStock(0.0);
+        row.setCloseStock(0.0);
+        row.setSales(0.0);
+        CashierStock counter = new CashierStock();
+        counter.setCurrentStock(0.0);
+
+        when(repository.findByProductIdAndShiftIdForUpdate(40L, 2700L)).thenReturn(row);
+        when(cashierStockRepository.findByProductIdAndScidForUpdate(40L, 1L)).thenReturn(Optional.of(counter));
+        when(manualStockReceiptRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        service.topUpForInvoice(oil, shift, 3.0, "C26/123");
+
+        assertEquals(10.0, row.getIncomeStock(), "a 3-unit shortfall still adds 10");
+        assertEquals(10.0, row.getCloseStock());
+        assertEquals(10.0, counter.getCurrentStock());
+        ArgumentCaptor<ManualStockReceipt> receipt = ArgumentCaptor.forClass(ManualStockReceipt.class);
+        verify(manualStockReceiptRepository).save(receipt.capture());
+        assertTrue(receipt.getValue().getReason().contains("C26/123"));
+    }
+
+    @Test
+    void invoiceShortfallAboveTenAddsTheShortfall() {
+        ProductInventory row = new ProductInventory();
+        row.setProduct(oil);
+        row.setOpenStock(2.0);
+        row.setIncomeStock(0.0);
+        row.setTotalStock(2.0);
+        row.setCloseStock(2.0);
+        row.setSales(0.0);
+
+        when(repository.findByProductIdAndShiftIdForUpdate(40L, 2700L)).thenReturn(row);
+        when(cashierStockRepository.findByProductIdAndScidForUpdate(40L, 1L)).thenReturn(Optional.empty());
+        when(manualStockReceiptRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        service.topUpForInvoice(oil, shift, 14.5, "C26/124");
+
+        assertEquals(13.0, row.getIncomeStock());
+    }
+
+    @Test
+    void invoiceCoveredByStockAddsNothing() {
+        ProductInventory row = new ProductInventory();
+        row.setCloseStock(5.0);
+        when(repository.findByProductIdAndShiftIdForUpdate(40L, 2700L)).thenReturn(row);
+
+        service.topUpForInvoice(oil, shift, 5.0, "C26/125");
+
+        verify(manualStockReceiptRepository, never()).save(any());
+    }
 }
